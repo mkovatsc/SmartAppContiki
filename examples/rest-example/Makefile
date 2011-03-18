@@ -1,17 +1,25 @@
 all: rest-server-example coap-client-example
 
-ifndef TARGET
-TARGET=sky
-endif
-
 CONTIKI=../..
 
-WITH_UIP6=1
+# useless, delete?
+#WITH_UIP6=1
+
+# variable for root Makefile.include
 UIP_CONF_IPV6=1
 
-WITH_COAP = 1
+# variable for this Makefile
+WITH_COAP=1
+
+# must be CFLAGS not variables, maybe put into project-conf.h?
+CFLAGS += -DUIP_CONF_IPV6_RPL=1
+CFLAGS += -DUIP_CONF_TCP=0
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+# linker optimizations
+CFLAGS += -ffunction-sections
+LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
 ifeq ($(WITH_COAP), 1)
 CFLAGS += -DWITH_COAP

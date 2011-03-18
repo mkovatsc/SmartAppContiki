@@ -206,7 +206,7 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define UIP_CONF_ICMP6           1
 #define UIP_CONF_UDP             1
 #define UIP_CONF_TCP             0
-#define UIP_CONF_IPV6_RPL        0
+#define UIP_CONF_IPV6_RPL        1
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
 #else
@@ -374,7 +374,10 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 /* Optional, TCP needed to serve the RPL neighbor web page currently hard coded at bbbb::11 */
 /* The RPL neighbors can also be viewed using the jack menu */
 /* A small MSS is adequate for the internal jackdaw webserver and RAM is very limited*/
+#ifndef RPL_HTTPD_SERVER
 #define RPL_HTTPD_SERVER            0
+#endif
+
 #if RPL_HTTPD_SERVER
 #undef UIP_CONF_TCP            
 #define UIP_CONF_TCP                1
