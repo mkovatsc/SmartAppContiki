@@ -11,6 +11,10 @@ UIP_CONF_IPV6 = 1
 #Override inclusion of internal webserver with make WITH_WEBSERVER=0
 WITH_WEBSERVER=1
 
+# radio configuration
+CFLAGS += -DRF_CHANNEL=25
+# TODO: make PANID configurable
+
 # must be CFLAGS not variable
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 

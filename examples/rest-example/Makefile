@@ -11,6 +11,10 @@ UIP_CONF_IPV6=1
 # variable for this Makefile
 WITH_COAP=1
 
+# radio configuration
+CFLAGS += -DRF_CHANNEL=25
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
 # must be CFLAGS not variables, maybe put into project-conf.h?
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 CFLAGS += -DUIP_CONF_TCP=0

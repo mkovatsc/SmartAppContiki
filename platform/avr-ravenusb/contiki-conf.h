@@ -257,12 +257,18 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define UIP_CONF_STATISTICS      1
 
   /* Network setup */
+#ifdef RF_CHANNEL
+#define CHANNEL_802_15_4         (RF_CHANNEL)
+else
+#define CHANNEL_802_15_4          26
+#endif /* RF_CHANNEL */
+
 #if 1              /* No radio cycling */
 #define NETSTACK_CONF_MAC         nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
+/* #define CHANNEL_802_15_4          26 *defined globally*/
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent by sicslowpan.c (else autoretry) */
@@ -278,7 +284,7 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
+/* #define CHANNEL_802_15_4          26 *defined globally*/
 #define RF230_CONF_AUTOACK        0
 #define RF230_CONF_AUTORETRIES    0
 #define SICSLOWPAN_CONF_FRAG      1
@@ -290,7 +296,7 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define NETSTACK_CONF_RDC         cxmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
+/* #define CHANNEL_802_15_4          26 *defined globally*/
 #define RF230_CONF_AUTOACK        1
 #define RF230_CONF_AUTORETRIES    1
 #define SICSLOWPAN_CONF_FRAG      1
