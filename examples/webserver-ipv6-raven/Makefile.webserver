@@ -1,14 +1,27 @@
-
 all: webserver6
+
+CONTIKI = ../..
 
 APPS=raven-webserver raven-lcd-interface
 TARGET=avr-raven
+
+# variable for root Makefile.include
 UIP_CONF_IPV6=1
+
 #RF230BB=1             //Use radio driver that communicates with the core MAC layer. Now the default.
 #COFFEE_FILES=1        //Use coffee file system in EEPROM
 #COFFEE_FILES=2        //Use coffee file system in program flash
 #COFFEE_ADDRESS=0xnnnn //Override default coffee file system starting address
-CONTIKI = ../..
 
+# radio configuration
+CFLAGS += -DRF_CHANNEL=21
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
+# unused as address is defined by Raven Webserver (httpd-fsdata.c via makefsdata.h)
+#CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
+
+# must be CFLAGS not variables
+CFLAGS += -DUIP_CONF_IPV6_RPL=1
 
 include $(CONTIKI)/Makefile.include

@@ -129,17 +129,20 @@ FUSES ={.low = 0xe2, .high = 0x99, .extended = 0xff,};
 extern uint8_t mac_address[8];     //These are defined in httpd-fsdata.c via makefsdata.h
 extern uint8_t server_name[16];
 extern uint8_t domain_name[30];
+#elif RAVEN_ADDRESS_LAST_BYTE
+uint8_t mac_address[8] EEMEM = {0x02, 0x11, 0x22, 0xff, 0xfe, 0x33, 0x44, RAVEN_ADDRESS_LAST_BYTE};
 #else
 uint8_t mac_address[8] EEMEM = {0x02, 0x11, 0x22, 0xff, 0xfe, 0x33, 0x44, 0x55};
 #endif
 
 
-#ifdef CHANNEL_802_15_4
-uint8_t rf_channel[2] EEMEM = {CHANNEL_802_15_4, ~CHANNEL_802_15_4};
+#ifdef RF_CHANNEL
+uint8_t rf_channel[2] EEMEM = {RF_CHANNEL, ~RF_CHANNEL};
 #else
-uint8_t rf_channel[2] EEMEM = {22, ~22};
+#error "No RF channel defined!"
 #endif
-	volatile uint8_t eeprom_channel;
+volatile uint8_t eeprom_channel;
+
 static uint8_t get_channel_from_eeprom() {
 //	volatile uint8_t eeprom_channel;
 	uint8_t eeprom_check;
@@ -149,11 +152,11 @@ static uint8_t get_channel_from_eeprom() {
 	if(eeprom_channel==~eeprom_check)
 		return eeprom_channel;
 
-#ifdef CHANNEL_802_15_4
-	return(CHANNEL_802_15_4);
-#else
-	return 26;
-#endif
+#ifdef RF_CHANNEL
+	return RF_CHANNEL;
+#else /* RF_CHANNEL */
+#error "No RF channel defined!"
+#endif /* RF_CHANNEL */
 }
 
 static bool get_mac_from_eeprom(uint8_t* macptr) {
