@@ -49,9 +49,9 @@
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/uip-ds6.h"
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #include "net/rime.h"
 
@@ -288,7 +288,7 @@ main(int argc, char **argv)
 	 ds2411_id[0], ds2411_id[1], ds2411_id[2], ds2411_id[3],
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, ds2411_id, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -300,11 +300,12 @@ main(int argc, char **argv)
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%4X\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
                          NETSTACK_RDC.channel_check_interval()),
-         RF_CHANNEL);
+         RF_CHANNEL,
+         IEEE802154_PANID);
 
   process_start(&tcpip_process, NULL);
 
@@ -335,7 +336,7 @@ main(int argc, char **argv)
            ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
   }
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -346,9 +347,9 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
-#if !WITH_UIP && !WITH_UIP6
+#if !WITH_UIP && !UIP_CONF_IPV6
   uart1_set_input(serial_line_input_byte);
   serial_line_init();
 #endif

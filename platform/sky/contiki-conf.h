@@ -11,6 +11,21 @@
 
 #include "platform-conf.h"
 
+
+#ifndef RF_CHANNEL
+#define RF_CHANNEL              26
+#endif /* RF_CHANNEL */
+
+#if 1 /* No radio duty cycling */
+#define NETSTACK_CONF_RADIO       cc2420_driver
+#define NETSTACK_CONF_MAC         csma_driver
+#define NETSTACK_CONF_RDC         nullrdc_driver
+#define NETSTACK_CONF_FRAMER      framer_802154
+/* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
+#define CC2420_CONF_AUTOACK       1
+
+#else /* ContikiMAC duty cycling */
+
 #ifndef NETSTACK_CONF_MAC
 #define NETSTACK_CONF_MAC     csma_driver
 #endif /* NETSTACK_CONF_MAC */
@@ -35,8 +50,10 @@
 #define CC2420_CONF_AUTOACK              1
 #endif /* CC2420_CONF_AUTOACK */
 
+#endif /* radio config */
 
-#if WITH_UIP6
+
+#if UIP_CONF_IPV6
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
 #define CXMAC_CONF_ANNOUNCEMENTS         0
@@ -46,7 +63,7 @@
 #define QUEUEBUF_CONF_NUM                8
 #endif
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
 /* Network setup for non-IPv6 (rime). */
 
@@ -79,19 +96,11 @@
 #define CC2420_CONF_SFD_TIMESTAMPS       1
 #endif /* TIMESYNCH_CONF_ENABLED */
 
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
-#ifndef RF_CHANNEL
-#define RF_CHANNEL              26
-#endif /* RF_CHANNEL */
-
 #define CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT 0
-
-#ifndef IEEE802154_CONF_PANID
-#define IEEE802154_CONF_PANID       0xABCD
-#endif /* IEEE802154_CONF_PANID */
 
 #define SHELL_VARS_CONF_RAM_BEGIN 0x1100
 #define SHELL_VARS_CONF_RAM_END 0x2000
@@ -117,7 +126,11 @@
 #define PROCESS_CONF_STATS 1
 /*#define PROCESS_CONF_FASTPOLL    4*/
 
-#ifdef WITH_UIP6
+#if UIP_CONF_IPV6
+
+#ifndef UIP_CONF_IPV6_RPL
+#define UIP_CONF_IPV6_RPL               1
+#endif /* UIP_CONF_IPV6_RPL */
 
 #define RIMEADDR_CONF_SIZE              8
 
@@ -125,9 +138,6 @@
 #define UIP_CONF_LLH_LEN                0
 
 #define UIP_CONF_ROUTER                 1
-#ifndef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL               1
-#endif /* UIP_CONF_IPV6_RPL */
 
 /* configure number of neighbors and routes */
 #ifndef UIP_CONF_DS6_NBR_NBU
@@ -141,10 +151,10 @@
 #define UIP_CONF_ND6_REACHABLE_TIME     600000
 #define UIP_CONF_ND6_RETRANS_TIMER      10000
 
-#define UIP_CONF_IPV6                   1
 #ifndef UIP_CONF_IPV6_QUEUE_PKT
 #define UIP_CONF_IPV6_QUEUE_PKT         0
 #endif /* UIP_CONF_IPV6_QUEUE_PKT */
+
 #define UIP_CONF_IPV6_CHECKS            1
 #define UIP_CONF_IPV6_REASSEMBLY        0
 #define UIP_CONF_NETIF_MAX_ADDRESSES    3
@@ -152,6 +162,7 @@
 #define UIP_CONF_ND6_MAX_NEIGHBORS      4
 #define UIP_CONF_ND6_MAX_DEFROUTERS     2
 #define UIP_CONF_IP_FORWARD             0
+
 #ifndef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE		240
 #endif
@@ -169,10 +180,11 @@
 #ifndef SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS
 #define SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS   5
 #endif /* SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS */
-#else /* WITH_UIP6 */
+
+#else /* UIP_CONF_IPV6 */
 #define UIP_CONF_IP_FORWARD      1
 #define UIP_CONF_BUFFER_SIZE     108
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH 1
 

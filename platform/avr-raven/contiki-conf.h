@@ -96,11 +96,19 @@ unsigned long clock_seconds(void);
 #endif /*RF230BB */
 
 #if UIP_CONF_IPV6
+
+#ifndef UIP_CONF_IPV6_RPL
+#define UIP_CONF_IPV6_RPL        1
+#endif /*UIP_CONF_IPV6_RPL */
+
 #define RIMEADDR_CONF_SIZE        8
 #define UIP_CONF_ICMP6            1
 #define UIP_CONF_UDP              1
-#define UIP_CONF_TCP              1
-#define UIP_CONF_IPV6_RPL         0
+
+#ifndef UIP_CONF_TCP
+#define UIP_CONF_TCP             1
+#endif /*UIP_CONF_TCP */
+
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
 #else
@@ -162,13 +170,16 @@ unsigned long clock_seconds(void);
 #define UIP_CONF_DHCP_LIGHT      1
 
 
+#ifndef RF_CHANNEL
+#define RF_CHANNEL              26
+#endif /* RF_CHANNEL */
+
 #if 1 /* No radio cycling */
 
 #define NETSTACK_CONF_MAC         nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent (else autoretry). This is primarily for testing. */
@@ -187,7 +198,6 @@ unsigned long clock_seconds(void);
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
 #define RF230_CONF_AUTOACK        0
 #define RF230_CONF_AUTORETRIES    0
 #define SICSLOWPAN_CONF_FRAG      1
@@ -205,7 +215,6 @@ unsigned long clock_seconds(void);
 #define NETSTACK_CONF_RDC         cxmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
 #define RF230_CONF_AUTOACK        1
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3

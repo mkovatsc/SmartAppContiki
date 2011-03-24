@@ -2,9 +2,6 @@ all: border-router
 
 CONTIKI=../../..
 
-# useless, delete?
-#WITH_UIP6=1
-
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
@@ -12,12 +9,11 @@ UIP_CONF_IPV6=1
 WITH_WEBSERVER=1
 
 # radio configuration
-CFLAGS += -DRF_CHANNEL=25
+CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
-# must be CFLAGS not variables, maybe put into project-conf.h?
+# must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
-CFLAGS += -DUIP_CONF_TCP=1 # if not set, default is TCP enabled, see uipopt.h
 
 # linker optimizations
 CFLAGS += -ffunction-sections
@@ -29,6 +25,7 @@ PROJECT_SOURCEFILES += slip-bridge.c
 else
 APPS += webserver
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\" -DWEBSERVER
+CFLAGS += -DUIP_CONF_TCP=1
 PROJECT_SOURCEFILES += slip-bridge.c httpd-simple.c
 endif
 

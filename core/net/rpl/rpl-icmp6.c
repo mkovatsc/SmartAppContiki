@@ -196,7 +196,11 @@ dio_input(void)
     PRINTF("RPL: Neighbor already in neighbor cache\n");
   }
 
+#if JACKDAW_RPL
+  buffer_length = uip_len - uip_l2_l3_icmp_hdr_len + UIP_LLH_LEN; //Add jackdaw ethernet header
+#else
   buffer_length = uip_len - uip_l2_l3_icmp_hdr_len;
+#endif
 
   /* Process the DIO base option. */
   i = 0;
@@ -489,7 +493,12 @@ dao_input(void)
   PRINTF("\n");
 
   buffer = UIP_ICMP_PAYLOAD;
+
+#if JACKDAW_RPL
+  buffer_length = uip_len - uip_l2_l3_icmp_hdr_len + UIP_LLH_LEN; //Add jackdaw ethernet header
+#else
   buffer_length = uip_len - uip_l2_l3_icmp_hdr_len;
+#endif
 
   pos = 0;
   instance_id = buffer[pos++];
@@ -686,7 +695,12 @@ dao_ack_input(void)
   uint8_t status;
 
   buffer = UIP_ICMP_PAYLOAD;
+
+#if JACKDAW_RPL
+  buffer_length = uip_len - uip_l2_l3_icmp_hdr_len + UIP_LLH_LEN; //Add jackdaw ethernet header
+#else
   buffer_length = uip_len - uip_l2_l3_icmp_hdr_len;
+#endif
 
   instance_id = buffer[0];
   sequence = buffer[2];

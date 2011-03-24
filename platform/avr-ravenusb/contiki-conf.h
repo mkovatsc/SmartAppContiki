@@ -202,11 +202,20 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #endif /*RF230BB */
 
 #if UIP_CONF_IPV6
+
+#ifndef UIP_CONF_IPV6_RPL
+#define UIP_CONF_IPV6_RPL        1
+#endif /*UIP_CONF_IPV6_RPL */
+
 #define RIMEADDR_CONF_SIZE       8
+
 #define UIP_CONF_ICMP6           1
 #define UIP_CONF_UDP             1
-#define UIP_CONF_TCP             0
-#define UIP_CONF_IPV6_RPL        1
+
+#ifndef UIP_CONF_TCP
+#define UIP_CONF_TCP             1
+#endif /*UIP_CONF_TCP */
+
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
 #else
@@ -226,7 +235,6 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 
 #define UIP_CONF_LL_802154       1
 #define UIP_CONF_LLH_LEN         14
-#define UIP_CONF_BUFSIZE		 UIP_LINK_MTU + UIP_LLH_LEN + 4   /* +4 for vlan on macosx */
 
 /* 10 bytes per stateful address context - see sicslowpan.c */
 /* Default is 1 context with prefix aaaa::/64 */
@@ -256,19 +264,17 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #define UIP_CONF_TCP_SPLIT       0
 #define UIP_CONF_STATISTICS      1
 
-  /* Network setup */
-#ifdef RF_CHANNEL
-#define CHANNEL_802_15_4         (RF_CHANNEL)
-else
-#define CHANNEL_802_15_4          26
+
+#ifndef RF_CHANNEL
+#define RF_CHANNEL              26
 #endif /* RF_CHANNEL */
 
+  /* Network setup */
 #if 1              /* No radio cycling */
 #define NETSTACK_CONF_MAC         nullmac_driver
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-/* #define CHANNEL_802_15_4          26 *defined globally*/
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent by sicslowpan.c (else autoretry) */
@@ -279,12 +285,12 @@ else
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
 
+
 #elif 0  /* Contiki-mac radio cycling */
 #define NETSTACK_CONF_MAC         nullmac_driver
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-/* #define CHANNEL_802_15_4          26 *defined globally*/
 #define RF230_CONF_AUTOACK        0
 #define RF230_CONF_AUTORETRIES    0
 #define SICSLOWPAN_CONF_FRAG      1
@@ -296,7 +302,6 @@ else
 #define NETSTACK_CONF_RDC         cxmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-/* #define CHANNEL_802_15_4          26 *defined globally*/
 #define RF230_CONF_AUTOACK        1
 #define RF230_CONF_AUTORETRIES    1
 #define SICSLOWPAN_CONF_FRAG      1
@@ -380,9 +385,10 @@ else
 /* Optional, TCP needed to serve the RPL neighbor web page currently hard coded at bbbb::11 */
 /* The RPL neighbors can also be viewed using the jack menu */
 /* A small MSS is adequate for the internal jackdaw webserver and RAM is very limited*/
+
 #ifndef RPL_HTTPD_SERVER
 #define RPL_HTTPD_SERVER            0
-#endif
+#endif /* RPL_HTTPD_SERVER */
 
 #if RPL_HTTPD_SERVER
 #undef UIP_CONF_TCP            
