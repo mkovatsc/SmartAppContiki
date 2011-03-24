@@ -7,3 +7,7 @@ clean:
 	${MAKE} -f Makefile.ravenusbstick clean
 	rm -rf obj_avr-ravenusb
 	rm symbols.c symbols.h ravenusbstick.elf ravenusbstick.hex
+
+usb0up: /dev/ttyUSB0
+	sudo ifconfig usb0 -arp
+	sudo ip -6 address add bbbb::1/64 dev usb0
