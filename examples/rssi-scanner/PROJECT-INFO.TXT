@@ -1,0 +1,13 @@
+Name: RSSI-scanner
+Contact: Joakim Eriksson <joakime@sics.se>
+URL:
+License: BSD http://www.opensource.org/licenses/bsd-license.php
+Screenshot: 
+Contiki version: CVS 2009-11-23
+Intended platforms: Tmote Sky (and others with CC2420).
+Tested platforms: Tmote Sky
+Description:
+A RSSI-scanner that scans all possible frequencies as fast as possible
+using the CC2420 radio chip. The scanner include a small Java program
+that visualize the frequency spectrum around 2.4 Ghz and the energy
+detected.
