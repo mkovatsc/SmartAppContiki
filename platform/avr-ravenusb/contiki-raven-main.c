@@ -499,7 +499,7 @@ main(void)
 #if DEBUG
 {struct process *p;
  for(p = PROCESS_LIST();p != NULL; p = ((struct process *)p->next)) {
-  printf_P(PSTR("Process=%p Thread=%p  Name=\"%s\" \n"),p,p->thread,p->name);
+  printf_P(PSTR("Process=%p Thread=%p  Name=\"%s\" \n"),p,p->thread,PROCESS_NAME_STRING(p));
  }
 }
 #endif
