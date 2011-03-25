@@ -17,12 +17,26 @@
 #endif /* RF_CHANNEL */
 
 #if 1 /* No radio duty cycling */
+
+#ifndef NETSTACK_CONF_RADIO
 #define NETSTACK_CONF_RADIO       cc2420_driver
+#endif /* NETSTACK_CONF_RADIO */
+
+#ifndef NETSTACK_CONF_MAC
 #define NETSTACK_CONF_MAC         csma_driver
+#endif /* NETSTACK_CONF_MAC */
+
+#ifndef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC         nullrdc_driver
+#endif /* NETSTACK_CONF_RDC */
+
+#ifndef NETSTACK_CONF_FRAMER
 #define NETSTACK_CONF_FRAMER      framer_802154
-/* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
+#endif /* NETSTACK_CONF_FRAMER */
+
+#ifndef CC2420_CONF_AUTOACK
 #define CC2420_CONF_AUTOACK       1
+#endif /* CC2420_CONF_AUTOACK */
 
 #else /* ContikiMAC duty cycling */
 
