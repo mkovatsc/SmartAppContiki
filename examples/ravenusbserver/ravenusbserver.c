@@ -104,7 +104,6 @@ static void telnet(char *str);
 static int uart_get_char(unsigned char c)
 {
   ringbuf_put(&uart_buf, c);
-  Led2_toggle();
   if (c=='\r') ++state;
   if ((state==1 && c=='\n') || ringbuf_size(&uart_buf)==127) {
     ringbuf_put(&uart_buf, '\0');
@@ -225,7 +224,7 @@ PROCESS_THREAD(plogg_process, ev, data)
   PROCESS_BEGIN();
 
   ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
-  rs232_set_input(RS232_PORT_1, uart_get_char);
+  rs232_set_input(RS232_PORT_0, uart_get_char);
   Led1_on(); // red
 
   //etimer_set(&etimer, CLOCK_SECOND * 10);

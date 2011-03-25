@@ -203,9 +203,9 @@ static void initialize(void) {
   clock_init();
 
   /* Use rs232 port for serial out (tx, rx, gnd are the three pads behind jackdaw leds */
-  rs232_init(RS232_PORT_1, USART_BAUD_19200,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_0, USART_BAUD_19200,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
   /* Redirect stdout to second port */
-  rs232_redirect_stdout(RS232_PORT_1);
+  rs232_redirect_stdout(RS232_PORT_0);
 
   PRINTF("\n\n\n********BOOTING CONTIKI*********\n");
 
@@ -232,7 +232,6 @@ static void initialize(void) {
   rimeaddr_t addr;
   memset(&addr, 0, sizeof(rimeaddr_t));
   get_mac_from_eeprom(addr.u8);
-  Led0_on();
 
 #if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, &addr.u8, 8);
@@ -287,6 +286,7 @@ static void initialize(void) {
   autostart_start(autostart_processes);
   
   printf_P(PSTR("OK\r\n"));
+  Led0_on(); // blue
 }
 
 /*-------------------------------------------------------------------------*/
