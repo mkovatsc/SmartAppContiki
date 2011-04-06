@@ -22,7 +22,7 @@
 #define PRINTLLADDR(addr)
 #endif
 
-char temp[100];
+char temp[111]; // ./well-known/core has longest payload 110 + 1 string delimiter
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
 RESOURCE(helloworld, METHOD_GET, "helloworld");
@@ -138,11 +138,11 @@ RESOURCE(discover, METHOD_GET, ".well-known/core");
 void
 discover_handler(REQUEST* request, RESPONSE* response)
 {
-  char temp[100];
   int index = 0;
-  index += sprintf(temp + index, "%s,", "</helloworld>;n=\"HelloWorld\"");
-  index += sprintf(temp + index, "%s,", "</led>;n=\"LedControl\"");
-  index += sprintf(temp + index, "%s", "</light>;n=\"Light\"");
+  index += sprintf(temp + index, "%s,", "</helloworld>;rt=\"HelloWorldText\"");
+  index += sprintf(temp + index, "%s,", "</led>;rt=\"LedControl\"");
+  index += sprintf(temp + index, "%s,", "</light>;rt=\"LightSensor\"");
+  index += sprintf(temp + index, "%s", "</toggle>;rt=\"ToggleRedLED\"");
 
   rest_set_response_payload(response, temp, strlen(temp));
   rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
