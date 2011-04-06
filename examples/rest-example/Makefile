@@ -14,7 +14,6 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
-CFLAGS += -DUIP_CONF_TCP=0
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
@@ -24,9 +23,11 @@ LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVe
 
 ifeq ($(WITH_COAP), 1)
 CFLAGS += -DWITH_COAP
+CFLAGS += -DUIP_CONF_TCP=0
 APPS += rest-coap
 else
 CFLAGS += -DWITH_HTTP
+CFLAGS += -DUIP_CONF_TCP=1
 APPS += rest-http
 endif
 

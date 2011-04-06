@@ -33,7 +33,20 @@ RESOURCE(helloworld, METHOD_GET, "helloworld");
 void
 helloworld_handler(REQUEST* request, RESPONSE* response)
 {
-  sprintf(temp,"Hello World!\n");
+  char len[4];
+  int length = 12;
+  char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now";
+
+  if (rest_get_query_variable(request, "len", len, 4)) {
+    length = atoi(len);
+    if (length<0) length = 0;
+    if (length>99) length = 99;
+    memcpy(temp, message, length);
+    temp[length] = '\0';
+  } else {
+    memcpy(temp, message, length);
+    temp[length] = '\0';
+  }
 
   rest_set_header_content_type(response, TEXT_PLAIN);
   rest_set_response_payload(response, temp, strlen(temp));
