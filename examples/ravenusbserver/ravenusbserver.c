@@ -95,7 +95,7 @@ struct telnetd_state {
 
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
-static unsigned char uart_buf_data[96] = {0};
+static unsigned char uart_buf_data[128] = {0};
 static char state = 0;
 
 static void telnet(char *str);
