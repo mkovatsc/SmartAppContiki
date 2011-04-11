@@ -33,6 +33,7 @@
 /*---------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <avr/eeprom.h>
 #include "contiki-raven.h"
 #include "rs232.h"
@@ -208,14 +209,37 @@ static void ATInterpreterProcessCommand(char* command)
 	}
 }
 
+static struct {
+	uint16_t is_temperature;
+	uint16_t target_temperature;
+	uint16_t battery;
+	uint8_t valve;
+} poll_data;
+
+static void parseD(char * data){
+	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
+	if(data[0]=='D'){
+		poll_data.valve = atoi(&data[29]);
+		poll_data.is_temperature = atoi(&data[35]);
+		poll_data.target_temperature = atoi(&data[43]);
+		poll_data.battery = atoi(&data[51]);
+
+		/*char buf[20];
+		sprintf(buf, "V:%u I:%u S:%u B:%u", poll_data.valve, poll_data.is_temperature, poll_data.target_temperature, poll_data.battery);
+		telnet(buf);*/
+	}
+}
+
 
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(honeywell_process, ev, data)
 {
+	static struct etimer etimer;
 	int rx;
 	int buf_pos;
 	char buf[128];
+	static bool poll = false;
 
 	PROCESS_BEGIN();
 
@@ -223,17 +247,30 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
+	etimer_set(&etimer, CLOCK_SECOND * 10);
+
 	while (1) {
 		PROCESS_WAIT_EVENT();
-		if (ev == PROCESS_EVENT_MSG) {
+		if(ev == PROCESS_EVENT_TIMER) {
+			etimer_reset(&etimer);
+			telnet("INFO: polling...\r\nHONEYWELL> ");
+			printf("D\n");
+			poll = true;
+		} else if (ev == PROCESS_EVENT_MSG) {
 			buf_pos = 0;
 			while ((rx=ringbuf_get(&uart_buf))!=-1) {
 				if (buf_pos<126 && (char)rx=='\n') {
 					buf[buf_pos++] = '\n';
 					buf[buf_pos] = '\0';
 					//printf("%s\r\n", buf);
-					telnet(buf);
-					telnet("HONEYWELL> ");
+					if(poll){
+						poll = false;
+						parseD(buf);
+					}
+					else{
+						telnet(buf);
+						telnet("HONEYWELL> ");
+					}
 					//ATInterpreterProcessCommand(buf);
 					buf_pos = 0;
 					continue;
