@@ -87,6 +87,12 @@
 #define BLOCKING_TX 1
 #define NULLRDC_CONF_802154_AUTOACK_HW 1
 
+#define USE_WDT 0
+
+#ifndef WDT_TIMEOUT
+#define WDT_TIMEOUT 5000 /* watchdog timeout in ms */
+#endif
+
 /* end of mc1322x specific config. */
 
 /* start of conitki config. */
@@ -150,6 +156,8 @@
 #endif /* RF_CHANNEL */
 
 #define CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT 0
+
+#define IEEE802154_CONF_PANID       0xABCD
 
 #define PROFILE_CONF_ON 0
 #define ENERGEST_CONF_ON 0

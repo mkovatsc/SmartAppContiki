@@ -48,6 +48,7 @@
 #include "lib/random.h"
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
+#include "lib/include/uart1.h"
 
 #if WITH_UIP6
 #include "net/sicslowpan.h"
@@ -201,6 +202,13 @@ init_lowlevel(void)
 	*CRM_RTC_TIMEOUT = 32768 * 10; 
 #else 
 	*CRM_RTC_TIMEOUT = cal_rtc_secs * 10;
+#endif
+
+#if (USE_WDT == 1)
+	/* set the watchdog timer timeout to 1 sec */
+	cop_timeout_ms(WDT_TIMEOUT);
+	/* enable the watchdog timer */
+	CRM->COP_CNTLbits.COP_EN = 1;
 #endif
 
 	/* XXX debug */
@@ -479,7 +487,10 @@ main(void)
   while(1) {
 	  check_maca();
 
-	  /* TODO: replace this with a uart rx interrupt */
+#if (USE_WDT == 1)
+	  cop_service();
+#endif
+
 	  if(uart1_input_handler != NULL) {
 		  if(uart1_can_get()) {
 			  uart1_input_handler(uart1_getc());

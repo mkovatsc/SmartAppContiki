@@ -5,10 +5,12 @@
 #include "contiki-net.h"
 #include "rest.h"
 
+#if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
 #include "dev/light-sensor.h"
 #include "dev/battery-sensor.h"
 #include "dev/sht11-sensor.h"
 #include "dev/leds.h"
+#endif /*defined (CONTIKI_TARGET_SKY)*/
 
 #define DEBUG 1
 #if DEBUG
@@ -52,6 +54,23 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
   rest_set_response_payload(response, temp, strlen(temp));
 }
 
+RESOURCE(discover, METHOD_GET, ".well-known/core");
+void
+discover_handler(REQUEST* request, RESPONSE* response)
+{
+  int index = 0;
+  index += sprintf(temp + index, "%s", "</helloworld>;rt=\"HelloWorldText\"");
+#if defined (CONTIKI_TARGET_SKY)
+  index += sprintf(temp + index, ",%s", "</led>;rt=\"LedControl\"");
+  index += sprintf(temp + index, ",%s", "</light>;rt=\"LightSensor\"");
+  index += sprintf(temp + index, ",%s", "</toggle>;rt=\"ToggleRedLED\"");
+#endif /*defined (CONTIKI_TARGET_SKY)*/
+
+  rest_set_response_payload(response, temp, strlen(temp));
+  rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+}
+
+#if defined (CONTIKI_TARGET_SKY)
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
 RESOURCE(led, METHOD_POST | METHOD_PUT , "led");
 
@@ -133,21 +152,8 @@ toggle_handler(REQUEST* request, RESPONSE* response)
 {
   leds_toggle(LEDS_RED);
 }
+#endif /*defined (CONTIKI_TARGET_SKY)*/
 
-RESOURCE(discover, METHOD_GET, ".well-known/core");
-void
-discover_handler(REQUEST* request, RESPONSE* response)
-{
-  int index = 0;
-  index += sprintf(temp + index, "%s,", "</helloworld>;rt=\"HelloWorldText\"");
-  index += sprintf(temp + index, "%s,", "</led>;rt=\"LedControl\"");
-  index += sprintf(temp + index, "%s,", "</light>;rt=\"LightSensor\"");
-  index += sprintf(temp + index, "%s", "</toggle>;rt=\"ToggleRedLED\"");
-
-  rest_set_response_payload(response, temp, strlen(temp));
-  rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
-  rest_set_header_etag(response, 0xABCDEF);
-}
 
 PROCESS(rest_server_example, "Rest Server Example");
 AUTOSTART_PROCESSES(&rest_server_example);
@@ -162,14 +168,16 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("HTTP Server\n");
 #endif
 
-  SENSORS_ACTIVATE(light_sensor);
-
   rest_init();
 
-  rest_activate_resource(&resource_helloworld);
+#if defined (CONTIKI_TARGET_SKY)
+  SENSORS_ACTIVATE(light_sensor);
   rest_activate_resource(&resource_led);
   rest_activate_resource(&resource_light);
   rest_activate_resource(&resource_toggle);
+#endif /*defined (CONTIKI_TARGET_SKY)*/
+
+  rest_activate_resource(&resource_helloworld);
   rest_activate_resource(&resource_discover);
 
   PROCESS_END();

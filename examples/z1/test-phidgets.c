@@ -44,24 +44,27 @@
 #include "dev/button-sensor.h"
 #include "dev/leds.h"
 #include "dev/z1-phidgets.h"
-#include <stdio.h>
 
 /*---------------------------------------------------------------------------*/
-PROCESS(test_button_process, "Test button");
+PROCESS(test_button_process, "Test Button & Phidgets");
 AUTOSTART_PROCESSES(&test_button_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(test_button_process, ev, data)
 {
-  static struct etimer et;
+  //static struct etimer et;
   PROCESS_BEGIN();
   SENSORS_ACTIVATE(phidgets);
+  SENSORS_ACTIVATE(button_sensor);
 
   while(1) {
-    etimer_set(&et, CLOCK_SECOND/2);
+    //etimer_set(&et, CLOCK_SECOND/2);
+    printf("Please press the User Button\n");
+    PROCESS_WAIT_EVENT_UNTIL(ev == sensors_event &&
+                             data == &button_sensor);
 
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    //PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     leds_toggle(LEDS_GREEN);
-    printf("Button clicked\n");
+    //printf("Button clicked\n");
     printf("Phidget 5V 1:%d\n", phidgets.value(PHIDGET5V_1));
     printf("Phidget 5V 2:%d\n", phidgets.value(PHIDGET5V_2));
     printf("Phidget 3V 1:%d\n", phidgets.value(PHIDGET3V_1));
