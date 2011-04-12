@@ -1,4 +1,4 @@
-all: rest-server-example coap-client-example
+all: rest-server-example # coap-client-example
 
 CONTIKI=../..
 
@@ -6,7 +6,7 @@ CONTIKI=../..
 UIP_CONF_IPV6=1
 
 # variable for this Makefile
-WITH_COAP=1
+WITH_COAP=3
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
@@ -21,7 +21,11 @@ CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
-ifeq ($(WITH_COAP), 1)
+ifeq ($(WITH_COAP), 3)
+CFLAGS += -DWITH_COAP
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += rest-coap-03
+else ifeq ($(WITH_COAP), 1)
 CFLAGS += -DWITH_COAP
 CFLAGS += -DUIP_CONF_TCP=0
 APPS += rest-coap

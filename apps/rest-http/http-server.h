@@ -13,7 +13,7 @@ typedef int (*service_callback) (http_request_t* request, http_response_t* respo
 /*
  *Setter of the service callback, this callback will be called in case of HTTP request.
  */
-void http_set_service_callback(service_callback callback);
+void set_service_callback(service_callback callback);
 
 /*
  * Setter for the status code (200, 201, etc) of the response.

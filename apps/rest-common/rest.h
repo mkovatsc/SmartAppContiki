@@ -5,9 +5,11 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 
+struct resource_t;
+struct periodic_resource_t;
+
 #ifdef WITH_COAP
-  #include "coap-common.h"
-#include "coap-server.h"
+  #include "coap-server.h"
   #define REQUEST coap_packet_t
   #define RESPONSE coap_packet_t
   #define SERVER_PROCESS (&coap_server)
@@ -20,7 +22,6 @@
   #define SERVER_PROCESS (&http_server)
 #endif /*WITH_COAP*/
 
-struct resource_t;
 
 /*REST method types*/
 typedef enum {
@@ -65,6 +66,7 @@ struct periodic_resource_t {
   struct uip_udp_conn *client_conn;
 };
 typedef struct periodic_resource_t periodic_resource_t;
+
 
 /*
  * Macro to define a Resource
@@ -139,7 +141,7 @@ int rest_set_header_content_type(RESPONSE* response, content_type_t content_type
 /*
  * Setter for the response etag header
  */
-int rest_set_header_etag(RESPONSE* response, uint8_t* etag, uint8_t size);
+int rest_set_header_etag(RESPONSE* response, uint32_t etag);
 
 /*
  * Setter for the status code (200, 201, etc) of the response.

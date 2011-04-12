@@ -17,24 +17,17 @@
 
 /*FIXME it is possible to define some of the rest functions as MACROs rather than functions full of ifdefs.*/
 
-PROCESS_NAME(rest_manager_process);
-
 LIST(restful_services);
-LIST(restful_periodic_services);
 
 void
 rest_init(void)
 {
   list_init(restful_services);
 
-#ifdef WITH_COAP
-  coap_set_service_callback(rest_invoke_restful_service);
-#else /*WITH_COAP*/
-  http_set_service_callback(rest_invoke_restful_service);
-#endif /*WITH_COAP*/
+  set_service_callback(rest_invoke_restful_service);
 
-  /*Start rest framework process*/
-  process_start(&rest_manager_process, NULL);
+  /*Start rest server process*/
+  process_start(SERVER_PROCESS, NULL);
 }
 
 void
@@ -47,7 +40,9 @@ rest_activate_resource(resource_t* resource)
 void
 rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
-  list_add(restful_periodic_services, periodic_resource);
+#ifdef WITH_COAP
+  coap_activate_periodic_resource(periodic_resource);
+#endif /*WITH_COAP*/
   rest_activate_resource(periodic_resource->resource);
 }
 
@@ -200,15 +195,14 @@ rest_set_header_content_type(RESPONSE* response, content_type_t content_type)
 }
 
 int
-rest_set_header_etag(RESPONSE* response, uint8_t* etag, uint8_t size)
+rest_set_header_etag(RESPONSE* response, uint32_t etag)
 {
 #ifdef WITH_COAP
-  return coap_set_header_etag(response, etag, size);
+  return coap_set_header_etag(response, etag);
 #else
   /*FIXME for now etag should be a "/0" ending string for http part*/
-  char temp_etag[10];
-  memcpy(temp_etag, etag, size);
-  temp_etag[size] = 0;
+  char temp_etag[5];
+  sprintf(temp_etag, "%04x", etag);
   return http_set_res_header(response, HTTP_HEADER_NAME_ETAG, temp_etag, 1);
 #endif /*WITH_COAP*/
 }
@@ -234,27 +228,6 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
 
       if (resource->methods_to_handle & method) {
 
-        /*FIXME Need to move somewhere else*/
-        #ifdef WITH_COAP
-        uint32_t lifetime = 0;
-        if (coap_get_header_subscription_lifetime(request, &lifetime)) {
-          PRINTF("Lifetime %lu\n", lifetime);
-
-          periodic_resource_t* periodic_resource = NULL;
-          for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);
-               periodic_resource;
-               periodic_resource = periodic_resource->next) {
-            if (periodic_resource->resource == resource) {
-              PRINTF("Periodic Resource Found\n");
-              PRINT6ADDR(&request->addr);
-              periodic_resource->lifetime = lifetime;
-              stimer_set(periodic_resource->lifetime_timer, lifetime);
-              uip_ipaddr_copy(&periodic_resource->addr, &request->addr);
-            }
-          }
-        }
-        #endif /*WITH_COAP*/
-
         /*call pre handler if it exists*/
         if (!resource->pre_handler || resource->pre_handler(request, response)) {
           /* call handler function*/
@@ -277,56 +250,4 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
   }
 
   return found;
-}
-
-PROCESS(rest_manager_process, "Rest Process");
-
-PROCESS_THREAD(rest_manager_process, ev, data)
-{
-  PROCESS_BEGIN();
-
-  /*start the coap or http server*/
-  process_start(SERVER_PROCESS, NULL);
-
-  PROCESS_PAUSE();
-
-  /*Periodic resources are only available to COAP implementation*/
-#ifdef WITH_COAP
-  periodic_resource_t* periodic_resource = NULL;
-  for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
-    if (periodic_resource->period) {
-      PRINTF("Set timer for Res: %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
-      etimer_set(periodic_resource->handler_cb_timer, periodic_resource->period);
-    }
-  }
-
-  while(1) {
-    PROCESS_WAIT_EVENT();
-    if (ev == PROCESS_EVENT_TIMER) {
-      for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
-        if (periodic_resource->period && etimer_expired(periodic_resource->handler_cb_timer)) {
-          PRINTF("Etimer expired for %s (period:%lu life:%lu)\n", periodic_resource->resource->url, periodic_resource->period, periodic_resource->lifetime);
-          /*call the periodic handler function if exists*/
-          if (periodic_resource->periodic_handler) {
-            if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
-              PRINTF("RES CHANGE\n");
-              if (!stimer_expired(periodic_resource->lifetime_timer)) {
-                PRINTF("TIMER NOT EXPIRED\n");
-                resource_changed(periodic_resource);
-                periodic_resource->lifetime = stimer_remaining(periodic_resource->lifetime_timer);
-              } else {
-                periodic_resource->lifetime = 0;
-              }
-            }
-
-            PRINTF("%s lifetime %lu (%lu) expired %d\n", periodic_resource->resource->url, stimer_remaining(periodic_resource->lifetime_timer), periodic_resource->lifetime, stimer_expired(periodic_resource->lifetime_timer));
-          }
-          etimer_reset(periodic_resource->handler_cb_timer);
-        }
-      }
-    }
-  }
-#endif /*WITH_COAP*/
-
-  PROCESS_END();
 }

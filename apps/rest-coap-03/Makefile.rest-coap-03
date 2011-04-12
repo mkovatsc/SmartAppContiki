@@ -1,0 +1,4 @@
+rest-coap-03_src = coap-server.c coap-03.c
+
+APPS += rest-common
+include $(CONTIKI)/apps/rest-common/Makefile.rest-common

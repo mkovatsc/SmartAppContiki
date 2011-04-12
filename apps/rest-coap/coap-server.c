@@ -38,7 +38,7 @@ static uint16_t current_tid;
 static service_callback service_cbk = NULL;
 
 void
-coap_set_service_callback(service_callback callback)
+set_service_callback(service_callback callback)
 {
   service_cbk = callback;
 }
@@ -374,9 +374,11 @@ coap_set_header_uri(coap_packet_t* packet, char* uri)
 }
 
 int
-coap_set_header_etag(coap_packet_t* packet, uint8_t* etag, uint8_t size)
+coap_set_header_etag(coap_packet_t* packet, uint32_t etag)
 {
-  return coap_set_option(packet, Option_Type_Etag, size, etag);
+  uint8_t temp[4];
+  uint16_t len = write_variable_int(temp, etag);
+  return coap_set_option(packet, Option_Type_Etag, len, temp);
 }
 
 void

@@ -120,9 +120,9 @@ light_handler(REQUEST* request, RESPONSE* response)
   sprintf(temp,"%d.%d", 0, 0);
 #endif /*CONTIKI_TARGET_SKY*/
 
-  char etag[4] = "ABCD";
+  uint32_t etag = 0xABCD;
   rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_header_etag(response, etag, sizeof(etag));
+  rest_set_header_etag(response, etag);
   rest_set_response_payload(response, temp, strlen(temp));
 }
 
@@ -146,6 +146,7 @@ discover_handler(REQUEST* request, RESPONSE* response)
 
   rest_set_response_payload(response, temp, strlen(temp));
   rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+  rest_set_header_etag(response, 0xABCDEF);
 }
 
 PROCESS(rest_server_example, "Rest Server Example");

@@ -27,7 +27,7 @@ int coap_get_header_block(coap_packet_t* packet, block_option_t* block);
 int coap_set_header_block(coap_packet_t* packet, uint32_t number, uint8_t more, uint8_t size);
 
 int coap_set_header_uri(coap_packet_t* packet, char* uri);
-int coap_set_header_etag(coap_packet_t* packet, uint8_t* etag, uint8_t size);
+int coap_set_header_etag(coap_packet_t* packet, uint32_t etag);
 
 void coap_set_code(coap_packet_t* packet, status_code_t code);
 
@@ -46,7 +46,7 @@ typedef int (*service_callback) (coap_packet_t* request, coap_packet_t* response
 /*
  *Setter of the service callback, this callback will be called in case of HTTP request.
  */
-void coap_set_service_callback(service_callback callback);
+void set_service_callback(service_callback callback);
 
 struct periodic_resource_t;
 void resource_changed(struct periodic_resource_t* resource);

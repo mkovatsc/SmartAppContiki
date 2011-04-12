@@ -130,7 +130,7 @@ static const char* is_request_hdr_needed(const char* header_name)
 static service_callback service_cbk = NULL;
 
 void
-http_set_service_callback(service_callback callback)
+set_service_callback(service_callback callback)
 {
   service_cbk = callback;
 }
