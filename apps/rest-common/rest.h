@@ -125,9 +125,6 @@ int rest_get_query_variable(REQUEST* request, const char *name, char* output, ui
  */
 int rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
 
-method_t rest_get_method_type(REQUEST* request);
-void rest_set_method_type(REQUEST* request, method_t method);
-
 /*
  * Getter for the request content type
  */
@@ -138,10 +135,30 @@ content_type_t rest_get_header_content_type(REQUEST* request);
  */
 int rest_set_header_content_type(RESPONSE* response, content_type_t content_type);
 
-/*
- * Setter for the response etag header
- */
+
+int rest_get_header_etag(RESPONSE* response, uint32_t *etag);
 int rest_set_header_etag(RESPONSE* response, uint32_t etag);
+
+int rest_get_header_max_age(RESPONSE* response, uint32_t *age);
+int rest_set_header_max_age(RESPONSE* response, uint32_t age);
+
+//int rest_set_header_uri(RESPONSE* response, char *uri, uint16_t len); // use tokens
+
+int rest_get_header_location(RESPONSE* response, char **uri);
+int rest_set_header_location(RESPONSE* response, char *uri);
+
+int rest_get_header_observe(RESPONSE* response, uint32_t *observe);
+int rest_set_header_observe(RESPONSE* response, uint32_t observe);
+
+int rest_get_header_token(RESPONSE* response, uint16_t *token);
+int rest_set_header_token(RESPONSE* response, uint16_t token);
+
+int rest_get_header_block(RESPONSE* response, uint32_t *num, uint8_t *more, uint16_t *size);
+int rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size);
+
+
+method_t rest_get_method_type(REQUEST* request);
+void rest_set_method_type(REQUEST* request, method_t method);
 
 /*
  * Setter for the status code (200, 201, etc) of the response.
@@ -151,8 +168,9 @@ void rest_set_response_status(RESPONSE* response, status_code_t status);
 /*
  * Setter for the payload of the request and response
  */
-void rest_set_request_payload(RESPONSE* response, uint8_t* payload, uint16_t size);
+void rest_set_request_payload(REQUEST* response, uint8_t* payload, uint16_t size);
 void rest_set_response_payload(RESPONSE* response, uint8_t* payload, uint16_t size);
+
 
 /*
  * Getter method for user specific data.

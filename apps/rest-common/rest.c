@@ -195,17 +195,128 @@ rest_set_header_content_type(RESPONSE* response, content_type_t content_type)
 }
 
 int
+rest_get_header_etag(RESPONSE* response, uint32_t *etag)
+{
+#ifdef WITH_COAP
+  return coap_get_header_etag(response, etag);
+#else
+  return 0; // FIXME
+#endif /*WITH_COAP*/
+}
+int
 rest_set_header_etag(RESPONSE* response, uint32_t etag)
 {
 #ifdef WITH_COAP
   return coap_set_header_etag(response, etag);
 #else
-  /*FIXME for now etag should be a "/0" ending string for http part*/
+  /* restricted to comply with 32-bit size for CoAP */
   char temp_etag[5];
   sprintf(temp_etag, "%04x", etag);
   return http_set_res_header(response, HTTP_HEADER_NAME_ETAG, temp_etag, 1);
 #endif /*WITH_COAP*/
 }
+
+int
+rest_get_header_max_age(RESPONSE* response, uint32_t *age)
+{
+#ifdef WITH_COAP
+  return coap_get_header_max_age(response, age);
+#else
+  return 0; // FIXME
+#endif /*WITH_COAP*/
+}
+int
+rest_set_header_max_age(RESPONSE* response, uint32_t age)
+{
+#ifdef WITH_COAP
+  return coap_set_header_max_age(response, age);
+#else
+  /* Cache-Control: max-age=age for HTTP */
+  char temp_age[19];
+  sprintf(temp_age, "max-age=%lu", age);
+  return http_set_res_header(response, HTTP_HEADER_CACHE_CONTROL, temp_age, 1);
+#endif /*WITH_COAP*/
+}
+
+//int rest_set_header_uri(RESPONSE* response, char *uri, uint16_t len); // use tokens
+
+int
+rest_get_header_location(RESPONSE* response, char **uri)
+{
+#ifdef WITH_COAP
+  return coap_get_header_location(response, uri);
+#else
+  return 0; // FIXME http_set_res_header(response, HTTP_HEADER_NAME_LOCATION, uri, 1);
+#endif /*WITH_COAP*/
+}
+int
+rest_set_header_location(RESPONSE* response, char *uri)
+{
+#ifdef WITH_COAP
+  return coap_set_header_location(response, uri);
+#else
+  return http_set_res_header(response, HTTP_HEADER_NAME_LOCATION, uri, 1);
+#endif /*WITH_COAP*/
+}
+
+int
+rest_get_header_observe(RESPONSE* response, uint32_t *observe)
+{
+#ifdef WITH_COAP
+  return coap_get_header_observe(response, observe);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+int
+rest_set_header_observe(RESPONSE* response, uint32_t observe)
+{
+#ifdef WITH_COAP
+  return coap_set_header_observe(response, observe);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+
+int
+rest_get_header_token(RESPONSE* response, uint16_t *token)
+{
+#ifdef WITH_COAP
+  return coap_get_header_token(response, token);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+int
+rest_set_header_token(RESPONSE* response, uint16_t token)
+{
+#ifdef WITH_COAP
+  return coap_set_header_token(response, token);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+
+int
+rest_get_header_block(RESPONSE* response, uint32_t *num, uint8_t *more, uint16_t *size)
+{
+#ifdef WITH_COAP
+  return coap_get_header_block(response, num, more, size);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+int
+rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size)
+{
+#ifdef WITH_COAP
+  return coap_set_header_block(response, num, more, size);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+
+
 
 int
 rest_invoke_restful_service(REQUEST* request, RESPONSE* response)

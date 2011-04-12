@@ -24,7 +24,7 @@
 #define PRINTLLADDR(addr)
 #endif
 
-char temp[111]; // ./well-known/core has longest payload 110 + 1 string delimiter
+static char temp[127]; // ./well-known/core has longest payload 126 + 1 string delimiter
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
 RESOURCE(helloworld, METHOD_GET, "helloworld");
@@ -54,12 +54,53 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
   rest_set_response_payload(response, temp, strlen(temp));
 }
 
+/* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
+RESOURCE(mirror, METHOD_GET, "mirror");
+
+/* For each resource defined, there corresponds an handler method which should be defined too.
+ * Name of the handler method should be [resource name]_handler
+ * */
+void
+mirror_handler(REQUEST* request, RESPONSE* response)
+{
+  rest_set_header_max_age(response, 3600);
+  rest_set_header_etag(response, 0xABCDEF);
+  rest_set_header_location(response, "/fake");
+  rest_set_header_observe(response, 10);
+  rest_set_header_token(response, 0x0180);
+  //rest_set_header_block(response, uint32_t num, uint8_t more, uint16_t size);
+
+  content_type_t content = 0;
+  uint32_t max_age = 0;
+  uint32_t etag = 0;
+  char *location = "";
+  uint32_t observe = 0;
+  uint16_t token = 0;
+  uint32_t block_num = 0;
+  uint8_t block_more = 0;
+  uint16_t block_size = 0;
+
+  content = rest_get_header_content_type(request);
+  rest_get_header_max_age(request, &max_age);
+  rest_get_header_etag(request, &etag);
+  rest_get_header_location(request, &location);
+  rest_get_header_observe(request, &observe);
+  rest_get_header_token(request, &token);
+  rest_get_header_block(request, &block_num, &block_more, &block_size);
+
+  sprintf(temp, "Content-Type: %u\nMage-Age: %lu\nETag: 0x%lX\nLocation: %s\nObserve: %lu\nToken: 0x%X\nBlock %lu%s (%u B/blk)", content, max_age, etag, location, observe, token, block_num, block_more ? "+" : "", block_size);
+
+  rest_set_header_content_type(response, TEXT_PLAIN);
+  rest_set_response_payload(response, temp, strlen(temp));
+}
+
 RESOURCE(discover, METHOD_GET, ".well-known/core");
 void
 discover_handler(REQUEST* request, RESPONSE* response)
 {
   int index = 0;
-  index += sprintf(temp + index, "%s", "</helloworld>;rt=\"HelloWorldText\"");
+  index += sprintf(temp + index, "%s", "</helloworld>;rt=\"Text\"");
+  index += sprintf(temp + index, ",%s", "</mirror>;rt=\"Mirror\"");
 #if defined (CONTIKI_TARGET_SKY)
   index += sprintf(temp + index, ",%s", "</led>;rt=\"LedControl\"");
   index += sprintf(temp + index, ",%s", "</light>;rt=\"LightSensor\"");
@@ -162,13 +203,13 @@ PROCESS_THREAD(rest_server_example, ev, data)
 {
   PROCESS_BEGIN();
 
-#ifdef WITH_COAP
-  PRINTF("COAP Server\n");
-#else
-  PRINTF("HTTP Server\n");
-#endif
+  PRINTF("Rest Server Example\n");
 
   rest_init();
+
+  rest_activate_resource(&resource_helloworld);
+  rest_activate_resource(&resource_mirror);
+  rest_activate_resource(&resource_discover);
 
 #if defined (CONTIKI_TARGET_SKY)
   SENSORS_ACTIVATE(light_sensor);
@@ -176,9 +217,6 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_activate_resource(&resource_light);
   rest_activate_resource(&resource_toggle);
 #endif /*defined (CONTIKI_TARGET_SKY)*/
-
-  rest_activate_resource(&resource_helloworld);
-  rest_activate_resource(&resource_discover);
 
   PROCESS_END();
 }
