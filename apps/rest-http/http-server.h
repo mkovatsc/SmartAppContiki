@@ -51,9 +51,21 @@ int http_get_query_variable(http_request_t* request, const char *name, char* out
 int http_get_post_variable(http_request_t* request, const char *name, char* output, uint16_t output_size);
 
 /*
+ * Get the raw payload.
+ * Returns the payload lenght.
+ * Payload pointer is pointed to in-place payload.
+ */
+int http_get_req_payload(http_request_t* request, uint8_t **payload);
+
+/*
  * Get the header "Content-Type".
  */
 const char* http_get_content_type_string(content_type_t content_type);
 content_type_t http_get_header_content_type(http_request_t* request);
+
+/*
+ * Get the header "Host".
+ */
+int http_get_header_host(http_request_t *request, const char **host);
 
 #endif /*HTTPSERVER_H_*/

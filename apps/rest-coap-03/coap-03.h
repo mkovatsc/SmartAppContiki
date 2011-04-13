@@ -12,17 +12,19 @@
 
 
 #ifndef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS  3
+#define COAP_MAX_OPEN_TRANSACTIONS  1
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
-#ifndef COAP_MAX_PACKET_SIZE
-#define COAP_MAX_PACKET_SIZE  152
+#ifndef COAP_MAX_PACKET_SIZE /*                       0/14          48 for IPv6 (28 for IPv4) */
+#define COAP_MAX_PACKET_SIZE  (UIP_CONF_BUFFER_SIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN) // 132
 #endif /* COAP_MAX_PACKET_SIZE */
 
-#ifndef COAP_MAX_PAYLOAD_SIZE
-#define COAP_MAX_PAYLOAD_SIZE  120
-#endif /* COAP_MAX_PAYLOAD_SIZE */
-
+/*
+ * Conservative size limit, as not all options have to be set at the same time.
+ */
+#ifndef COAP_MAX_PAYLOAD_SIZE /*                      Hdr CoT Age Tag Obs Tok Blo Loc*/
+#define COAP_MAX_PAYLOAD_SIZE  (COAP_MAX_PACKET_SIZE - 4 - 2 - 5 - 5 - 5 - 5 - 4 - 0) // 102
+#endif /* COAP_MAX_PAYLOAD_SIZE */                  /* 30 + Location */
 
 
 /*COAP method types*/
@@ -108,21 +110,6 @@ typedef enum {
     } \
   }
 
-#define INT2BYTES(bytes,var,len) { \
-    int i = 0; \
-    do { \
-      bytes[i] = 0xFF & var; \
-      var >>= 8; \
-      ++i; \
-    } while (var); \
-    len = i; \
-    for (i=0; i<len/2; ++i) { \
-      char tmp = bytes[i]; \
-      bytes[i] = bytes[len-1-i]; \
-      bytes[len-1-i] = tmp; \
-    } \
-  }
-
 #define SET_OPTION(field, opt) field |= 1<<opt
 #define IS_OPTION(field, opt) field & 1<<opt
 
@@ -157,7 +144,7 @@ typedef struct {
   content_type_t content_type; /* Parse options once and store; allows setting options in random order  */
   uint32_t max_age;
   uint32_t etag;
-  uint32_t observe; /* TODO: is now 0-2 bytes */
+  uint32_t observe; /* 0-4 bytes for coap-03 */
   uint16_t token;
   uint32_t block_num;
   uint16_t block_size;
@@ -197,31 +184,29 @@ void coap_message_init(coap_packet_t* packet, char *buffer, uint8_t type, uint8_
 int coap_message_serialize(coap_packet_t* packet);
 void coap_message_parse(coap_packet_t *request, char *data, uint16_t data_len);
 
-void coap_set_code(coap_packet_t* packet, status_code_t code);
-
 coap_method_t coap_get_method(coap_packet_t* packet);
 void coap_set_method(coap_packet_t* packet, coap_method_t method);
 
-uint16_t coap_get_payload(coap_packet_t* packet, uint8_t** payload);
-int coap_set_payload(coap_packet_t* packet, uint8_t* payload, uint16_t size);
+void coap_set_code(coap_packet_t* packet, status_code_t code);
 
 int coap_get_query_variable(coap_packet_t* packet, const char *name, char* output, uint16_t output_size);
-
 int coap_get_post_variable(coap_packet_t* packet, const char *name, char* output, uint16_t output_size);
 
 content_type_t coap_get_header_content_type(coap_packet_t *packet);
 int coap_set_header_content_type(coap_packet_t* packet, content_type_t content_type);
 
-int coap_get_header_etag(coap_packet_t* packet, uint32_t *etag);
-int coap_set_header_etag(coap_packet_t* packet, uint32_t etag);
-
 int coap_get_header_max_age(coap_packet_t* packet, uint32_t *age);
 int coap_set_header_max_age(coap_packet_t* packet, uint32_t age);
 
-//int coap_set_header_uri(coap_packet_t* packet, char *uri, uint16_t len); // use tokens
+int coap_get_header_etag(coap_packet_t* packet, uint32_t *etag); // FIXME included for debugging, remove as only for responses
+int coap_set_header_etag(coap_packet_t* packet, uint32_t etag);
 
-int coap_get_header_location(coap_packet_t* packet, char **uri);
+int coap_get_header_uri_host(coap_packet_t* packet, const char **host); // in-place host might not be 0-terminated
+
+int coap_get_header_location(coap_packet_t* packet, const char **uri); // FIXME included for debugging, remove as only for responses
 int coap_set_header_location(coap_packet_t* packet, char *uri);
+
+//int coap_set_header_uri(coap_packet_t* packet, char *uri, uint16_t len); // use tokens
 
 int coap_get_header_observe(coap_packet_t* packet, uint32_t *observe);
 int coap_set_header_observe(coap_packet_t* packet, uint32_t observe);
@@ -231,5 +216,8 @@ int coap_set_header_token(coap_packet_t* packet, uint16_t token);
 
 int coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size);
 int coap_set_header_block(coap_packet_t* packet, uint32_t num, uint8_t more, uint16_t size);
+
+int coap_get_payload(coap_packet_t* packet, uint8_t** payload);
+int coap_set_payload(coap_packet_t* packet, uint8_t* payload, uint16_t size);
 
 #endif /* COAP_COMMON_H_ */

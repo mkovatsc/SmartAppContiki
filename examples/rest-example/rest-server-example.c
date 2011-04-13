@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -24,10 +24,10 @@
 #define PRINTLLADDR(addr)
 #endif
 
-static char temp[127]; // ./well-known/core has longest payload 126 + 1 string delimiter
+static char temp[103]; // ./well-known/core has longest payload 102 + 1 string delimiter
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
-RESOURCE(helloworld, METHOD_GET, "helloworld");
+RESOURCE(helloworld, METHOD_GET, "hello");
 
 /* For each resource defined, there corresponds an handler method which should be defined too.
  * Name of the handler method should be [resource name]_handler
@@ -55,7 +55,7 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
 }
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
-RESOURCE(mirror, METHOD_GET, "mirror");
+RESOURCE(mirror, METHOD_GET, "dbg");
 
 /* For each resource defined, there corresponds an handler method which should be defined too.
  * Name of the handler method should be [resource name]_handler
@@ -63,34 +63,44 @@ RESOURCE(mirror, METHOD_GET, "mirror");
 void
 mirror_handler(REQUEST* request, RESPONSE* response)
 {
-  rest_set_header_max_age(response, 3600);
-  rest_set_header_etag(response, 0xABCDEF);
-  rest_set_header_location(response, "/fake");
-  rest_set_header_observe(response, 10);
-  rest_set_header_token(response, 0x0180);
-  //rest_set_header_block(response, uint32_t num, uint8_t more, uint16_t size);
+  int index = 0;
 
-  content_type_t content = 0;
+  content_type_t content = rest_get_header_content_type(request);
   uint32_t max_age = 0;
   uint32_t etag = 0;
-  char *location = "";
+  int len = 0;
+  const char *host = "";
+  const char *location = "";
   uint32_t observe = 0;
   uint16_t token = 0;
   uint32_t block_num = 0;
   uint8_t block_more = 0;
   uint16_t block_size = 0;
 
-  content = rest_get_header_content_type(request);
-  rest_get_header_max_age(request, &max_age);
-  rest_get_header_etag(request, &etag);
-  rest_get_header_location(request, &location);
-  rest_get_header_observe(request, &observe);
-  rest_get_header_token(request, &token);
-  rest_get_header_block(request, &block_num, &block_more, &block_size);
-
-  sprintf(temp, "Content-Type: %u\nMage-Age: %lu\nETag: 0x%lX\nLocation: %s\nObserve: %lu\nToken: 0x%X\nBlock %lu%s (%u B/blk)", content, max_age, etag, location, observe, token, block_num, block_more ? "+" : "", block_size);
+  index += sprintf(temp, "CT %u\n", content);
+  if (rest_get_header_max_age(request, &max_age))
+    index += sprintf(temp+index, "MA %lu\n", max_age);
+  if (rest_get_header_etag(request, &etag))
+    index += sprintf(temp+index, "ET 0x%lX\n", etag);
+  if ((len = rest_get_header_host(request, &host)))
+    index += sprintf(temp+index, "UH %.*s\n", len, host);
+  if ((len = rest_get_header_location(request, &location)))
+    index += sprintf(temp+index, "Lo %.*s\n", len, location);
+  if (rest_get_header_observe(request, &observe))
+    index += sprintf(temp+index, "Ob %lu\n", observe);
+  if (rest_get_header_token(request, &token))
+    index += sprintf(temp+index, "To 0x%X\n", token);
+  if (rest_get_header_block(request, &block_num, &block_more, &block_size))
+    index += sprintf(temp+index, "Bl %lu%s (%u)", block_num, block_more ? "+" : "", block_size);
 
   rest_set_header_content_type(response, TEXT_PLAIN);
+  rest_set_header_max_age(response, 3600);
+  rest_set_header_etag(response, 0xABCDEF);
+  rest_set_header_location(response, "/fake");
+  rest_set_header_observe(response, 10);
+  rest_set_header_token(response, 0x0180);
+  rest_set_header_block(response, 42, 0, 64);
+
   rest_set_response_payload(response, temp, strlen(temp));
 }
 
@@ -98,13 +108,14 @@ RESOURCE(discover, METHOD_GET, ".well-known/core");
 void
 discover_handler(REQUEST* request, RESPONSE* response)
 {
+  /* </hello>;rt="Text",</dbg>;rt="Mirror",</led>;rt="Control",</light>;rt="LightSensor",</toggle>;rt="Led" */
   int index = 0;
-  index += sprintf(temp + index, "%s", "</helloworld>;rt=\"Text\"");
-  index += sprintf(temp + index, ",%s", "</mirror>;rt=\"Mirror\"");
+  index += sprintf(temp + index, "%s", "</hello>;rt=\"Text\"");
+  index += sprintf(temp + index, ",%s", "</dbg>;rt=\"Mirror\"");
 #if defined (CONTIKI_TARGET_SKY)
-  index += sprintf(temp + index, ",%s", "</led>;rt=\"LedControl\"");
+  index += sprintf(temp + index, ",%s", "</led>;rt=\"Control\"");
   index += sprintf(temp + index, ",%s", "</light>;rt=\"LightSensor\"");
-  index += sprintf(temp + index, ",%s", "</toggle>;rt=\"ToggleRedLED\"");
+  index += sprintf(temp + index, ",%s", "</toggle>;rt=\"Led\"");
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
   rest_set_response_payload(response, temp, strlen(temp));
@@ -204,6 +215,14 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PROCESS_BEGIN();
 
   PRINTF("Rest Server Example\n");
+  PRINTF("uIP buffer: %u\n", UIP_CONF_BUFFER_SIZE);
+  PRINTF("LL header: %u\n", UIP_LLH_LEN);
+  PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
+#if WITH_COAP == 3
+  PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
+  PRINTF("CoAP max packet: %u\n", COAP_MAX_PACKET_SIZE);
+  PRINTF("CoAP max payload: %u\n", COAP_MAX_PAYLOAD_SIZE);
+#endif
 
   rest_init();
 

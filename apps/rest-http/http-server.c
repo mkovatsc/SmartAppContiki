@@ -122,6 +122,8 @@ static const char* is_request_hdr_needed(const char* header_name)
     header = HTTP_HEADER_NAME_CONTENT_LENGTH;
   } else if (strcmp(header_name, HTTP_HEADER_NAME_CONTENT_TYPE) == 0) {
     header = HTTP_HEADER_NAME_CONTENT_TYPE;
+  } else if (strcmp(header_name, HTTP_HEADER_NAME_HOST) == 0) {
+    header = HTTP_HEADER_NAME_HOST;
   }
 
   return header;
@@ -227,6 +229,19 @@ http_get_post_variable(http_request_t* request, const char *name, char* output, 
   }
 
   return 0;
+}
+
+int
+http_get_req_payload(http_request_t* request, uint8_t **payload)
+{
+  if (request->payload)
+  {
+    *payload = request->payload;
+    return request->payload_len;
+  } else {
+    *payload = NULL;
+    return 0;
+  }
 }
 
 static int
@@ -372,7 +387,8 @@ const char* http_get_req_header(http_request_t* request, const char* name)
   return get_header(request->headers, name);
 }
 
-content_type_t http_get_header_content_type(http_request_t* request)
+content_type_t
+http_get_header_content_type(http_request_t* request)
 {
   const char* content_type_string = http_get_req_header(request, HTTP_HEADER_NAME_CONTENT_TYPE);
   if (content_type_string) {
@@ -386,6 +402,19 @@ content_type_t http_get_header_content_type(http_request_t* request)
 
   return UNKNOWN_CONTENT_TYPE;
 }
+
+int
+http_get_header_host(http_request_t *request, const char **host)
+{
+  const char* host_string = http_get_req_header(request, HTTP_HEADER_NAME_HOST);
+  if (host_string) {
+    *host = host_string;
+    return strlen(host_string);
+  }
+
+  return 0;
+}
+
 
 static
 PT_THREAD(handle_request(connection_state_t* conn_state))
@@ -512,16 +541,15 @@ PT_THREAD(handle_request(connection_state_t* conn_state))
 static
 PT_THREAD(send_data(connection_state_t* conn_state))
 {
-  uint16_t index;
-  http_response_t* response;
-  http_header_t* header;
-  uint8_t* buffer;
+  uint16_t index = 0;
+  http_response_t* response = NULL;
+  http_header_t* header = NULL;
+  uint8_t* buffer = NULL;
 
   PSOCK_BEGIN(&(conn_state->sout));
 
   PRINTF("send_data -> \n");
 
-  index = 0;
   response = &conn_state->response;
   header = response->headers;
   buffer = allocate_buffer(200);

@@ -333,7 +333,7 @@ coap_set_header_subscription_lifetime(coap_packet_t* packet, uint32_t lifetime)
 }
 
 int
-coap_get_header_block(coap_packet_t* packet, block_option_t* block)
+coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size)
 {
   uint32_t all_block;
   PRINTF("coap_get_header_block --> \n");
@@ -342,9 +342,9 @@ coap_get_header_block(coap_packet_t* packet, block_option_t* block)
     PRINTF("Block Found len %u (first byte %u)\n", option->len, (uint16_t)option->value[0]);
 
     all_block = read_int(option->value, option->len);
-    block->number = all_block >> 4;
-    block->more = (all_block & 0x8) >> 3;
-    block->size = (all_block & 0x7);
+    *num = all_block >> 4;
+    *more = (all_block & 0x8) >> 3;
+    *size = 16 << (all_block & 0x7);
     return 1;
   }
 
@@ -352,17 +352,17 @@ coap_get_header_block(coap_packet_t* packet, block_option_t* block)
 }
 
 int
-coap_set_header_block(coap_packet_t* packet, uint32_t number, uint8_t more, uint8_t size)
+coap_set_header_block(coap_packet_t* packet, uint32_t num, uint8_t more, uint16_t size)
 {
   uint8_t temp[4];
   size = log_2(size/16);
-  number = number << 4;
-  number |= (more << 3) & 0x8;
-  number |= size & 0x7;
+  num <<= 4;
+  if (more) num |= 0x8;
+  num |= size & 0x7;
 
-  uint16_t len = write_variable_int(temp, number);
+  uint16_t len = write_variable_int(temp, num);
   PRINTF("number %lu, more %u, size %u block[0] %u block[1] %u block[2] %u block[3] %u\n",
-      number, (uint16_t)more, (uint16_t)size, (uint16_t)temp[0], (uint16_t)temp[1], (uint16_t)temp[2], (uint16_t)temp[3]);
+      num, more, size, (uint16_t)temp[0], (uint16_t)temp[1], (uint16_t)temp[2], (uint16_t)temp[3]);
   return coap_set_option(packet, Option_Type_Block, len, temp);
 }
 

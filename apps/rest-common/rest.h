@@ -101,76 +101,9 @@ void rest_activate_resource(resource_t* resource);
 void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
 
 /*
- * To be called by HTTP/COAP server as a callback function when a new service request appears.
- * This function dispatches the corresponding RESTful service.
- */
-int rest_invoke_restful_service(REQUEST* request, RESPONSE* response);
-
-/*
  * Returns the resource list
  */
 list_t rest_get_resources(void);
-
-/*
- * Returns query variable in the URL.
- * Returns true if the variable found, false otherwise.
- * Variable is put in the buffer provided.
- */
-int rest_get_query_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
-
-/*
- * Returns variable in the Post Data/Payload.
- * Returns true if the variable found, false otherwise.
- * Variable is put in the buffer provided.
- */
-int rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
-
-/*
- * Getter for the request content type
- */
-content_type_t rest_get_header_content_type(REQUEST* request);
-
-/*
- * Setter for the response content type
- */
-int rest_set_header_content_type(RESPONSE* response, content_type_t content_type);
-
-
-int rest_get_header_etag(RESPONSE* response, uint32_t *etag);
-int rest_set_header_etag(RESPONSE* response, uint32_t etag);
-
-int rest_get_header_max_age(RESPONSE* response, uint32_t *age);
-int rest_set_header_max_age(RESPONSE* response, uint32_t age);
-
-//int rest_set_header_uri(RESPONSE* response, char *uri, uint16_t len); // use tokens
-
-int rest_get_header_location(RESPONSE* response, char **uri);
-int rest_set_header_location(RESPONSE* response, char *uri);
-
-int rest_get_header_observe(RESPONSE* response, uint32_t *observe);
-int rest_set_header_observe(RESPONSE* response, uint32_t observe);
-
-int rest_get_header_token(RESPONSE* response, uint16_t *token);
-int rest_set_header_token(RESPONSE* response, uint16_t token);
-
-int rest_get_header_block(RESPONSE* response, uint32_t *num, uint8_t *more, uint16_t *size);
-int rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size);
-
-
-method_t rest_get_method_type(REQUEST* request);
-void rest_set_method_type(REQUEST* request, method_t method);
-
-/*
- * Setter for the status code (200, 201, etc) of the response.
- */
-void rest_set_response_status(RESPONSE* response, status_code_t status);
-
-/*
- * Setter for the payload of the request and response
- */
-void rest_set_request_payload(REQUEST* response, uint8_t* payload, uint16_t size);
-void rest_set_response_payload(RESPONSE* response, uint8_t* payload, uint16_t size);
-
 
 /*
  * Getter method for user specific data.
@@ -195,5 +128,74 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  * Can be used to do cleanup (deallocate memory, etc) after resource handling.
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
+
+/*
+ * To be called by HTTP/COAP server as a callback function when a new service request appears.
+ * This function dispatches the corresponding RESTful service.
+ */
+int rest_invoke_restful_service(REQUEST* request, RESPONSE* response);
+
+
+/*
+ * Returns the RESTful method
+ */
+method_t rest_get_method_type(REQUEST* request);
+
+// FIXME remove, servers do not send requests, dependency for periodic example
+void rest_set_method_type(REQUEST* request, method_t method);
+
+/*
+ * Setter for the status code (200, 201, etc) of the response.
+ */
+void rest_set_response_status(RESPONSE* response, status_code_t status);
+
+/*
+ * Returns query variable in the URL.
+ * Returns true if the variable found, false otherwise.
+ * Variable is put in the buffer provided.
+ */
+int rest_get_query_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
+
+/*
+ * Returns variable in the Post Data/Payload.
+ * Returns true if the variable found, false otherwise.
+ * Variable is put in the buffer provided.
+ */
+int rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
+
+/*
+ * Getter for the request content type
+ */
+content_type_t rest_get_header_content_type(REQUEST* request);
+int rest_set_header_content_type(RESPONSE* response, content_type_t content_type);
+
+int rest_get_header_max_age(REQUEST* request, uint32_t *age);
+int rest_set_header_max_age(RESPONSE* response, uint32_t age);
+
+int rest_get_header_etag(REQUEST* request, uint32_t *etag); // FIXME included for debugging, remove as only for responses
+int rest_set_header_etag(RESPONSE* response, uint32_t etag);
+
+int rest_get_header_host(REQUEST* request, const char **host); // in-place host might not be 0-terminated
+
+int rest_get_header_location(REQUEST* request, const char **uri); // FIXME included for debugging, remove as only for responses
+int rest_set_header_location(RESPONSE* response, char *uri);
+
+//int rest_set_header_uri(RESPONSE* response, char *uri, uint16_t len); // use tokens
+
+int rest_get_header_observe(REQUEST* request, uint32_t *observe);
+int rest_set_header_observe(RESPONSE* response, uint32_t observe);
+
+int rest_get_header_token(REQUEST* request, uint16_t *token);
+int rest_set_header_token(RESPONSE* response, uint16_t token);
+
+int rest_get_header_block(REQUEST* request, uint32_t *num, uint8_t *more, uint16_t *size);
+int rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size);
+
+/*
+ * Setter for the payload of the request and response
+ */
+int rest_get_request_payload(REQUEST* request, uint8_t **payload);
+//int rest_set_request_payload(REQUEST* request, uint8_t *payload, uint16_t size); // FIXME remove, servers do not send requests, dependency for periodic example
+int rest_set_response_payload(RESPONSE* response, uint8_t *payload, uint16_t size);
 
 #endif /*REST_H_*/
