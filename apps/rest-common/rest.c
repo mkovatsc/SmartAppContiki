@@ -17,10 +17,10 @@
 
 /*FIXME it is possible to define some of the rest functions as MACROs rather than functions full of ifdefs.*/
 
+LIST(restful_services);
 #if WITH_COAP <= 1
 LIST(restful_periodic_services);
 #endif
-LIST(restful_services);
 
 void
 rest_init(void)
