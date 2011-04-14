@@ -117,9 +117,14 @@ http_set_res_header(http_response_t* response, const char* name, const char* val
 static const char* is_request_hdr_needed(const char* header_name)
 {
   const char* header = NULL;
-  /*FIXME add needed headers here*/
+  /*
+   * FIXME add needed headers here
+   *    Requests must use the Accept header to define the preferred content-type.
+   */
   if (strcmp(header_name, HTTP_HEADER_NAME_CONTENT_LENGTH) == 0) {
     header = HTTP_HEADER_NAME_CONTENT_LENGTH;
+  } else if (strcmp(header_name, HTTP_HEADER_NAME_ACCEPT) == 0) {
+    header = HTTP_HEADER_NAME_ACCEPT;
   } else if (strcmp(header_name, HTTP_HEADER_NAME_CONTENT_TYPE) == 0) {
     header = HTTP_HEADER_NAME_CONTENT_TYPE;
   } else if (strcmp(header_name, HTTP_HEADER_NAME_HOST) == 0) {
@@ -331,14 +336,33 @@ parse_header(connection_state_t* conn_state, char* inputbuf)
     if (header_name && delimiter) {
       char* buffer = delimiter;
 
-      if (buffer[0] == ' ') {
+      PRINTF("HEADER %s\n", header_name);
+
+      /* remove CARRIAGE_RETURN_CHAR */
+      if (buffer[strlen(buffer)-1]==CARRIAGE_RETURN_CHAR) {
+        PRINTF("removing \\r\n");
+        buffer[strlen(buffer)-1] = 0;
+      }
+
+      while (buffer[0] == ' ') {
         buffer++;
+      }
+
+      PRINTF("   VAL %s (%u)\n", buffer, strlen(buffer));
+
+      if (header_name==HTTP_HEADER_NAME_ACCEPT) {
+        delimiter = strchr(buffer, ',');
+        if (delimiter) {
+          PRINTF("selecting first Accept content-type\n");
+          *delimiter = 0;
+        }
       }
 
       http_header_t* current_header = NULL;
       http_header_t* head = NULL;
 
-      current_header = allocate_header(strlen(buffer));
+      /* FIXME dirty quick fix for bug */
+      current_header = allocate_header(strlen(buffer)+1);
 
       if (current_header) {
         current_header->name = (char*)header_name;
@@ -390,17 +414,20 @@ const char* http_get_req_header(http_request_t* request, const char* name)
 content_type_t
 http_get_header_content_type(http_request_t* request)
 {
-  const char* content_type_string = http_get_req_header(request, HTTP_HEADER_NAME_CONTENT_TYPE);
+  const char* content_type_string = http_get_req_header(request, HTTP_HEADER_NAME_ACCEPT);
+
   if (content_type_string) {
     int i = 0;
-    for(; i < sizeof(content_types)/sizeof(const char*) ; i++) {
-      if (strcmp(content_types[i], content_type_string)) {
-        return (content_type_t)i;
+    for(; i < sizeof(content_types)/sizeof(const char*); ++i) {
+      if (strcmp(content_types[i], content_type_string)==0) {
+        return (content_type_t) i;
       }
     }
+    return UNKNOWN_CONTENT_TYPE;
   }
 
-  return UNKNOWN_CONTENT_TYPE;
+  /* default if no Content-Type is set*/
+  return TEXT_PLAIN;
 }
 
 int

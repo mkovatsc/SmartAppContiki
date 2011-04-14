@@ -18,6 +18,7 @@ const char* close = "close";
 
 /*header names*/
 const char* HTTP_HEADER_NAME_CONTENT_TYPE = "Content-Type";
+const char* HTTP_HEADER_NAME_ACCEPT = "Accept";
 const char* HTTP_HEADER_NAME_CONTENT_LENGTH = "Content-Length";
 const char* HTTP_HEADER_NAME_LOCATION = "Location";
 const char* HTTP_HEADER_NAME_CONNECTION = "Connection";

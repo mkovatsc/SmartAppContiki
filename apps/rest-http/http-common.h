@@ -31,6 +31,7 @@ extern const char* close;
 
 /*header names*/
 extern const char* HTTP_HEADER_NAME_CONTENT_TYPE;
+extern const char* HTTP_HEADER_NAME_ACCEPT;
 extern const char* HTTP_HEADER_NAME_CONTENT_LENGTH;
 extern const char* HTTP_HEADER_NAME_LOCATION;
 extern const char* HTTP_HEADER_NAME_CONNECTION;
