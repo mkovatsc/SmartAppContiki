@@ -374,11 +374,9 @@ coap_set_header_uri(coap_packet_t* packet, char* uri)
 }
 
 int
-coap_set_header_etag(coap_packet_t* packet, uint32_t etag)
+coap_set_header_etag(coap_packet_t* packet, uint8_t* etag, uint8_t size)
 {
-  uint8_t temp[4];
-  uint16_t len = write_variable_int(temp, etag);
-  return coap_set_option(packet, Option_Type_Etag, len, temp);
+  return coap_set_option(packet, Option_Type_Etag, size, etag);
 }
 
 void

@@ -27,7 +27,7 @@ int coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, u
 int coap_set_header_block(coap_packet_t* packet, uint32_t num, uint8_t more, uint16_t size);
 
 int coap_set_header_uri(coap_packet_t* packet, char* uri);
-int coap_set_header_etag(coap_packet_t* packet, uint32_t etag);
+int coap_set_header_etag(coap_packet_t* packet, uint8_t* etag, uint8_t size);
 
 void coap_set_code(coap_packet_t* packet, status_code_t code);
 

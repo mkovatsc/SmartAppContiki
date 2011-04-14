@@ -66,8 +66,9 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   int index = 0;
 
   content_type_t content = rest_get_header_content_type(request);
+  /* the other header options  */
   uint32_t max_age = 0;
-  uint32_t etag = 0;
+  const uint8_t *etag = NULL;
   int len = 0;
   const char *host = "";
   const char *location = "";
@@ -80,8 +81,15 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   index += sprintf(temp, "CT %u\n", content);
   if (rest_get_header_max_age(request, &max_age))
     index += sprintf(temp+index, "MA %lu\n", max_age);
-  if (rest_get_header_etag(request, &etag))
-    index += sprintf(temp+index, "ET 0x%lX\n", etag);
+  if ((len = rest_get_header_etag(request, &etag))) {
+    int i = 0;
+    /* readable print, use strncmp() */
+    index += sprintf(temp+index, "ET 0x");
+    while (i<len){
+      index += sprintf(temp+index, "%02X", etag[i++]);
+    }
+    index += sprintf(temp+index, "\n");
+  }
   if ((len = rest_get_header_host(request, &host)))
     index += sprintf(temp+index, "UH %.*s\n", len, host);
   if ((len = rest_get_header_location(request, &location)))
@@ -93,13 +101,21 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   if (rest_get_header_block(request, &block_num, &block_more, &block_size))
     index += sprintf(temp+index, "Bl %lu%s (%u)", block_num, block_more ? "+" : "", block_size);
 
+  /* setting header options for response */
+  uint8_t etag_res[] = {0xAB, 0xCD, 0xEF, 0x00}; // is copied
+  static char host_res[] =  {'c','o','n','t','i','k','i',0}; // strings are not copied and should be static or in .text
+  char fake[] = {'/','f','a','k','e',0}; // See what happens...
+
   rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_header_max_age(response, 3600);
-  rest_set_header_etag(response, 0xABCDEF);
-  rest_set_header_location(response, "/fake");
+  rest_set_header_max_age(response, 10); // For HTTP the page will not be re-requested for 10 seconds
+  rest_set_header_etag(response, etag_res);
+  rest_set_header_host(response, host_res); // ensure the terminating 0 for strings
+  rest_set_header_location(response, fake);
+  rest_set_path(response, "/path/to/res"); // the leading / MUST be omitted and will be cropped by the setter function
   rest_set_header_observe(response, 10);
   rest_set_header_token(response, 0x0180);
   rest_set_header_block(response, 42, 0, 64);
+  rest_set_query(response, "?l=1"); // the leading ? MUST be omitted and will be cropped by the setter function
 
   rest_set_response_payload(response, temp, strlen(temp));
 }
@@ -169,32 +185,36 @@ led_handler(REQUEST* request, RESPONSE* response)
   }
 }
 
-uint16_t light_photosynthetic;
-uint16_t light_solar;
-
-void
-read_light_sensor(uint16_t* light_1, uint16_t* light_2)
-{
-  *light_1 = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-  *light_2 = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-}
-
 /*A simple getter example. Returns the reading from light sensor with a simple etag*/
 RESOURCE(light, METHOD_GET, "light");
 void
 light_handler(REQUEST* request, RESPONSE* response)
 {
-#ifdef CONTIKI_TARGET_SKY
-  read_light_sensor(&light_photosynthetic, &light_solar);
-  sprintf(temp,"%u;%u", light_photosynthetic, light_solar);
-#else /*CONTIKI_TARGET_SKY*/
-  sprintf(temp,"%d.%d", 0, 0);
-#endif /*CONTIKI_TARGET_SKY*/
+  static uint8_t etag[] = {0xAB, 0xCD, 0};
 
-  uint32_t etag = 0xABCD;
-  rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_header_etag(response, etag);
-  rest_set_response_payload(response, temp, strlen(temp));
+  uint16_t light_photosynthetic;
+  uint16_t light_solar;
+
+  light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+  light_solar = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+
+  if (rest_get_header_content_type(request)==TEXT_PLAIN || rest_get_header_content_type(request)==TEXT_HTML) {
+    rest_set_header_content_type(response, TEXT_PLAIN);
+    sprintf(temp,"%u;%u", light_photosynthetic, light_solar);
+
+    rest_set_header_etag(response, etag);
+    rest_set_response_payload(response, temp, strlen(temp));
+  } else if (rest_get_header_content_type(request)==APPLICATION_JSON) {
+    rest_set_header_content_type(response, APPLICATION_JSON);
+    sprintf(temp,"{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
+
+    rest_set_header_etag(response, etag);
+    rest_set_response_payload(response, temp, strlen(temp));
+  } else {
+    char *info = "Supporting content-types text/plain, text/html, and application/json";
+    rest_set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
+    rest_set_response_payload(response, info, strlen(info));
+  }
 }
 
 /*A simple actuator example. Toggles the red led*/
@@ -215,6 +235,10 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PROCESS_BEGIN();
 
   PRINTF("Rest Server Example\n");
+
+  PRINTF("RF channel: %u\n", RF_CHANNEL);
+  PRINTF("PAN ID: 0x%04X\n", DIEEE802154_CONF_PANID);
+
   PRINTF("uIP buffer: %u\n", UIP_CONF_BUFFER_SIZE);
   PRINTF("LL header: %u\n", UIP_LLH_LEN);
   PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);

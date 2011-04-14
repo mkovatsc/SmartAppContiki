@@ -45,7 +45,7 @@ rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
 #if WITH_COAP > 1
   coap_activate_periodic_resource(periodic_resource);
-#elif WITH_COAP
+#elif WITH_COAP == 1
   list_add(restful_periodic_services, periodic_resource);
 #endif /*WITH_COAP*/
   rest_activate_resource(periodic_resource->resource);
@@ -243,7 +243,7 @@ rest_set_header_max_age(RESPONSE* response, uint32_t age)
 {
 #if WITH_COAP > 1
   return coap_set_header_max_age(response, age);
-#elif WITH_COAP
+#elif defined( WITH_COAP )
   return 0;
 #else
   /* Cache-Control: max-age=age for HTTP */
@@ -253,26 +253,32 @@ rest_set_header_max_age(RESPONSE* response, uint32_t age)
 #endif /*WITH_COAP*/
 }
 /*-----------------------------------------------------------------------------------*/
-// FIXME included for debugging, remove as only for responses
 int
-rest_get_header_etag(REQUEST* request, uint32_t *etag)
+rest_get_header_etag(RESPONSE* response, const uint8_t **etag)
 {
 #if WITH_COAP > 1
-  return coap_get_header_etag(request, etag);
+  return coap_get_header_etag(response, etag);
 #else
   return 0;
 #endif /*WITH_COAP*/
 }
 
 int
-rest_set_header_etag(RESPONSE* response, uint32_t etag)
+rest_set_header_etag(RESPONSE* response, uint8_t *etag)
 {
-#ifdef WITH_COAP
+#if WITH_COAP > 1
   return coap_set_header_etag(response, etag);
+#elif defined( WITH_COAP )
+  return coap_set_header_etag(response, etag, strlen(etag)>4 ? 4 : strlen(etag));
 #else
-  /* restricted to comply with 32-bit size for CoAP */
-  char temp_etag[5];
-  sprintf(temp_etag, "%04lx", etag);
+  char temp_etag[9];
+  int index = 0;
+
+  while(index<sizeof(temp_etag) && index<strlen(etag)) {
+    sprintf(temp_etag, "%02x", etag[index++]);
+  }
+  temp_etag[index] = 0;
+
   return http_set_res_header(response, HTTP_HEADER_NAME_ETAG, temp_etag, 1);
 #endif /*WITH_COAP*/
 }
@@ -282,19 +288,28 @@ rest_get_header_host(REQUEST* request, const char **host)
 {
 #if WITH_COAP > 1
   return coap_get_header_uri_host(request, host);
-#elif WITH_COAP
+#elif defined( WITH_COAP )
   return 0;
 #else
   return http_get_header_host(request, host);
 #endif /*WITH_COAP*/
 }
-/*-----------------------------------------------------------------------------------*/
-// FIXME included for debugging, remove as only for responses
+
 int
-rest_get_header_location(REQUEST* request, const char **uri)
+rest_set_header_host(REQUEST* request, char *host)
 {
 #if WITH_COAP > 1
-  return coap_get_header_location(request, uri);
+  return coap_set_header_uri_host(request, host);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+/*-----------------------------------------------------------------------------------*/
+int
+rest_get_header_location(RESPONSE* response, const char **uri)
+{
+#if WITH_COAP > 1
+  return coap_get_header_location(response, uri);
 #else
   return 0;
 #endif /*WITH_COAP*/
@@ -305,10 +320,30 @@ rest_set_header_location(RESPONSE* response, char *uri)
 {
 #if WITH_COAP > 1
   return coap_set_header_location(response, uri);
-#elif WITH_COAP
+#elif defined( WITH_COAP )
   return 0;
 #else
   return http_set_res_header(response, HTTP_HEADER_NAME_LOCATION, uri, 1);
+#endif /*WITH_COAP*/
+}
+/*-----------------------------------------------------------------------------------*/
+int
+rest_get_path(REQUEST* request, const char **path)
+{
+#if WITH_COAP > 1
+  return coap_get_header_uri_path(request, path);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+
+int
+rest_set_path(REQUEST* request, char *path)
+{
+#if WITH_COAP > 1
+  return coap_set_header_uri_path(request, path);
+#else
+  return 0;
 #endif /*WITH_COAP*/
 }
 /*-----------------------------------------------------------------------------------*/
@@ -317,7 +352,7 @@ rest_get_header_observe(REQUEST* request, uint32_t *observe)
 {
 #if WITH_COAP > 1
   return coap_get_header_observe(request, observe);
-#elif WITH_COAP
+#elif defined( WITH_COAP )
   return coap_get_header_subscription_lifetime(request, observe);
 #else
   return 0;
@@ -329,7 +364,7 @@ rest_set_header_observe(RESPONSE* response, uint32_t observe)
 {
 #if WITH_COAP > 1
   return coap_set_header_observe(response, observe);
-#elif WITH_COAP
+#elif defined( WITH_COAP )
   return coap_set_header_subscription_lifetime(response, observe);
 #else
   return 0;
@@ -376,6 +411,25 @@ rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t s
 #endif /*WITH_COAP*/
 }
 /*-----------------------------------------------------------------------------------*/
+int
+rest_get_query(REQUEST* request, const char **query)
+{
+#if WITH_COAP > 1
+  return coap_get_header_uri_query(request, query);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
+
+int
+rest_set_query(REQUEST* request, char *query)
+{
+#if WITH_COAP > 1
+  return coap_set_header_uri_query(request, query);
+#else
+  return 0;
+#endif /*WITH_COAP*/
+}
 /*-----------------------------------------------------------------------------------*/
 int
 rest_get_request_payload(REQUEST *request, uint8_t **payload)
@@ -387,7 +441,6 @@ rest_get_request_payload(REQUEST *request, uint8_t **payload)
 #endif /*WITH_COAP*/
 }
 
-// FIXME remove, servers do not send requests, dependency for periodic example
 /*
 int
 rest_set_request_payload(REQUEST *request, uint8_t *payload, uint16_t size)

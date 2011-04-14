@@ -172,16 +172,19 @@ int rest_set_header_content_type(RESPONSE* response, content_type_t content_type
 int rest_get_header_max_age(REQUEST* request, uint32_t *age);
 int rest_set_header_max_age(RESPONSE* response, uint32_t age);
 
-int rest_get_header_etag(REQUEST* request, uint32_t *etag); // FIXME included for debugging, remove as only for responses
-int rest_set_header_etag(RESPONSE* response, uint32_t etag);
+int rest_get_header_etag(RESPONSE* response, const uint8_t **etag); // in-place string might not be 0-terminated
+int rest_set_header_etag(RESPONSE* response, uint8_t *etag);
 
-int rest_get_header_host(REQUEST* request, const char **host); // in-place host might not be 0-terminated
+int rest_get_header_host(REQUEST* request, const char **host); // in-place string might not be 0-terminated
+int rest_set_header_host(REQUEST* request, char *uri);
 
-int rest_get_header_location(REQUEST* request, const char **uri); // FIXME included for debugging, remove as only for responses
+int rest_get_header_location(RESPONSE* response, const char **uri); // in-place string might not be 0-terminated
 int rest_set_header_location(RESPONSE* response, char *uri);
 
-//int rest_set_header_uri(RESPONSE* response, char *uri, uint16_t len); // use tokens
+int rest_get_path(REQUEST* request, const char **uri); // in-place string might not be 0-terminated
+int rest_set_path(REQUEST* request, char *uri);
 
+// TODO request/response distinction awkward for CoAP-only options
 int rest_get_header_observe(REQUEST* request, uint32_t *observe);
 int rest_set_header_observe(RESPONSE* response, uint32_t observe);
 
@@ -190,6 +193,9 @@ int rest_set_header_token(RESPONSE* response, uint16_t token);
 
 int rest_get_header_block(REQUEST* request, uint32_t *num, uint8_t *more, uint16_t *size);
 int rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size);
+
+int rest_get_query(REQUEST* request, const char **query); // in-place string might not be 0-terminated
+int rest_set_query(REQUEST* request, char *query);
 
 /*
  * Setter for the payload of the request and response
