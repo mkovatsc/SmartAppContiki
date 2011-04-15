@@ -8,6 +8,10 @@
 #ifndef COAP_COMMON_H_
 #define COAP_COMMON_H_
 
+#if !defined(WITH_COAP) || WITH_COAP!=3
+#error "### WITH_COAP MUST BE DEFINED: 3 ###"
+#endif
+
 #include "contiki-net.h"
 
 /*

@@ -1,6 +1,10 @@
 #ifndef COAPSERVER_H_
 #define COAPSERVER_H_
 
+#if !defined(WITH_COAP) || WITH_COAP!=3
+#error "### WITH_COAP MUST BE DEFINED: 3 ###"
+#endif
+
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "coap-03.h"
