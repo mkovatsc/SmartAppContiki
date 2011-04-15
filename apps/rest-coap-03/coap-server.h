@@ -15,16 +15,6 @@ PROCESS_NAME(coap_server);
 
 #define SERVER_LISTEN_PORT 61616
 
-typedef struct coap_transaction {
-  uint16_t tid;
-
-  uip_ipaddr_t addr;
-  uint16_t port;
-
-  char packet[COAP_MAX_PACKET_SIZE];
-  uint16_t packet_len;
-} coap_transaction_t;
-
 /*Type definition of the service callback*/
 typedef int (*service_callback) (coap_packet_t* request, coap_packet_t* response);
 
