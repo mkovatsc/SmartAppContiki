@@ -100,6 +100,10 @@ struct rtimer rt;
 void rtimercycle(void) {rtimerflag=1;}
 #endif /* TESTRTIMER */
 
+#ifndef BAUD_RATE
+#define BAUD_RATE USART_BAUD_19200
+#endif
+
 /*-------------------------------------------------------------------------*/
 /*----------------------Configuration of the .elf file---------------------*/
 typedef struct {unsigned char B2;unsigned char B1;unsigned char B0;} __signature_t;
@@ -203,7 +207,7 @@ static void initialize(void) {
   clock_init();
 
   /* Use rs232 port for serial out (tx, rx, gnd are the three pads behind jackdaw leds */
-  rs232_init(RS232_PORT_0, USART_BAUD_19200,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_0, BAUD_RATE,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
   /* Redirect stdout to second port */
   rs232_redirect_stdout(RS232_PORT_0);
 
@@ -285,7 +289,7 @@ static void initialize(void) {
   /* Autostart other processes */
   autostart_start(autostart_processes);
   
-  printf_P(PSTR("OK\r\n"));
+  //printf_P(PSTR("OK\r\n"));
   Led0_on(); // blue
 }
 
