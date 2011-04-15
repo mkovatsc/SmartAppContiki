@@ -225,10 +225,10 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 #endif /* UIP_CONF_IPV6 */
 
 /* See uip-ds6.h */
-#define UIP_CONF_DS6_NBR_NBU     2
+#define UIP_CONF_DS6_NBR_NBU     10 /* number of possible neighbors */
 #define UIP_CONF_DS6_DEFRT_NBU   2
-#define UIP_CONF_DS6_PREFIX_NBU  3
-#define UIP_CONF_DS6_ROUTE_NBU   2
+#define UIP_CONF_DS6_PREFIX_NBU  2
+#define UIP_CONF_DS6_ROUTE_NBU   10 /* number of possible routes */
 #define UIP_CONF_DS6_ADDR_NBU    3
 #define UIP_CONF_DS6_MADDR_NBU   0
 #define UIP_CONF_DS6_AADDR_NBU   0
@@ -271,10 +271,11 @@ extern void mac_log_802_15_4_rx(const uint8_t* buffer, size_t total_len);
 
   /* Network setup */
 #if 1              /* No radio cycling */
-#define NETSTACK_CONF_MAC         nullmac_driver
-#define NETSTACK_CONF_RDC         sicslowmac_driver
+#define NETSTACK_CONF_MAC         csma_driver
+#define NETSTACK_CONF_RDC         nullrdc_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
+
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent by sicslowpan.c (else autoretry) */
