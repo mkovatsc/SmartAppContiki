@@ -5,6 +5,8 @@ CONTIKI = ../..
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
+WITH_COAP=1
+
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
@@ -12,6 +14,14 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 # must be CFLAGS not variable
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 CFLAGS += -DUIP_CONF_TCP=1 # enabled by default, just as a reminder that it is needed for telnet 
+
+ifeq ($WITH_COAP),3)
+CFLAGS += -DWITH_COAP
+APPS += rest-coap03
+else ifeq ($(WITH_COAP),1)
+CFLAGS += -DWITH_COAP
+APPS += rest-coap
+endif
 
 
 # set the baud rate
