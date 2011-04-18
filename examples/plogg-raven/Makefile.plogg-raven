@@ -1,0 +1,44 @@
+all: plogg-raven
+
+CONTIKI = ../..
+
+# variable for root Makefile.include
+UIP_CONF_IPV6=1
+
+# variable for this Makefile
+WITH_COAP=1
+
+# radio configuration
+CFLAGS += -DRF_CHANNEL=26
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
+CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
+
+# must be CFLAGS not variables
+CFLAGS += -DUIP_CONF_IPV6_RPL=1
+#CFLAGS += -DUIP_CONF_TCP=1
+
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+# linker optimizations
+CFLAGS += -ffunction-sections
+LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
+
+
+ifeq ($(WITH_COAP), 1)
+CFLAGS += -DWITH_COAP
+APPS += rest-coap
+CFLAGS += -DUIP_CONF_TCP=0
+else ifeq ($(WITH_COAP), 3)
+CFLAGS += -DWITH_COAP
+APPS += rest-coap-03
+CFLAGS += -DUIP_CONF_TCP=0
+else
+CFLAGS += -DWITH_HTTP
+APPS += rest-http
+CFLAGS += -DUIP_CONF_TCP=1
+endif
+
+include $(CONTIKI)/Makefile.include
