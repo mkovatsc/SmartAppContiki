@@ -113,15 +113,12 @@ handle_incoming_data(void)
 {
   int error = NO_ERROR;
 
-  char error_buf[20] = {0};
-  int error_size = 9;
-
-  char *send_buf = NULL;
+  uint8_t *send_buf = NULL;
   int send_size = 0;
 
   PRINTF("handle_incoming_data(): received uip_datalen=%u \n",(uint16_t)uip_datalen());
 
-  char* data = uip_appdata + uip_ext_len;
+  uint8_t *data = uip_appdata + uip_ext_len;
   uint16_t data_len = uip_datalen() - uip_ext_len;
 
   if (uip_newdata()) {
@@ -138,23 +135,9 @@ handle_incoming_data(void)
 
     coap_message_parse(request, data, data_len);
 
-#if DEBUG
-    PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->header->version, request->header->type, request->header->oc, request->header->code, request->header->tid);
-
-    if (IS_OPTION(request->options, COAP_OPTION_CONTENT_TYPE)) { PRINTF("Content-Type: %u\n", request->content_type); }
-    if (IS_OPTION(request->options, COAP_OPTION_MAX_AGE)) { PRINTF("Max-Age: %lu\n", request->max_age); }
-    if (IS_OPTION(request->options, COAP_OPTION_ETAG)) { PRINTF("ETag: %lX\n", request->etag); }
-    if (IS_OPTION(request->options, COAP_OPTION_URI_HOST)) { PRINTF("Uri-Auth: %.*s\n", request->uri_host_len, request->uri_host); }
-    if (IS_OPTION(request->options, COAP_OPTION_LOCATION_PATH)) { PRINTF("Location: %.*s\n", request->location_path_len, request->location_path); }
-    if (IS_OPTION(request->options, COAP_OPTION_URI_PATH)) { PRINTF("Uri-Path: %.*s\n", request->uri_path_len, request->uri_path); }
-    if (IS_OPTION(request->options, COAP_OPTION_OBSERVE)) { PRINTF("Observe: %lu\n", request->observe); }
-    if (IS_OPTION(request->options, COAP_OPTION_TOKEN)) { PRINTF("Token: %0X\n", request->token); }
-    if (IS_OPTION(request->options, COAP_OPTION_BLOCK)) { PRINTF("Block: %lu%s (%u B/blk)\n", request->block_num, request->block_more ? "+" : "", request->block_size); }
-    if (IS_OPTION(request->options, COAP_OPTION_URI_QUERY)) { PRINTF("Uri-Query: %.*s\n", request->uri_query_len, request->uri_query); }
-
+    PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
     PRINTF("URL: %.*s\n", request->url_len, request->url);
     PRINTF("Payload: %.*s\n", request->payload_len, request->payload);
-#endif
 
     coap_transaction_t *transaction = NULL;
 
@@ -166,7 +149,7 @@ handle_incoming_data(void)
 
         /* prepare response */
         coap_packet_t response[1];
-        coap_message_init(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->header->tid);
+        coap_message_init(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
 
         /* call application-specific handler */
         if (service_cbk) {
@@ -184,16 +167,11 @@ handle_incoming_data(void)
     }
 
     if (error!=NO_ERROR) {
-        ((coap_header_t *)error_buf)->version = 1;
-        ((coap_header_t *)error_buf)->type = COAP_TYPE_ACK;
-        ((coap_header_t *)error_buf)->oc = 0;
-        ((coap_header_t *)error_buf)->code = INTERNAL_SERVER_ERROR_500;
-        ((coap_header_t *)error_buf)->tid = request->header->tid;
+        /* reuse input buffer */
+        coap_message_init(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
 
-        error_size = sizeof(coap_header_t) + sprintf(error_buf + sizeof(coap_header_t), "memb_alloc %u", error);
-
-        send_buf = error_buf;
-        send_size = error_size;
+        send_buf = request->header;
+        send_size = COAP_HEADER_LEN + sprintf((char *) (request->header + COAP_HEADER_LEN), "Transaction buffer allocation failed");
     }
 
     /*configure connection to reply to client*/

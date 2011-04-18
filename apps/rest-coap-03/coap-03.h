@@ -1,8 +1,8 @@
 /*
- * coap.h
+ * coap-03.h
  *
- *  Created on: Aug 25, 2010
- *      Author: dogan
+ *  Created on: 12 Apr 2011
+ *      Author: Matthias Kovatsch, based on Dogan Yazar's work
  */
 
 #ifndef COAP_COMMON_H_
@@ -22,7 +22,7 @@
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
 #ifndef COAP_MAX_PACKET_SIZE /*                       0/14          48 for IPv6 (28 for IPv4) */
-#define COAP_MAX_PACKET_SIZE  (UIP_CONF_BUFFER_SIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN) // 132 <- recalc on your own!
+#define COAP_MAX_PACKET_SIZE  (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN) // 132 <- recalc on your own!
 #endif /* COAP_MAX_PACKET_SIZE */
 
 /*
@@ -32,12 +32,47 @@
 #define COAP_MAX_PAYLOAD_SIZE  (COAP_MAX_PACKET_SIZE - 4 - 2 - 5 - 5 - 5 - 5 - 4 - 0) // 102 <- recalc on your own!
 #endif /* COAP_MAX_PAYLOAD_SIZE */                  /* 30 + string options */
 
-/*
- * The maximum number of bytes for the ETag, which is 4 for coap-03.
- */
-#define COAP_ETAG_LEN   4
+#define COAP_DEFAULT_MAX_AGE   60
+#define COAP_RESPONSE_TIMEOUT  1
+#define COAP_MAX_RETRANSMIT    5
 
-/*COAP method types*/
+#define COAP_HEADER_LEN        4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
+#define COAP_ETAG_LEN          4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+
+#define COAP_HEADER_VERSION_MASK             0xC0
+#define COAP_HEADER_VERSION_POSITION         6
+#define COAP_HEADER_TYPE_MASK                0x30
+#define COAP_HEADER_TYPE_POSITION            4
+#define COAP_HEADER_OPTION_COUNT_MASK        0x0F
+#define COAP_HEADER_OPTION_COUNT_POSITION    0
+
+#define COAP_HEADER_OPTION_DELTA_MASK        0xF0
+#define COAP_HEADER_OPTION_SHORT_LENGTH_MASK 0x0F
+
+
+
+
+/* container for transactions with message buffer and retransmission info */
+typedef struct coap_transaction {
+  uint16_t tid;
+  struct etimer retrans_timer;
+
+  uip_ipaddr_t addr;
+  uint16_t port;
+
+  uint16_t packet_len;
+  char packet[COAP_MAX_PACKET_SIZE];
+} coap_transaction_t;
+
+/* CoAP message types */
+typedef enum {
+  COAP_TYPE_CON, /* confirmables */
+  COAP_TYPE_NON, /* non-confirmables */
+  COAP_TYPE_ACK, /* acknowledgements */
+  COAP_TYPE_RST  /* reset */
+} coap_message_type_t;
+
+/* CoAP request method codes */
 typedef enum {
   COAP_GET = 1,
   COAP_POST,
@@ -45,13 +80,7 @@ typedef enum {
   COAP_DELETE
 } coap_method_t;
 
-typedef enum {
-  COAP_TYPE_CON,
-  COAP_TYPE_NON,
-  COAP_TYPE_ACK,
-  COAP_TYPE_RST
-} message_type;
-
+/* CoAP response codes */
 typedef enum {
   OK_200 = 80,
   CREATED_201 = 81,
@@ -65,6 +94,7 @@ typedef enum {
   GATEWAY_TIMEOUT_504 = 204
 } status_code_t;
 
+/* CoAP header options */
 typedef enum {
   COAP_OPTION_CONTENT_TYPE = 1,  /* 1 B */
   COAP_OPTION_MAX_AGE = 2,       /* 1-4 B */
@@ -72,13 +102,14 @@ typedef enum {
   COAP_OPTION_URI_HOST = 5,      /* 1-270 B */
   COAP_OPTION_LOCATION_PATH = 6, /* 1-270 B */
   COAP_OPTION_URI_PATH = 9,      /* 1-270 B */
-  COAP_OPTION_OBSERVE = 10,      /* 0-2 B (formerly 0-4) */
+  COAP_OPTION_OBSERVE = 10,      /* 0-4 B */
   COAP_OPTION_TOKEN = 11,        /* 1-2 B */
   COAP_OPTION_BLOCK = 13,        /* 1-3 B */
   COAP_OPTION_NOOP = 14,         /* 0 B */
   COAP_OPTION_URI_QUERY = 15     /* 1-270 B */
 } coap_option_t;
 
+/* CoAP content-types */
 typedef enum {
   TEXT_PLAIN = 0,
   TEXT_XML = 1,
@@ -103,13 +134,6 @@ typedef enum {
   APPLICATION_SOAP_FASTINFOSET = 50,
   APPLICATION_JSON = 51
 } content_type_t;
-
-#define REQUEST_BUFFER_SIZE 200
-
-#define DEFAULT_CONTENT_TYPE 0
-#define DEFAULT_MAX_AGE 60
-#define DEFAULT_URI_HOST ""
-#define DEFAULT_URI_PATH ""
 
 #define BYTES2INT(var,bytes,len) { \
     int i = 0; \
@@ -139,15 +163,13 @@ typedef union {
 } coap_header_option_t;
 
 typedef struct {
-  uint8_t oc:4;      /* Option count following the header */
-  uint8_t type:2;    /* Message type  */
-  uint8_t version:2; /* CoAP version */
-  uint8_t code;      /* Request method (1-10) or response code (40-255) */
-  uint16_t tid;      /* Transaction id */
-} coap_header_t;
+  uint8_t *header; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
 
-typedef struct {
-  coap_header_t *header; /* CoAP header, also pointing to the memory to serialize packet */
+  uint8_t version;
+  coap_message_type_t type;
+  uint8_t option_count;
+  uint8_t code;
+  uint16_t tid;
 
   uint16_t options;  /* Bitmap to check if option is set */
 
@@ -186,14 +208,12 @@ typedef enum
   MEMORY_BOUNDARY_EXCEEDED
 } error_t;
 
-
-void coap_message_init(coap_packet_t *packet, uint8_t *buffer, uint8_t type, uint8_t code, uint16_t tid);
+void coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
 int coap_message_serialize(coap_packet_t *packet);
 void coap_message_parse(coap_packet_t *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(coap_packet_t *packet);
 void coap_set_method(coap_packet_t *packet, coap_method_t method);
-
 void coap_set_code(coap_packet_t *packet, status_code_t code);
 
 int coap_get_query_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *output, uint16_t output_size);
