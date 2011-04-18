@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -77,6 +77,7 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   uint32_t block_num = 0;
   uint8_t block_more = 0;
   uint16_t block_size = 0;
+  const char *query = "";
 
   index += sprintf(temp, "CT %u\n", content);
   if (rest_get_header_max_age(request, &max_age))
@@ -99,10 +100,12 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   if (rest_get_header_token(request, &token))
     index += sprintf(temp+index, "To 0x%X\n", token);
   if (rest_get_header_block(request, &block_num, &block_more, &block_size))
-    index += sprintf(temp+index, "Bl %lu%s (%u)", block_num, block_more ? "+" : "", block_size);
+    index += sprintf(temp+index, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+  if ((len = rest_get_query(request, &query)))
+    index += sprintf(temp+index, "Qu %.*s", len, query);
 
   /* setting header options for response */
-  uint8_t etag_res[] = {0xAB, 0xCD, 0xEF, 0x00}; // is copied
+  uint8_t etag_res[] = {0xCB, 0xCD, 0xEF, 0x00}; // is copied
   static char host_res[] =  {'c','o','n','t','i','k','i',0}; // strings are not copied and should be static or in .text
   char fake[] = {'/','f','a','k','e',0}; // See what happens...
 
@@ -236,10 +239,14 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
   PRINTF("Rest Server Example\n");
 
+#ifdef RF_CHANNEL
   PRINTF("RF channel: %u\n", RF_CHANNEL);
+#endif
+#ifdef DIEEE802154_CONF_PANID
   PRINTF("PAN ID: 0x%04X\n", DIEEE802154_CONF_PANID);
+#endif
 
-  PRINTF("uIP buffer: %u\n", UIP_CONF_BUFFER_SIZE);
+  PRINTF("uIP buffer: %u\n", UIP_BUFSIZE);
   PRINTF("LL header: %u\n", UIP_LLH_LEN);
   PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
 #if WITH_COAP == 3
