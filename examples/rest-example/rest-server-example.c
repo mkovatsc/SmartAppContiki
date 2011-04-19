@@ -36,7 +36,7 @@ void
 helloworld_handler(REQUEST* request, RESPONSE* response)
 {
   char len[4];
-  int length = 12;
+  int length = 12; /**********/
   char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now";
 
   if (rest_get_query_variable(request, "len", len, 4)) {
@@ -51,7 +51,7 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
   }
 
   rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_response_payload(response, temp, strlen(temp));
+  rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
 }
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
@@ -120,7 +120,7 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   rest_set_header_block(response, 42, 0, 64);
   rest_set_query(response, "?l=1"); // the leading ? MUST be omitted and will be cropped by the setter function
 
-  rest_set_response_payload(response, temp, strlen(temp));
+  rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
 }
 
 RESOURCE(discover, METHOD_GET, ".well-known/core");
@@ -137,7 +137,7 @@ discover_handler(REQUEST* request, RESPONSE* response)
   index += sprintf(temp + index, ",%s", "</toggle>;rt=\"Led\"");
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-  rest_set_response_payload(response, temp, strlen(temp));
+  rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
   rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 }
 
@@ -206,17 +206,17 @@ light_handler(REQUEST* request, RESPONSE* response)
     sprintf(temp,"%u;%u", light_photosynthetic, light_solar);
 
     rest_set_header_etag(response, etag);
-    rest_set_response_payload(response, temp, strlen(temp));
+    rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
   } else if (rest_get_header_content_type(request)==APPLICATION_JSON) {
     rest_set_header_content_type(response, APPLICATION_JSON);
     sprintf(temp,"{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
 
     rest_set_header_etag(response, etag);
-    rest_set_response_payload(response, temp, strlen(temp));
+    rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
   } else {
     char *info = "Supporting content-types text/plain, text/html, and application/json";
     rest_set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
-    rest_set_response_payload(response, info, strlen(info));
+    rest_set_response_payload(response, (uint8_t *)info, strlen(info));
   }
 }
 

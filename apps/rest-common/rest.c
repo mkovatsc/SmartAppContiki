@@ -2,7 +2,6 @@
 #include <string.h> /*for string operations in match_addresses*/
 #include <stdio.h> /*for sprintf in rest_set_header_**/
 #include "rest.h"
-#include "buffer.h"
 
 #define DEBUG 0
 #if DEBUG
