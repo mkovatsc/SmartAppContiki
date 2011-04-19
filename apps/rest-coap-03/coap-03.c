@@ -27,6 +27,7 @@
 
 #include "rest-util.h"
 #include "coap-03.h"
+#include "coap-transactions.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -83,6 +84,7 @@ coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t ty
   packet->tid = tid;
 
   /* set header fields */
+  /*
   packet->header[0]  = 0x00;
   packet->header[0] |= COAP_HEADER_VERSION_MASK & (packet->version)<<COAP_HEADER_VERSION_POSITION;
   packet->header[0] |= COAP_HEADER_TYPE_MASK & (packet->type)<<COAP_HEADER_TYPE_POSITION;
@@ -90,6 +92,7 @@ coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t ty
   packet->header[1] = packet->code;
   packet->header[2] = 0xFF & packet->tid;
   packet->header[3] = 0xFF & (packet->tid)>>8;
+  */
 }
 /*-----------------------------------------------------------------------------------*/
 int
@@ -244,7 +247,7 @@ coap_message_serialize(coap_packet_t *packet)
   else
   {
     packet->code = INTERNAL_SERVER_ERROR_500;
-    packet->payload_len = sprintf(packet->header + COAP_HEADER_LEN, "Header (4), options (%u), and payload (%u) exceed COAP_MAX_PACKET_SIZE", (option - packet->header), packet->payload_len);
+    packet->payload_len = (uint16_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4), options (%u), and payload (%u) exceed COAP_MAX_PACKET_SIZE", (option - packet->header), packet->payload_len);
   }
 
   /* set header fields */
@@ -322,23 +325,23 @@ coap_message_parse(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           PRINTF("]\n");
           break;
         case COAP_OPTION_URI_HOST:
-          packet->uri_host = option_data;
+          packet->uri_host = (char *) option_data;
           packet->uri_host_len = option_len;
           PRINTF("Uri-Auth [%.*s]\n", packet->uri_host_len, packet->uri_host);
           break;
         case COAP_OPTION_LOCATION_PATH:
-          packet->location_path = option_data;
+          packet->location_path = (char *) option_data;
           packet->location_path_len = option_len;
           PRINTF("Location [%.*s]\n", packet->location_path_len, packet->location_path);
           break;
         case COAP_OPTION_URI_PATH:
-          packet->uri_path = option_data;
+          packet->uri_path = (char *) option_data;
           packet->uri_path_len = option_len;
+          PRINTF("Uri-Path [%.*s]\n", packet->uri_path_len, packet->uri_path);
 
           // REST framework uses ->url
-          packet->url = option_data;
-          packet->url_len = option_len;
-          PRINTF("Uri-Path [%.*s]\n", packet->uri_path_len, packet->uri_path);
+          packet->url = packet->uri_path;
+          packet->url_len = packet->uri_path_len;
           break;
         case COAP_OPTION_OBSERVE:
           BYTES2INT(packet->observe, option_data, option_len);
@@ -359,7 +362,7 @@ coap_message_parse(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Noop-Fencepost\n");
           break;
         case COAP_OPTION_URI_QUERY:
-          packet->uri_query = option_data;
+          packet->uri_query = (char *) option_data;
           packet->uri_query_len = option_len;
           PRINTF("Uri-Query [%.*s]\n", packet->uri_query_len, packet->uri_query);
           break;
@@ -403,7 +406,7 @@ coap_set_code(coap_packet_t *packet, status_code_t code)
 /*-----------------------------------------------------------------------------------*/
 // FIXME return in-place pointer to save memory
 int
-coap_get_query_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *output, uint16_t output_size)
+coap_get_query_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size)
 {
   if (IS_OPTION(packet->options, COAP_OPTION_URI_QUERY)) {
     return get_variable(name, packet->uri_query, packet->uri_query_len, output, output_size, 0);
@@ -414,10 +417,10 @@ coap_get_query_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *out
 
 // FIXME return in-place pointer to save memory
 int
-coap_get_post_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *output, uint16_t output_size)
+coap_get_post_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size)
 {
   if (packet->payload_len) {
-      return get_variable(name, packet->payload, packet->payload_len, output, output_size, 0);
+      return get_variable(name, (const char *)packet->payload, packet->payload_len, output, output_size, 0);
     }
 
     return 0;
@@ -469,7 +472,8 @@ coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag)
 int
 coap_set_header_etag(coap_packet_t *packet, uint8_t *etag)
 {
-  packet->etag_len = strlen(etag)>COAP_ETAG_LEN ? COAP_ETAG_LEN : strlen(etag);
+  int len = strlen((char *)etag);
+  packet->etag_len = len>COAP_ETAG_LEN ? COAP_ETAG_LEN : len;
   memcpy(packet->etag, etag, packet->etag_len);
 
   SET_OPTION(packet->options, COAP_OPTION_ETAG);
@@ -481,7 +485,7 @@ coap_get_header_uri_host(coap_packet_t *packet, const char **host) // in-place h
 {
   if (!IS_OPTION(packet->options, COAP_OPTION_URI_HOST)) return 0;
 
-  *host = (const uint8_t *) packet->uri_host;
+  *host = packet->uri_host;
   return packet->uri_host_len;
 }
 
@@ -500,7 +504,7 @@ coap_get_header_location(coap_packet_t *packet, const char **uri) // in-place ur
 {
   if (!IS_OPTION(packet->options, COAP_OPTION_LOCATION_PATH)) return 0;
 
-  *uri = (const uint8_t *) packet->location_path;
+  *uri = packet->location_path;
   return packet->location_path_len;
 }
 
@@ -521,7 +525,7 @@ coap_get_header_uri_path(coap_packet_t *packet, const char **uri)
 {
   if (!IS_OPTION(packet->options, COAP_OPTION_URI_PATH)) return 0;
 
-  *uri = (const uint8_t *) packet->uri_path;
+  *uri = packet->uri_path;
   return packet->uri_path_len;
 }
 
@@ -603,7 +607,7 @@ coap_get_header_uri_query(coap_packet_t *packet, const char **query)
 {
   if (!IS_OPTION(packet->options, COAP_OPTION_URI_QUERY)) return 0;
 
-  *query = (const uint8_t *) packet->uri_query;
+  *query = packet->uri_query;
   return packet->uri_query_len;
 }
 

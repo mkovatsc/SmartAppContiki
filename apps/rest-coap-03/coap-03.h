@@ -5,8 +5,8 @@
  *      Author: Matthias Kovatsch, based on Dogan Yazar's work
  */
 
-#ifndef COAP_COMMON_H_
-#define COAP_COMMON_H_
+#ifndef COAP_03_H_
+#define COAP_03_H_
 
 #if !defined(WITH_COAP) || WITH_COAP!=3
 #error "### WITH_COAP MUST BE DEFINED: 3 ###"
@@ -49,20 +49,6 @@
 #define COAP_HEADER_OPTION_DELTA_MASK        0xF0
 #define COAP_HEADER_OPTION_SHORT_LENGTH_MASK 0x0F
 
-
-
-
-/* container for transactions with message buffer and retransmission info */
-typedef struct coap_transaction {
-  uint16_t tid;
-  struct etimer retrans_timer;
-
-  uip_ipaddr_t addr;
-  uint16_t port;
-
-  uint16_t packet_len;
-  char packet[COAP_MAX_PACKET_SIZE];
-} coap_transaction_t;
 
 /* CoAP message types */
 typedef enum {
@@ -145,7 +131,7 @@ typedef enum {
   }
 
 #define SET_OPTION(field, opt) field |= 1<<opt
-#define IS_OPTION(field, opt) field & 1<<opt
+#define IS_OPTION(field, opt) (field & 1<<opt)
 
 //keep open requests and their xactid
 
@@ -178,24 +164,24 @@ typedef struct {
   uint8_t etag_len;
   uint8_t etag[COAP_ETAG_LEN];
   uint8_t uri_host_len;
-  uint8_t *uri_host;
+  char *uri_host;
   uint8_t location_path_len;
-  uint8_t *location_path;
+  char *location_path;
   uint8_t uri_path_len;
-  uint8_t *uri_path;
+  char *uri_path;
   uint32_t observe; /* 0-4 bytes for coap-03 */
   uint16_t token;
   uint32_t block_num;
   uint16_t block_size;
   uint8_t block_more;
   uint8_t uri_query_len;
-  uint8_t *uri_query;
+  char *uri_query;
 
   uint16_t payload_len;
   uint8_t *payload;
 
   uint16_t url_len;
-  uint8_t *url; /* for the REST framework */
+  char *url; /* for the REST framework */
 } coap_packet_t;
 
 /*error definitions*/
@@ -216,8 +202,8 @@ coap_method_t coap_get_method(coap_packet_t *packet);
 void coap_set_method(coap_packet_t *packet, coap_method_t method);
 void coap_set_code(coap_packet_t *packet, status_code_t code);
 
-int coap_get_query_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *output, uint16_t output_size);
-int coap_get_post_variable(coap_packet_t *packet, const uint8_t *name, uint8_t *output, uint16_t output_size);
+int coap_get_query_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size);
+int coap_get_post_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size);
 
 content_type_t coap_get_header_content_type(coap_packet_t *packet);
 int coap_set_header_content_type(coap_packet_t *packet, content_type_t content_type);
@@ -252,4 +238,4 @@ int coap_set_header_uri_query(coap_packet_t *packet, char *query);
 int coap_get_payload(coap_packet_t *packet, uint8_t* *payload);
 int coap_set_payload(coap_packet_t *packet, uint8_t *payload, uint16_t size);
 
-#endif /* COAP_COMMON_H_ */
+#endif /* COAP_03_H_ */

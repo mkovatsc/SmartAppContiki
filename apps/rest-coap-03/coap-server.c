@@ -37,8 +37,6 @@
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
 
-MEMB(transactions_memb, coap_transaction_t, COAP_MAX_OPEN_TRANSACTIONS);
-
 LIST(restful_periodic_services);
 
 
@@ -58,54 +56,6 @@ void
 coap_activate_periodic_resource(struct periodic_resource_t* periodic_resource) {
   list_add(restful_periodic_services, periodic_resource);
 }
-
-/*
-static void
-fill_error_packet(coap_packet_t* packet, int error, uint16_t tid)
-{
-  packet->ver=1;
-  packet->option_count=0;
-  packet->url=NULL;
-  packet->options=NULL;
-  switch (error){
-    case MEMORY_ALLOC_ERR:
-      packet->code=INTERNAL_SERVER_ERROR_500;
-      packet->tid=tid;
-      packet->type=MESSAGE_TYPE_ACK;
-      break;
-    default:
-      break;
-  }
-}
-
-static void
-init_response(coap_packet_t* request, coap_packet_t* response)
-{
-  init_packet(response);
-  if(request->type == MESSAGE_TYPE_CON) {
-    response->code = OK_200;
-    response->tid = request->tid;
-    response->type = MESSAGE_TYPE_ACK;
-  }
-}
-
-static void send_request(coap_packet_t* request, struct uip_udp_conn *client_conn)
-{
-  char buf[MAX_PAYLOAD_LEN];
-  int data_size = 0;
-
-  //data_size = serialize_packet(request, buf);
-
-  PRINTF("Created a connection with the server ");
-  PRINT6ADDR(&client_conn->ripaddr);
-  PRINTF(" local/remote port %u/%u\n",
-      uip_htons(client_conn->lport), uip_htons(client_conn->rport));
-
-  PRINTF("Sending to: ");
-  PRINT6ADDR(&client_conn->ripaddr);
-  uip_udp_packet_send(client_conn, buf, data_size);
-}
-*/
 
 /*-----------------------------------------------------------------------------------*/
 static int
@@ -141,12 +91,8 @@ handle_incoming_data(void)
 
     coap_transaction_t *transaction = NULL;
 
-    if ( (transaction = memb_alloc(&transactions_memb)) )
+    if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
     {
-        /* save client address */
-        uip_ipaddr_copy(&transaction->addr, &UIP_IP_BUF->srcipaddr);
-        transaction->port = UIP_UDP_BUF->srcport;
-
         /* prepare response */
         coap_packet_t response[1];
         coap_message_init(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
@@ -174,21 +120,7 @@ handle_incoming_data(void)
         send_size = COAP_HEADER_LEN + sprintf((char *) (request->header + COAP_HEADER_LEN), "Transaction buffer allocation failed");
     }
 
-    /*configure connection to reply to client*/
-    uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
-    server_conn->rport = UIP_UDP_BUF->srcport;
-
-    uip_udp_packet_send(server_conn, send_buf, send_size);
-    PRINTF("-sent UDP datagram------\n Length: %u\n -----------------------\n", send_size);
-
-    /* Restore server connection to allow data from any node */
-    memset(&server_conn->ripaddr, 0, sizeof(server_conn->ripaddr));
-    server_conn->rport = 0;
-
-    if (transaction)
-    {
-      memb_free(&transactions_memb, transaction);
-    }
+    coap_send_transaction(transaction);
   }
 
   return error;
@@ -275,6 +207,8 @@ PROCESS_THREAD(coap_server, ev, data)
   server_conn = udp_new(NULL, uip_htons(0), NULL);
   udp_bind(server_conn, uip_htons(SERVER_LISTEN_PORT));
   PRINTF("Local/remote port %u/%u\n", uip_htons(server_conn->lport), uip_htons(server_conn->rport));
+
+  coap_init_transactions(server_conn);
 
   /*Periodic resources are only available to COAP implementation*/
   /*set event timers for all periodic resources*/

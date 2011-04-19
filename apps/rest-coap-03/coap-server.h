@@ -1,5 +1,5 @@
-#ifndef COAPSERVER_H_
-#define COAPSERVER_H_
+#ifndef COAP_SERVER_H_
+#define COAP_SERVER_H_
 
 #if !defined(WITH_COAP) || WITH_COAP!=3
 #error "### WITH_COAP MUST BE DEFINED: 3 ###"
@@ -8,6 +8,7 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 #include "coap-03.h"
+#include "coap-transactions.h"
 #include "rest.h" /*added for periodic_resource*/
 
 /*Declare process*/
@@ -30,4 +31,4 @@ void coap_activate_periodic_resource(struct periodic_resource_t* periodic_resour
 
 //void resource_changed(struct periodic_resource_t* resource);
 
-#endif /* COAPSERVER_H_ */
+#endif /* COAP_SERVER_H_ */
