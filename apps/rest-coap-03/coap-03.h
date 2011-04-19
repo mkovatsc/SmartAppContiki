@@ -18,7 +18,7 @@
  * The number of concurrent messages that can be stored for retransmission in the transaction layer.
  */
 #ifndef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS  1
+#define COAP_MAX_OPEN_TRANSACTIONS  3
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
 #ifndef COAP_MAX_PACKET_SIZE /*                       0/14          48 for IPv6 (28 for IPv4) */
@@ -48,6 +48,10 @@
 
 #define COAP_HEADER_OPTION_DELTA_MASK        0xF0
 #define COAP_HEADER_OPTION_SHORT_LENGTH_MASK 0x0F
+
+
+#define SET_OPTION(field, opt) field |= 1<<opt
+#define IS_OPTION(field, opt) (field & 1<<opt)
 
 
 /* CoAP message types */
@@ -121,20 +125,6 @@ typedef enum {
   APPLICATION_JSON = 51
 } content_type_t;
 
-#define BYTES2INT(var,bytes,len) { \
-    int i = 0; \
-    var = 0; \
-    for (i=0; i<len; ++i) { \
-      var <<= 8; \
-      var |= 0xFF & bytes[i]; \
-    } \
-  }
-
-#define SET_OPTION(field, opt) field |= 1<<opt
-#define IS_OPTION(field, opt) (field & 1<<opt)
-
-//keep open requests and their xactid
-
 typedef union {
   struct { /* 0--14 bytes options */
     uint8_t length:4; /* option length in bytes (15 indicates long option format) */
@@ -194,9 +184,12 @@ typedef enum
   MEMORY_BOUNDARY_EXCEEDED
 } error_t;
 
-void coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
-int coap_message_serialize(coap_packet_t *packet);
-void coap_message_parse(coap_packet_t *request, uint8_t *data, uint16_t data_len);
+void coap_init_connection(uint16_t port);
+void coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length);
+
+void coap_init_message(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
+int coap_serialize_message(coap_packet_t *packet);
+void coap_parse_message(coap_packet_t *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(coap_packet_t *packet);
 void coap_set_method(coap_packet_t *packet, coap_method_t method);

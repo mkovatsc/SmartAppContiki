@@ -41,8 +41,25 @@
 #define PRINTLLADDR(addr)
 #endif
 
+
+static struct uip_udp_conn *udp_conn = NULL;
+
 /*-----------------------------------------------------------------------------------*/
 /*- LOCAL HELP FUNCTIONS ------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
+static
+uint32_t
+bytes_2_uint32(uint8_t *bytes, uint16_t length)
+{
+  uint32_t var = 0;
+  int i = 0;
+  while (i<length)
+  {
+    var <<= 8;
+    var |= 0xFF & bytes[i++];
+  }
+  return var;
+}
 /*-----------------------------------------------------------------------------------*/
 static
 int
@@ -68,10 +85,36 @@ uint32_2_bytes(uint8_t *bytes, uint32_t var)
   return i;
 }
 /*-----------------------------------------------------------------------------------*/
+/*- MEASSAGE SENDING ----------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
+void
+coap_init_connection(uint16_t port)
+{
+  /* new connection with remote host */
+  udp_conn = udp_new(NULL, uip_htons(0), NULL);
+  udp_bind(udp_conn, uip_htons(port));
+  PRINTF("Local/remote port %u/%u\n", uip_htons(udp_conn->lport), uip_htons(udp_conn->rport));
+}
+/*-----------------------------------------------------------------------------------*/
+void
+coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length)
+{
+  /*configure connection to reply to client*/
+  uip_ipaddr_copy(&udp_conn->ripaddr, addr);
+  udp_conn->rport = port;
+
+  uip_udp_packet_send(udp_conn, data, length);
+  PRINTF("-sent UDP datagram------\n Length: %u\n -----------------------\n", length);
+
+  /* Restore server connection to allow data from any node */
+  memset(&udp_conn->ripaddr, 0, sizeof(udp_conn->ripaddr));
+  udp_conn->rport = 0;
+}
+/*-----------------------------------------------------------------------------------*/
 /*- MEASSAGE PROCESSING -------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 void
-coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid)
+coap_init_message(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid)
 {
   memset(packet, 0, sizeof(coap_packet_t));
 
@@ -96,7 +139,7 @@ coap_message_init(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t ty
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_message_serialize(coap_packet_t *packet)
+coap_serialize_message(coap_packet_t *packet)
 {
   /* serialize options */
   uint8_t *option = packet->header + COAP_HEADER_LEN;
@@ -265,7 +308,7 @@ coap_message_serialize(coap_packet_t *packet)
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_message_parse(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
+coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
 {
   /* store packet bytes */
   packet->header = data;
@@ -312,7 +355,7 @@ coap_message_parse(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Content-Type [%u]\n", packet->content_type);
           break;
         case COAP_OPTION_MAX_AGE:
-          BYTES2INT(packet->max_age, option_data, option_len);
+          packet->max_age = bytes_2_uint32(option_data, option_len);
           PRINTF("Max-Age [%lu]\n", packet->max_age);
           break;
         case COAP_OPTION_ETAG:
@@ -344,15 +387,15 @@ coap_message_parse(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           packet->url_len = packet->uri_path_len;
           break;
         case COAP_OPTION_OBSERVE:
-          BYTES2INT(packet->observe, option_data, option_len);
+          packet->observe = bytes_2_uint32(option_data, option_len);
           PRINTF("Observe [%lu]\n", packet->observe);
           break;
         case COAP_OPTION_TOKEN:
-          BYTES2INT(packet->token, option_data, option_len);
+          packet->token = bytes_2_uint32(option_data, option_len);
           PRINTF("Token [0x%X]\n", packet->token);
           break;
         case COAP_OPTION_BLOCK:
-          BYTES2INT(packet->block_num, option_data, option_len);
+          packet->block_num = bytes_2_uint32(option_data, option_len);
           packet->block_more = (packet->block_num & 0x08);
           packet->block_size = 16 << (packet->block_num & 0x07);
           packet->block_num >>= 4;

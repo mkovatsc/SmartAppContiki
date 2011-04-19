@@ -40,8 +40,6 @@
 LIST(restful_periodic_services);
 
 
-static struct uip_udp_conn *server_conn;
-
 static uint16_t current_tid;
 
 static service_callback service_cbk = NULL;
@@ -63,9 +61,6 @@ handle_incoming_data(void)
 {
   int error = NO_ERROR;
 
-  uint8_t *send_buf = NULL;
-  int send_size = 0;
-
   PRINTF("handle_incoming_data(): received uip_datalen=%u \n",(uint16_t)uip_datalen());
 
   uint8_t *data = uip_appdata + uip_ext_len;
@@ -83,7 +78,7 @@ handle_incoming_data(void)
 
     coap_packet_t request[1] = {{0}};
 
-    coap_message_parse(request, data, data_len);
+    coap_parse_message(request, data, data_len);
 
     PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
     PRINTF("URL: %.*s\n", request->url_len, request->url);
@@ -95,32 +90,33 @@ handle_incoming_data(void)
     {
         /* prepare response */
         coap_packet_t response[1];
-        coap_message_init(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
+        coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
 
         /* call application-specific handler */
         if (service_cbk) {
           service_cbk(request, response);
         }
 
-        transaction->packet_len = coap_message_serialize(response);
-
-        send_buf = transaction->packet;
-        send_size = transaction->packet_len;
+        transaction->packet_len = coap_serialize_message(response);
 
     } else {
         PRINTF("Memory allocation error\n");
         error = MEMORY_ALLOC_ERR;
     }
 
-    if (error!=NO_ERROR) {
-        /* reuse input buffer */
-        coap_message_init(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
-
-        send_buf = request->header;
-        send_size = COAP_HEADER_LEN + sprintf((char *) (request->header + COAP_HEADER_LEN), "Transaction buffer allocation failed");
+    if (error==NO_ERROR) {
+      coap_send_transaction(transaction);
     }
+    else
+    {
+      PRINTF("ERROR %u\n", error);
 
-    coap_send_transaction(transaction);
+      /* reuse input buffer */
+      coap_init_message(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
+      coap_set_payload(request, request->header + COAP_HEADER_LEN, sprintf((char *) (request->header + COAP_HEADER_LEN), "Transaction buffer allocation failed"));
+      coap_serialize_message(request);
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->header, coap_serialize_message(request));
+    }
   }
 
   return error;
@@ -203,12 +199,7 @@ PROCESS_THREAD(coap_server, ev, data)
 
   current_tid = random_rand();
 
-  /* new connection with remote host */
-  server_conn = udp_new(NULL, uip_htons(0), NULL);
-  udp_bind(server_conn, uip_htons(SERVER_LISTEN_PORT));
-  PRINTF("Local/remote port %u/%u\n", uip_htons(server_conn->lport), uip_htons(server_conn->rport));
-
-  coap_init_transactions(server_conn);
+  coap_init_connection(SERVER_LISTEN_PORT);
 
   /*Periodic resources are only available to COAP implementation*/
   /*set event timers for all periodic resources*/
@@ -226,28 +217,32 @@ PROCESS_THREAD(coap_server, ev, data)
     if(ev == tcpip_event) {
       handle_incoming_data();
     } else if (ev == PROCESS_EVENT_TIMER) {
-	  /*find resource whose timer expired*/
-	  for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
-		if (periodic_resource->period && etimer_expired(periodic_resource->handler_cb_timer)) {
-		  PRINTF("Etimer expired for %s (period:%lu life:%lu)\n", periodic_resource->resource->url, periodic_resource->period, periodic_resource->lifetime);
-		  /*call the periodic handler function if exists*/
-		  if (periodic_resource->periodic_handler) {
-			if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
-			  PRINTF("RES CHANGE\n");
-			  if (!stimer_expired(periodic_resource->lifetime_timer)) {
-				PRINTF("TIMER NOT EXPIRED\n");
-				resource_changed(periodic_resource);
-				periodic_resource->lifetime = stimer_remaining(periodic_resource->lifetime_timer);
-			  } else {
-				periodic_resource->lifetime = 0;
-			  }
-			}
 
-			PRINTF("%s lifetime %lu (%lu) expired %d\n", periodic_resource->resource->url, stimer_remaining(periodic_resource->lifetime_timer), periodic_resource->lifetime, stimer_expired(periodic_resource->lifetime_timer));
-		  }
-		  etimer_reset(periodic_resource->handler_cb_timer);
-		}
-	  }
+        PRINTF("### Timer!\n");
+        coap_check_transactions();
+
+//	  /*find resource whose timer expired*/
+//	  for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
+//		if (periodic_resource->period && etimer_expired(periodic_resource->handler_cb_timer)) {
+//		  PRINTF("Etimer expired for %s (period:%lu life:%lu)\n", periodic_resource->resource->url, periodic_resource->period, periodic_resource->lifetime);
+//		  /*call the periodic handler function if exists*/
+//		  if (periodic_resource->periodic_handler) {
+//			if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
+//			  PRINTF("RES CHANGE\n");
+//			  if (!stimer_expired(periodic_resource->lifetime_timer)) {
+//				PRINTF("TIMER NOT EXPIRED\n");
+//				resource_changed(periodic_resource);
+//				periodic_resource->lifetime = stimer_remaining(periodic_resource->lifetime_timer);
+//			  } else {
+//				periodic_resource->lifetime = 0;
+//			  }
+//			}
+//
+//			PRINTF("%s lifetime %lu (%lu) expired %d\n", periodic_resource->resource->url, stimer_remaining(periodic_resource->lifetime_timer), periodic_resource->lifetime, stimer_expired(periodic_resource->lifetime_timer));
+//		  }
+//		  etimer_reset(periodic_resource->handler_cb_timer);
+//		}
+//	  }
 	} /* if (ev) */
   } /* while (1) */
 
