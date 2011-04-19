@@ -110,6 +110,7 @@ buf_append(struct telnetd_buf *buf, const char *data, int len)
   PRINTF("buf_append len %d (%d) '%.*s'\n", len, buf->ptr, len, data);
   copylen = MIN(len, buf->size - buf->ptr);
   memcpy(&buf->bufmem[buf->ptr], data, copylen);
+  petsciiconv_toascii(&buf->bufmem[buf->ptr], copylen);
   buf->ptr += copylen;
 
   return copylen;
@@ -175,18 +176,23 @@ shell_default_output(const char *str1, int len1, const char *str2, int len2)
   buf_append(&buf, "\r\n", 2);
 }
 /*---------------------------------------------------------------------------*/
+void
+shell_exit(void)
+{
+  s.state = STATE_CLOSE;
+}
+/*---------------------------------------------------------------------------*/
 PROCESS_THREAD(telnetd_process, ev, data)
 {
   PROCESS_BEGIN();
   
-  tcp_listen(UIP_HTONS(23));
-  buf_init(&buf);
-
   shell_init();
 
 #if TELNETD_CONF_GUI
   telnetd_gui_init();
 #endif /* TELNETD_CONF_GUI */
+
+  tcp_listen(UIP_HTONS(23));
 
   while(1) {
     PROCESS_WAIT_EVENT();
@@ -222,11 +228,6 @@ senddata(void)
 }
 /*---------------------------------------------------------------------------*/
 static void
-closed(void)
-{
-}
-/*---------------------------------------------------------------------------*/
-static void
 get_char(u8_t c)
 {
   PRINTF("telnetd: get_char '%c' %d %d\n", c, c, s.bufptr);
@@ -259,6 +260,7 @@ sendopt(u8_t option, u8_t value)
   line[1] = option;
   line[2] = value;
   line[3] = 0;
+  petsciiconv_topetscii(line, 4);
   buf_append(&buf, line, 4);
 }
 /*---------------------------------------------------------------------------*/
@@ -339,6 +341,7 @@ void
 telnetd_appcall(void *ts)
 {
   if(uip_connected()) {
+    tcp_unlisten(UIP_HTONS(23));
     tcp_markconn(uip_conn, &s);
     buf_init(&buf);
     s.bufptr = 0;
@@ -354,7 +357,8 @@ telnetd_appcall(void *ts)
   if(uip_closed() ||
      uip_aborted() ||
      uip_timedout()) {
-    closed();
+    shell_stop();
+    tcp_listen(UIP_HTONS(23));
   }
   if(uip_acked()) {
     acked();
