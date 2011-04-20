@@ -27,7 +27,7 @@ void set_service_callback(service_callback callback);
 /*
  *Add resource to the list of restful_periodic_services
  */
-void coap_activate_periodic_resource(struct periodic_resource_t* periodic_resource);
+void coap_activate_periodic_resource(struct periodic_resource_s *periodic_resource);
 
 //void resource_changed(struct periodic_resource_t* resource);
 

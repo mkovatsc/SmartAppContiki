@@ -51,7 +51,7 @@ set_service_callback(service_callback callback)
 }
 
 void
-coap_activate_periodic_resource(struct periodic_resource_t* periodic_resource) {
+coap_activate_periodic_resource(periodic_resource_t* periodic_resource) {
   list_add(restful_periodic_services, periodic_resource);
 }
 
@@ -97,6 +97,13 @@ handle_incoming_data(void)
           service_cbk(request, response);
         }
 
+        if (!IS_OPTION(response->options, COAP_OPTION_TOKEN))
+        {
+          /* make sure request is not required after this as the first payload byte might be overwritten */
+          request->url[request->url_len] = '\0';
+          coap_set_header_uri_path(response, request->url);
+        }
+
         transaction->packet_len = coap_serialize_message(response);
 
     } else {
@@ -123,7 +130,7 @@ handle_incoming_data(void)
 }
 /*-----------------------------------------------------------------------------------*/
 static void
-resource_changed(struct periodic_resource_t* resource)
+resource_changed(periodic_resource_t* resource)
 {
   PRINTF("resource_changed_event \n");
 

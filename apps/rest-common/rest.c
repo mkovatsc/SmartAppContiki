@@ -14,12 +14,47 @@
 #define PRINTLLADDR(addr)
 #endif
 
-/*FIXME it is possible to define some of the rest functions as MACROs rather than functions full of ifdefs.*/
-
 LIST(restful_services);
 #if WITH_COAP <= 1
 LIST(restful_periodic_services);
 #endif
+
+
+#ifdef WITH_COAP
+
+static
+method_t
+coap_to_rest_method(coap_method_t method)
+{
+  return (method_t)(1 << (method - 1));
+}
+
+#else
+
+char *
+rest_to_http_max_age(uint32_t age)
+{
+  /* Cache-Control: max-age=age for HTTP */
+  static char temp_age[19];
+  sprintf(temp_age, "max-age=%lu", age);
+  return temp_age;
+}
+
+char *
+rest_to_http_etag(uint8_t *etag, uint8_t etag_len)
+{
+  static char temp_etag[17];
+  int index = 0;
+
+  for (index = 0; index<sizeof(temp_etag) && index<etag_len; ++index) {
+    sprintf(temp_etag+2*index, "%02x", etag[index]);
+  }
+  temp_etag[2*index] = '\0';
+
+  return temp_etag;
+}
+#endif /*WITH_COAP*/
+
 
 void
 rest_init(void)
@@ -62,7 +97,6 @@ rest_get_user_data(resource_t* resource)
 {
   return resource->user_data;
 }
-
 
 void
 rest_set_user_data(resource_t* resource, void* user_data)
@@ -125,340 +159,5 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
   }
 
   return found;
-}
-
-
-#ifdef WITH_COAP
-static method_t coap_to_rest_method(coap_method_t method)
-{
-  return (method_t)(1 << (method - 1));
-}
-
-static coap_method_t rest_to_coap_method(method_t method)
-{
-  coap_method_t coap_method = COAP_GET;
-  switch (method) {
-  case METHOD_GET:
-    coap_method = COAP_GET;
-    break;
-  case METHOD_POST:
-    coap_method = COAP_POST;
-      break;
-  case METHOD_PUT:
-    coap_method = COAP_PUT;
-      break;
-  case METHOD_DELETE:
-    coap_method = COAP_DELETE;
-      break;
-  default:
-    break;
-  }
-  return coap_method;
-}
-#endif /*WITH_COAP*/
-/*-----------------------------------------------------------------------------------*/
-method_t
-rest_get_method_type(REQUEST* request)
-{
-#ifdef WITH_COAP
-  return coap_to_rest_method(coap_get_method(request));
-#else
-  return (method_t)(request->request_type);
-#endif
-}
-
-void
-rest_set_method_type(REQUEST* request, method_t method)
-{
-/*Only defined for COAP for now.*/
-#ifdef WITH_COAP
-  coap_set_method(request, rest_to_coap_method(method));
-#endif /*WITH_COAP*/
-}
-
-void
-rest_set_response_status(RESPONSE* response, status_code_t status)
-{
-#ifdef WITH_COAP
-  coap_set_code(response, status);
-#else /*WITH_COAP*/
-  http_set_status(response, status);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_query_variable(REQUEST* request, const char *name, char* output, uint16_t output_size)
-{
-#ifdef WITH_COAP
-  return coap_get_query_variable(request, name, output, output_size);
-#else
-  return http_get_query_variable(request, name, output, output_size);
-#endif /*WITH_COAP*/
-}
-
-int
-rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size)
-{
-#ifdef WITH_COAP
-  return coap_get_post_variable(request, name, output, output_size);
-#else
-  return http_get_post_variable(request, name, output, output_size);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------*/
-content_type_t
-rest_get_header_content_type(REQUEST* request)
-{
-#ifdef WITH_COAP
-  return coap_get_header_content_type(request);
-#else
-  return http_get_header_content_type(request);
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_content_type(RESPONSE* response, content_type_t content_type)
-{
-#ifdef WITH_COAP
-  return coap_set_header_content_type(response, content_type);
-#else
-  return http_set_res_header(response, HTTP_HEADER_NAME_CONTENT_TYPE, http_get_content_type_string(content_type), 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_max_age(REQUEST* request, uint32_t *age)
-{
-#if WITH_COAP > 1
-  return coap_get_header_max_age(request, age);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_max_age(RESPONSE* response, uint32_t age)
-{
-#if WITH_COAP > 1
-  return coap_set_header_max_age(response, age);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  /* Cache-Control: max-age=age for HTTP */
-  char temp_age[19];
-  sprintf(temp_age, "max-age=%lu", age);
-  return http_set_res_header(response, HTTP_HEADER_NAME_CACHE_CONTROL, temp_age, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_etag(RESPONSE* response, const uint8_t **etag)
-{
-#if WITH_COAP > 1
-  return coap_get_header_etag(response, etag);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_etag(RESPONSE* response, uint8_t *etag)
-{
-#if WITH_COAP > 1
-  return coap_set_header_etag(response, etag);
-#elif defined( WITH_COAP )
-  return coap_set_header_etag(response, etag, strlen(etag)>4 ? 4 : strlen(etag));
-#else
-  char temp_etag[9];
-  int index = 0;
-
-  while(index<sizeof(temp_etag) && index<strlen(etag)) {
-    sprintf(temp_etag, "%02x", etag[index++]);
-  }
-  temp_etag[index] = 0;
-
-  return http_set_res_header(response, HTTP_HEADER_NAME_ETAG, temp_etag, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_host(REQUEST* request, const char **host)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_host(request, host);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  return http_get_header_host(request, host);
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_host(REQUEST* request, char *host)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_host(request, host);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_location(RESPONSE* response, const char **uri)
-{
-#if WITH_COAP > 1
-  return coap_get_header_location(response, uri);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_location(RESPONSE* response, char *uri)
-{
-#if WITH_COAP > 1
-  return coap_set_header_location(response, uri);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  return http_set_res_header(response, HTTP_HEADER_NAME_LOCATION, uri, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_path(REQUEST* request, const char **path)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_path(request, path);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_path(REQUEST* request, char *path)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_path(request, path);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_observe(REQUEST* request, uint32_t *observe)
-{
-#if WITH_COAP > 1
-  return coap_get_header_observe(request, observe);
-#elif defined( WITH_COAP )
-  return coap_get_header_subscription_lifetime(request, observe);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_observe(RESPONSE* response, uint32_t observe)
-{
-#if WITH_COAP > 1
-  return coap_set_header_observe(response, observe);
-#elif defined( WITH_COAP )
-  return coap_set_header_subscription_lifetime(response, observe);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_token(REQUEST* request, uint16_t *token)
-{
-#if WITH_COAP > 1
-  return coap_get_header_token(request, token);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_token(RESPONSE* response, uint16_t token)
-{
-#if WITH_COAP > 1
-  return coap_set_header_token(response, token);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_block(REQUEST* request, uint32_t *num, uint8_t *more, uint16_t *size)
-{
-#ifdef WITH_COAP
-  return coap_get_header_block(request, num, more, size);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_header_block(response, num, more, size);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_query(REQUEST* request, const char **query)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_query(request, query);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_query(REQUEST* request, char *query)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_query(request, query);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_request_payload(REQUEST *request, uint8_t **payload)
-{
-#ifdef WITH_COAP
-  return coap_get_payload(request, payload);
-#else
-  return http_get_req_payload(request, payload);
-#endif /*WITH_COAP*/
-}
-
-/*
-int
-rest_set_request_payload(REQUEST *request, uint8_t *payload, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_payload(request, payload, size);
-#else
-  return 0;
-#endif
-}
-*/
-
-int
-rest_set_response_payload(RESPONSE *response, uint8_t *payload, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_payload(response, payload, size);
-#else
-  return http_set_res_payload(response, payload, size);
-#endif /*WITH_COAP*/
 }
 /*-----------------------------------------------------------------------------------*/

@@ -513,10 +513,9 @@ coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag)
 }
 
 int
-coap_set_header_etag(coap_packet_t *packet, uint8_t *etag)
+coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, uint8_t etag_len)
 {
-  int len = strlen((char *)etag);
-  packet->etag_len = len>COAP_ETAG_LEN ? COAP_ETAG_LEN : len;
+  packet->etag_len = etag_len>COAP_ETAG_LEN ? COAP_ETAG_LEN : etag_len;
   memcpy(packet->etag, etag, packet->etag_len);
 
   SET_OPTION(packet->options, COAP_OPTION_ETAG);

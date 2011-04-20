@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -51,7 +51,33 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
   }
 
   rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
+
+  /* blockwise test */
+  int offset = 0;
+  uint32_t block_num = 0;
+  uint8_t block_more = 0;
+  uint16_t block_size = 0;
+  if (rest_get_header_block(request, &block_num, &block_more, &block_size))
+  {
+    offset = block_num * block_size;
+
+    if (offset > strlen(temp))
+    {
+      rest_set_response_status(response, BAD_REQUEST_400);
+      return;
+    }
+
+    length = strlen(temp+offset);
+    block_more = length > block_size;
+
+    rest_set_header_block(response, block_num, block_more, block_size);
+    rest_set_response_payload(response, (uint8_t *)temp+offset, length<block_size ? length : block_size);
+  }
+  else
+  {
+    rest_set_header_block(response, 0, strlen(temp)>16, 16);
+    rest_set_response_payload(response, (uint8_t *)temp, length);
+  }
 }
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
@@ -68,10 +94,8 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   content_type_t content = rest_get_header_content_type(request);
   /* the other header options  */
   uint32_t max_age = 0;
-  const uint8_t *etag = NULL;
   int len = 0;
   const char *host = "";
-  const char *location = "";
   uint32_t observe = 0;
   uint16_t token = 0;
   uint32_t block_num = 0;
@@ -82,19 +106,8 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   index += sprintf(temp, "CT %u\n", content);
   if (rest_get_header_max_age(request, &max_age))
     index += sprintf(temp+index, "MA %lu\n", max_age);
-  if ((len = rest_get_header_etag(request, &etag))) {
-    int i = 0;
-    /* readable print, use strncmp() */
-    index += sprintf(temp+index, "ET 0x");
-    while (i<len){
-      index += sprintf(temp+index, "%02X", etag[i++]);
-    }
-    index += sprintf(temp+index, "\n");
-  }
   if ((len = rest_get_header_host(request, &host)))
     index += sprintf(temp+index, "UH %.*s\n", len, host);
-  if ((len = rest_get_header_location(request, &location)))
-    index += sprintf(temp+index, "Lo %.*s\n", len, location);
   if (rest_get_header_observe(request, &observe))
     index += sprintf(temp+index, "Ob %lu\n", observe);
   if (rest_get_header_token(request, &token))
@@ -105,20 +118,16 @@ mirror_handler(REQUEST* request, RESPONSE* response)
     index += sprintf(temp+index, "Qu %.*s", len, query);
 
   /* setting header options for response */
-  uint8_t etag_res[] = {0xCB, 0xCD, 0xEF, 0x00}; // is copied
-  static char host_res[] =  {'c','o','n','t','i','k','i',0}; // strings are not copied and should be static or in .text
-  char fake[] = {'/','f','a','k','e',0}; // See what happens...
+  uint8_t etag_res[] = {0xCB, 0xCD, 0xEF}; // is copied
+  static char fake[] = {'/','f','a','k','e', 0}; // strings are not copied and should be static or in .text
 
   rest_set_header_content_type(response, TEXT_PLAIN);
   rest_set_header_max_age(response, 10); // For HTTP the page will not be re-requested for 10 seconds
-  rest_set_header_etag(response, etag_res);
-  rest_set_header_host(response, host_res); // ensure the terminating 0 for strings
+  rest_set_header_etag(response, etag_res, 3);
   rest_set_header_location(response, fake);
-  rest_set_path(response, "/path/to/res"); // the leading / MUST be omitted and will be cropped by the setter function
   rest_set_header_observe(response, 10);
   rest_set_header_token(response, 0x0180);
   rest_set_header_block(response, 42, 0, 64);
-  rest_set_query(response, "?l=1"); // the leading ? MUST be omitted and will be cropped by the setter function
 
   rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
 }
@@ -205,13 +214,13 @@ light_handler(REQUEST* request, RESPONSE* response)
     rest_set_header_content_type(response, TEXT_PLAIN);
     sprintf(temp,"%u;%u", light_photosynthetic, light_solar);
 
-    rest_set_header_etag(response, etag);
+    rest_set_header_etag(response, etag, 2);
     rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
   } else if (rest_get_header_content_type(request)==APPLICATION_JSON) {
     rest_set_header_content_type(response, APPLICATION_JSON);
     sprintf(temp,"{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
 
-    rest_set_header_etag(response, etag);
+    rest_set_header_etag(response, etag, 2);
     rest_set_response_payload(response, (uint8_t *)temp, strlen(temp));
   } else {
     char *info = "Supporting content-types text/plain, text/html, and application/json";

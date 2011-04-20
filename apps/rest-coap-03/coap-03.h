@@ -205,7 +205,7 @@ int coap_get_header_max_age(coap_packet_t *packet, uint32_t *age);
 int coap_set_header_max_age(coap_packet_t *packet, uint32_t age);
 
 int coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag);
-int coap_set_header_etag(coap_packet_t *packet, uint8_t *etag);
+int coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, uint8_t etag_len);
 
 int coap_get_header_uri_host(coap_packet_t *packet, const char **host); // in-place string might not be 0-terminated
 int coap_set_header_uri_host(coap_packet_t *packet, char *host);
