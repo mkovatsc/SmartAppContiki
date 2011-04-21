@@ -159,7 +159,7 @@ coap_default_block_handler(coap_packet_t* request, coap_packet_t* response)
 
   if (coap_get_header_block(request, &block_num, &block_more, &block_size, &offset))
   {
-    PRINTF("%u (%u/%u), offset %lu\n", block_num, response->payload_len, block_size, offset);
+    PRINTF("%lu (%u/%u), offset %lu\n", block_num, response->payload_len, block_size, offset);
 
     if (offset > response->payload_len)
     {

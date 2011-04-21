@@ -139,9 +139,9 @@ typedef union {
     /* 0--14 bytes options */
   } s;
   struct { /* 15-270 bytes options */
-    uint8_t flag:4;   /* must be 15 */
-    uint8_t delta:4;  /* option delta */
-    uint8_t length;   /* length - 15 */
+    uint16_t flag:4;   /* must be 15 */
+    uint16_t delta:4;  /* option delta */
+    uint16_t length:8;   /* length - 15 */
   } l;
 } coap_header_option_t;
 

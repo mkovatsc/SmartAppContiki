@@ -88,10 +88,12 @@ mirror_handler(REQUEST* request, RESPONSE* response)
     index += sprintf(temp+index, "Ob %lu\n", observe);
   if (rest_get_header_token(request, &token))
     index += sprintf(temp+index, "To 0x%X\n", token);
-  if (rest_get_header_block(request, &block_num, &block_more, &block_size, NULL))
+  if (rest_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* this getter allows NULL pointers to get a subset of the block parameters */
     index += sprintf(temp+index, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
   if ((len = rest_get_query(request, &query)))
     index += sprintf(temp+index, "Qu %.*s", len, query);
+
+  PRINTF("/dbg read options: %s\n", temp);
 
   /* setting header options for response */
   uint8_t etag_res[] = {0xCB, 0xCD, 0xEF}; // is copied

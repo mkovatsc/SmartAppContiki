@@ -629,10 +629,11 @@ coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint1
 {
   if (!IS_OPTION(packet, COAP_OPTION_BLOCK)) return 0;
 
-  *num = packet->block_num;
-  *more = packet->block_more;
-  *size = packet->block_size;
-  *offset = packet->block_offset;
+  /* pointers may be NULL to get only specific block parameters */
+  if (num!=NULL) *num = packet->block_num;
+  if (more!=NULL) *more = packet->block_more;
+  if (size!=NULL) *size = packet->block_size;
+  if (offset!=NULL) *offset = packet->block_offset;
 
   return 1;
 }
