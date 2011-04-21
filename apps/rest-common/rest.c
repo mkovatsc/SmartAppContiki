@@ -14,10 +14,10 @@
 #define PRINTLLADDR(addr)
 #endif
 
+PROCESS_NAME(rest_manager_process);
+
 LIST(restful_services);
-#if WITH_COAP <= 1
 LIST(restful_periodic_services);
-#endif
 
 
 #ifdef WITH_COAP
@@ -63,8 +63,8 @@ rest_init(void)
 
   set_service_callback(rest_invoke_restful_service);
 
-  /*Start rest server process*/
-  process_start(SERVER_PROCESS, NULL);
+  /*Start rest manager process*/
+  process_start(&rest_manager_process, NULL);
 }
 
 void
@@ -77,11 +77,7 @@ rest_activate_resource(resource_t* resource)
 void
 rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
-#if WITH_COAP > 1
-  coap_activate_periodic_resource(periodic_resource);
-#elif WITH_COAP == 1
   list_add(restful_periodic_services, periodic_resource);
-#endif /*WITH_COAP*/
   rest_activate_resource(periodic_resource->resource);
 }
 
@@ -161,3 +157,47 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
   return found;
 }
 /*-----------------------------------------------------------------------------------*/
+
+PROCESS(rest_manager_process, "Rest Process");
+
+PROCESS_THREAD(rest_manager_process, ev, data)
+{
+  PROCESS_BEGIN();
+
+  /*start the coap or http server*/
+  process_start(SERVER_PROCESS, NULL);
+
+  PROCESS_PAUSE();
+
+  /* Periodic resources are only available to COAP implementation*/
+  periodic_resource_t* periodic_resource = NULL;
+  for (periodic_resource = (periodic_resource_t*) list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
+    if (periodic_resource->period) {
+      PRINTF("Periodic: Set timer for %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
+      etimer_set(&periodic_resource->periodic_timer, periodic_resource->period);
+    }
+  }
+
+  while(1) {
+    PROCESS_WAIT_EVENT();
+    if (ev == PROCESS_EVENT_TIMER) {
+      for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
+        if (periodic_resource->period && etimer_expired(&periodic_resource->periodic_timer)) {
+
+          PRINTF("Periodic: etimer expired for %s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
+
+          /*call the periodic handler function if exists*/
+          if (periodic_resource->periodic_handler) {
+            if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
+              PRINTF("Periodic: CHANGED\n");
+            }
+          }
+          etimer_reset(&periodic_resource->periodic_timer);
+        }
+      }
+    }
+  }
+
+  PROCESS_END();
+}
+

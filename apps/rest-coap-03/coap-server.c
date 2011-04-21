@@ -53,23 +53,15 @@ const char* error_messages[] = {
 };
 /*-----------------------------------------------------------------------------------*/
 
-LIST(restful_periodic_services);
-
 static uint16_t current_tid;
-
 static service_callback service_cbk = NULL;
 
+/*-----------------------------------------------------------------------------------*/
 void
 set_service_callback(service_callback callback)
 {
   service_cbk = callback;
 }
-
-void
-coap_activate_periodic_resource(periodic_resource_t* periodic_resource) {
-  list_add(restful_periodic_services, periodic_resource);
-}
-
 /*-----------------------------------------------------------------------------------*/
 static
 int
@@ -104,33 +96,49 @@ handle_incoming_data(void)
       PRINTF("URL: %.*s\n", request->url_len, request->url);
       PRINTF("Payload: %.*s\n", request->payload_len, request->payload);
 
-      if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+      if (request->type==COAP_TYPE_CON)
       {
-          /* prepare response */
-          coap_packet_t response[1];
-          coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
+        /* Use transaction buffer for response to confirmable request. */
+        if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+        {
+            /* prepare response */
+            coap_packet_t response[1];
+            coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
 
-          /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
-          if (IS_OPTION(request, COAP_OPTION_TOKEN))
-          {
-              coap_get_header_token(request, &response->token);
-              SET_OPTION(response, COAP_OPTION_TOKEN);
-          }
+            /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
+            if (IS_OPTION(request, COAP_OPTION_TOKEN))
+            {
+                coap_get_header_token(request, &response->token);
+                SET_OPTION(response, COAP_OPTION_TOKEN);
+            }
 
-          /* call application-specific handler */
-          if (service_cbk) {
-            service_cbk(request, response);
-          }
+            /* call application-specific handler */
+            if (service_cbk) {
+              service_cbk(request, response);
+            }
 
-          transaction->packet_len = coap_serialize_message(response);
+            transaction->packet_len = coap_serialize_message(response);
 
-      } else {
-          error = MEMORY_ALLOC_ERR;
+        } else {
+            error = MEMORY_ALLOC_ERR;
+        }
+      }
+      else if (request->type==COAP_TYPE_NON)
+      {
+        /* Call application-specific handler without response. */
+        if (service_cbk) {
+          service_cbk(request, NULL);
+        }
+      }
+      else if (request->type==COAP_TYPE_ACK || request->type==COAP_TYPE_RST)
+      {
+        //TODO check for subscriptions or registered tokens
+        PRINTF("Received ACK or RST\n");
       }
     } /* if (parsed correctly) */
 
     if (error==NO_ERROR) {
-      coap_send_transaction(transaction);
+      if (transaction) coap_send_transaction(transaction);
     }
     else
     {
@@ -283,33 +291,8 @@ PROCESS_THREAD(coap_server, ev, data)
     if(ev == tcpip_event) {
       handle_incoming_data();
     } else if (ev == PROCESS_EVENT_TIMER) {
-
-        PRINTF("### Timer!\n");
-        coap_check_transactions();
-
-//	  /*find resource whose timer expired*/
-//	  for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
-//		if (periodic_resource->period && etimer_expired(periodic_resource->handler_cb_timer)) {
-//		  PRINTF("Etimer expired for %s (period:%lu life:%lu)\n", periodic_resource->resource->url, periodic_resource->period, periodic_resource->lifetime);
-//		  /*call the periodic handler function if exists*/
-//		  if (periodic_resource->periodic_handler) {
-//			if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
-//			  PRINTF("RES CHANGE\n");
-//			  if (!stimer_expired(periodic_resource->lifetime_timer)) {
-//				PRINTF("TIMER NOT EXPIRED\n");
-//				resource_changed(periodic_resource);
-//				periodic_resource->lifetime = stimer_remaining(periodic_resource->lifetime_timer);
-//			  } else {
-//				periodic_resource->lifetime = 0;
-//			  }
-//			}
-//
-//			PRINTF("%s lifetime %lu (%lu) expired %d\n", periodic_resource->resource->url, stimer_remaining(periodic_resource->lifetime_timer), periodic_resource->lifetime, stimer_expired(periodic_resource->lifetime_timer));
-//		  }
-//		  etimer_reset(periodic_resource->handler_cb_timer);
-//		}
-//	  }
-	} /* if (ev) */
+      coap_check_transactions();
+    }
   } /* while (1) */
 
   PROCESS_END();

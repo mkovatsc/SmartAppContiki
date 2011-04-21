@@ -46,7 +46,6 @@ typedef int (*restful_pre_handler) (REQUEST* request, RESPONSE* response);
 typedef void (*restful_post_handler) (REQUEST* request, RESPONSE* response);
 
 typedef int (*restful_periodic_handler) (struct resource_s* resource);
-typedef void (*restful_periodic_request_generator) (REQUEST* request);
 
 /*
  * Data structure representing a resource in REST.
@@ -66,13 +65,8 @@ struct periodic_resource_s {
   struct periodic_resource_s *next; /*for LIST, points to next resource defined*/
   resource_t *resource;
   uint32_t period;
-  struct etimer* handler_cb_timer;
-  struct stimer* lifetime_timer;
+  struct etimer periodic_timer;
   restful_periodic_handler periodic_handler;
-  restful_periodic_request_generator periodic_request_generator;
-  uint32_t lifetime;
-  uip_ipaddr_t addr;
-  struct uip_udp_conn *client_conn;
 };
 typedef struct periodic_resource_s periodic_resource_t;
 
@@ -98,14 +92,21 @@ resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL
 
 /*
  * Macro to define a Periodic Resource
+ * The corresponding _periodic_handler() function will be called every period.
+ * There one can define what to do, e.g., poll a sensor and publish a changed value to observing clients.
  */
-#define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
-RESOURCE(name, methods_to_handle, url); \
-int name##_periodic_handler(resource_t*); \
-void name##_periodic_request_generator(REQUEST*); \
-struct etimer handler_cb_timer_##name; \
-struct stimer lifetime_timer_##name; \
-periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, &handler_cb_timer_##name, &lifetime_timer_##name, name##_periodic_handler, name##_periodic_request_generator, 0}
+#if WITH_COAP > 1
+  #define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
+  void name##_handler(REQUEST*, RESPONSE*); \
+  resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, NULL, NULL}; \
+  int name##_periodic_handler(resource_t*); \
+  periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
+#else /* WITH_COAP */
+  #define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
+  RESOURCE(name, methods_to_handle, url); \
+  int name##_periodic_handler(resource_t*); \
+  periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {0}, name##_periodic_handler}
+#endif /* WITH_COAP */
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
@@ -153,6 +154,5 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  * Can be used to do cleanup (deallocate memory, etc) after resource handling.
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
-
 
 #endif /*REST_H_*/
