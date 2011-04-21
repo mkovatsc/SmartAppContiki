@@ -37,8 +37,23 @@
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
 
-LIST(restful_periodic_services);
 
+/*-----------------------------------------------------------------------------------*/
+/*- Constants -----------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
+const char* error_messages[] = {
+  "",
+
+  /* Memory errors */
+  "Transaction buffer allocation failed",
+  "MEMORY_BOUNDARY_EXCEEDED",
+
+  /* CoAP errors */
+  "Request sent unknown critical option" //FIXME which one?
+};
+/*-----------------------------------------------------------------------------------*/
+
+LIST(restful_periodic_services);
 
 static uint16_t current_tid;
 
@@ -77,54 +92,56 @@ handle_incoming_data(void)
     PRINTF("\n -----------------------\n");
 
     coap_packet_t request[1] = {{0}};
-
-    coap_parse_message(request, data, data_len);
-
-    PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
-    PRINTF("URL: %.*s\n", request->url_len, request->url);
-    PRINTF("Payload: %.*s\n", request->payload_len, request->payload);
-
     coap_transaction_t *transaction = NULL;
 
-    if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+    error = coap_parse_message(request, data, data_len);
+
+    if (error==NO_ERROR)
     {
-        /* prepare response */
-        coap_packet_t response[1];
-        coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
 
-        /* call application-specific handler */
-        if (service_cbk) {
-          service_cbk(request, response);
-        }
+      PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
+      PRINTF("URL: %.*s\n", request->url_len, request->url);
+      PRINTF("Payload: %.*s\n", request->payload_len, request->payload);
 
-        if (!IS_OPTION(response->options, COAP_OPTION_TOKEN))
-        {
-          /* make sure request is not required after this as the first payload byte might be overwritten */
-          request->url[request->url_len] = '\0';
-          coap_set_header_uri_path(response, request->url);
-        }
+      if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+      {
+          /* prepare response */
+          coap_packet_t response[1];
+          coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
 
-        transaction->packet_len = coap_serialize_message(response);
+          //FIXME move to pre_handler for different handling, e.g., TOKEN_OPTION_REQUIRED_240 for some resources such as DELAYED_RESOURCE
+          if (IS_OPTION(request, COAP_OPTION_TOKEN))
+          {
+              coap_get_header_token(request, &response->token);
+              SET_OPTION(response, COAP_OPTION_TOKEN);
+          }
 
-    } else {
-        PRINTF("Memory allocation error\n");
-        error = MEMORY_ALLOC_ERR;
-    }
+          /* call application-specific handler */
+          if (service_cbk) {
+            service_cbk(request, response);
+          }
+
+          transaction->packet_len = coap_serialize_message(response);
+
+      } else {
+          error = MEMORY_ALLOC_ERR;
+      }
+    } /* if (parsed correctly) */
 
     if (error==NO_ERROR) {
       coap_send_transaction(transaction);
     }
     else
     {
-      PRINTF("ERROR %u\n", error);
+      PRINTF("ERROR %u: %s\n", error, error_messages[error]);
 
       /* reuse input buffer */
       coap_init_message(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
-      coap_set_payload(request, request->header + COAP_HEADER_LEN, sprintf((char *) (request->header + COAP_HEADER_LEN), "Transaction buffer allocation failed"));
+      coap_set_payload(request, request->header + COAP_HEADER_LEN, sprintf((char *) (request->header + COAP_HEADER_LEN), "%s", error_messages[error]));
       coap_serialize_message(request);
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->header, coap_serialize_message(request));
     }
-  }
+  } /* if (new data) */
 
   return error;
 }

@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -36,7 +36,7 @@ void
 helloworld_handler(REQUEST* request, RESPONSE* response)
 {
   char len[4];
-  int length = 12; /**********/
+  int length = 12; /*<------>*/
   char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now";
 
   if (rest_get_query_variable(request, "len", len, 4)) {

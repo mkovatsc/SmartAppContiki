@@ -50,8 +50,8 @@
 #define COAP_HEADER_OPTION_SHORT_LENGTH_MASK 0x0F
 
 
-#define SET_OPTION(field, opt) field |= 1<<opt
-#define IS_OPTION(field, opt) (field & 1<<opt)
+#define SET_OPTION(packet, opt) packet->options |= 1<<opt
+#define IS_OPTION(packet, opt) (packet->options & 1<<opt)
 
 
 /* CoAP message types */
@@ -72,6 +72,7 @@ typedef enum {
 
 /* CoAP response codes */
 typedef enum {
+  CONTINUE_100 = 40,
   OK_200 = 80,
   CREATED_201 = 81,
   NOT_MODIFIED_304 = 124,
@@ -81,7 +82,11 @@ typedef enum {
   UNSUPPORTED_MADIA_TYPE_415 = 175,
   INTERNAL_SERVER_ERROR_500 = 200,
   BAD_GATEWAY_502 = 202,
-  GATEWAY_TIMEOUT_504 = 204
+  SERVICE_UNAVAILABLE_503 = 203,
+  GATEWAY_TIMEOUT_504 = 204,
+  TOKEN_OPTION_REQUIRED = 240,
+  HOST_REQUIRED = 241,
+  CRITICAL_OPTION_NOT_SUPPORTED = 242
 } status_code_t;
 
 /* CoAP header options */
@@ -179,9 +184,12 @@ typedef enum
 {
   NO_ERROR,
 
-  /*Memory errors*/
+  /* Memory errors */
   MEMORY_ALLOC_ERR,
-  MEMORY_BOUNDARY_EXCEEDED
+  MEMORY_BOUNDARY_EXCEEDED,
+
+  /* CoAP errors */
+  UNKNOWN_CRITICAL_OPTION
 } error_t;
 
 void coap_init_connection(uint16_t port);
@@ -189,7 +197,7 @@ void coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_
 
 void coap_init_message(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
 int coap_serialize_message(coap_packet_t *packet);
-void coap_parse_message(coap_packet_t *request, uint8_t *data, uint16_t data_len);
+error_t coap_parse_message(coap_packet_t *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(coap_packet_t *packet);
 void coap_set_method(coap_packet_t *packet, coap_method_t method);
