@@ -29,6 +29,7 @@ void set_service_callback(service_callback callback);
  */
 void coap_activate_periodic_resource(struct periodic_resource_s *periodic_resource);
 
+void coap_default_block_handler(coap_packet_t* request, coap_packet_t* response);
 //void resource_changed(struct periodic_resource_t* resource);
 
 #endif /* COAP_SERVER_H_ */

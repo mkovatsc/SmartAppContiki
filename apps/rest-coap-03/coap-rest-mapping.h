@@ -29,7 +29,7 @@
 #define rest_get_header_token(request, token)                       coap_get_header_token(request, token)
 #define rest_set_header_token(response, token)                      coap_set_header_token(response, token)
 
-#define rest_get_header_block(request, num, more, size)             coap_get_header_block(request, num, more, size)
+#define rest_get_header_block(request, num, more, size, offset)     coap_get_header_block(request, num, more, size, offset)
 #define rest_set_header_block(response, num, more, size)            coap_set_header_block(response, num, more, size)
 
 #define rest_get_query(request, query)                              coap_get_header_uri_query(request, query)

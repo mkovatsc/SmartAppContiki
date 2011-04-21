@@ -32,12 +32,14 @@
 #define COAP_MAX_PAYLOAD_SIZE  (COAP_MAX_PACKET_SIZE - 4 - 2 - 5 - 5 - 5 - 5 - 4 - 0) // 102 <- recalc on your own!
 #endif /* COAP_MAX_PAYLOAD_SIZE */                  /* 30 + string options */
 
-#define COAP_DEFAULT_MAX_AGE   60
-#define COAP_RESPONSE_TIMEOUT  1
-#define COAP_MAX_RETRANSMIT    5
+#define COAP_DEFAULT_MAX_AGE    60
+#define COAP_RESPONSE_TIMEOUT   1
+#define COAP_MAX_RETRANSMIT     5
 
-#define COAP_HEADER_LEN        4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
-#define COAP_ETAG_LEN          4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+#define COAP_DEFAULT_BLOCK_SIZE 16
+
+#define COAP_HEADER_LEN         4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
+#define COAP_ETAG_LEN           4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
 
 #define COAP_HEADER_VERSION_MASK             0xC0
 #define COAP_HEADER_VERSION_POSITION         6
@@ -167,8 +169,9 @@ typedef struct {
   uint32_t observe; /* 0-4 bytes for coap-03 */
   uint16_t token;
   uint32_t block_num;
-  uint16_t block_size;
   uint8_t block_more;
+  uint16_t block_size;
+  uint32_t block_offset;
   uint8_t uri_query_len;
   char *uri_query;
 
@@ -230,7 +233,7 @@ int coap_set_header_observe(coap_packet_t *packet, uint32_t observe);
 int coap_get_header_token(coap_packet_t *packet, uint16_t *token);
 int coap_set_header_token(coap_packet_t *packet, uint16_t token);
 
-int coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size);
+int coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block(coap_packet_t *packet, uint32_t num, uint8_t more, uint16_t size);
 
 int coap_get_header_uri_query(coap_packet_t *packet, const char **query); // in-place string might not be 0-terminated

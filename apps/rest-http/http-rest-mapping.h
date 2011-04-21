@@ -29,7 +29,7 @@
 #define rest_get_header_token(request, token)                       0
 #define rest_set_header_token(response, token)                      0
 
-#define rest_get_header_block(request, num, more, size)             0
+#define rest_get_header_block(request, num, more, size, offset)     0
 #define rest_set_header_block(response, num, more, size)            0
 
 #define rest_get_query(request, query)                              0

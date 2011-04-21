@@ -52,7 +52,7 @@ typedef void (*restful_periodic_request_generator) (REQUEST* request);
  * Data structure representing a resource in REST.
  */
 struct resource_s {
-  struct resource_s *next; /*points to next resource defined*/
+  struct resource_s *next; /*for LIST, points to next resource defined*/
   method_t methods_to_handle; /*handled HTTP methods*/
   const char* url; /*handled URL*/
   restful_handler handler; /*handler function*/
@@ -63,7 +63,7 @@ struct resource_s {
 typedef struct resource_s resource_t;
 
 struct periodic_resource_s {
-  struct periodic_resource_s *next;
+  struct periodic_resource_s *next; /*for LIST, points to next resource defined*/
   resource_t *resource;
   uint32_t period;
   struct etimer* handler_cb_timer;
@@ -86,12 +86,12 @@ resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL
 
 /*
  * Macro to define a Resource with block-wise transfers
+ * For data > 64k use normal RESOURCE and implement block-wise yourself (block-wise byte offset is uint32_t up to 134'217'600 = 127 M).
  */
 #if WITH_COAP > 1
   #define BLOCKWISE_RESOURCE(name, methods_to_handle, url) \
   void name##_handler(REQUEST*, RESPONSE*); \
-  void name##_block_handler(REQUEST*, RESPONSE*); \
-  resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, name##_block_handler, NULL}
+  resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, coap_default_block_handler, NULL}
 #else /* WITH_COAP */
   #define BLOCKWISE_RESOURCE(name, methods_to_handle, url)    RESOURCE(name, methods_to_handle, url)
 #endif /* WITH_COAP */

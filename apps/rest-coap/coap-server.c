@@ -333,7 +333,7 @@ coap_set_header_subscription_lifetime(coap_packet_t* packet, uint32_t lifetime)
 }
 
 int
-coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size)
+coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset)
 {
   uint32_t all_block;
   PRINTF("coap_get_header_block --> \n");
@@ -345,6 +345,7 @@ coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint1
     *num = all_block >> 4;
     *more = (all_block & 0x8) >> 3;
     *size = 16 << (all_block & 0x7);
+    *offset = (all_block & ~0xF)<<(all_block & 0x7);
     return 1;
   }
 

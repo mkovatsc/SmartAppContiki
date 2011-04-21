@@ -290,7 +290,7 @@ coap_serialize_message(coap_packet_t *packet)
   else
   {
     packet->code = INTERNAL_SERVER_ERROR_500;
-    packet->payload_len = (uint16_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4), options (%u), and payload (%u) exceed COAP_MAX_PACKET_SIZE", (option - packet->header), packet->payload_len);
+    packet->payload_len = (uint32_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4), options (%u), and payload (%u) exceed COAP_MAX_PACKET_SIZE", (option - packet->header), packet->payload_len);
   }
 
   /* set header fields */
@@ -398,6 +398,7 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           packet->block_num = bytes_2_uint32(option_data, option_len);
           packet->block_more = (packet->block_num & 0x08);
           packet->block_size = 16 << (packet->block_num & 0x07);
+          packet->block_offset = (packet->block_num & ~0x0F)<<(packet->block_num & 0x07);
           packet->block_num >>= 4;
           PRINTF("Block [%lu%s (%u B/blk)]\n", packet->block_num, packet->block_more ? "+" : "", packet->block_size);
           break;
@@ -624,13 +625,14 @@ coap_set_header_token(coap_packet_t *packet, uint16_t token)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size)
+coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset)
 {
   if (!IS_OPTION(packet, COAP_OPTION_BLOCK)) return 0;
 
   *num = packet->block_num;
   *more = packet->block_more;
   *size = packet->block_size;
+  *offset = packet->block_offset;
 
   return 1;
 }

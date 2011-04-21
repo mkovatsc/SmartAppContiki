@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -27,7 +27,7 @@
 static char temp[103]; // ./well-known/core has longest payload 102 + 1 string delimiter
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
-RESOURCE(helloworld, METHOD_GET, "hello");
+BLOCKWISE_RESOURCE(helloworld, METHOD_GET, "hello");
 
 /* For each resource defined, there corresponds an handler method which should be defined too.
  * Name of the handler method should be [resource name]_handler
@@ -36,7 +36,7 @@ void
 helloworld_handler(REQUEST* request, RESPONSE* response)
 {
   char len[4];
-  int length = 12; /*<------>*/
+  int length = 12; /* ------->| */
   char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now";
 
   if (rest_get_query_variable(request, "len", len, 4)) {
@@ -50,35 +50,11 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
     temp[length] = '\0';
   }
 
+  rest_set_header_etag(response, (uint8_t *) &length, 1);
   rest_set_header_content_type(response, TEXT_PLAIN);
-
-  /* blockwise test */
-  int offset = 0;
-  uint32_t block_num = 0;
-  uint8_t block_more = 0;
-  uint16_t block_size = 0;
-  if (rest_get_header_block(request, &block_num, &block_more, &block_size))
-  {
-    offset = block_num * block_size;
-
-    if (offset > strlen(temp))
-    {
-      rest_set_response_status(response, BAD_REQUEST_400);
-      return;
-    }
-
-    length = strlen(temp+offset);
-    block_more = length > block_size;
-
-    rest_set_header_block(response, block_num, block_more, block_size);
-    rest_set_response_payload(response, (uint8_t *)temp+offset, length<block_size ? length : block_size);
-  }
-  else
-  {
-    rest_set_header_block(response, 0, strlen(temp)>16, 16);
-    rest_set_response_payload(response, (uint8_t *)temp, length);
-  }
+  rest_set_response_payload(response, (uint8_t *)temp, length);
 }
+
 
 /* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
 RESOURCE(mirror, METHOD_GET, "dbg");
@@ -112,7 +88,7 @@ mirror_handler(REQUEST* request, RESPONSE* response)
     index += sprintf(temp+index, "Ob %lu\n", observe);
   if (rest_get_header_token(request, &token))
     index += sprintf(temp+index, "To 0x%X\n", token);
-  if (rest_get_header_block(request, &block_num, &block_more, &block_size))
+  if (rest_get_header_block(request, &block_num, &block_more, &block_size, NULL))
     index += sprintf(temp+index, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
   if ((len = rest_get_query(request, &query)))
     index += sprintf(temp+index, "Qu %.*s", len, query);
