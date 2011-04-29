@@ -12,7 +12,7 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -24,15 +24,15 @@
 #define PRINTLLADDR(addr)
 #endif
 
-static char temp[103]; // ./well-known/core has longest payload 102 + 1 string delimiter
+static char temp[REST_MAX_CHUNK_SIZE+1]; /* +1 for string delimiter */
 
 
 /* Resources are defined by RESOURCE macro. Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash) */
-RESOURCE(mirror, METHOD_GET, "dbg");
+RESOURCE(mirror, METHOD_GET, "mirror");
 
 /* To each defined resource corresponds a handler function named [resource name]_handler. */
 void
-mirror_handler(REQUEST* request, RESPONSE* response)
+mirror_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   int strpos = 0;
 
@@ -77,7 +77,7 @@ mirror_handler(REQUEST* request, RESPONSE* response)
     rest_set_header_content_type(response, TEXT_PLAIN);
     rest_set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. */
     rest_set_header_etag(response, etag_res, 3);
-    rest_set_header_location(response, fake);
+    rest_set_header_location(response, fake); /* Initial slash is omitted by framework */
     rest_set_header_observe(response, 10);
     rest_set_header_token(response, 0x0180); /* If this function is not called, the Token is copied from the request by default. */
     rest_set_header_block(response, 42, 0, 64); /* See BLOCKWISE_RESOURCE. */
@@ -86,22 +86,25 @@ mirror_handler(REQUEST* request, RESPONSE* response)
   }
 }
 
-/* When using CoAP, BLOCKWISE_RESOURCEs will call coap_default_block_handler()
- * after the [resource name]_handler() function and crop the payload into the requested block. */
-BLOCKWISE_RESOURCE(helloworld, METHOD_GET, "hello");
+/* The REST framework automatically converts the data to the requested blocks for CoAP.
+ * For large data, the byte offset is provided to the handler as int32_t pointer and must
+ * and chunk-wise resources must set its value to the new value or -1 of the end is reached.
+ * The offset for CoAP's blockwise transfer can go up to 2'147'481'600 = ~2047 M.
+ */
+RESOURCE(helloworld, METHOD_GET, "hello");
 
 /* For each resource defined, there corresponds an handler function named [resource name]_handler. */
 void
-helloworld_handler(REQUEST* request, RESPONSE* response)
+helloworld_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   char len[4];
   int length = 12; /* ------->| */
-  char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now";
+  char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now100..105..110..115..120..125..130..135..140..145..150..155..160";
 
   if (rest_get_query_variable(request, "len", len, 4)) {
     length = atoi(len);
     if (length<0) length = 0;
-    if (length>99) length = 99;
+    if (length>sizeof(temp)) length = sizeof(temp)-1;
     memcpy(temp, message, length);
     temp[length] = '\0';
   } else {
@@ -112,10 +115,65 @@ helloworld_handler(REQUEST* request, RESPONSE* response)
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
+      /*
+      if (block_offset > response->payload_len)
+                    {
+                      coap_set_code(response, BAD_REQUEST_400);
+                      coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+                    }
+      */
+
     rest_set_header_etag(response, (uint8_t *) &length, 1);
     rest_set_header_content_type(response, TEXT_PLAIN);
     rest_set_response_payload(response, (uint8_t *)temp, length);
   }
+}
+
+/* The REST framework automatically converts the data to the requested blocks for CoAP.
+ * For large data, the byte offset is provided to the handler as int32_t pointer and must
+ * and chunk-wise resources must set its value to the new value or -1 of the end is reached.
+ * The offset for CoAP's blockwise transfer can go up to 2'147'481'600 = ~2047 M.
+ */
+RESOURCE(chunks, METHOD_GET, "chunks");
+#define CHUNKS_TOTAL    1030
+
+void
+chunks_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
+{
+
+  /* check boundaries of this resource */
+  if (*offset>=CHUNKS_TOTAL)
+  {
+    coap_set_code(response, BAD_REQUEST_400);
+    coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    return;
+  }
+
+  if (response)
+  {
+    int32_t strpos = 0;
+
+    /* generate data until reaching CHUNKS_TOTAL, truncate of over */
+    while (strpos<sizeof(temp)-1) {
+      strpos += snprintf(temp+strpos, sizeof(temp)-strpos, "|%ld|", *offset);
+    }
+    if (*offset+strpos > CHUNKS_TOTAL)
+    {
+      strpos = CHUNKS_TOTAL - *offset;
+    }
+
+    rest_set_response_payload(response, (uint8_t *)temp, strpos);
+
+    *offset += strpos;
+
+    /* end of chunks, e.g., specific size or EOF */
+    if (*offset>=CHUNKS_TOTAL)
+    {
+      //rest_set_response_payload(response, (uint8_t *)temp, CHUNKS_TOTAL-old_offset);
+      *offset = -1;
+    }
+  }
+
 }
 
 PERIODIC_RESOURCE(polling, METHOD_GET, "poll", 5*CLOCK_SECOND);
@@ -126,7 +184,7 @@ static uint16_t periodic_port = 0;
 static uint32_t periodic_i = 0;
 
 void
-polling_handler(REQUEST* request, RESPONSE* response)
+polling_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   /* Response might be NULL for non-confirmable requests. */
   if (response)
@@ -173,7 +231,7 @@ polling_periodic_handler(resource_t *r)
     coap_set_header_token(push, periodic_token);
     coap_set_payload(push, (uint8_t *)"TICK", 4);
 
-    PRINTF("Sending TICK %u to ", periodic_i);
+    PRINTF("Sending TICK %lu to ", periodic_i);
     PRINT6ADDR(&periodic_addr);
     PRINTF(":%u\n", periodic_port);
     coap_send_message(&periodic_addr, periodic_port, push->header, coap_serialize_message(push));
@@ -186,33 +244,37 @@ polling_periodic_handler(resource_t *r)
 /* The discover resource should be included when using CoAP. */
 RESOURCE(discover, METHOD_GET, ".well-known/core");
 void
-discover_handler(REQUEST* request, RESPONSE* response)
+discover_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    /* </hello>;rt="Text",</dbg>;rt="Mirror",</led>;rt="Control",</light>;rt="LightSensor",</toggle>;rt="Led" */
-    int strpos = 0;
+    char *links = "</hello>;rt=\"HelloWorldText\","
+                  "</mirror>;rt=\"Debug\","
+                  "</chunks>;rt=\"ChunkwiseTest\","
+                  "</poll>;rt=\"PeriodicTest\""
+#if defined (CONTIKI_TARGET_SKY)
+                  ",</leds>;rt=\"LedControl\","
+                  "</light>;rt=\"LightSensor\","
+                  "</toggle>;rt=\"RedLed\""
+#endif /*defined (CONTIKI_TARGET_SKY)*/
+                  ;
 
-    strpos += sprintf(temp + strpos, "%s", "</hello>;rt=\"Text\"");
-    strpos += sprintf(temp + strpos, ",%s", "</dbg>;rt=\"Mirror\"");
-  #if defined (CONTIKI_TARGET_SKY)
-    strpos += sprintf(temp + strpos, ",%s", "</led>;rt=\"Control\"");
-    strpos += sprintf(temp + strpos, ",%s", "</light>;rt=\"LightSensor\"");
-    strpos += sprintf(temp + strpos, ",%s", "</toggle>;rt=\"Led\"");
-  #endif /*defined (CONTIKI_TARGET_SKY)*/
-
-    rest_set_response_payload(response, (uint8_t *)temp, strpos);
+    PRINTF("discover: %ld/%u @ %ld B\n", strlen(links) - *offset, REST_MAX_CHUNK_SIZE, *offset);
+    rest_set_response_payload(response, (uint8_t *)links+*offset, strlen(links+*offset) );
     rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+
+    *offset += REST_MAX_CHUNK_SIZE;
+    if (*offset >= strlen(links)) *offset = -1;
   }
 }
 
 #if defined (CONTIKI_TARGET_SKY)
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
-RESOURCE(led, METHOD_POST | METHOD_PUT , "led");
+RESOURCE(led, METHOD_POST | METHOD_PUT , "leds");
 
 void
-led_handler(REQUEST* request, RESPONSE* response)
+led_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   char color[10];
   char mode[10];
@@ -257,7 +319,7 @@ led_handler(REQUEST* request, RESPONSE* response)
 /*A simple getter example. Returns the reading from light sensor with a simple etag*/
 RESOURCE(light, METHOD_GET, "light");
 void
-light_handler(REQUEST* request, RESPONSE* response)
+light_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   static uint8_t etag[] = {0xAB, 0xCD};
 
@@ -294,7 +356,7 @@ light_handler(REQUEST* request, RESPONSE* response)
 /*A simple actuator example. Toggles the red led*/
 RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "toggle");
 void
-toggle_handler(REQUEST* request, RESPONSE* response)
+toggle_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   leds_toggle(LEDS_RED);
 }
@@ -320,16 +382,17 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("uIP buffer: %u\n", UIP_BUFSIZE);
   PRINTF("LL header: %u\n", UIP_LLH_LEN);
   PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
+  PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
 #if WITH_COAP == 3
-  PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
   PRINTF("CoAP max packet: %u\n", COAP_MAX_PACKET_SIZE);
-  PRINTF("CoAP max payload: %u\n", COAP_MAX_PAYLOAD_SIZE);
+  PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
 #endif
 
   rest_init();
 
   rest_activate_resource(&resource_helloworld);
   rest_activate_resource(&resource_mirror);
+  rest_activate_resource(&resource_chunks);
   rest_activate_periodic_resource(&periodic_resource_polling);
   rest_activate_resource(&resource_discover);
 

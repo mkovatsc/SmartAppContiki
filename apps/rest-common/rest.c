@@ -113,13 +113,13 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 }
 
 int
-rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
+rest_invoke_restful_service(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
 {
   int found = 0;
   const char* url = request->url;
   uint16_t url_len = request->url_len;
 
-  PRINTF("rest_invoke_restful_service url %s url_len %d -->\n", url, url_len);
+  PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
   resource_t* resource = NULL;
 
@@ -136,7 +136,7 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
         /*call pre handler if it exists*/
         if (!resource->pre_handler || resource->pre_handler(request, response)) {
           /* call handler function*/
-          resource->handler(request, response);
+          resource->handler(request, response, offset, buffer, buffer_size);
 
           /*call post handler if it exists*/
           if (resource->post_handler) {
@@ -178,7 +178,7 @@ PROCESS_THREAD(rest_manager_process, ev, data)
     }
   }
 
-  while(1) {
+  while (1) {
     PROCESS_WAIT_EVENT();
     if (ev == PROCESS_EVENT_TIMER) {
       for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {

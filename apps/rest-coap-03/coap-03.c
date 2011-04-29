@@ -283,14 +283,14 @@ coap_serialize_message(coap_packet_t *packet)
   }
 
   /* pack payload */
-  if (packet->payload_len <= COAP_MAX_PACKET_SIZE - (option - packet->header))
+  if ((option - packet->header)<=COAP_MAX_HEADER_SIZE)
   {
-    memcpy(option, packet->payload, packet->payload_len);
+    memmove(option, packet->payload, packet->payload_len);
   }
   else
   {
     packet->code = INTERNAL_SERVER_ERROR_500;
-    packet->payload_len = (uint32_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4), options (%u), and payload (%u) exceed COAP_MAX_PACKET_SIZE", (option - packet->header), packet->payload_len);
+    packet->payload_len = (uint32_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - packet->header));
   }
 
   /* set header fields */
@@ -693,12 +693,12 @@ coap_set_payload(coap_packet_t *packet, uint8_t *payload, uint16_t size)
 {
   packet->payload = payload;
 
-  PRINTF("setting payload (%u of %u)\n", size, COAP_MAX_PAYLOAD_SIZE);
+  PRINTF("setting payload (%u/%u)\n", size, REST_MAX_CHUNK_SIZE);
 
-  if (size <= COAP_MAX_PAYLOAD_SIZE) {
+  if (size <= REST_MAX_CHUNK_SIZE) {
     packet->payload_len = size;
   } else {
-    packet->payload_len = COAP_MAX_PAYLOAD_SIZE;
+    packet->payload_len = REST_MAX_CHUNK_SIZE;
   }
 
   return packet->payload_len;

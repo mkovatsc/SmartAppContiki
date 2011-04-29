@@ -8,11 +8,19 @@
 #ifndef COAP_03_H_
 #define COAP_03_H_
 
-#if !defined(WITH_COAP) || WITH_COAP!=3
-#error "### WITH_COAP MUST BE DEFINED: 3 ###"
-#endif
-
 #include "contiki-net.h"
+
+/*
+ * Conservative size limit, as not all options have to be set at the same time.
+ */
+/*                            Hdr CoT Age Tag Obs Tok Blo strings */
+#define COAP_MAX_HEADER_SIZE  (4 + 2 + 5 + 5 + 5 + 5 + 4 + 0)
+#define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
+
+/*                                        0/14          48 for IPv6 (28 for IPv4) */
+#if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)
+#error "UIP_CONF_BUFFER_SIZE too small for REST_MAX_CHUNK_SIZE"
+#endif
 
 /*
  * The number of concurrent messages that can be stored for retransmission in the transaction layer.
@@ -21,22 +29,9 @@
 #define COAP_MAX_OPEN_TRANSACTIONS  3
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
-#ifndef COAP_MAX_PACKET_SIZE /*                       0/14          48 for IPv6 (28 for IPv4) */
-#define COAP_MAX_PACKET_SIZE  (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN) // 132 <- recalc on your own!
-#endif /* COAP_MAX_PACKET_SIZE */
-
-/*
- * Conservative size limit, as not all options have to be set at the same time.
- */
-#ifndef COAP_MAX_PAYLOAD_SIZE /*                      Hdr CoT Age Tag Obs Tok Blo strings*/
-#define COAP_MAX_PAYLOAD_SIZE  (COAP_MAX_PACKET_SIZE - 4 - 2 - 5 - 5 - 5 - 5 - 4 - 0) // 102 <- recalc on your own!
-#endif /* COAP_MAX_PAYLOAD_SIZE */                  /* 30 + string options */
-
 #define COAP_DEFAULT_MAX_AGE    60
 #define COAP_RESPONSE_TIMEOUT   1
 #define COAP_MAX_RETRANSMIT     5
-
-#define COAP_DEFAULT_BLOCK_SIZE 16
 
 #define COAP_HEADER_LEN         4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
 #define COAP_ETAG_LEN           4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */

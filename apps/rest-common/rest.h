@@ -8,6 +8,10 @@
 struct resource_s;
 struct periodic_resource_s;
 
+#ifndef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE     128
+#endif
+
 #ifdef WITH_COAP
   #include "coap-server.h"
   #define REQUEST coap_packet_t
@@ -41,7 +45,7 @@ typedef enum {
 
 
 /*Signature of handler functions*/
-typedef void (*restful_handler) (REQUEST* request, RESPONSE* response);
+typedef void (*restful_handler) (REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size);
 typedef int (*restful_pre_handler) (REQUEST* request, RESPONSE* response);
 typedef void (*restful_post_handler) (REQUEST* request, RESPONSE* response);
 
@@ -75,38 +79,18 @@ typedef struct periodic_resource_s periodic_resource_t;
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
 #define RESOURCE(name, methods_to_handle, url) \
-void name##_handler(REQUEST*, RESPONSE*); \
+void name##_handler(REQUEST*, RESPONSE*, int32_t*, uint8_t*, uint16_t); \
 resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, NULL, NULL}
-
-/*
- * Macro to define a Resource with block-wise transfers
- * For data > 64k use normal RESOURCE and implement block-wise yourself (block-wise byte offset is uint32_t up to 134'217'600 = 127 M).
- */
-#if WITH_COAP > 1
-  #define BLOCKWISE_RESOURCE(name, methods_to_handle, url) \
-  void name##_handler(REQUEST*, RESPONSE*); \
-  resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, coap_default_block_handler, NULL}
-#else /* WITH_COAP */
-  #define BLOCKWISE_RESOURCE(name, methods_to_handle, url)    RESOURCE(name, methods_to_handle, url)
-#endif /* WITH_COAP */
 
 /*
  * Macro to define a Periodic Resource
  * The corresponding _periodic_handler() function will be called every period.
  * There one can define what to do, e.g., poll a sensor and publish a changed value to observing clients.
  */
-#if WITH_COAP > 1
-  #define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
-  void name##_handler(REQUEST*, RESPONSE*); \
-  resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, NULL, NULL}; \
-  int name##_periodic_handler(resource_t*); \
-  periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
-#else /* WITH_COAP */
-  #define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
-  RESOURCE(name, methods_to_handle, url); \
-  int name##_periodic_handler(resource_t*); \
-  periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {0}, name##_periodic_handler}
-#endif /* WITH_COAP */
+#define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
+RESOURCE(name, methods_to_handle, url); \
+int name##_periodic_handler(resource_t*); \
+periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
@@ -124,7 +108,7 @@ void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
  * To be called by HTTP/COAP server as a callback function when a new service request appears.
  * This function dispatches the corresponding RESTful service.
  */
-int rest_invoke_restful_service(REQUEST* request, RESPONSE* response);
+int rest_invoke_restful_service(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size);
 
 /*
  * Returns the resource list
