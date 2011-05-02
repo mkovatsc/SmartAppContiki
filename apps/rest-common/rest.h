@@ -35,6 +35,10 @@ struct periodic_resource_s;
 
 #endif /*WITH_COAP*/
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)? (a) : (b))
+#endif /* MIN */
+
 /*REST method types*/
 typedef enum {
   METHOD_GET = (1 << 0),

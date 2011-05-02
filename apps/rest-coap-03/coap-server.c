@@ -12,7 +12,6 @@
 
 #define DEBUG 1
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
 #define PRINTLLADDR(lladdr) PRINTF(" %02x:%02x:%02x:%02x:%02x:%02x ",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
@@ -34,8 +33,6 @@
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
-
-
 
 /*-----------------------------------------------------------------------------------*/
 /*- Constants -----------------------------------------------------------------------*/
@@ -75,13 +72,11 @@ handle_incoming_data(void)
 
   if (uip_newdata()) {
 
-    PRINTF("-receiving UDP datagram-\n From: ");
+    PRINTF("receiving UDP datagram from: ");
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-    PRINTF(":%u\n Length: %u\n Data: ", uip_htons(UIP_UDP_BUF->srcport), data_len );
-
+    PRINTF(":%u\n  Length: %u\n  Data: ", uip_htons(UIP_UDP_BUF->srcport), data_len );
     PRINTBITS(data, data_len);
-
-    PRINTF("\n -----------------------\n");
+    PRINTF("\n");
 
     coap_packet_t request[1] = {{0}};
     coap_transaction_t *transaction = NULL;
@@ -91,9 +86,9 @@ handle_incoming_data(void)
     if (error==NO_ERROR)
     {
 
-      PRINTF("Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
-      PRINTF("URL: %.*s\n", request->url_len, request->url);
-      PRINTF("Payload: %.*s\n", request->payload_len, request->payload);
+      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
+      PRINTF("  URL: %.*s\n", request->url_len, request->url);
+      PRINTF("  Payload: %.*s\n", request->payload_len, request->payload);
 
       if (request->type==COAP_TYPE_CON)
       {
@@ -120,11 +115,8 @@ handle_incoming_data(void)
             /* get offset for blockwise transfers */
             if (coap_get_header_block(request, &block_num, NULL, &block_size, &block_offset))
             {
-                PRINTF("Blockwise: %lu (%u/%u) @ %lu bytes\n", block_num, block_size, REST_MAX_CHUNK_SIZE, block_offset);
-                if ( block_size > REST_MAX_CHUNK_SIZE)
-                {
-                    block_size = REST_MAX_CHUNK_SIZE;
-                }
+                PRINTF("Blockwise: block request %lu (%u/%u) @ %lu bytes\n", block_num, block_size, REST_MAX_CHUNK_SIZE, block_offset);
+                block_size = MIN(block_size, REST_MAX_CHUNK_SIZE);
                 new_offset = block_offset;
             }
 
@@ -143,7 +135,7 @@ handle_incoming_data(void)
               /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
               if (new_offset==block_offset)
               {
-                PRINTF("Blockwise: block request for unaware resource, payload length %u\n", response->payload_len);
+                PRINTF("Blockwise: unaware resource with payload length %u/%u\n", response->payload_len, block_size);
                 if (block_offset >= response->payload_len)
                 {
                   coap_set_code(response, BAD_REQUEST_400);
@@ -152,13 +144,13 @@ handle_incoming_data(void)
                 else
                 {
                   coap_set_header_block(response, block_num, response->payload_len - block_offset > block_size, block_size);
-                  coap_set_payload(response, response->payload+block_offset, response->payload_len - block_offset > block_size ? block_size : response->payload_len - block_offset);
+                  coap_set_payload(response, response->payload+block_offset, MIN(response->payload_len - block_offset, block_size));
                 } /* if (valid offset) */
               }
               else
               {
                 /* resource provides chunk-wise data */
-                PRINTF("Blockwise: block request for blockwise resource, new offset %ld\n", new_offset);
+                PRINTF("Blockwise: blockwise resource, new offset %ld\n", new_offset);
                 coap_set_header_block(response, block_num, new_offset!=-1 || response->payload_len > block_size, block_size);
                 if (response->payload_len > block_size) coap_set_payload(response, response->payload, block_size);
               } /* if (resource aware of blockwise) */
@@ -168,7 +160,7 @@ handle_incoming_data(void)
               PRINTF("Blockwise: no block option for blockwise resource, using block size %u\n", REST_MAX_CHUNK_SIZE);
 
               rest_set_header_block(response, 0, new_offset!=-1, REST_MAX_CHUNK_SIZE);
-              rest_set_response_payload(response, response->payload, response->payload_len<REST_MAX_CHUNK_SIZE ? response->payload_len : REST_MAX_CHUNK_SIZE);
+              rest_set_response_payload(response, response->payload, MIN(response->payload_len, REST_MAX_CHUNK_SIZE));
             } /* if (blockwise request) */
 
             transaction->packet_len = coap_serialize_message(response);

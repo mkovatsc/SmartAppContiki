@@ -48,7 +48,6 @@ extern const char* header_delimiter;
 #define HTTP_PORT 8080
 #define HTTP_DATA_BUFF_SIZE 600     /* depending on connection_state_t (2+232 bytes), number of headers (2+12+x bytes each), and OUTGOING_DATA_BUFF_SIZE (+2 for buffer_index) */
 #define INCOMING_DATA_BUFF_SIZE 102 /* 100+2, 100 = max url len, 2 = space char+'\0' */
-#define OUTGOING_DATA_BUFF_SIZE 200 /* depending on application */
 
 /*HTTP method types*/
 typedef enum {

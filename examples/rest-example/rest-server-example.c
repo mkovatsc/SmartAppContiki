@@ -260,11 +260,11 @@ discover_handler(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t 
 #endif /*defined (CONTIKI_TARGET_SKY)*/
                   ;
 
-    PRINTF("discover: %ld/%u @ %ld B\n", strlen(links) - *offset, REST_MAX_CHUNK_SIZE, *offset);
-    rest_set_response_payload(response, (uint8_t *)links+*offset, strlen(links+*offset) );
+    PRINTF("discover: %ld/%u @ %ld B\n", strlen(links) - *offset, buffer_size, *offset);
+    rest_set_response_payload(response, (uint8_t *)links+*offset, MIN(strlen(links+*offset), buffer_size) );
     rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 
-    *offset += REST_MAX_CHUNK_SIZE;
+    *offset += buffer_size;
     if (*offset >= strlen(links)) *offset = -1;
   }
 }

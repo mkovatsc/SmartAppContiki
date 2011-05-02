@@ -11,7 +11,7 @@
 #include "static-routing.h"
 #endif
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -581,8 +581,8 @@ PT_THREAD(send_data(connection_state_t* conn_state))
   response = &conn_state->response;
   header = response->headers;
 
-  PRINTF("ALLOCATE: send buffer %u\n", OUTGOING_DATA_BUFF_SIZE);
-  buffer = allocate_buffer(OUTGOING_DATA_BUFF_SIZE);
+  PRINTF("ALLOCATE: send buffer %u\n", REST_MAX_CHUNK_SIZE);
+  buffer = allocate_buffer(REST_MAX_CHUNK_SIZE);
 
   /*FIXME: what is the best solution here to send the data. Right now, if buffer is not allocated, no data is sent!*/
   if (buffer) {
