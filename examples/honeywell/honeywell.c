@@ -45,75 +45,12 @@
 
 /*---------------------------------------------------------------------------*/
 PROCESS(honeywell_process, "Honeywell comm");
-PROCESS(telnetd_process, "Telnet server");
 
 /*---------------------------------------------------------------------------*/
-// request
-#define AT_COMMAND_PREFIX "AT"
-// command for info
-#define AT_COMMAND_INFO AT_COMMAND_PREFIX"I"
-// command for reset
-#define AT_COMMAND_RESET AT_COMMAND_PREFIX"Z"
-// command for hangup
-#define AT_COMMAND_HANGUP AT_COMMAND_PREFIX"H"
-// command for unicast: AT+UCAST:<16Byte src addr>,<response>\r\n
-#define AT_COMMAND_UNICAST AT_COMMAND_PREFIX"+UCAST:"
-// response when everything is ok
-#define AT_RESPONSE_OK "OK"
-// response when an error occured
-#define AT_RESPONSE_ERROR "ERROR"
 
-
-
-#define ISO_nl       0x0a
-#define ISO_cr       0x0d
-
-#ifndef TELNETD_CONF_LINELEN
-#define TELNETD_CONF_LINELEN 110
-#endif
-#ifndef TELNETD_CONF_NUMLINES
-#define TELNETD_CONF_NUMLINES 1
-#endif
-
-struct telnetd_state {
-	char buf[TELNETD_CONF_LINELEN + 1];
-	char bufptr;
-	char continued;
-	uint16_t numsent;
-	uint8_t state;
-#define STATE_NORMAL 0
-#define STATE_IAC    1
-#define STATE_WILL   2
-#define STATE_WONT   3
-#define STATE_DO     4
-#define STATE_DONT   5
-
-#define STATE_CLOSE  6
-};
-
-#define TELNET_IAC   255
-#define TELNET_WILL  251
-#define TELNET_WONT  252
-#define TELNET_DO    253
-#define TELNET_DONT  254
-
-
-/*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
-
-static void telnet(char *str);
-
-/*---------------------------------------------------------------------------*/
-static int uart_get_char(unsigned char c)
-{
-	ringbuf_put(&uart_buf, c);
-	if (c=='\n' || ringbuf_size(&uart_buf)==127) {
-		ringbuf_put(&uart_buf, '\0');
-		process_post(&honeywell_process, PROCESS_EVENT_MSG, NULL);
-	}
-	return 1;
-}
+static char debug_buffer[128];
 
 enum mode {manual=0, timers=1, valve=2};
 
@@ -131,8 +68,32 @@ static struct {
 	uint8_t valve;
 	uint8_t mode;
 
+	// values used in the auto mode
+	uint16_t frost_temperature;
+	uint16_t energy_temperature;
+	uint16_t comfort_temperature;
+	uint16_t supercomfort_temperature;
+	
+
+	/* 0 : justOne
+	*  1 : weekdays */
+	bool automode;
+
+
 	clock_time_t last_poll;
 } poll_data;
+
+/*---------------------------------------------------------------------------*/
+static int uart_get_char(unsigned char c)
+{
+	ringbuf_put(&uart_buf, c);
+	if (c=='\n' || ringbuf_size(&uart_buf)==127) {
+		ringbuf_put(&uart_buf, '\0');
+		process_post(&honeywell_process, PROCESS_EVENT_MSG, NULL);
+	}
+	return 1;
+}
+
 
 static void parseD(char * data){
 	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
@@ -168,6 +129,11 @@ static void parseD(char * data){
 
 static int poll_time = 10;
 
+enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode};
+
+static enum request_type request_state = idle;
+
+
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(honeywell_process, ev, data)
 {
@@ -175,7 +141,6 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	int rx;
 	int buf_pos;
 	char buf[128];
-	static bool poll = false;
 
 	PROCESS_BEGIN();
 
@@ -184,14 +149,16 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	Led1_on(); // red
 
 	etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	
+	printf_P(PSTR("G01\n"));
+	request_state = auto_temperatures;
 
 	while (1) {
 		PROCESS_WAIT_EVENT();
 		if(ev == PROCESS_EVENT_TIMER) {
 			etimer_set(&etimer, CLOCK_SECOND * poll_time);
-			telnet("INFO: polling...\r\nHONEYWELL> ");
-			printf("D\n");
-			poll = true;
+			printf_P(PSTR("D\n"));
+			request_state = poll;
 		} else if (ev == PROCESS_EVENT_MSG) {
 			buf_pos = 0;
 			while ((rx=ringbuf_get(&uart_buf))!=-1) {
@@ -199,15 +166,58 @@ PROCESS_THREAD(honeywell_process, ev, data)
 					buf[buf_pos++] = '\n';
 					buf[buf_pos] = '\0';
 					//printf("%s\r\n", buf);
-					if(poll){
-						poll = false;
-						parseD(buf);
+					switch(request_state){
+						case idle:
+							break;
+						case poll:
+							request_state = idle;
+							parseD(buf);
+							break;
+						case debug:
+							memcpy(debug_buffer, buf, strlen(buf));
+							request_state = idle;
+							break;
+						case auto_temperatures:
+							if(strncmp_P(buf, PSTR("G[0"), 3) == 0){
+								int index = atoi(&buf[3]);
+								int temp;
+								sscanf_P(&buf[6], PSTR("%x"), &temp);
+								temp *= 50;
+								switch(index){
+									case 1:
+										poll_data.frost_temperature = temp;
+										printf_P(PSTR("G02\n"));
+										break;
+									case 2:
+										poll_data.energy_temperature = temp;
+										printf_P(PSTR("G03\n"));
+										break;
+									case 3:
+										poll_data.comfort_temperature = temp;
+										printf_P(PSTR("G04\n"));
+										break;
+									case 4:
+										poll_data.supercomfort_temperature = temp;
+										request_state = idle;
+										break;
+								}
+							}
+							break;
+						case auto_mode:
+							if(strncmp_P(buf, PSTR("S[22]"), 5) == 0){
+								/*Result is either
+								*  G[22]=00 or
+								*  G[22]=01 */
+								poll_data.automode = atoi(&buf[7]);
+							}
+							request_state = idle;
+						case set_auto_temperatures:
+							printf_P(PSTR("G01\n"));
+							request_state = auto_temperatures;
+							break;
+						default:
+							break;
 					}
-					else{
-						telnet(buf);
-						telnet("HONEYWELL> ");
-					}
-					//ATInterpreterProcessCommand(buf);
 					buf_pos = 0;
 					continue;
 				} else {
@@ -215,254 +225,11 @@ PROCESS_THREAD(honeywell_process, ev, data)
 				}
 				if (buf_pos==127) {
 					buf[buf_pos] = 0;
-					telnet("ERROR: RX buffer overflow\r\n");
-					telnet("HONEYWELL> ");
 					buf_pos = 0;
 				}
 			} // while
 		} // events
 	}
-	PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
-
-struct telnetd_buf {
-	char bufmem[TELNETD_CONF_NUMLINES * TELNETD_CONF_LINELEN];
-	int  ptr;
-	int  size;
-};
-
-static struct telnetd_buf send_buf;
-static struct telnetd_state s;
-
-#define MIN(a, b) ((a) < (b)? (a): (b))
-/*---------------------------------------------------------------------------*/
-static void buf_init(struct telnetd_buf *buf)
-{
-	buf->ptr = 0;
-	buf->size = sizeof(buf->bufmem); // rows * cols
-}
-/*---------------------------------------------------------------------------*/
-static int buf_append(struct telnetd_buf *buf, const char *data, int len)
-{
-	int copylen;
-
-	copylen = MIN(len, buf->size - buf->ptr);
-	memcpy(&buf->bufmem[buf->ptr], data, copylen);
-	buf->ptr += copylen;
-
-	return copylen;
-}
-/*---------------------------------------------------------------------------*/
-static void buf_copyto(struct telnetd_buf *buf, char *to, int len)
-{
-	memcpy(to, &buf->bufmem[0], len);
-}
-/*---------------------------------------------------------------------------*/
-static void buf_pop(struct telnetd_buf *buf, int len)
-{
-	int poplen;
-
-	poplen = MIN(len, buf->ptr);
-	memcpy(&buf->bufmem[0], &buf->bufmem[poplen], buf->ptr - poplen);
-	buf->ptr -= poplen;
-}
-/*---------------------------------------------------------------------------*/
-static int buf_len(struct telnetd_buf *buf)
-{
-	return buf->ptr;
-}
-
-/*---------------------------------------------------------------------------*/
-static void telnetd_get_char(u8_t c)
-{
-	if (c == 0) {
-		return;
-	}
-
-	if (c != ISO_nl && c != ISO_cr) {
-		s.buf[(int)s.bufptr] = c;
-		++s.bufptr;
-	}
-
-	if ((c == ISO_nl || c == ISO_cr) && s.bufptr > 0 ) {
-		s.buf[(int)s.bufptr] = 0;
-		printf("%s\r\n", s.buf);
-		s.continued = 0;
-		//telnet("HONEYWELL> ");
-		s.bufptr = 0;
-	} else if (s.bufptr == sizeof(s.buf)-1) {
-		s.buf[(int)s.bufptr] = 0;
-		printf(s.buf);
-		s.continued = 1;
-		s.bufptr = 0;
-	}
-}
-/*---------------------------------------------------------------------------*/
-static void sendopt(u8_t option, u8_t value)
-{
-	char line[4];
-	line[0] = (char)TELNET_IAC;
-	line[1] = option;
-	line[2] = value;
-	line[3] = 0;
-	buf_append(&send_buf, line, 4);
-}
-/*---------------------------------------------------------------------------*/
-static void newdata(void)
-{
-	u16_t len;
-	u8_t c;
-	uint8_t *ptr;
-
-	len = uip_datalen();
-	ptr = uip_appdata;
-
-	while(len > 0 && s.bufptr < sizeof(s.buf)) {
-		c = *ptr;
-		++ptr;
-		--len;
-
-		switch(s.state) {
-			case STATE_IAC:
-				if(c == TELNET_IAC) {
-					telnetd_get_char(c);
-					s.state = STATE_NORMAL;
-				} else {
-					switch(c) {
-						case TELNET_WILL:
-							s.state = STATE_WILL;
-							break;
-						case TELNET_WONT:
-							s.state = STATE_WONT;
-							break;
-						case TELNET_DO:
-							s.state = STATE_DO;
-							break;
-						case TELNET_DONT:
-							s.state = STATE_DONT;
-							break;
-						default:
-							s.state = STATE_NORMAL;
-							break;
-					}
-				}
-				break;
-			case STATE_WILL:
-				/* Reply with a DONT */
-				sendopt(TELNET_DONT, c);
-				s.state = STATE_NORMAL;
-				break;
-
-			case STATE_WONT:
-				/* Reply with a DONT */
-				sendopt(TELNET_DONT, c);
-				s.state = STATE_NORMAL;
-				break;
-			case STATE_DO:
-				/* Reply with a WONT */
-				sendopt(TELNET_WONT, c);
-				s.state = STATE_NORMAL;
-				break;
-			case STATE_DONT:
-				/* Reply with a WONT */
-				sendopt(TELNET_WONT, c);
-				s.state = STATE_NORMAL;
-				break;
-			case STATE_NORMAL:
-				if(c == TELNET_IAC) {
-					s.state = STATE_IAC;
-				} else {
-					telnetd_get_char(c);
-				}
-				break;
-		}
-	}
-}
-/*---------------------------------------------------------------------------*/
-static void closed(void)
-{
-}
-/*---------------------------------------------------------------------------*/
-static void acked(void)
-{
-	buf_pop(&send_buf, s.numsent);
-}
-/*---------------------------------------------------------------------------*/
-static void senddata(void)
-{
-	int len;
-	len = MIN(buf_len(&send_buf), uip_mss());
-	buf_copyto(&send_buf, uip_appdata, len);
-	uip_send(uip_appdata, len);
-	s.numsent = len;
-}
-/*---------------------------------------------------------------------------*/
-void telnetd_appcall(void *ts)
-{
-	if(uip_connected()) {
-		tcp_markconn(uip_conn, &s);
-		buf_init(&send_buf);
-		s.bufptr = 0;
-		s.continued = 0;
-		s.state = STATE_NORMAL;
-		telnet("HONEYWELL> ");
-	}
-
-	if(s.state == STATE_CLOSE) {
-		s.state = STATE_NORMAL;
-		uip_close();
-		return;
-	}
-	if(uip_closed() ||
-			uip_aborted() ||
-			uip_timedout()) {
-		closed();
-	}
-	if(uip_acked()) {
-		acked();
-	}
-	if(uip_newdata()) {
-		newdata();
-	}
-	if(uip_rexmit() ||
-			uip_newdata() ||
-			uip_acked() ||
-			uip_connected() ||
-			uip_poll()) {
-		senddata();
-	}
-}
-/*---------------------------------------------------------------------------*/
-void telnetd_quit(void)
-{
-	process_exit(&telnetd_process);
-	LOADER_UNLOAD();
-}
-/*---------------------------------------------------------------------------*/
-void telnet(char *str)
-{
-	buf_append(&send_buf, str, (int)strlen(str));
-}
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(telnetd_process, ev, data)
-{
-	PROCESS_BEGIN();
-
-	tcp_listen(UIP_HTONS(23));
-	buf_init(&send_buf);
-
-	while(1) {
-		PROCESS_WAIT_EVENT();
-		if(ev == tcpip_event) {
-			telnetd_appcall(data);
-		} else if(ev == PROCESS_EVENT_EXIT) {
-			telnetd_quit();
-		} else {
-
-		}
-	}
-
 	PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
@@ -509,7 +276,7 @@ void mode_handler(REQUEST* request, RESPONSE* response)
 				sprintf_P(temp, PSTR("valve"));
 				break;
 			default:
-				sprintf_P(temp, PSTR("Undefined"));
+				sprintf_P(temp, PSTR("undefined"));
 		}
 	}
 	else{
@@ -549,14 +316,23 @@ void target_handler(REQUEST* request, RESPONSE* response)
 	}
 	else{
 		char string[5];
-		if(rest_get_post_variable(request, "value", string, 4) == 0){ 
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=abc, eg: value=155 sets the temperature 15.5 degrees"));
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
 		}
 		else{
-			uint16_t value = atoi(string);
-			printf("A%02x\n",value/5);
-			sprintf_P(temp, PSTR("Successfully set value"));
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf("A%02x\n",value/5);
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"));
 		}
 	}
 
@@ -573,13 +349,29 @@ void poll_handler(REQUEST* request, RESPONSE* response)
 	}
 	else{
 		char string[5];
-		if(rest_get_post_variable(request, "value", string, 4) == 0){ 
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=15 sets the poll intervall to 15 seconds"));
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
 		}
 		else{
-			poll_time = atoi(string);
-			sprintf_P(temp, PSTR("Successfully set poll intervall"));
+			if (!isdigit(string[0])){
+				success=0;
+			} 
+			else{
+				// the poll intervall has to be bigger than 0
+				int poll_intervall = atoi(string);
+				if(temp > 0){
+					poll_time = poll_intervall;
+					sprintf_P(temp, PSTR("Successfully set poll intervall"));
+				}
+				else{
+					success = 0;
+				}
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"));
 		}
 	}
 
@@ -596,14 +388,23 @@ void valve_handler(REQUEST* request, RESPONSE* response)
 	}
 	else{
 		char string[5];
+		int success = 1;
 		if(rest_get_post_variable(request, "value", string, 4) == 0){
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
+			success = 0;
 		}
 		else{
-			int new_valve=atoi(string);
-			printf_P(PSTR("E%02x\n"),new_valve);
-			sprintf_P(temp, PSTR("Successfully set valve position"));
+			if (!isdigit(string[0])){
+				success=0;
+			} 
+			else{
+				int new_valve=atoi(string);
+				printf_P(PSTR("E%02x\n"),new_valve);
+				sprintf_P(temp, PSTR("Successfully set valve position"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
 		}
 	}
 
@@ -714,13 +515,395 @@ void time_handler(REQUEST* request, RESPONSE* response)
 		}
 		if(!success){
 			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=mm:hh[:ss]"));
+			sprintf_P(temp, PSTR("Payload format: value=hh:mm[:ss]"));
 		}
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
 	rest_set_response_payload(response, temp, strlen(temp));
 }
+
+RESOURCE(frost, METHOD_GET | METHOD_POST, "auto/frost");
+void frost_handler(REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_GET){
+		sprintf_P(temp, PSTR("%d.%02d"), poll_data.frost_temperature/100, poll_data.frost_temperature%100);
+	}
+	else{
+		char string[5];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
+		}
+		else{
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf("S01%02x\n",value/5);
+				request_state = set_auto_temperatures;
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the frost temperature to 15.5 degrees"));
+		}
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+RESOURCE(energy, METHOD_GET | METHOD_POST, "auto/energy");
+void energy_handler(REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_GET){
+		sprintf_P(temp, PSTR("%d.%02d"), poll_data.energy_temperature/100, poll_data.energy_temperature%100);
+	}
+	else{
+		char string[5];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
+		}
+		else{
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf("S02%02x\n",value/5);
+				request_state = set_auto_temperatures;
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the energy temperature to 15.5 degrees"));
+		}
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort");
+void comfort_handler(REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_GET){
+		sprintf_P(temp, PSTR("%d.%02d"), poll_data.comfort_temperature/100, poll_data.comfort_temperature%100);
+	}
+	else{
+		char string[5];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
+		}
+		else{
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf("S03%02x\n",value/5);
+				request_state = set_auto_temperatures;
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the comfort temperature to 15.5 degrees"));
+		}
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort");
+void supercomfort_handler(REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_GET){
+		sprintf_P(temp, PSTR("%d.%02d"), poll_data.supercomfort_temperature/100, poll_data.supercomfort_temperature%100);
+	}
+	else{
+		char string[5];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
+		}
+		else{
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf("S04%02x\n",value/5);
+				request_state = set_auto_temperatures;
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the supercomfort temperature to 15.5 degrees"));
+		}
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+RESOURCE(debug, METHOD_GET | METHOD_POST, "debug");
+void debug_handler(REQUEST * request, RESPONSE * response){
+	if (rest_get_method_type(request)==METHOD_POST){
+		char string[10];
+		rest_get_post_variable(request, "value", string, 9);
+		printf("%s\n",string);
+		request_state = debug;
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, debug_buffer, strlen(debug_buffer));
+}
+
+
+
+
+RESOURCE(auto, METHOD_GET, "auto");
+void auto_handler(REQUEST* request, RESPONSE* response)
+{	
+	char temp[128];
+	int index = 0;
+	index += sprintf_P(temp + index, PSTR("</auto/frost>"));
+	index += sprintf_P(temp + index, PSTR("</auto/energy>"));
+	index += sprintf_P(temp + index, PSTR("</auto/comfort>"));
+	index += sprintf_P(temp + index, PSTR("</auto/supercomfort>"));
+	index += sprintf_P(temp + index, PSTR("</auto/timermode>"));
+	index += sprintf_P(temp + index, PSTR("</auto/weektimer/slot1>"));
+
+	/*index += sprintf_P(temp + index, PSTR("</auto/weektimer>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer1>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer2>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer3>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer4>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer5>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer6>"));
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer7>"));*/
+
+
+	rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+	rest_set_response_payload(response, temp , strlen(temp));
+}
+
+RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode");
+void timermode_handler(REQUEST* request, RESPONSE* response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_POST){
+		char string[16];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 10)==0){
+			success = 0;
+		}
+		else {
+			if(strncmp_P(string, PSTR("weekdays"), 9)==0){
+				request_state=auto_mode;
+				printf_P(PSTR("S2201\n"));
+				sprintf_P(temp, PSTR("Timermode set to weekdays"));
+			}
+			else if(strncmp_P(string, PSTR("justOne"), 8)==0){
+				request_state=auto_mode;
+				printf_P(PSTR("S2200\n"));
+				sprintf_P(temp, PSTR("Timermode set to justOne"));
+			}
+			else{
+				success = 0;
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value={justOne, weekdays}"));
+		}
+	}
+	else{
+		sprintf_P(temp, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"));
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+static void handleTimer(int day, int slot, REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_POST){
+		char mode[16];
+		int success = 1;
+		if(rest_get_post_variable(request, "mode", mode, 14)==0){
+			success = 0;
+		}
+		else {
+			/* frost -> 0
+		     * energy -> 1
+    		 * comfort -> 2
+			 * supercomfort -> 3 */
+			int level;
+			if(strncmp_P(mode, PSTR("frost"), 14)==0){
+				level = 0;
+			}
+			else if(strncmp_P(mode, PSTR("energy"), 14)==0){
+				level = 1;
+			}
+			else if(strncmp_P(mode, PSTR("comfort"), 14)==0){
+				level = 2;
+			}
+			else if(strncmp_P(mode, PSTR("supercomfort"), 14)==0){
+				level = 3;
+			}
+			else{
+				success = 0;
+			}
+
+			if(success){
+				char time[8];
+				if(rest_get_post_variable(request, "time", time, 6)==0){
+					success = 0;
+				}
+				else{
+					if(isdigit(time[0]) && isdigit(time[1]) && isdigit(time[3]) && isdigit(time[4]) ){
+						int hour = atoi(&time[0]);
+						int minute = atoi(&time[3]);
+						if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){
+							success = 0; 
+						}
+						else{
+							//sprintf_P(temp, PSTR("Set timer of day %d in slot %d to the mode %s at time %s"), day, slot, mode, time);
+							printf_P(PSTR("W%d%d%d%x\n"),day, slot, level, hour*60 + minute);
+							sprintf_P(temp, PSTR("W%d%d%d%x\n"),day, slot, level, hour*60 + minute);
+						}
+					}
+					else{
+						success = 0;
+					}
+				}
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: time=hh:mm&mode={frost, energy, comfort, supercomfort}"));
+		}
+	}
+	else{
+		sprintf_P(temp, PSTR("TODO"));
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, temp, strlen(temp));
+}
+
+RESOURCE(weektimer1, METHOD_GET | METHOD_POST, "auto/weektimer/slot1");
+RESOURCE(weektimer2, METHOD_GET | METHOD_POST, "auto/weektimer/slot2");
+RESOURCE(weektimer3, METHOD_GET | METHOD_POST, "auto/weektimer/slot3");
+RESOURCE(weektimer4, METHOD_GET | METHOD_POST, "auto/weektimer/slot4");
+RESOURCE(weektimer5, METHOD_GET | METHOD_POST, "auto/weektimer/slot5");
+RESOURCE(weektimer6, METHOD_GET | METHOD_POST, "auto/weektimer/slot6");
+void weektimer1_handler(REQUEST* request, RESPONSE* response){handleTimer(0,0,request,response);}
+void weektimer2_handler(REQUEST* request, RESPONSE* response){handleTimer(0,1,request,response);}
+void weektimer3_handler(REQUEST* request, RESPONSE* response){handleTimer(0,2,request,response);}
+void weektimer4_handler(REQUEST* request, RESPONSE* response){handleTimer(0,3,request,response);}
+void weektimer5_handler(REQUEST* request, RESPONSE* response){handleTimer(0,4,request,response);}
+void weektimer6_handler(REQUEST* request, RESPONSE* response){handleTimer(0,5,request,response);}
+
+RESOURCE(day1timer1, METHOD_GET | METHOD_POST, "auto/daytimer1/slot1");
+RESOURCE(day1timer2, METHOD_GET | METHOD_POST, "auto/daytimer1/slot2");
+RESOURCE(day1timer3, METHOD_GET | METHOD_POST, "auto/daytimer1/slot3");
+RESOURCE(day1timer4, METHOD_GET | METHOD_POST, "auto/daytimer1/slot4");
+RESOURCE(day1timer5, METHOD_GET | METHOD_POST, "auto/daytimer1/slot5");
+RESOURCE(day1timer6, METHOD_GET | METHOD_POST, "auto/daytimer1/slot6");
+void day1timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(1,0,request,response);}
+void day1timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(1,1,request,response);}
+void day1timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(1,2,request,response);}
+void day1timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(1,3,request,response);}
+void day1timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(1,4,request,response);}
+void day1timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(1,5,request,response);}
+
+RESOURCE(day2timer1, METHOD_GET | METHOD_POST, "auto/daytimer2/slot1");
+RESOURCE(day2timer2, METHOD_GET | METHOD_POST, "auto/daytimer2/slot2");
+RESOURCE(day2timer3, METHOD_GET | METHOD_POST, "auto/daytimer2/slot3");
+RESOURCE(day2timer4, METHOD_GET | METHOD_POST, "auto/daytimer2/slot4");
+RESOURCE(day2timer5, METHOD_GET | METHOD_POST, "auto/daytimer2/slot5");
+RESOURCE(day2timer6, METHOD_GET | METHOD_POST, "auto/daytimer2/slot6");
+void day2timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(2,0,request,response);}
+void day2timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(2,1,request,response);}
+void day2timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(2,2,request,response);}
+void day2timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(2,3,request,response);}
+void day2timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(2,4,request,response);}
+void day2timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(2,5,request,response);}
+
+RESOURCE(day3timer1, METHOD_GET | METHOD_POST, "auto/daytimer3/slot1");
+RESOURCE(day3timer2, METHOD_GET | METHOD_POST, "auto/daytimer3/slot2");
+RESOURCE(day3timer3, METHOD_GET | METHOD_POST, "auto/daytimer3/slot3");
+RESOURCE(day3timer4, METHOD_GET | METHOD_POST, "auto/daytimer3/slot4");
+RESOURCE(day3timer5, METHOD_GET | METHOD_POST, "auto/daytimer3/slot5");
+RESOURCE(day3timer6, METHOD_GET | METHOD_POST, "auto/daytimer3/slot6");
+void day3timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(3,0,request,response);}
+void day3timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(3,1,request,response);}
+void day3timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(3,2,request,response);}
+void day3timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(3,3,request,response);}
+void day3timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(3,4,request,response);}
+void day3timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(3,5,request,response);}
+
+RESOURCE(day4timer1, METHOD_GET | METHOD_POST, "auto/daytimer4/slot1");
+RESOURCE(day4timer2, METHOD_GET | METHOD_POST, "auto/daytimer4/slot2");
+RESOURCE(day4timer3, METHOD_GET | METHOD_POST, "auto/daytimer4/slot3");
+RESOURCE(day4timer4, METHOD_GET | METHOD_POST, "auto/daytimer4/slot4");
+RESOURCE(day4timer5, METHOD_GET | METHOD_POST, "auto/daytimer4/slot5");
+RESOURCE(day4timer6, METHOD_GET | METHOD_POST, "auto/daytimer4/slot6");
+void day4timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(4,0,request,response);}
+void day4timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(4,1,request,response);}
+void day4timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(4,2,request,response);}
+void day4timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(4,3,request,response);}
+void day4timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(4,4,request,response);}
+void day4timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(4,5,request,response);}
+
+RESOURCE(day5timer1, METHOD_GET | METHOD_POST, "auto/daytimer5/slot1");
+RESOURCE(day5timer2, METHOD_GET | METHOD_POST, "auto/daytimer5/slot2");
+RESOURCE(day5timer3, METHOD_GET | METHOD_POST, "auto/daytimer5/slot3");
+RESOURCE(day5timer4, METHOD_GET | METHOD_POST, "auto/daytimer5/slot4");
+RESOURCE(day5timer5, METHOD_GET | METHOD_POST, "auto/daytimer5/slot5");
+RESOURCE(day5timer6, METHOD_GET | METHOD_POST, "auto/daytimer5/slot6");
+void day5timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(5,0,request,response);}
+void day5timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(5,1,request,response);}
+void day5timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(5,2,request,response);}
+void day5timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(5,3,request,response);}
+void day5timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(5,4,request,response);}
+void day5timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(5,5,request,response);}
+
+RESOURCE(day6timer1, METHOD_GET | METHOD_POST, "auto/daytimer6/slot1");
+RESOURCE(day6timer2, METHOD_GET | METHOD_POST, "auto/daytimer6/slot2");
+RESOURCE(day6timer3, METHOD_GET | METHOD_POST, "auto/daytimer6/slot3");
+RESOURCE(day6timer4, METHOD_GET | METHOD_POST, "auto/daytimer6/slot4");
+RESOURCE(day6timer5, METHOD_GET | METHOD_POST, "auto/daytimer6/slot5");
+RESOURCE(day6timer6, METHOD_GET | METHOD_POST, "auto/daytimer6/slot6");
+void day6timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(6,0,request,response);}
+void day6timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(6,1,request,response);}
+void day6timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(6,2,request,response);}
+void day6timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(6,3,request,response);}
+void day6timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(6,4,request,response);}
+void day6timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(6,5,request,response);}
+
+RESOURCE(day7timer1, METHOD_GET | METHOD_POST, "auto/daytimer7/slot1");
+RESOURCE(day7timer2, METHOD_GET | METHOD_POST, "auto/daytimer7/slot2");
+RESOURCE(day7timer3, METHOD_GET | METHOD_POST, "auto/daytimer7/slot3");
+RESOURCE(day7timer4, METHOD_GET | METHOD_POST, "auto/daytimer7/slot4");
+RESOURCE(day7timer5, METHOD_GET | METHOD_POST, "auto/daytimer7/slot5");
+RESOURCE(day7timer6, METHOD_GET | METHOD_POST, "auto/daytimer7/slot6");
+void day7timer1_handler(REQUEST* request, RESPONSE* response){handleTimer(7,0,request,response);}
+void day7timer2_handler(REQUEST* request, RESPONSE* response){handleTimer(7,1,request,response);}
+void day7timer3_handler(REQUEST* request, RESPONSE* response){handleTimer(7,2,request,response);}
+void day7timer4_handler(REQUEST* request, RESPONSE* response){handleTimer(7,3,request,response);}
+void day7timer5_handler(REQUEST* request, RESPONSE* response){handleTimer(7,4,request,response);}
+void day7timer6_handler(REQUEST* request, RESPONSE* response){handleTimer(7,5,request,response);}
 
 
 
@@ -729,7 +912,7 @@ void discover_handler(REQUEST* request, RESPONSE* response)
 {
 	char temp[128];
 	int index = 0;
-	index += sprintf_P(temp + index, PSTR("</temperature>"));
+	index += sprintf_P(temp + index, PSTR("</temperature>;rt=\"CurrentTemperature\""));
 	index += sprintf_P(temp + index, PSTR("</target>"));
 	index += sprintf_P(temp + index, PSTR("</mode>"));
 	index += sprintf_P(temp + index, PSTR("</poll>"));
@@ -737,6 +920,8 @@ void discover_handler(REQUEST* request, RESPONSE* response)
 	index += sprintf_P(temp + index, PSTR("</battery>"));
 	index += sprintf_P(temp + index, PSTR("</date>"));
 	index += sprintf_P(temp + index, PSTR("</time>"));
+	index += sprintf_P(temp + index, PSTR("</auto>"));
+	index += sprintf_P(temp + index, PSTR("</debug>"));
 
 
 	rest_set_response_payload(response, temp, strlen(temp));
@@ -744,13 +929,16 @@ void discover_handler(REQUEST* request, RESPONSE* response)
 }
 
 
-PROCESS(rest_server_example, "Rest Server Example");
-PROCESS_THREAD(rest_server_example, ev, data)
+PROCESS(coap_process, "coap");
+PROCESS_THREAD(coap_process, ev, data)
 {
 	PROCESS_BEGIN();
 
 	rest_init();
+
 	
+	rest_activate_resource(&resource_debug);
+
 	rest_activate_resource(&resource_date);
 	rest_activate_resource(&resource_time);
 	rest_activate_resource(&resource_temperature);
@@ -759,7 +947,71 @@ PROCESS_THREAD(rest_server_example, ev, data)
 	rest_activate_resource(&resource_mode);
 	rest_activate_resource(&resource_poll);
 	rest_activate_resource(&resource_valve);
+	rest_activate_resource(&resource_auto);
+	rest_activate_resource(&resource_frost);
+	rest_activate_resource(&resource_energy);
+	rest_activate_resource(&resource_comfort);
+	rest_activate_resource(&resource_supercomfort);
+	rest_activate_resource(&resource_timermode);
+
+	rest_activate_resource(&resource_weektimer1);
+	rest_activate_resource(&resource_weektimer2);
+	rest_activate_resource(&resource_weektimer3);
+	rest_activate_resource(&resource_weektimer4);
+	rest_activate_resource(&resource_weektimer5);
+	rest_activate_resource(&resource_weektimer6);
+
+	rest_activate_resource(&resource_day1timer1);
+	rest_activate_resource(&resource_day1timer2);
+	rest_activate_resource(&resource_day1timer3);
+	rest_activate_resource(&resource_day1timer4);
+	rest_activate_resource(&resource_day1timer5);
+	rest_activate_resource(&resource_day1timer6);
+	
+	rest_activate_resource(&resource_day2timer1);
+	rest_activate_resource(&resource_day2timer2);
+	rest_activate_resource(&resource_day2timer3);
+	rest_activate_resource(&resource_day2timer4);
+	rest_activate_resource(&resource_day2timer5);
+	rest_activate_resource(&resource_day2timer6);
+
+	rest_activate_resource(&resource_day3timer1);
+	rest_activate_resource(&resource_day3timer2);
+	rest_activate_resource(&resource_day3timer3);
+	rest_activate_resource(&resource_day3timer4);
+	rest_activate_resource(&resource_day3timer5);
+	rest_activate_resource(&resource_day3timer6);
+
+	rest_activate_resource(&resource_day4timer1);
+	rest_activate_resource(&resource_day4timer2);
+	rest_activate_resource(&resource_day4timer3);
+	rest_activate_resource(&resource_day4timer4);
+	rest_activate_resource(&resource_day4timer5);
+	rest_activate_resource(&resource_day4timer6);
+
+	rest_activate_resource(&resource_day5timer1);
+	rest_activate_resource(&resource_day5timer2);
+	rest_activate_resource(&resource_day5timer3);
+	rest_activate_resource(&resource_day5timer4);
+	rest_activate_resource(&resource_day5timer5);
+	rest_activate_resource(&resource_day5timer6);
+
+	rest_activate_resource(&resource_day6timer1);
+	rest_activate_resource(&resource_day6timer2);
+	rest_activate_resource(&resource_day6timer3);
+	rest_activate_resource(&resource_day6timer4);
+	rest_activate_resource(&resource_day6timer5);
+	rest_activate_resource(&resource_day6timer6);
+
+	rest_activate_resource(&resource_day7timer1);
+	rest_activate_resource(&resource_day7timer2);
+	rest_activate_resource(&resource_day7timer3);
+	rest_activate_resource(&resource_day7timer4);
+	rest_activate_resource(&resource_day7timer5);
+	rest_activate_resource(&resource_day7timer6);
+
 	rest_activate_resource(&resource_discover);
+
 
 	PROCESS_END();
 }
@@ -768,6 +1020,6 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
 
 /*---------------------------------------------------------------------------*/
-AUTOSTART_PROCESSES(&telnetd_process, &honeywell_process, &rest_server_example);
+AUTOSTART_PROCESSES(&honeywell_process, &coap_process);
 /*---------------------------------------------------------------------------*/
 
