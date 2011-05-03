@@ -96,7 +96,7 @@ typedef struct http_header_t http_header_t;
 
 /*This structure contains information about the HTTP request.*/
 struct http_request_t {
-  char* url;
+  const char* url;
   uint16_t url_len;
   http_method_t request_type; /* GET, POST, etc */
   char* query;

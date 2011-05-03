@@ -49,7 +49,7 @@ typedef enum {
 
 
 /*Signature of handler functions*/
-typedef void (*restful_handler) (REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size);
+typedef void (*restful_handler) (REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 typedef int (*restful_pre_handler) (REQUEST* request, RESPONSE* response);
 typedef void (*restful_post_handler) (REQUEST* request, RESPONSE* response);
 
@@ -59,18 +59,19 @@ typedef int (*restful_periodic_handler) (struct resource_s* resource);
  * Data structure representing a resource in REST.
  */
 struct resource_s {
-  struct resource_s *next; /*for LIST, points to next resource defined*/
-  method_t methods_to_handle; /*handled HTTP methods*/
+  struct resource_s *next; /* for LIST, points to next resource defined */
+  method_t methods_to_handle; /* handled RESTful methods */
   const char* url; /*handled URL*/
-  restful_handler handler; /*handler function*/
-  restful_pre_handler pre_handler; /*to be called before handler, may perform initializations*/
-  restful_post_handler post_handler; /*to be called after handler, may perform finalizations (cleanup, etc)*/
-  void* user_data; /*pointer to user specific data*/
+  const char* attributes; /* link-format attributes; can be omitted for HTTP */
+  restful_handler handler; /* handler function */
+  restful_pre_handler pre_handler; /* to be called before handler, may perform initializations */
+  restful_post_handler post_handler; /* to be called after handler, may perform finalizations (cleanup, etc) */
+  void* user_data; /* pointer to user specific data */
 };
 typedef struct resource_s resource_t;
 
 struct periodic_resource_s {
-  struct periodic_resource_s *next; /*for LIST, points to next resource defined*/
+  struct periodic_resource_s *next; /* for LIST, points to next resource defined */
   resource_t *resource;
   uint32_t period;
   struct etimer periodic_timer;
@@ -82,17 +83,17 @@ typedef struct periodic_resource_s periodic_resource_t;
  * Macro to define a Resource
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
-#define RESOURCE(name, methods_to_handle, url) \
-void name##_handler(REQUEST*, RESPONSE*, int32_t*, uint8_t*, uint16_t); \
-resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, NULL, NULL}
+#define RESOURCE(name, methods_to_handle, url, attributes) \
+void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}
 
 /*
  * Macro to define a Periodic Resource
  * The corresponding _periodic_handler() function will be called every period.
  * There one can define what to do, e.g., poll a sensor and publish a changed value to observing clients.
  */
-#define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
-RESOURCE(name, methods_to_handle, url); \
+#define PERIODIC_RESOURCE(name, methods_to_handle, url, attributes, period) \
+RESOURCE(name, methods_to_handle, url, attributes); \
 int name##_periodic_handler(resource_t*); \
 periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
 
@@ -112,7 +113,7 @@ void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
  * To be called by HTTP/COAP server as a callback function when a new service request appears.
  * This function dispatches the corresponding RESTful service.
  */
-int rest_invoke_restful_service(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size);
+int rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset);
 
 /*
  * Returns the resource list

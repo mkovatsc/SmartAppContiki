@@ -36,7 +36,7 @@ rest_to_http_max_age(uint32_t age)
 {
   /* Cache-Control: max-age=age for HTTP */
   static char temp_age[19];
-  sprintf(temp_age, "max-age=%lu", age);
+  snprintf(temp_age, sizeof(temp_age), "max-age=%lu", age);
   return temp_age;
 }
 
@@ -47,7 +47,7 @@ rest_to_http_etag(uint8_t *etag, uint8_t etag_len)
   int index = 0;
 
   for (index = 0; index<sizeof(temp_etag) && index<etag_len; ++index) {
-    sprintf(temp_etag+2*index, "%02x", etag[index]);
+    snprintf(temp_etag+2*index, sizeof(temp_etag), "%02x", etag[index]);
   }
   temp_etag[2*index] = '\0';
 
@@ -71,6 +71,7 @@ void
 rest_activate_resource(resource_t* resource)
 {
   /*add it to the restful web service link list*/
+  PRINTF("Activating: %s", resource->url);
   list_add(restful_services, resource);
 }
 
@@ -113,33 +114,39 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 }
 
 int
-rest_invoke_restful_service(REQUEST* request, RESPONSE* response, int32_t *offset, uint8_t *buffer, uint16_t buffer_size)
+rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
   int found = 0;
-  const char* url = request->url;
-  uint16_t url_len = request->url_len;
 
   PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
   resource_t* resource = NULL;
 
-  for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next) {
+  for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
+  {
     /*if the web service handles that kind of requests and urls matches*/
-    if (url && strlen(resource->url) == url_len && strncmp(resource->url, url, url_len) == 0){
+    if (request->url && strlen(resource->url) == request->url_len && strncmp(resource->url, request->url, request->url_len) == 0)
+    {
+      /* The resource URL is '\0'-terminated: a much better handle, e.g., for observing */
+      request->url = resource->url;
+
       found = 1;
       method_t method = rest_get_method_type(request);
 
       PRINTF("method %u, resource->methods_to_handle %u\n", (uint16_t)method, resource->methods_to_handle);
 
-      if (resource->methods_to_handle & method) {
+      if (resource->methods_to_handle & method)
+      {
 
         /*call pre handler if it exists*/
-        if (!resource->pre_handler || resource->pre_handler(request, response)) {
+        if (!resource->pre_handler || resource->pre_handler(request, response))
+        {
           /* call handler function*/
-          resource->handler(request, response, offset, buffer, buffer_size);
+          resource->handler(request, response, buffer, buffer_size, offset);
 
           /*call post handler if it exists*/
-          if (resource->post_handler) {
+          if (resource->post_handler)
+          {
             resource->post_handler(request, response);
           }
         }

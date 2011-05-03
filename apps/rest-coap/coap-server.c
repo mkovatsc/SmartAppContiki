@@ -511,7 +511,9 @@ PROCESS_THREAD(coap_server, ev, data)
 
     if(ev == tcpip_event) {
       handle_incoming_data();
-    } else if (ev == resource_changed_event) {
+    }
+#if 0
+    else if (ev == resource_changed_event) {
       periodic_resource_t* resource = (periodic_resource_t*)data;
       PRINTF("resource_changed_event \n");
 
@@ -539,6 +541,7 @@ PROCESS_THREAD(coap_server, ev, data)
         delete_buffer();
       }
     }
+#endif
   }
 
   PROCESS_END();

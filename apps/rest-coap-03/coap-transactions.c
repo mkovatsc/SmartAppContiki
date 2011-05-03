@@ -2,28 +2,11 @@
  * coap-03.h
  *
  *  Created on: 12 Apr 2011
- *      Author: Matthias Kovatsch, based on Dogan Yazar's work
+ *      Author: Matthias Kovatsch
  */
 
-#ifdef CONTIKI_TARGET_NETSIM
-  #include <stdio.h>
-  #include <iostream>
-  #include <cstring>
-  #include <cstdlib>
-  #include <unistd.h>
-  #include <errno.h>
-  #include <string.h>
-  #include <sys/types.h>
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-  #include <arpa/inet.h>
-  #include <netdb.h>
-#else
-  #include "contiki.h"
-  #include "contiki-net.h"
-  #include <string.h>
-  #include <stdio.h>
-#endif
+#include "contiki.h"
+#include "contiki-net.h"
 
 #include "coap-transactions.h"
 
@@ -81,14 +64,42 @@ coap_send_transaction(coap_transaction_t *t)
     }
     else
     {
-      list_remove(transactions_list, t);
+      /* timeout */
+
+      /* handle observers */
+      coap_remove_observer_by_client(&t->addr, t->port);
+
+      coap_cancel_transaction(t);
     }
   }
-
-  if (t)
+  else
   {
-    PRINTF("Freeing transaction %u\n", t->tid);
-    memb_free(&transactions_memb, t);
+    coap_cancel_transaction(t);
+  }
+}
+
+void
+coap_cancel_transaction(coap_transaction_t *t)
+{
+  list_remove(transactions_list, t);
+
+  PRINTF("Freeing transaction %u\n", t->tid);
+  etimer_stop(&t->retrans_timer);
+  memb_free(&transactions_memb, t);
+}
+
+void
+coap_cancel_transaction_by_tid(uint16_t tid)
+{
+  coap_transaction_t *t = NULL;
+
+  for (t = (coap_transaction_t*)list_head(transactions_list); t; t = t->next)
+  {
+    if (t->tid==tid)
+    {
+      coap_cancel_transaction(t);
+      return;
+    }
   }
 }
 

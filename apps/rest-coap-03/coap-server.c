@@ -10,7 +10,7 @@
 #include "static-routing.h"
 #endif
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
@@ -42,7 +42,7 @@ const char* error_messages[] = {
 
   /* Memory errors */
   "Transaction buffer allocation failed",
-  "MEMORY_BOUNDARY_EXCEEDED",
+  "Memory boundary exceeded",
 
   /* CoAP errors */
   "Request has unknown critical option" //FIXME which one?
@@ -100,7 +100,6 @@ handle_incoming_data(void)
             uint32_t block_offset = 0;
             int32_t new_offset = 0;
 
-
             /* prepare response */
             coap_packet_t response[1];
             coap_init_message(response, transaction->packet, COAP_TYPE_ACK, OK_200, request->tid);
@@ -124,7 +123,7 @@ handle_incoming_data(void)
             /* call application-specific handler        */
             /*------------------------------------------*/
             if (service_cbk) {
-              service_cbk(request, response, &new_offset, transaction->packet+COAP_MAX_HEADER_SIZE, block_size);
+              service_cbk(request, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset);
             }
             /*------------------------------------------*/
 
@@ -173,13 +172,18 @@ handle_incoming_data(void)
       {
         /* Call application-specific handler without response. */
         if (service_cbk) {
-          service_cbk(request, NULL, 0, NULL, 0);
+          service_cbk(request, NULL, NULL, 0, 0);
         }
       }
-      else if (request->type==COAP_TYPE_ACK || request->type==COAP_TYPE_RST)
+      else if (request->type==COAP_TYPE_ACK)
       {
-        //TODO check for subscriptions or registered tokens
-        PRINTF("Received ACK or RST\n");
+        PRINTF("Received ACK\n");
+        coap_cancel_transaction_by_tid(request->tid);
+      }
+      else if (request->type==COAP_TYPE_RST)
+      {
+        PRINTF("Received RST\n");
+        coap_remove_observer_by_client(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport);
       }
     } /* if (parsed correctly) */
 
@@ -192,7 +196,7 @@ handle_incoming_data(void)
 
       /* reuse input buffer */
       coap_init_message(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
-      coap_set_payload(request, request->header + COAP_HEADER_LEN, sprintf((char *) (request->header + COAP_HEADER_LEN), "%s", error_messages[error]));
+      coap_set_payload(request, (uint8_t *) error_messages[error], strlen(error_messages[error]));
       coap_serialize_message(request);
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->header, coap_serialize_message(request));
     }
@@ -201,6 +205,72 @@ handle_incoming_data(void)
   return error;
 }
 /*-----------------------------------------------------------------------------------*/
+/* The discover resource should be included when using CoAP. */
+RESOURCE(well_known_core, METHOD_GET, ".well-known/core", "");
+void
+well_known_core_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  /* Response might be NULL for non-confirmable requests. */
+  if (response)
+  {
+    int strpos = 0;
+    int bufpos = 0;
+    resource_t* resource = NULL;
+
+    for (resource = (resource_t*)list_head(rest_get_resources()); resource; resource = resource->next)
+    {
+      strpos += snprintf(buffer + bufpos, REST_MAX_CHUNK_SIZE - bufpos + 1,
+                         "</%s>%s%s%s",
+                         resource->url,
+                         resource->attributes[0] ? ";" : "",
+                         resource->attributes,
+                         resource->next ? "," : "" );
+
+      PRINTF("discover: %s\n", resource->url);
+
+      if (strpos <= *offset)
+      {
+        /* Discard output before current block */
+        PRINTF("  if %d <= %ld B\n", strpos, *offset);
+        PRINTF("  %s\n", buffer);
+        bufpos = 0;
+      }
+      else /* (strpos > *offset) */
+      {
+        /* output partly in block */
+        int len = MIN(strpos - *offset, preferred_size);
+
+        PRINTF("  el %d/%d @ %ld B\n", len, preferred_size, *offset);
+
+        /* Block might start in the middle of the output; align with buffer start. */
+        if (bufpos == 0)
+        {
+          memmove(buffer, buffer+strlen(buffer)-strpos+*offset, len);
+        }
+
+        bufpos = len;
+        PRINTF("  %s\n", buffer);
+
+        if (bufpos >= preferred_size)
+        {
+          break;
+        }
+      }
+    }
+
+    rest_set_response_payload(response, buffer, bufpos );
+    rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+
+    if (resource==NULL) {
+        *offset = -1;
+    }
+    else
+    {
+      *offset += bufpos;
+    }
+  }
+}
+
 /*
 void
 default_observe_handler(REQUEST* request, RESPONSE* response)
@@ -278,6 +348,8 @@ PROCESS_THREAD(coap_server, ev, data)
   set_global_address();
   configure_routing();
 #endif
+
+  rest_activate_resource(&resource_well_known_core);
 
   current_tid = random_rand();
 

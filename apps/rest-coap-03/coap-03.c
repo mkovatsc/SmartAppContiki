@@ -290,7 +290,7 @@ coap_serialize_message(coap_packet_t *packet)
   else
   {
     packet->code = INTERNAL_SERVER_ERROR_500;
-    packet->payload_len = (uint32_t) sprintf((char *)packet->header + COAP_HEADER_LEN, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - packet->header));
+    packet->payload_len = (uint32_t) snprintf((char *)packet->header + COAP_HEADER_LEN, REST_MAX_CHUNK_SIZE+1, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - packet->header));
   }
 
   /* set header fields */
