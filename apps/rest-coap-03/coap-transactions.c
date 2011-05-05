@@ -57,7 +57,13 @@ coap_send_transaction(coap_transaction_t *t)
     if (t->retrans_counter<COAP_MAX_RETRANSMIT)
     {
       PRINTF("Keeping transaction %u\n", t->tid);
-      etimer_set(&t->retrans_timer, CLOCK_SECOND * COAP_RESPONSE_TIMEOUT * 1<<(t->retrans_counter));
+
+// FIXME Hack to ensure timers are handled by CoAP server; posting to the process for sending would stall the response
+struct process *process_actual = PROCESS_CURRENT();
+process_current = process_coap_server;
+      etimer_set(&t->retrans_timer, CLOCK_SECOND * COAP_RESPONSE_TIMEOUT * (1<<(t->retrans_counter)));
+process_current = process_actual;
+
       list_add(transactions_list, t); /* list itself makes sure same element is not added twice */
 
       t = NULL;
@@ -65,6 +71,7 @@ coap_send_transaction(coap_transaction_t *t)
     else
     {
       /* timeout */
+      PRINTF("Timeout\n");
 
       /* handle observers */
       coap_remove_observer_by_client(&t->addr, t->port);
@@ -88,7 +95,7 @@ coap_cancel_transaction(coap_transaction_t *t)
   memb_free(&transactions_memb, t);
 }
 
-void
+int
 coap_cancel_transaction_by_tid(uint16_t tid)
 {
   coap_transaction_t *t = NULL;
@@ -98,9 +105,10 @@ coap_cancel_transaction_by_tid(uint16_t tid)
     if (t->tid==tid)
     {
       coap_cancel_transaction(t);
-      return;
+      return 1;
     }
   }
+  return 0;
 }
 
 void

@@ -8,6 +8,10 @@
 struct resource_s;
 struct periodic_resource_s;
 
+/*
+ * The maximum buffer size that is provided for resource responses and must be respected due to the limited IP buffer.
+ * Larger data must be handled by the resource and will be sent chunk-wise through a TCP stream or CoAP blocks.
+ */
 #ifndef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE     128
 #endif
@@ -88,14 +92,27 @@ void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
 resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}
 
 /*
- * Macro to define a Periodic Resource
- * The corresponding _periodic_handler() function will be called every period.
- * There one can define what to do, e.g., poll a sensor and publish a changed value to observing clients.
+ * Macro to define a periodic resource
+ * The corresponding [name]_periodic_handler() function will be called every period.
+ * For instance polling a sensor and publishing a changed value to subscribed clients would be done there.
+ * The subscriber list will be maintained by the post_handler rest_subscription_handler() (see rest-mapping header file).
  */
 #define PERIODIC_RESOURCE(name, methods_to_handle, url, attributes, period) \
-RESOURCE(name, methods_to_handle, url, attributes); \
+void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, rest_subscription_handler, NULL}; \
 int name##_periodic_handler(resource_t*); \
 periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
+
+/*
+ * Macro to define an event resource
+ * Like periodic resources, event resources have a post_handler that manages a subscriber list.
+ * Instead of a periodic_handler, an event_callback must be provided.
+ */
+#define EVENT_RESOURCE(name, methods_to_handle, url, attributes) \
+void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, rest_subscription_handler, NULL}; \
+int name##_event_handler(resource_t*)
+
 
 /*
  * Initializes REST framework and starts HTTP or COAP process

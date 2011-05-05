@@ -242,13 +242,13 @@ coap_serialize_message(coap_packet_t *packet)
     ++(packet->option_count);
   }
   if (IS_OPTION(packet, COAP_OPTION_TOKEN)) {
-    option_len = uint16_2_bytes(option+1, packet->token);
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_TOKEN - index;
-    ((coap_header_option_t *)option)->s.length = option_len;
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_TOKEN, option_len, COAP_OPTION_TOKEN - index);
-    PRINTF("Token [0x%X]\n", packet->token);
+    ((coap_header_option_t *)option)->s.length = packet->token_len;
+    memcpy(++option, packet->token, packet->token_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_TOKEN, packet->token_len, COAP_OPTION_TOKEN - index);
+    PRINTF("Token %u [0x%02X%02X]\n", packet->token_len, packet->token[0], packet->token[1]); // FIXME always prints 2 bytes...
     index = COAP_OPTION_TOKEN;
-    option += 1 + option_len;
+    option += packet->token_len;
     ++(packet->option_count);
   }
   if (IS_OPTION(packet, COAP_OPTION_BLOCK)) {
@@ -359,7 +359,7 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Max-Age [%lu]\n", packet->max_age);
           break;
         case COAP_OPTION_ETAG:
-          packet->etag_len = option_len>COAP_ETAG_LEN ? COAP_ETAG_LEN : option_len;
+          packet->etag_len = MIN(COAP_ETAG_LEN, option_len);
           memcpy(packet->etag, option_data, packet->etag_len);
           PRINTF("ETag %u [0x%02X", packet->etag_len, packet->etag[0]); // FIXME always prints 4 bytes...
           PRINTF("%02X", packet->etag[1]);
@@ -391,8 +391,9 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Observe [%lu]\n", packet->observe);
           break;
         case COAP_OPTION_TOKEN:
-          packet->token = bytes_2_uint32(option_data, option_len);
-          PRINTF("Token [0x%X]\n", packet->token);
+          packet->token_len = MIN(COAP_TOKEN_LEN, option_len);
+          memcpy(packet->token, option_data, packet->token_len);
+          PRINTF("Token %u [0x%02X%02X]\n", packet->token_len, packet->token[0] packet->token[1]); // FIXME always prints 2 bytes...
           break;
         case COAP_OPTION_BLOCK:
           packet->block_num = bytes_2_uint32(option_data, option_len);
@@ -522,7 +523,7 @@ coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag)
 int
 coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, uint8_t etag_len)
 {
-  packet->etag_len = etag_len>COAP_ETAG_LEN ? COAP_ETAG_LEN : etag_len;
+  packet->etag_len = MIN(COAP_ETAG_LEN, etag_len);
   memcpy(packet->etag, etag, packet->etag_len);
 
   SET_OPTION(packet, COAP_OPTION_ETAG);
@@ -608,20 +609,22 @@ coap_set_header_observe(coap_packet_t *packet, uint32_t observe)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_token(coap_packet_t *packet, uint16_t *token)
+coap_get_header_token(coap_packet_t *packet, const uint8_t **token)
 {
   if (!IS_OPTION(packet, COAP_OPTION_TOKEN)) return 0;
 
   *token = packet->token;
-  return 1;
+  return packet->token_len;
 }
 
 int
-coap_set_header_token(coap_packet_t *packet, uint16_t token)
+coap_set_header_token(coap_packet_t *packet, uint8_t *token, uint8_t token_len)
 {
-  packet->token = token;
+  packet->token_len = MIN(COAP_TOKEN_LEN, token_len);
+  memcpy(packet->token, token, packet->token_len);
+
   SET_OPTION(packet, COAP_OPTION_TOKEN);
-  return 1;
+  return packet->token_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int

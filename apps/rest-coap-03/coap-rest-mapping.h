@@ -27,7 +27,7 @@
 #define rest_set_header_observe(response, observe)                  coap_set_header_observe(response, observe)
 
 #define rest_get_header_token(request, token)                       coap_get_header_token(request, token)
-#define rest_set_header_token(response, token)                      coap_set_header_token(response, token)
+#define rest_set_header_token(response, token, len)                 coap_set_header_token(response, token, len)
 
 #define rest_get_header_block(request, num, more, size, offset)     coap_get_header_block(request, num, more, size, offset)
 #define rest_set_header_block(response, num, more, size)            coap_set_header_block(response, num, more, size)
@@ -39,5 +39,7 @@
 
 #define rest_get_query_variable(request, name, output, output_size) coap_get_query_variable(request, name, output, output_size)
 #define rest_get_post_variable(request, name, output, output_size)  coap_get_post_variable(request, name, output, output_size)
+
+#define rest_subscription_handler                                   coap_observe_handler
 
 #endif /* COAP_REST_MAPPING_H_ */

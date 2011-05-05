@@ -17,6 +17,8 @@ PROCESS_NAME(coap_server);
 
 #define SERVER_LISTEN_PORT 61616
 
+struct process *process_coap_server;
+
 /*Type definition of the service callback*/
 typedef int (*service_callback) (coap_packet_t *request, coap_packet_t *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 

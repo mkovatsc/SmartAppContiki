@@ -19,6 +19,7 @@
 #define COAP_MAX_OPEN_TRANSACTIONS  3
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
+#include "coap-server.h"
 #include "coap-03.h"
 #include "coap-observing.h"
 
@@ -41,7 +42,7 @@ typedef struct coap_transaction {
 coap_transaction_t *coap_new_transaction(uint16_t tid, uip_ipaddr_t *addr, uint16_t port);
 void coap_send_transaction(coap_transaction_t *t);
 void coap_cancel_transaction(coap_transaction_t *t);
-void coap_cancel_transaction_by_tid(uint16_t tid);
+int coap_cancel_transaction_by_tid(uint16_t tid);
 
 void coap_check_transactions();
 

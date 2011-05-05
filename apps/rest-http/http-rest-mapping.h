@@ -40,4 +40,6 @@
 #define rest_get_query_variable(request, name, output, output_size) http_get_query_variable(request, name, output, output_size)
 #define rest_get_post_variable(request, name, output, output_size)  http_get_post_variable(request, name, output, output_size)
 
+#define rest_subscription_handler                                   NULL
+
 #endif /* HTTP_REST_MAPPING_H_ */

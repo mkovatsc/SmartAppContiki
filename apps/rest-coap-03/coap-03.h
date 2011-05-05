@@ -44,6 +44,9 @@
 #define SET_OPTION(packet, opt) packet->options |= 1<<opt
 #define IS_OPTION(packet, opt) (packet->options & 1<<opt)
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)? (a) : (b))
+#endif /* MIN */
 
 /* CoAP message types */
 typedef enum {
@@ -156,7 +159,8 @@ typedef struct {
   uint8_t uri_path_len;
   char *uri_path;
   uint32_t observe; /* 0-4 bytes for coap-03 */
-  uint16_t token;
+  uint8_t token_len;
+  uint8_t token[COAP_TOKEN_LEN];
   uint32_t block_num;
   uint8_t block_more;
   uint16_t block_size;
@@ -219,8 +223,8 @@ int coap_set_header_uri_path(coap_packet_t *packet, char *uri);
 int coap_get_header_observe(coap_packet_t *packet, uint32_t *observe);
 int coap_set_header_observe(coap_packet_t *packet, uint32_t observe);
 
-int coap_get_header_token(coap_packet_t *packet, uint16_t *token);
-int coap_set_header_token(coap_packet_t *packet, uint16_t token);
+int coap_get_header_token(coap_packet_t *packet, const uint8_t **token);
+int coap_set_header_token(coap_packet_t *packet, uint8_t *token, uint8_t token_len);
 
 int coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block(coap_packet_t *packet, uint32_t num, uint8_t more, uint16_t size);
