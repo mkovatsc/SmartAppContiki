@@ -1,5 +1,5 @@
 /*
- * coap-03.h
+ * coap-transactions.c
  *
  *  Created on: 12 Apr 2011
  *      Author: Matthias Kovatsch
@@ -9,6 +9,7 @@
 #include "contiki-net.h"
 
 #include "coap-transactions.h"
+#include "coap-observing.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -26,6 +27,14 @@
 MEMB(transactions_memb, coap_transaction_t, COAP_MAX_OPEN_TRANSACTIONS);
 LIST(transactions_list);
 
+
+static struct process *transaction_handler_process = NULL;
+
+void
+coap_register_as_transaction_handler()
+{
+  transaction_handler_process = PROCESS_CURRENT();
+}
 
 coap_transaction_t *
 coap_new_transaction(uint16_t tid, uip_ipaddr_t *addr, uint16_t port)
@@ -58,11 +67,11 @@ coap_send_transaction(coap_transaction_t *t)
     {
       PRINTF("Keeping transaction %u\n", t->tid);
 
-// FIXME Hack to ensure timers are handled by CoAP server; posting to the process for sending would stall the response
-struct process *process_actual = PROCESS_CURRENT();
-process_current = process_coap_server;
+      // FIXME Hack, maybe there is a better way that is lighter than posting everything to the process
+      struct process *process_actual = PROCESS_CURRENT();
+      process_current = transaction_handler_process;
       etimer_set(&t->retrans_timer, CLOCK_SECOND * COAP_RESPONSE_TIMEOUT * (1<<(t->retrans_counter)));
-process_current = process_actual;
+      process_current = process_actual;
 
       list_add(transactions_list, t); /* list itself makes sure same element is not added twice */
 

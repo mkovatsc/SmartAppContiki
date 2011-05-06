@@ -22,13 +22,6 @@ LIST(restful_periodic_services);
 
 #ifdef WITH_COAP
 
-static
-method_t
-coap_to_rest_method(coap_method_t method)
-{
-  return (method_t)(1 << (method - 1));
-}
-
 #else
 
 char *
@@ -57,11 +50,14 @@ rest_to_http_etag(uint8_t *etag, uint8_t etag_len)
 
 
 void
-rest_init(void)
+rest_init_framework(void)
 {
   list_init(restful_services);
 
-  set_service_callback(rest_invoke_restful_service);
+  REST.set_service_callback(rest_invoke_restful_service);
+
+  /* Start the RESTful server implementation. */
+  REST.init();
 
   /*Start rest manager process*/
   process_start(&rest_manager_process, NULL);
@@ -80,6 +76,8 @@ rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
   list_add(restful_periodic_services, periodic_resource);
   rest_activate_resource(periodic_resource->resource);
+
+  rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
 }
 
 list_t
@@ -131,13 +129,12 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffe
       request->url = resource->url;
 
       found = 1;
-      method_t method = rest_get_method_type(request);
+      rest_method_t method = REST.get_method_type(request);
 
       PRINTF("method %u, resource->methods_to_handle %u\n", (uint16_t)method, resource->methods_to_handle);
 
       if (resource->methods_to_handle & method)
       {
-
         /*call pre handler if it exists*/
         if (!resource->pre_handler || resource->pre_handler(request, response))
         {
@@ -151,14 +148,14 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffe
           }
         }
       } else {
-        rest_set_response_status(response, METHOD_NOT_ALLOWED_405);
+        REST.set_response_status(response, METHOD_NOT_ALLOWED_405);
       }
       break;
     }
   }
 
   if (!found) {
-    rest_set_response_status(response, NOT_FOUND_404);
+    REST.set_response_status(response, NOT_FOUND_404);
   }
 
   return found;
@@ -171,12 +168,9 @@ PROCESS_THREAD(rest_manager_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  /*start the coap or http server*/
-  process_start(SERVER_PROCESS, NULL);
-
   PROCESS_PAUSE();
 
-  /* Periodic resources are only available to COAP implementation*/
+  /* Initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
   periodic_resource_t* periodic_resource = NULL;
   for (periodic_resource = (periodic_resource_t*) list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
     if (periodic_resource->period) {
@@ -191,13 +185,11 @@ PROCESS_THREAD(rest_manager_process, ev, data)
       for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
         if (periodic_resource->period && etimer_expired(&periodic_resource->periodic_timer)) {
 
-          PRINTF("Periodic: etimer expired for %s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
+          PRINTF("Periodic: etimer expired for /%s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
 
-          /*call the periodic handler function if exists*/
+          /* Call the periodic_handler function if it exists. */
           if (periodic_resource->periodic_handler) {
-            if ((periodic_resource->periodic_handler)(periodic_resource->resource)) {
-              PRINTF("Periodic: CHANGED\n");
-            }
+            (periodic_resource->periodic_handler)(periodic_resource->resource);
           }
           etimer_reset(&periodic_resource->periodic_timer);
         }

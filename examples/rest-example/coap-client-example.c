@@ -140,8 +140,10 @@ PROCESS_THREAD(coap_client_example, ev, data)
     } else if (ev == PROCESS_EVENT_TIMER) {
       /* retransmissions are handled here */
       coap_check_transactions();
+#if defined (CONTIKI_TARGET_SKY)
     } else if (ev == sensors_event && data == &button_sensor) {
       send_data();
+#endif
     }
   }
 

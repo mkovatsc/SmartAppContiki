@@ -1,5 +1,5 @@
 /*
- * coap-observing.h
+ * coap-observing.c
  *
  *  Created on: 03 May 2011
  *      Author: Matthias Kovatsch
@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include "coap-observing.h"
+#include "coap-transactions.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -90,7 +91,7 @@ coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token,
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_notify_observers(const char *url, coap_message_type_t type, uint32_t observe, uint8_t *payload, uint16_t payload_len)
+coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, uint16_t payload_len)
 {
   coap_observer_t* obs = NULL;
   for (obs = (coap_observer_t*)list_head(observers_list); obs; obs = obs->next)
@@ -104,21 +105,16 @@ coap_notify_observers(const char *url, coap_message_type_t type, uint32_t observ
       if ( (transaction = coap_new_transaction(random_rand(), &obs->addr, obs->port)) )
       {
         /* Use CON to check whether client is still there/interested after COAP_OBSERVING_REFRESH_INTERVAL. */
-
         if (stimer_expired(&obs->refresh_timer))
         {
           PRINTF("Observing: Refresh client with CON\n");
           type = COAP_TYPE_CON;
           stimer_restart(&obs->refresh_timer);
         }
-        else
-          {
-            PRINTF("Observing: not expired %lu / %lu\n", obs->refresh_timer.start+obs->refresh_timer.interval, clock_seconds());
-          }
 
         /* prepare response */
         coap_packet_t push[1]; /* This way the packet can be treated as pointer as usual. */
-        coap_init_message(push, transaction->packet, type, OK_200, transaction->tid );
+        coap_init_message(push, transaction->packet, (coap_message_type_t)type, OK_200, transaction->tid );
         coap_set_header_observe(push, observe);
         coap_set_header_token(push, obs->token, obs->token_len);
         coap_set_payload(push, payload, payload_len);

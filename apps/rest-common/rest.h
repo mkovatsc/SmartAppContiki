@@ -5,9 +5,6 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 
-struct resource_s;
-struct periodic_resource_s;
-
 /*
  * The maximum buffer size that is provided for resource responses and must be respected due to the limited IP buffer.
  * Larger data must be handled by the resource and will be sent chunk-wise through a TCP stream or CoAP blocks.
@@ -16,40 +13,100 @@ struct periodic_resource_s;
 #define REST_MAX_CHUNK_SIZE     128
 #endif
 
-#ifdef WITH_COAP
-  #include "coap-server.h"
-  #define REQUEST coap_packet_t
-  #define RESPONSE coap_packet_t
-  #define SERVER_PROCESS (&coap_server)
-
-  #include "coap-rest-mapping.h"
-
-#else /*WITH_COAP*/
-  /*WITH_HTTP*/
-  #include "http-common.h"
-  #include "http-server.h"
-  #define REQUEST http_request_t
-  #define RESPONSE http_response_t
-  #define SERVER_PROCESS (&http_server)
-
-  char *rest_to_http_max_age(uint32_t age);
-  char *rest_to_http_etag(uint8_t *etag, uint8_t etag_len);
-
-  #include "http-rest-mapping.h"
-
-#endif /*WITH_COAP*/
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b)? (a) : (b))
-#endif /* MIN */
-
 /*REST method types*/
 typedef enum {
   METHOD_GET = (1 << 0),
   METHOD_POST = (1 << 1),
   METHOD_PUT = (1 << 2),
   METHOD_DELETE = (1 << 3)
-} method_t;
+} rest_method_t;
+
+
+
+
+#ifdef WITH_COAP
+#include "coap-03.h"
+#define REQUEST         coap_packet_t
+#define RESPONSE        coap_packet_t
+#else
+#define REQUEST         http_request_t
+#define RESPONSE        http_response_t
+#endif
+
+typedef int (* service_callback_t)(REQUEST *request, RESPONSE *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+
+/**
+ * The structure of a MAC protocol driver in Contiki.
+ */
+struct rest_implementation {
+  char *name;
+
+  /** Initialize the REST implementation. */
+  void (* init)(void);
+
+  /** Register the RESTful service callback at implementation */
+  void (* set_service_callback)(service_callback_t callback);
+
+  /** Get the method of a request. */
+  rest_method_t (* get_method_type)(REQUEST *request);
+
+  /** Set the status code of a response. */
+  void (* set_response_status)(RESPONSE *response, rest_status_t code);
+
+  /** Get the content-type of a request. */
+  rest_content_type_t (* get_header_content_type)(REQUEST *request);
+
+  /** Set the content-type of a response. */
+  int (* set_header_content_type)(RESPONSE *response, rest_content_type_t);
+
+  /** Get the Max-Age option of a request. */
+  int (* get_header_max_age)(REQUEST *request, uint32_t *age);
+
+  /** Set the Max-Age option of a response. */
+  int (* set_header_max_age)(RESPONSE *response, uint32_t age);
+
+  /** Set the ETag option of a response. */
+  int (* set_header_etag)(RESPONSE *response, uint8_t *etag, int length);
+
+  /** Get the Host option of a request. */
+  int (* get_header_host)(REQUEST *request, const char **host);
+
+  /** Set the location option of a response. */
+  int (* set_header_location)(RESPONSE *response, char *location);
+
+  /** Get the payload option of a request. */
+  int (* get_request_payload)(REQUEST *request, uint8_t **payload);
+
+  /** Set the payload option of a response. */
+  int (* set_response_payload)(RESPONSE *response, uint8_t *payload, int length);
+
+  /** Get the query string of a request. */
+  int (* get_query)(REQUEST *request, const char **value);
+
+  /** Get the value of a request query key-value pair. */
+  int (* get_query_variable)(REQUEST *request, const char *name, const char **value);
+
+  /** Get the value of a request POST key-value pair. */
+  int (* get_post_variable)(REQUEST *request, const char *name, const char **value);
+
+  /** Send the payload to all subscribers of the resource at url. */
+  void (* notify_subscribers)(const char *url, int, uint32_t observe, uint8_t *payload, uint16_t payload_len);
+
+  /** The handler for resource subscriptions. */
+  void (* subscription_handler)(REQUEST *request, RESPONSE *response);
+};
+
+struct resource_s;
+struct periodic_resource_s;
+
+
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)? (a) : (b))
+#endif /* MIN */
+
+
+
 
 
 /*Signature of handler functions*/
@@ -64,7 +121,7 @@ typedef int (*restful_periodic_handler) (struct resource_s* resource);
  */
 struct resource_s {
   struct resource_s *next; /* for LIST, points to next resource defined */
-  method_t methods_to_handle; /* handled RESTful methods */
+  rest_method_t methods_to_handle; /* handled RESTful methods */
   const char* url; /*handled URL*/
   const char* attributes; /* link-format attributes; can be omitted for HTTP */
   restful_handler handler; /* handler function */
@@ -99,7 +156,7 @@ resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_h
  */
 #define PERIODIC_RESOURCE(name, methods_to_handle, url, attributes, period) \
 void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
-resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, rest_subscription_handler, NULL}; \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_periodic_handler(resource_t*); \
 periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
 
@@ -110,14 +167,17 @@ periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, 
  */
 #define EVENT_RESOURCE(name, methods_to_handle, url, attributes) \
 void name##_handler(REQUEST *, RESPONSE *, uint8_t *, uint16_t, int32_t *); \
-resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, rest_subscription_handler, NULL}; \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_event_handler(resource_t*)
 
+
+
+extern const struct rest_implementation coap_rest_implementation;
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
  */
-void rest_init(void);
+void rest_init_framework(void);
 
 /*
  * Resources wanted to be accessible should be activated with the following code.

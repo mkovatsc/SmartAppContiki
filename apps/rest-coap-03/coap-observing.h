@@ -1,8 +1,8 @@
 /*
- * coap-03.h
+ * coap-observing.h
  *
- *  Created on: 12 Apr 2011
- *      Author: Matthias Kovatsch, based on Dogan Yazar's work
+ *  Created on: 03 May 2011
+ *      Author: Matthias Kovatsch
  */
 
 #ifndef COAP_OBSERVING_H_
@@ -13,19 +13,18 @@
 #endif
 
 #include "coap-03.h"
-#include "coap-transactions.h"
 
 #ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      2
+#define COAP_MAX_OBSERVERS      4
 #endif /* COAP_MAX_OBSERVERS */
 
-#define COAP_OBSERVING_REFRESH_INTERVAL  15
+/* Interval in seconds in which NON notifies are changed to CON notifies to check client. */
+#define COAP_OBSERVING_REFRESH_INTERVAL  60
 
 #if COAP_MAX_OPEN_TRANSACTIONS<COAP_MAX_OBSERVERS
 #warning "COAP_MAX_OPEN_TRANSACTIONS smaller than COAP_MAX_OBSERVERS: cannot handle CON notifications"
 #endif
 
-/* container for transactions with message buffer and retransmission info */
 typedef struct coap_observer {
   struct coap_observer *next; /* for LIST */
 
@@ -42,7 +41,7 @@ coap_observer_t *coap_add_observer(const char *url, uip_ipaddr_t *addr, uint16_t
 void coap_remove_observer(coap_observer_t *o);
 int coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port);
 int coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, uint8_t token_len);
-void coap_notify_observers(const char *url, coap_message_type_t type, uint32_t observe, uint8_t *payload, uint16_t payload_len);
+void coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, uint16_t payload_len);
 
 void coap_observe_handler(coap_packet_t *request, coap_packet_t *response);
 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "contiki.h"
 #include "contiki-net.h"
+
 #include "rest.h"
 
 #if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
@@ -43,12 +44,13 @@ helloworld_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16
   /* response might be NULL for non-confirmable CoAP requests. */
   if (response)
   {
-    char len[4];
+    char alen[4];
+    char *len = alen;
     int length = 12; /* ------->| */
     char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now100..105..110..115..120..125..130..135..140..145..150..155..160";
 
     /* The query string can be retrieved by rest_get_query() or parsed for its key-value pairs. */
-    if (rest_get_query_variable(request, "len", len, 4)) {
+    if (REST.get_query_variable(request, "len", &len)) {
       length = atoi(len);
       if (length<0) length = 0;
       if (length>REST_MAX_CHUNK_SIZE) length = REST_MAX_CHUNK_SIZE;
@@ -57,9 +59,9 @@ helloworld_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16
       memcpy(buffer, message, length);
     }
 
-    rest_set_header_content_type(response, TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
-    rest_set_header_etag(response, (uint8_t *) &length, 1);
-    rest_set_response_payload(response, buffer, length);
+    REST.set_header_content_type(response, TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
+    REST.set_header_etag(response, (uint8_t *) &length, 1);
+    REST.set_response_payload(response, buffer, length);
   }
 }
 
@@ -79,7 +81,7 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
     static char location[] = {'/','f','a','k','e', 0};
 
     /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
-    content_type_t content_type = rest_get_header_content_type(request);
+    rest_content_type_t content_type = REST.get_header_content_type(request);
 
     /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
     uint32_t max_age = 0;
@@ -102,19 +104,20 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
 
     /* Some getters such as for ETag or Location are omitted, as these options should not appear in a request.
      * Max-Age might appear in HTTP requests or used for special purposes in CoAP. */
-    if (rest_get_header_max_age(request, &max_age))
+    if (REST.get_header_max_age(request, &max_age))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "MA %lu\n", max_age);
     }
-    if ((len = rest_get_header_host(request, &host)))
+    if ((len = REST.get_header_host(request, &host)))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, host);
     }
-    if (rest_get_header_observe(request, &observe))
+#if WITH_COAP > 1
+    if (coap_get_header_observe(request, &observe))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Ob %lu\n", observe);
     }
-    if ((len = rest_get_header_token(request, &token)))
+    if ((len = coap_get_header_token(request, &token)))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "To 0x");
       int index = 0;
@@ -123,28 +126,31 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
       }
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
     }
-    if (rest_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
+    if (coap_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
     }
-    if ((len = rest_get_query(request, &query)))
+#endif
+    if ((len = REST.get_query(request, &query)))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s", len, query);
     }
-    rest_set_response_payload(response, buffer, strpos);
+    REST.set_response_payload(response, buffer, strpos);
 
     PRINTF("/mirror options received: %s\n", buffer);
 
     /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
-    rest_set_header_content_type(response, TEXT_PLAIN);
-    rest_set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
-    rest_set_header_etag(response, opaque, 3);
-    rest_set_header_location(response, location); /* Initial slash is omitted by framework */
-    rest_set_header_observe(response, 10);
+    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
+    REST.set_header_etag(response, opaque, 3);
+    REST.set_header_location(response, location); /* Initial slash is omitted by framework */
+#if WITH_COAP > 1
+    coap_set_header_observe(response, 10);
     opaque[0] = 0x01;
     opaque[1] = 0xCC;
-    rest_set_header_token(response, opaque, 2); /* If this function is not called, the Token is copied from the request by default. */
-    rest_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
+    coap_set_header_token(response, opaque, 2); /* If this function is not called, the Token is copied from the request by default. */
+    coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
+#endif
   }
 }
 
@@ -184,7 +190,7 @@ chunks_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
       strpos = CHUNKS_TOTAL - *offset;
     }
 
-    rest_set_response_payload(response, buffer, strpos);
+    REST.set_response_payload(response, buffer, strpos);
 
     /* Signal chunk awareness of resource to framework. */
     *offset += strpos;
@@ -210,8 +216,8 @@ polling_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t 
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    rest_set_header_content_type(response, TEXT_PLAIN);
-    rest_set_response_payload(response, (uint8_t *)"It's periodic!", 14);
+    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_response_payload(response, (uint8_t *)"It's periodic!", 14);
   }
 
   /* A post_handler that handles subscriptions will be called for periodic resources by the REST framework. */
@@ -225,16 +231,15 @@ int
 polling_periodic_handler(resource_t *r)
 {
   static uint32_t periodic_i = 0;
-  static char content[10];
+  static char content[16];
 
   PRINTF("TICK /%s\n", r->url);
   periodic_i = periodic_i + 1;
 
   // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
-#if WITH_COAP>1
   /* Notify the registered observers with the given message type, observe option, and payload. */
-  coap_notify_observers(r->url, COAP_TYPE_NON, periodic_i, content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
-#endif
+  REST.notify_subscribers(r->url, COAP_TYPE_NON, periodic_i, content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
+
   return 1;
 }
 
@@ -252,8 +257,8 @@ event_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pr
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    rest_set_header_content_type(response, TEXT_PLAIN);
-    rest_set_response_payload(response, (uint8_t *)"It's eventful!", 14);
+    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_response_payload(response, (uint8_t *)"It's eventful!", 14);
   }
 
   /* A post_handler that handles subscriptions/observing will be called for periodic resources by the framework. */
@@ -274,9 +279,7 @@ event_event_handler(resource_t *r)
    * The token will be set automatically. */
 
   // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
-#if WITH_COAP>1
-  coap_notify_observers(r->url, COAP_TYPE_CON, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
-#endif
+  REST.notify_subscribers(r->url, COAP_TYPE_CON, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
   return 1;
 }
 
@@ -286,12 +289,14 @@ RESOURCE(led, METHOD_POST | METHOD_PUT , "leds", "title=\"Led control (use ?colo
 void
 led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  char color[10];
-  char mode[10];
+  char acolor[10];
+  char *color = acolor;
+  char amode[10];
+  char *mode = amode;
   uint8_t led = 0;
   int success = 1;
 
-  if (rest_get_query_variable(request, "color", color, 10)) {
+  if (REST.get_query_variable(request, "color", &color)) {
     PRINTF("color %s\n", color);
 
     if (!strcmp(color,"red")) {
@@ -307,7 +312,7 @@ led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pref
     success = 0;
   }
 
-  if (success && rest_get_post_variable(request, "mode", mode, 10)) {
+  if (success && REST.get_post_variable(request, "mode", &mode)) {
     PRINTF("mode %s\n", mode);
 
     if (!strcmp(mode, "on")) {
@@ -322,7 +327,7 @@ led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pref
   }
 
   if (!success && response) {
-    rest_set_response_status(response, BAD_REQUEST_400);
+    REST.set_response_status(response, BAD_REQUEST_400);
   }
 }
 
@@ -339,22 +344,22 @@ light_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pr
     uint16_t light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
     uint16_t light_solar = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
 
-    if (rest_get_header_content_type(request)==TEXT_PLAIN || rest_get_header_content_type(request)==TEXT_HTML) {
-      rest_set_header_content_type(response, TEXT_PLAIN);
+    if (REST.get_header_content_type(request)==TEXT_PLAIN || REST.get_header_content_type(request)==TEXT_HTML) {
+      REST.set_header_content_type(response, TEXT_PLAIN);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "%u;%u", light_photosynthetic, light_solar);
 
-      rest_set_header_etag(response, etag, 2);
-      rest_set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-    } else if (rest_get_header_content_type(request)==APPLICATION_JSON) {
-      rest_set_header_content_type(response, APPLICATION_JSON);
+      REST.set_header_etag(response, etag, 2);
+      REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
+    } else if (REST.get_header_content_type(request)==APPLICATION_JSON) {
+      REST.set_header_content_type(response, APPLICATION_JSON);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
 
-      rest_set_header_etag(response, etag, 2);
-      rest_set_response_payload(response, buffer, strlen(buffer));
+      REST.set_header_etag(response, etag, 2);
+      REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      rest_set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
-      rest_set_response_payload(response, (uint8_t *)info, strlen(info));
+      REST.set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }
 }
@@ -371,22 +376,22 @@ battery_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t 
   {
     int battery = battery_sensor.value(0);
 
-    if (rest_get_header_content_type(request)==TEXT_PLAIN || rest_get_header_content_type(request)==TEXT_HTML) {
-      rest_set_header_content_type(response, TEXT_PLAIN);
+    if (REST.get_header_content_type(request)==TEXT_PLAIN || REST.get_header_content_type(request)==TEXT_HTML) {
+      REST.set_header_content_type(response, TEXT_PLAIN);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
 
-      rest_set_header_etag(response, etag, 2);
-      rest_set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-    } else if (rest_get_header_content_type(request)==APPLICATION_JSON) {
-      rest_set_header_content_type(response, APPLICATION_JSON);
+      REST.set_header_etag(response, etag, 2);
+      REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
+    } else if (REST.get_header_content_type(request)==APPLICATION_JSON) {
+      REST.set_header_content_type(response, APPLICATION_JSON);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
 
-      rest_set_header_etag(response, etag, 2);
-      rest_set_response_payload(response, buffer, strlen(buffer));
+      REST.set_header_etag(response, etag, 2);
+      REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      rest_set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
-      rest_set_response_payload(response, (uint8_t *)info, strlen(info));
+      REST.set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }
 }
@@ -408,13 +413,13 @@ PROCESS_THREAD(rest_server_example, ev, data)
 {
   PROCESS_BEGIN();
 
-  PRINTF("Rest Server Example\n");
+  PRINTF("Rest Example\n");
 
 #ifdef RF_CHANNEL
   PRINTF("RF channel: %u\n", RF_CHANNEL);
 #endif
-#ifdef DIEEE802154_CONF_PANID
-  PRINTF("PAN ID: 0x%04X\n", DIEEE802154_CONF_PANID);
+#ifdef IEEE802154_PANID
+  PRINTF("PAN ID: 0x%04X\n", IEEE802154_PANID);
 #endif
 
   PRINTF("uIP buffer: %u\n", UIP_BUFSIZE);
@@ -426,8 +431,10 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
 #endif
 
-  rest_init();
+  /* Initialize the REST framework. */
+  rest_init_framework();
 
+  /* Activate the application-specific resources. */
   rest_activate_resource(&resource_helloworld);
   rest_activate_resource(&resource_mirror);
   rest_activate_resource(&resource_chunks);
@@ -445,15 +452,17 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_activate_resource(&resource_toggle);
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
+  /* Define application-specific events here. */
   while(1) {
     PROCESS_WAIT_EVENT();
+#if defined (CONTIKI_TARGET_SKY)
     if (ev == sensors_event && data == &button_sensor) {
       PRINTF("BUTTON\n");
-      /*Call the function that sends a resource changed event to COAP Server*/
-      //resource_changed(&periodic_resource_prlight);
+      /* Call the event_handler for this application-specific event. */
       event_event_handler(&resource_event);
     }
-  }
+#endif
+  } /* while (1) */
 
   PROCESS_END();
 }

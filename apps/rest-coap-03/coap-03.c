@@ -91,9 +91,9 @@ void
 coap_init_connection(uint16_t port)
 {
   /* new connection with remote host */
-  udp_conn = udp_new(NULL, uip_htons(0), NULL);
-  udp_bind(udp_conn, uip_htons(port));
-  PRINTF("Local/remote port %u/%u\n", uip_htons(udp_conn->lport), uip_htons(udp_conn->rport));
+  udp_conn = udp_new(NULL, 0, NULL);
+  udp_bind(udp_conn, port);
+  PRINTF("Local/remote port %u/%u\n", uip_ntohs(udp_conn->lport), uip_ntohs(udp_conn->rport));
 }
 /*-----------------------------------------------------------------------------------*/
 void
@@ -450,17 +450,19 @@ coap_set_method(coap_packet_t *packet, coap_method_t method)
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_set_code(coap_packet_t *packet, status_code_t code)
+coap_set_code(coap_packet_t *packet, rest_status_t code)
 {
-  packet->code = (uint8_t)code;
+  packet->code = (uint8_t) code;
 }
 /*-----------------------------------------------------------------------------------*/
 // FIXME return in-place pointer to save memory
 int
-coap_get_query_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size)
+coap_get_query_variable(coap_packet_t *packet, const char *name, const char **output)
 {
   if (IS_OPTION(packet, COAP_OPTION_URI_QUERY)) {
-    return get_variable(name, packet->uri_query, packet->uri_query_len, output, output_size, 0);
+      // FIXME 2
+    get_variable(name, packet->uri_query, packet->uri_query_len, *output, 1, 0);
+    return strlen(*output);
   }
 
   return 0;
@@ -468,10 +470,12 @@ coap_get_query_variable(coap_packet_t *packet, const char *name, char *output, u
 
 // FIXME return in-place pointer to save memory
 int
-coap_get_post_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size)
+coap_get_post_variable(coap_packet_t *packet, const char *name, const char **output)
 {
   if (packet->payload_len) {
-      return get_variable(name, (const char *)packet->payload, packet->payload_len, output, output_size, 0);
+      // FIXME 2
+      get_variable(name, (const char *)packet->payload, packet->payload_len, *output, 1, 0);
+      return strlen(*output);
     }
 
     return 0;
@@ -479,14 +483,14 @@ coap_get_post_variable(coap_packet_t *packet, const char *name, char *output, ui
 /*-----------------------------------------------------------------------------------*/
 /*- HEADER OPTION GETTERS AND SETTERS -----------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-content_type_t
+rest_content_type_t
 coap_get_header_content_type(coap_packet_t *packet)
 {
   return packet->content_type;
 }
 
 int
-coap_set_header_content_type(coap_packet_t *packet, content_type_t content_type)
+coap_set_header_content_type(coap_packet_t *packet, rest_content_type_t content_type)
 {
   packet->content_type = (uint8_t) content_type;
   SET_OPTION(packet, COAP_OPTION_CONTENT_TYPE);
@@ -521,7 +525,7 @@ coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag)
 }
 
 int
-coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, uint8_t etag_len)
+coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, int etag_len)
 {
   packet->etag_len = MIN(COAP_ETAG_LEN, etag_len);
   memcpy(packet->etag, etag, packet->etag_len);
@@ -618,7 +622,7 @@ coap_get_header_token(coap_packet_t *packet, const uint8_t **token)
 }
 
 int
-coap_set_header_token(coap_packet_t *packet, uint8_t *token, uint8_t token_len)
+coap_set_header_token(coap_packet_t *packet, uint8_t *token, int token_len)
 {
   packet->token_len = MIN(COAP_TOKEN_LEN, token_len);
   memcpy(packet->token, token, packet->token_len);
@@ -692,17 +696,12 @@ coap_get_payload(coap_packet_t *packet, uint8_t **payload)
 }
 
 int
-coap_set_payload(coap_packet_t *packet, uint8_t *payload, uint16_t size)
+coap_set_payload(coap_packet_t *packet, uint8_t *payload, int length)
 {
+  PRINTF("setting payload (%u/%u)\n", length, REST_MAX_CHUNK_SIZE);
+
   packet->payload = payload;
-
-  PRINTF("setting payload (%u/%u)\n", size, REST_MAX_CHUNK_SIZE);
-
-  if (size <= REST_MAX_CHUNK_SIZE) {
-    packet->payload_len = size;
-  } else {
-    packet->payload_len = REST_MAX_CHUNK_SIZE;
-  }
+  packet->payload_len = MIN(REST_MAX_CHUNK_SIZE, length);
 
   return packet->payload_len;
 }

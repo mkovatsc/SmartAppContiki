@@ -4,7 +4,9 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "coap-server.h"
+#include "coap-03-server.h"
+#include "coap-transactions.h"
+#include "coap-observing.h"
 
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
 #include "static-routing.h"
@@ -34,6 +36,8 @@
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
+PROCESS(coap_server, "Coap Server");
+
 /*-----------------------------------------------------------------------------------*/
 /*- Constants -----------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
@@ -48,18 +52,12 @@ const char* error_messages[] = {
   "Request has unknown critical option" //FIXME which one?
 };
 /*-----------------------------------------------------------------------------------*/
-
-struct process *process_coap_server = NULL;
-
-static uint16_t current_tid;
-static service_callback service_cbk = NULL;
-
+/*- Variables -----------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-void
-set_service_callback(service_callback callback)
-{
-  service_cbk = callback;
-}
+static uint16_t current_tid;
+static service_callback_t service_cbk = NULL;
+/*-----------------------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 static
 int
@@ -76,7 +74,7 @@ handle_incoming_data(void)
 
     PRINTF("receiving UDP datagram from: ");
     PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
-    PRINTF(":%u\n  Length: %u\n  Data: ", uip_htons(UIP_UDP_BUF->srcport), data_len );
+    PRINTF(":%u\n  Length: %u\n  Data: ", uip_ntohs(UIP_UDP_BUF->srcport), data_len );
     PRINTBITS(data, data_len);
     PRINTF("\n");
 
@@ -87,6 +85,9 @@ handle_incoming_data(void)
 
     if (error==NO_ERROR)
     {
+
+      // FIXME
+      // duplicates suppression
 
       PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
       PRINTF("  URL: %.*s\n", request->url_len, request->url);
@@ -160,8 +161,8 @@ handle_incoming_data(void)
             {
               PRINTF("Blockwise: no block option for blockwise resource, using block size %u\n", REST_MAX_CHUNK_SIZE);
 
-              rest_set_header_block(response, 0, new_offset!=-1, REST_MAX_CHUNK_SIZE);
-              rest_set_response_payload(response, response->payload, MIN(response->payload_len, REST_MAX_CHUNK_SIZE));
+              coap_set_header_block(response, 0, new_offset!=-1, REST_MAX_CHUNK_SIZE);
+              coap_set_payload(response, response->payload, MIN(response->payload_len, REST_MAX_CHUNK_SIZE));
             } /* if (blockwise request) */
 
             transaction->packet_len = coap_serialize_message(response);
@@ -204,7 +205,6 @@ handle_incoming_data(void)
       /* reuse input buffer */
       coap_init_message(request, request->header, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
       coap_set_payload(request, (uint8_t *) error_messages[error], strlen(error_messages[error]));
-      coap_serialize_message(request);
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->header, coap_serialize_message(request));
     }
   } /* if (new data) */
@@ -265,8 +265,8 @@ well_known_core_handler(coap_packet_t* request, coap_packet_t* response, uint8_t
       }
     }
 
-    rest_set_response_payload(response, buffer, bufpos );
-    rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+    coap_set_payload(response, buffer, bufpos );
+    coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 
     if (resource==NULL) {
         *offset = -1;
@@ -278,11 +278,28 @@ well_known_core_handler(coap_packet_t* request, coap_packet_t* response, uint8_t
   }
 }
 /*-----------------------------------------------------------------------------------*/
-PROCESS(coap_server, "Coap Server");
+void
+coap_server_init()
+{
+  process_start(&coap_server, NULL);
+}
+/*-----------------------------------------------------------------------------------*/
+void
+coap_set_service_callback(service_callback_t callback)
+{
+  service_cbk = callback;
+}
+/*-----------------------------------------------------------------------------------*/
+rest_method_t
+coap_get_rest_method(coap_packet_t *packet)
+{
+  return (rest_method_t)(1 << (packet->code - 1));
+}
+/*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("COAP SERVER\n");
+  PRINTF("Starting CoAP server...\n");
 
 /* if static routes are used rather than RPL */
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
@@ -290,25 +307,10 @@ PROCESS_THREAD(coap_server, ev, data)
   configure_routing();
 #endif
 
-  process_coap_server = PROCESS_CURRENT();
-
   rest_activate_resource(&resource_well_known_core);
-
   current_tid = random_rand();
-
+  coap_register_as_transaction_handler();
   coap_init_connection(SERVER_LISTEN_PORT);
-
-  /*Periodic resources are only available to COAP implementation*/
-  /*set event timers for all periodic resources*/
-  /*
-  periodic_resource_t* periodic_resource = NULL;
-  for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
-    if (periodic_resource->period) {
-      PRINTF("Set timer for Res: %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
-      etimer_set(periodic_resource->handler_cb_timer, periodic_resource->period);
-    }
-  }
-  */
 
   while(1) {
     PROCESS_YIELD();
@@ -316,6 +318,7 @@ PROCESS_THREAD(coap_server, ev, data)
     if(ev == tcpip_event) {
       handle_incoming_data();
     } else if (ev == PROCESS_EVENT_TIMER) {
+      /* retransmissions are handled here */
       coap_check_transactions();
     }
   } /* while (1) */
@@ -323,3 +326,30 @@ PROCESS_THREAD(coap_server, ev, data)
   PROCESS_END();
 }
 /*-----------------------------------------------------------------------------------*/
+const struct rest_implementation coap_rest_implementation = {
+    "CoAP-03",
+
+    coap_server_init,
+    coap_set_service_callback,
+
+    coap_get_rest_method,
+    coap_set_code,
+
+    coap_get_header_content_type,
+    coap_set_header_content_type,
+    coap_get_header_max_age,
+    coap_set_header_max_age,
+    coap_set_header_etag,
+    coap_get_header_uri_host,
+    coap_set_header_location,
+
+    coap_get_payload,
+    coap_set_payload,
+
+    coap_get_header_uri_query,
+    coap_get_query_variable,
+    coap_get_post_variable,
+
+    coap_notify_observers,
+    coap_observe_handler
+};

@@ -26,6 +26,7 @@ LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVe
 ifeq ($(WITH_COAP), 3)
 ${info INFO: compiling with CoAP-03}
 CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=0
 APPS += rest-coap-03
 else ifeq ($(WITH_COAP), 1)

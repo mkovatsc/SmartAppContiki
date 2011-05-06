@@ -10,18 +10,6 @@
 
 #include "contiki-net.h"
 
-/*
- * Conservative size limit, as not all options have to be set at the same time.
- */
-/*                            Hdr CoT Age Tag Obs Tok Blo strings */
-#define COAP_MAX_HEADER_SIZE  (4 + 2 + 5 + 5 + 5 + 5 + 4 + 0)
-#define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
-
-/*                                        0/14          48 for IPv6 (28 for IPv4) */
-#if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)
-#error "UIP_CONF_BUFFER_SIZE too small for REST_MAX_CHUNK_SIZE"
-#endif
-
 #define COAP_DEFAULT_MAX_AGE    60
 #define COAP_RESPONSE_TIMEOUT   1
 #define COAP_MAX_RETRANSMIT     5
@@ -81,7 +69,7 @@ typedef enum {
   TOKEN_OPTION_REQUIRED = 240,
   HOST_REQUIRED = 241,
   CRITICAL_OPTION_NOT_SUPPORTED = 242
-} status_code_t;
+} rest_status_t;
 
 /* CoAP header options */
 typedef enum {
@@ -122,7 +110,7 @@ typedef enum {
   APPLICATION_FASTINFOSET = 49,
   APPLICATION_SOAP_FASTINFOSET = 50,
   APPLICATION_JSON = 51
-} content_type_t;
+} rest_content_type_t;
 
 typedef union {
   struct { /* 0--14 bytes options */
@@ -148,7 +136,7 @@ typedef struct {
 
   uint16_t options;  /* Bitmap to check if option is set */
 
-  content_type_t content_type; /* Parse options once and store; allows setting options in random order  */
+  rest_content_type_t content_type; /* Parse options once and store; allows setting options in random order  */
   uint32_t max_age;
   uint8_t etag_len;
   uint8_t etag[COAP_ETAG_LEN];
@@ -197,19 +185,19 @@ error_t coap_parse_message(coap_packet_t *request, uint8_t *data, uint16_t data_
 
 coap_method_t coap_get_method(coap_packet_t *packet);
 void coap_set_method(coap_packet_t *packet, coap_method_t method);
-void coap_set_code(coap_packet_t *packet, status_code_t code);
+void coap_set_code(coap_packet_t *packet, rest_status_t code);
 
-int coap_get_query_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size);
-int coap_get_post_variable(coap_packet_t *packet, const char *name, char *output, uint16_t output_size);
+int coap_get_query_variable(coap_packet_t *packet, const char *name, const char **output);
+int coap_get_post_variable(coap_packet_t *packet, const char *name, const char **output);
 
-content_type_t coap_get_header_content_type(coap_packet_t *packet);
-int coap_set_header_content_type(coap_packet_t *packet, content_type_t content_type);
+rest_content_type_t coap_get_header_content_type(coap_packet_t *packet);
+int coap_set_header_content_type(coap_packet_t *packet, rest_content_type_t content_type);
 
 int coap_get_header_max_age(coap_packet_t *packet, uint32_t *age);
 int coap_set_header_max_age(coap_packet_t *packet, uint32_t age);
 
 int coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag);
-int coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, uint8_t etag_len);
+int coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, int etag_len);
 
 int coap_get_header_uri_host(coap_packet_t *packet, const char **host); // in-place string might not be 0-terminated
 int coap_set_header_uri_host(coap_packet_t *packet, char *host);
@@ -224,7 +212,7 @@ int coap_get_header_observe(coap_packet_t *packet, uint32_t *observe);
 int coap_set_header_observe(coap_packet_t *packet, uint32_t observe);
 
 int coap_get_header_token(coap_packet_t *packet, const uint8_t **token);
-int coap_set_header_token(coap_packet_t *packet, uint8_t *token, uint8_t token_len);
+int coap_set_header_token(coap_packet_t *packet, uint8_t *token, int token_len);
 
 int coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block(coap_packet_t *packet, uint32_t num, uint8_t more, uint16_t size);
@@ -233,6 +221,19 @@ int coap_get_header_uri_query(coap_packet_t *packet, const char **query); // in-
 int coap_set_header_uri_query(coap_packet_t *packet, char *query);
 
 int coap_get_payload(coap_packet_t *packet, uint8_t* *payload);
-int coap_set_payload(coap_packet_t *packet, uint8_t *payload, uint16_t size);
+int coap_set_payload(coap_packet_t *packet, uint8_t *payload, int length);
+
+#include "rest.h"
+/*
+ * Conservative size limit, as not all options have to be set at the same time.
+ */
+/*                            Hdr CoT Age Tag Obs Tok Blo strings */
+#define COAP_MAX_HEADER_SIZE  (4 + 2 + 5 + 5 + 5 + 5 + 4 + 0)
+#define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
+
+/*                                        0/14          48 for IPv6 (28 for IPv4) */
+#if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)
+#error "UIP_CONF_BUFFER_SIZE too small for REST_MAX_CHUNK_SIZE"
+#endif
 
 #endif /* COAP_03_H_ */
