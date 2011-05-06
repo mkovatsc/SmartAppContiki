@@ -13,7 +13,13 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variable
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
-CFLAGS += -DUIP_CONF_TCP=1 # enabled by default, just as a reminder that it is needed for telnet 
+CFLAGS += -DUIP_CONF_TCP=0 # not used anymore
+
+#used to be able to use sscanf
+LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
+
+#extmem
+LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 ifeq ($WITH_COAP),3)
 CFLAGS += -DWITH_COAP
@@ -26,5 +32,7 @@ endif
 
 # set the baud rate
 CFLAGS += -DBAUD_RATE=USART_BAUD_9600
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 include $(CONTIKI)/Makefile.include

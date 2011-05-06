@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include "contiki-raven.h"
@@ -41,6 +42,19 @@
 #include "ringbuf.h"
 #include "rest.h"
 #include "sys/clock.h"
+
+#include "UsefulMicropendousDefines.h"
+// set up external SRAM prior to anything else to make sure malloc() has access to it
+void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
+void EnableExternalSRAM(void)
+{
+  PORTE_EXT_SRAM_SETUP;  // set up control port
+  ENABLE_EXT_SRAM;       // enable the external SRAM
+  XMCRA = ((1 << SRE));  // enable XMEM interface with 0 wait states
+  XMCRB = 0;
+  SELECT_EXT_SRAM_BANK0; // select Bank 0
+}
+
 
 
 /*---------------------------------------------------------------------------*/
@@ -53,6 +67,11 @@ static unsigned char uart_buf_data[128] = {0};
 static char debug_buffer[128];
 
 enum mode {manual=0, timers=1, valve=2};
+
+typedef struct {
+	uint8_t mode;
+	uint16_t time;
+} hw_timer_slot_t;
 
 static struct {
 	uint8_t day;
@@ -73,6 +92,9 @@ static struct {
 	uint16_t energy_temperature;
 	uint16_t comfort_temperature;
 	uint16_t supercomfort_temperature;
+
+	
+	hw_timer_slot_t timers[8][6];
 	
 
 	/* 0 : justOne
@@ -124,12 +146,13 @@ static void parseD(char * data){
 		poll_data.second=atoi(&data[21]);
 
 		poll_data.last_poll = clock_time();
+
 	}
 }
 
 static int poll_time = 10;
 
-enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode};
+enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode, get_timer};
 
 static enum request_type request_state = idle;
 
@@ -215,6 +238,18 @@ PROCESS_THREAD(honeywell_process, ev, data)
 							printf_P(PSTR("G01\n"));
 							request_state = auto_temperatures;
 							break;
+						case get_timer:
+							if(buf[0]=='R' || buf[0]=='W'){
+								uint8_t index = atoi(&buf[2]);
+								uint8_t day = index / 10;
+								uint8_t slot = index % 10;
+								char temp=buf[6];
+								poll_data.timers[day][slot].mode = atoi(&temp);
+								
+								sscanf_P(&buf[7], PSTR("%x"), &poll_data.timers[day][slot].time);
+							}
+							request_state = idle;
+							break;
 						default:
 							break;
 					}
@@ -245,7 +280,7 @@ void temperature_handler(REQUEST* request, RESPONSE* response)
 	sprintf_P(temp, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 RESOURCE(battery, METHOD_GET, "battery");
@@ -255,7 +290,7 @@ void battery_handler(REQUEST* request, RESPONSE* response)
 	sprintf_P(temp, PSTR("%d"), poll_data.battery);
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 
@@ -303,7 +338,7 @@ void mode_handler(REQUEST* request, RESPONSE* response)
 
 	}
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 
@@ -337,7 +372,7 @@ void target_handler(REQUEST* request, RESPONSE* response)
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 RESOURCE(poll, METHOD_GET | METHOD_POST, "poll");
@@ -376,7 +411,7 @@ void poll_handler(REQUEST* request, RESPONSE* response)
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 RESOURCE(valve, METHOD_GET | METHOD_POST, "valve");
@@ -409,7 +444,7 @@ void valve_handler(REQUEST* request, RESPONSE* response)
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 RESOURCE(date, METHOD_GET | METHOD_POST, "date");
@@ -466,7 +501,7 @@ void date_handler(REQUEST* request, RESPONSE* response)
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 
@@ -520,139 +555,59 @@ void time_handler(REQUEST* request, RESPONSE* response)
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
+}
+
+static void handle_temperature(char * identifier, int temperature, int index, REQUEST * request, RESPONSE * response){
+	char temp[128];
+	if (rest_get_method_type(request)==METHOD_GET){
+		sprintf_P(temp, PSTR("%d.%02d"), temperature/100, temperature%100);
+	}
+	else{
+		char string[5];
+		int success = 1;
+		if(rest_get_post_variable(request, "value", string, 4) == 0){
+			success = 0;
+		}
+		else{
+			if (!isdigit(string[0])){
+				success = 0;
+			} 
+			else{
+				uint16_t value = atoi(string);
+				printf_P("S0%d%02x\n",index, value/5);
+				request_state = set_auto_temperatures;
+				sprintf_P(temp, PSTR("Successfully set value"));
+			}
+		}
+		if(!success){
+			rest_set_response_status(response, BAD_REQUEST_400);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees"), identifier);
+		}
+	}
+
+	rest_set_header_content_type(response, TEXT_PLAIN);
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 RESOURCE(frost, METHOD_GET | METHOD_POST, "auto/frost");
 void frost_handler(REQUEST * request, RESPONSE * response){
-	char temp[128];
-	if (rest_get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), poll_data.frost_temperature/100, poll_data.frost_temperature%100);
-	}
-	else{
-		char string[5];
-		int success = 1;
-		if(rest_get_post_variable(request, "value", string, 4) == 0){
-			success = 0;
-		}
-		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				printf("S01%02x\n",value/5);
-				request_state = set_auto_temperatures;
-				sprintf_P(temp, PSTR("Successfully set value"));
-			}
-		}
-		if(!success){
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the frost temperature to 15.5 degrees"));
-		}
-	}
-
-	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	handle_temperature(PSTR("frost"), poll_data.frost_temperature, 1, request, response);
 }
 
 RESOURCE(energy, METHOD_GET | METHOD_POST, "auto/energy");
 void energy_handler(REQUEST * request, RESPONSE * response){
-	char temp[128];
-	if (rest_get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), poll_data.energy_temperature/100, poll_data.energy_temperature%100);
-	}
-	else{
-		char string[5];
-		int success = 1;
-		if(rest_get_post_variable(request, "value", string, 4) == 0){
-			success = 0;
-		}
-		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				printf("S02%02x\n",value/5);
-				request_state = set_auto_temperatures;
-				sprintf_P(temp, PSTR("Successfully set value"));
-			}
-		}
-		if(!success){
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the energy temperature to 15.5 degrees"));
-		}
-	}
-
-	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	handle_temperature(PSTR("energy"), poll_data.energy_temperature, 2, request, response);
 }
 
 RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort");
 void comfort_handler(REQUEST * request, RESPONSE * response){
-	char temp[128];
-	if (rest_get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), poll_data.comfort_temperature/100, poll_data.comfort_temperature%100);
-	}
-	else{
-		char string[5];
-		int success = 1;
-		if(rest_get_post_variable(request, "value", string, 4) == 0){
-			success = 0;
-		}
-		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				printf("S03%02x\n",value/5);
-				request_state = set_auto_temperatures;
-				sprintf_P(temp, PSTR("Successfully set value"));
-			}
-		}
-		if(!success){
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the comfort temperature to 15.5 degrees"));
-		}
-	}
-
-	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	handle_temperature(PSTR("comfort"), poll_data.comfort_temperature, 3, request, response);
 }
 
 RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort");
 void supercomfort_handler(REQUEST * request, RESPONSE * response){
-	char temp[128];
-	if (rest_get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), poll_data.supercomfort_temperature/100, poll_data.supercomfort_temperature%100);
-	}
-	else{
-		char string[5];
-		int success = 1;
-		if(rest_get_post_variable(request, "value", string, 4) == 0){
-			success = 0;
-		}
-		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				printf("S04%02x\n",value/5);
-				request_state = set_auto_temperatures;
-				sprintf_P(temp, PSTR("Successfully set value"));
-			}
-		}
-		if(!success){
-			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the supercomfort temperature to 15.5 degrees"));
-		}
-	}
-
-	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	handle_temperature(PSTR("supercomfort"), poll_data.supercomfort_temperature, 4, request, response);
 }
 
 RESOURCE(debug, METHOD_GET | METHOD_POST, "debug");
@@ -665,36 +620,31 @@ void debug_handler(REQUEST * request, RESPONSE * response){
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, debug_buffer, strlen(debug_buffer));
+	rest_set_response_payload(response, (uint8_t*)debug_buffer, strlen(debug_buffer));
 }
-
-
 
 
 RESOURCE(auto, METHOD_GET, "auto");
 void auto_handler(REQUEST* request, RESPONSE* response)
 {	
-	char temp[128];
+	char temp[256];
 	int index = 0;
 	index += sprintf_P(temp + index, PSTR("</auto/frost>"));
 	index += sprintf_P(temp + index, PSTR("</auto/energy>"));
 	index += sprintf_P(temp + index, PSTR("</auto/comfort>"));
 	index += sprintf_P(temp + index, PSTR("</auto/supercomfort>"));
 	index += sprintf_P(temp + index, PSTR("</auto/timermode>"));
-	index += sprintf_P(temp + index, PSTR("</auto/weektimer/slot1>"));
-
-	/*index += sprintf_P(temp + index, PSTR("</auto/weektimer>"));
+	index += sprintf_P(temp + index, PSTR("</auto/weektimer>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer1>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer2>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer3>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer4>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer5>"));
 	index += sprintf_P(temp + index, PSTR("</auto/daytimer6>"));
-	index += sprintf_P(temp + index, PSTR("</auto/daytimer7>"));*/
-
+	index += sprintf_P(temp + index, PSTR("</auto/daytimer7>"));
 
 	rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
-	rest_set_response_payload(response, temp , strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp , strlen(temp));
 }
 
 RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode");
@@ -731,15 +681,26 @@ void timermode_handler(REQUEST* request, RESPONSE* response){
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
 static void handleTimer(int day, int slot, REQUEST * request, RESPONSE * response){
 	char temp[128];
 	if (rest_get_method_type(request)==METHOD_POST){
 		char mode[16];
+		char disable[10];
 		int success = 1;
-		if(rest_get_post_variable(request, "mode", mode, 14)==0){
+		if(rest_get_post_variable(request, "disable", disable, 9)!=0){
+			if(strncmp_P(disable, PSTR("disable"), 10)!=0){
+				success = 0;
+			}
+			else{
+				request_state = get_timer;
+				printf_P(PSTR("W%d%d0fff\n"),day, slot);
+				sprintf_P(temp, PSTR("W%d%d0fff\n"),day, slot);
+			}
+		}
+		else if(rest_get_post_variable(request, "mode", mode, 14)==0){
 			success = 0;
 		}
 		else {
@@ -778,8 +739,9 @@ static void handleTimer(int day, int slot, REQUEST * request, RESPONSE * respons
 						}
 						else{
 							//sprintf_P(temp, PSTR("Set timer of day %d in slot %d to the mode %s at time %s"), day, slot, mode, time);
-							printf_P(PSTR("W%d%d%d%x\n"),day, slot, level, hour*60 + minute);
-							sprintf_P(temp, PSTR("W%d%d%d%x\n"),day, slot, level, hour*60 + minute);
+							request_state = get_timer;
+							printf_P(PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
+							sprintf_P(temp, PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
 						}
 					}
 					else{
@@ -790,16 +752,65 @@ static void handleTimer(int day, int slot, REQUEST * request, RESPONSE * respons
 		}
 		if(!success){
 			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: time=hh:mm&mode={frost, energy, comfort, supercomfort}"));
+			sprintf_P(temp, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
 		}
 	}
 	else{
-		sprintf_P(temp, PSTR("TODO"));
+		request_state = get_timer;
+		printf_P(PSTR("R%d%d\n"),day,slot);
+
+		uint16_t time = poll_data.timers[day][slot].time;
+		if(time > 23*60 + 59){
+			sprintf_P(temp, PSTR("disabled"));
+		}
+		else{
+			char * mode;
+			switch(poll_data.timers[day][slot].mode){
+				case 0: mode = PSTR("frost"); break;
+				case 1: mode = PSTR("energy"); break;
+				case 2: mode = PSTR("comfort"); break;
+				case 3: mode = PSTR("supercomfort"); break;
+				default: mode = PSTR("undefined");
+			}
+
+			sprintf_P(temp, PSTR("%S at %02d:%02d"), mode, time/60, time%60 );
+		}
 	}
 
 	rest_set_header_content_type(response, TEXT_PLAIN);
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
+
+static void handleTimerDir(char * type, REQUEST* request, RESPONSE* response){
+	char temp[196];
+	int index = 0;
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot1>"), type);
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot2>"), type);
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot3>"), type);
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot4>"), type);
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot5>"), type);
+	index += sprintf_P(temp + index, PSTR("</auto/%S/slot6>"), type);
+
+	rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+	rest_set_response_payload(response, (uint8_t*)temp , strlen(temp));
+}
+
+RESOURCE(weektimer, METHOD_GET, "auto/weektimer");
+RESOURCE(daytimer1, METHOD_GET, "auto/daytimer1");
+RESOURCE(daytimer2, METHOD_GET, "auto/daytimer2");
+RESOURCE(daytimer3, METHOD_GET, "auto/daytimer3");
+RESOURCE(daytimer4, METHOD_GET, "auto/daytimer4");
+RESOURCE(daytimer5, METHOD_GET, "auto/daytimer5");
+RESOURCE(daytimer6, METHOD_GET, "auto/daytimer6");
+RESOURCE(daytimer7, METHOD_GET, "auto/daytimer7");
+void weektimer_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("weektimer"), request, response);}
+void daytimer1_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer1"), request, response);}
+void daytimer2_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer2"), request, response);}
+void daytimer3_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer3"), request, response);}
+void daytimer4_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer4"), request, response);}
+void daytimer5_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer5"), request, response);}
+void daytimer6_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer6"), request, response);}
+void daytimer7_handler(REQUEST* request, RESPONSE* response){handleTimerDir(PSTR("daytimer7"), request, response);}
 
 RESOURCE(weektimer1, METHOD_GET | METHOD_POST, "auto/weektimer/slot1");
 RESOURCE(weektimer2, METHOD_GET | METHOD_POST, "auto/weektimer/slot2");
@@ -924,7 +935,7 @@ void discover_handler(REQUEST* request, RESPONSE* response)
 	index += sprintf_P(temp + index, PSTR("</debug>"));
 
 
-	rest_set_response_payload(response, temp, strlen(temp));
+	rest_set_response_payload(response, (uint8_t*)temp, strlen(temp));
 	rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 }
 
@@ -953,6 +964,17 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_comfort);
 	rest_activate_resource(&resource_supercomfort);
 	rest_activate_resource(&resource_timermode);
+	
+	rest_activate_resource(&resource_weektimer);
+	rest_activate_resource(&resource_daytimer1);
+	rest_activate_resource(&resource_daytimer2);
+	rest_activate_resource(&resource_daytimer3);
+	rest_activate_resource(&resource_daytimer4);
+	rest_activate_resource(&resource_daytimer5);
+	rest_activate_resource(&resource_daytimer6);
+	rest_activate_resource(&resource_daytimer7);
+
+
 
 	rest_activate_resource(&resource_weektimer1);
 	rest_activate_resource(&resource_weektimer2);
