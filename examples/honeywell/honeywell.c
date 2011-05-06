@@ -575,14 +575,14 @@ static void handle_temperature(char * identifier, int temperature, int index, RE
 			} 
 			else{
 				uint16_t value = atoi(string);
-				printf_P("S0%d%02x\n",index, value/5);
+				printf_P(PSTR("S0%d%02x\n"),index, value/5);
 				request_state = set_auto_temperatures;
 				sprintf_P(temp, PSTR("Successfully set value"));
 			}
 		}
 		if(!success){
 			rest_set_response_status(response, BAD_REQUEST_400);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees"), identifier);
+			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees (just steps of 0.5 possible)"), identifier);
 		}
 	}
 
