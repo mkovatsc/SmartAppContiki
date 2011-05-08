@@ -1,4 +1,4 @@
-all: rest-server-example coap-client-example rest-server-example.co
+all: rest-server-example coap-client-example
 
 CONTIKI=../..
 

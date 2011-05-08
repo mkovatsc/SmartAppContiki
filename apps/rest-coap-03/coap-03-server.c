@@ -5,8 +5,8 @@
 #include "contiki-net.h"
 
 #include "coap-03-server.h"
-#include "coap-transactions.h"
-#include "coap-observing.h"
+#include "coap-03-transactions.h"
+#include "coap-03-observing.h"
 
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
 #include "static-routing.h"
@@ -140,7 +140,7 @@ handle_incoming_data(void)
                 PRINTF("Blockwise: unaware resource with payload length %u/%u\n", response->payload_len, block_size);
                 if (block_offset >= response->payload_len)
                 {
-                  coap_set_code(response, BAD_REQUEST_400);
+                  coap_set_status(response, BAD_REQUEST_400);
                   coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
                 }
                 else
@@ -215,18 +215,18 @@ handle_incoming_data(void)
 /* The discover resource should be included when using CoAP. */
 RESOURCE(well_known_core, METHOD_GET, ".well-known/core", "");
 void
-well_known_core_handler(coap_packet_t* request, coap_packet_t* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    int strpos = 0;
-    int bufpos = 0;
+    size_t strpos = 0;
+    size_t bufpos = 0;
     resource_t* resource = NULL;
 
     for (resource = (resource_t*)list_head(rest_get_resources()); resource; resource = resource->next)
     {
-      strpos += snprintf(buffer + bufpos, REST_MAX_CHUNK_SIZE - bufpos + 1,
+      strpos += snprintf((char *) buffer + bufpos, REST_MAX_CHUNK_SIZE - bufpos + 1,
                          "</%s>%s%s%s",
                          resource->url,
                          resource->attributes[0] ? ";" : "",
@@ -245,14 +245,14 @@ well_known_core_handler(coap_packet_t* request, coap_packet_t* response, uint8_t
       else /* (strpos > *offset) */
       {
         /* output partly in block */
-        int len = MIN(strpos - *offset, preferred_size);
+        size_t len = MIN(strpos - *offset, preferred_size);
 
         PRINTF("  el %d/%d @ %ld B\n", len, preferred_size, *offset);
 
         /* Block might start in the middle of the output; align with buffer start. */
         if (bufpos == 0)
         {
-          memmove(buffer, buffer+strlen(buffer)-strpos+*offset, len);
+          memmove(buffer, buffer+strlen((char *)buffer)-strpos+*offset, len);
         }
 
         bufpos = len;
@@ -291,9 +291,9 @@ coap_set_service_callback(service_callback_t callback)
 }
 /*-----------------------------------------------------------------------------------*/
 rest_method_t
-coap_get_rest_method(coap_packet_t *packet)
+coap_get_rest_method(void *packet)
 {
-  return (rest_method_t)(1 << (packet->code - 1));
+  return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
 }
 /*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server, ev, data)
@@ -332,8 +332,11 @@ const struct rest_implementation coap_rest_implementation = {
     coap_server_init,
     coap_set_service_callback,
 
+    // FIXME framework has void*, coap should use coap_packet_t*, also avoid "function redirect"
+    coap_get_header_uri_path,
+    coap_set_header_uri_path,
     coap_get_rest_method,
-    coap_set_code,
+    coap_set_status,
 
     coap_get_header_content_type,
     coap_set_header_content_type,
@@ -351,5 +354,48 @@ const struct rest_implementation coap_rest_implementation = {
     coap_get_post_variable,
 
     coap_notify_observers,
-    coap_observe_handler
+    coap_observe_handler,
+
+    {
+      CONTINUE_100,
+      OK_200,
+      CREATED_201,
+      NOT_MODIFIED_304,
+      BAD_REQUEST_400,
+      NOT_FOUND_404,
+      METHOD_NOT_ALLOWED_405,
+      UNSUPPORTED_MADIA_TYPE_415,
+      INTERNAL_SERVER_ERROR_500,
+      BAD_GATEWAY_502,
+      SERVICE_UNAVAILABLE_503,
+      GATEWAY_TIMEOUT_504,
+      TOKEN_OPTION_REQUIRED,
+      HOST_REQUIRED,
+      CRITICAL_OPTION_NOT_SUPPORTED
+    },
+
+    {
+      TEXT_PLAIN,
+      TEXT_XML,
+      TEXT_CSV,
+      TEXT_HTML,
+      IMAGE_GIF,
+      IMAGE_JPEG,
+      IMAGE_PNG,
+      IMAGE_TIFF,
+      AUDIO_RAW,
+      VIDEO_RAW,
+      APPLICATION_LINK_FORMAT,
+      APPLICATION_XML,
+      APPLICATION_OCTET_STREAM,
+      APPLICATION_RDF_XML,
+      APPLICATION_SOAP_XML,
+      APPLICATION_ATOM_XML,
+      APPLICATION_XMPP_XML,
+      APPLICATION_EXI,
+      APPLICATION_X_BXML,
+      APPLICATION_FASTINFOSET,
+      APPLICATION_SOAP_FASTINFOSET,
+      APPLICATION_JSON
+    }
 };

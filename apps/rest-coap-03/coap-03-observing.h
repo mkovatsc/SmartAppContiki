@@ -1,5 +1,5 @@
 /*
- * coap-observing.h
+ * coap-03-observing.h
  *
  *  Created on: 03 May 2011
  *      Author: Matthias Kovatsch
@@ -13,6 +13,7 @@
 #endif
 
 #include "coap-03.h"
+#include "coap-03-transactions.h"
 
 #ifndef COAP_MAX_OBSERVERS
 #define COAP_MAX_OBSERVERS      4
@@ -43,6 +44,6 @@ int coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port);
 int coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, uint8_t token_len);
 void coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, uint16_t payload_len);
 
-void coap_observe_handler(coap_packet_t *request, coap_packet_t *response);
+void coap_observe_handler(void *request, void *response);
 
 #endif /* COAP_OBSERVING_H_ */

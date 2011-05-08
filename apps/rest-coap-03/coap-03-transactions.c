@@ -1,5 +1,5 @@
 /*
- * coap-transactions.c
+ * coap-03-transactions.c
  *
  *  Created on: 12 Apr 2011
  *      Author: Matthias Kovatsch
@@ -8,8 +8,8 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "coap-transactions.h"
-#include "coap-observing.h"
+#include "coap-03-transactions.h"
+#include "coap-03-observing.h"
 
 #define DEBUG 0
 #if DEBUG

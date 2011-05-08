@@ -27,7 +27,7 @@
 
 #include "rest-util.h"
 #include "coap-03.h"
-#include "coap-transactions.h"
+#include "coap-03-transactions.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -85,6 +85,43 @@ uint32_2_bytes(uint8_t *bytes, uint32_t var)
   return i;
 }
 /*-----------------------------------------------------------------------------------*/
+static
+int
+coap_get_variable(const char *buffer, size_t length, const char *name, const char **output)
+{
+  const char *start = NULL;
+  const char *end = NULL;
+  const char *value_end = NULL;
+  size_t name_len = 0;
+
+  /*initialize the output buffer first*/
+  *output = 0;
+
+  name_len = strlen(name);
+  end = buffer + length;
+
+  for (start = buffer; start + name_len < end; ++start){
+    if ((start == buffer || start[-1] == '&') && start[name_len] == '=' &&
+        strncmp(name, start, name_len)==0) {
+
+      /* Point start to variable value */
+      start += name_len + 1;
+
+      /* Point end to the end of the value */
+      value_end = (const char *) memchr(start, '&', end - start);
+      if (value_end == NULL) {
+        value_end = end;
+      }
+
+      *output = start;
+
+      return (value_end - start);
+    }
+  }
+
+  return 0;
+}
+/*-----------------------------------------------------------------------------------*/
 /*- MEASSAGE SENDING ----------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 void
@@ -114,217 +151,217 @@ coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t len
 /*- MEASSAGE PROCESSING -------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 void
-coap_init_message(coap_packet_t *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid)
+coap_init_message(void *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid)
 {
   memset(packet, 0, sizeof(coap_packet_t));
 
-  packet->header = buffer;
+  ((coap_packet_t *)packet)->header = buffer;
 
-  packet->version = 1;
-  packet->type = type;
-  packet->option_count = 0;
-  packet->code = code;
-  packet->tid = tid;
+  ((coap_packet_t *)packet)->version = 1;
+  ((coap_packet_t *)packet)->type = type;
+  ((coap_packet_t *)packet)->option_count = 0;
+  ((coap_packet_t *)packet)->code = code;
+  ((coap_packet_t *)packet)->tid = tid;
 
   /* set header fields */
   /*
-  packet->header[0]  = 0x00;
-  packet->header[0] |= COAP_HEADER_VERSION_MASK & (packet->version)<<COAP_HEADER_VERSION_POSITION;
-  packet->header[0] |= COAP_HEADER_TYPE_MASK & (packet->type)<<COAP_HEADER_TYPE_POSITION;
-  packet->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (packet->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
-  packet->header[1] = packet->code;
-  packet->header[2] = 0xFF & packet->tid;
-  packet->header[3] = 0xFF & (packet->tid)>>8;
+  ((coap_packet_t *)packet)->header[0]  = 0x00;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_VERSION_MASK & (((coap_packet_t *)packet)->version)<<COAP_HEADER_VERSION_POSITION;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_TYPE_MASK & (((coap_packet_t *)packet)->type)<<COAP_HEADER_TYPE_POSITION;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (((coap_packet_t *)packet)->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
+  ((coap_packet_t *)packet)->header[1] = ((coap_packet_t *)packet)->code;
+  ((coap_packet_t *)packet)->header[2] = 0xFF & ((coap_packet_t *)packet)->tid;
+  ((coap_packet_t *)packet)->header[3] = 0xFF & (((coap_packet_t *)packet)->tid)>>8;
   */
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_serialize_message(coap_packet_t *packet)
+coap_serialize_message(void *packet)
 {
   /* serialize options */
-  uint8_t *option = packet->header + COAP_HEADER_LEN;
-  int option_len = 0;
+  uint8_t *option = ((coap_packet_t *)packet)->header + COAP_HEADER_LEN;
+  size_t option_len = 0;
   int index = 0;
 
-  if (IS_OPTION(packet, COAP_OPTION_CONTENT_TYPE)) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_CONTENT_TYPE)) {
     ((coap_header_option_t *)option)->s.delta = 1;
     ((coap_header_option_t *)option)->s.length = 1;
-    *(++option) = packet->content_type;
-    PRINTF("OPTION %u (type %u, len 1, delta %u): ", packet->option_count, COAP_OPTION_CONTENT_TYPE, COAP_OPTION_CONTENT_TYPE - index);
-    PRINTF("Content-Type [%u]\n", packet->content_type);
+    *(++option) = ((coap_packet_t *)packet)->content_type;
+    PRINTF("OPTION %u (type %u, len 1, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_CONTENT_TYPE, COAP_OPTION_CONTENT_TYPE - index);
+    PRINTF("Content-Type [%u]\n", ((coap_packet_t *)packet)->content_type);
     index = COAP_OPTION_CONTENT_TYPE;
     option += 1;
-    ++(packet->option_count);
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_MAX_AGE)) {
-    option_len = uint32_2_bytes(option+1, packet->max_age);
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_MAX_AGE)) {
+    option_len = uint32_2_bytes(option+1, ((coap_packet_t *)packet)->max_age);
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_MAX_AGE - index;
     ((coap_header_option_t *)option)->s.length = option_len;
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_MAX_AGE, option_len, COAP_OPTION_MAX_AGE - index);
-    PRINTF("Max-Age [%lu]\n", packet->max_age);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_MAX_AGE, option_len, COAP_OPTION_MAX_AGE - index);
+    PRINTF("Max-Age [%lu]\n", ((coap_packet_t *)packet)->max_age);
     index = COAP_OPTION_MAX_AGE;
     option += 1 + option_len;
-    ++(packet->option_count);
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_ETAG)) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_ETAG)) {
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_ETAG - index;
-    ((coap_header_option_t *)option)->s.length = packet->etag_len;
-    memcpy(++option, packet->etag, packet->etag_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_ETAG, packet->etag_len, COAP_OPTION_ETAG - index);
-    PRINTF("ETag %u [0x%02X", packet->etag_len, packet->etag[0]); // FIXME always prints 4 bytes...
-    PRINTF("%02X", packet->etag[1]);
-    PRINTF("%02X", packet->etag[2]);
-    PRINTF("%02X", packet->etag[3]);
+    ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->etag_len;
+    memcpy(++option, ((coap_packet_t *)packet)->etag, ((coap_packet_t *)packet)->etag_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_ETAG, ((coap_packet_t *)packet)->etag_len, COAP_OPTION_ETAG - index);
+    PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); // FIXME always prints 4 bytes...
+    PRINTF("%02X", ((coap_packet_t *)packet)->etag[1]);
+    PRINTF("%02X", ((coap_packet_t *)packet)->etag[2]);
+    PRINTF("%02X", ((coap_packet_t *)packet)->etag[3]);
     PRINTF("]\n");
     index = COAP_OPTION_ETAG;
-    option += packet->etag_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->etag_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_URI_HOST)) {
-    if (packet->uri_host_len<15) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST)) {
+    if (((coap_packet_t *)packet)->uri_host_len<15) {
       ((coap_header_option_t *)option)->s.delta = COAP_OPTION_URI_HOST - index;
-      ((coap_header_option_t *)option)->s.length = packet->uri_host_len;
+      ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->uri_host_len;
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_HOST - index;
-      ((coap_header_option_t *)option)->l.length = packet->uri_host_len - 15;
+      ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_host_len - 15;
       option += 2;
     }
-    memcpy(option, packet->uri_host, packet->uri_host_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_URI_HOST, packet->uri_host_len, COAP_OPTION_URI_HOST - index);
-    PRINTF("Uri-Auth [%.*s]\n", packet->uri_host_len, packet->uri_host);
+    memcpy(option, ((coap_packet_t *)packet)->uri_host, ((coap_packet_t *)packet)->uri_host_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_URI_HOST, ((coap_packet_t *)packet)->uri_host_len, COAP_OPTION_URI_HOST - index);
+    PRINTF("Uri-Auth [%.*s]\n", ((coap_packet_t *)packet)->uri_host_len, ((coap_packet_t *)packet)->uri_host);
     index = COAP_OPTION_URI_HOST;
-    option += packet->uri_host_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->uri_host_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_LOCATION_PATH)) {
-    if (packet->location_path_len<15) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH)) {
+    if (((coap_packet_t *)packet)->location_path_len<15) {
       ((coap_header_option_t *)option)->s.delta = COAP_OPTION_LOCATION_PATH - index;
-      ((coap_header_option_t *)option)->s.length = packet->location_path_len;
+      ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->location_path_len;
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_LOCATION_PATH - index;
-      ((coap_header_option_t *)option)->l.length = packet->location_path_len - 15;
+      ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->location_path_len - 15;
       option += 2;
     }
-    memcpy(option, packet->location_path, packet->location_path_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_LOCATION_PATH, packet->location_path_len, COAP_OPTION_LOCATION_PATH - index);
-    PRINTF("Location [%.*s]\n", packet->location_path_len, packet->location_path);
+    memcpy(option, ((coap_packet_t *)packet)->location_path, ((coap_packet_t *)packet)->location_path_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_LOCATION_PATH, ((coap_packet_t *)packet)->location_path_len, COAP_OPTION_LOCATION_PATH - index);
+    PRINTF("Location [%.*s]\n", ((coap_packet_t *)packet)->location_path_len, ((coap_packet_t *)packet)->location_path);
     index = COAP_OPTION_LOCATION_PATH;
-    option += packet->location_path_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->location_path_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_URI_PATH)) {
-    if (packet->uri_path_len<15) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_PATH)) {
+    if (((coap_packet_t *)packet)->uri_path_len<15) {
       ((coap_header_option_t *)option)->s.delta = COAP_OPTION_URI_PATH - index;
-      ((coap_header_option_t *)option)->s.length = packet->uri_path_len;
+      ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->uri_path_len;
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_PATH - index;
-      ((coap_header_option_t *)option)->l.length = packet->uri_path_len - 15;
+      ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_path_len - 15;
       option += 2;
     }
-    memcpy(option, packet->uri_path, packet->uri_path_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_URI_PATH, packet->uri_path_len, COAP_OPTION_URI_PATH - index);
-    PRINTF("Uri-Path [%.*s]\n", packet->uri_path_len, packet->uri_path);
+    memcpy(option, ((coap_packet_t *)packet)->uri_path, ((coap_packet_t *)packet)->uri_path_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_URI_PATH, ((coap_packet_t *)packet)->uri_path_len, COAP_OPTION_URI_PATH - index);
+    PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
     index = COAP_OPTION_URI_PATH;
-    option += packet->uri_path_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->uri_path_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_OBSERVE)) {
-    option_len = uint32_2_bytes(option+1, packet->observe);
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_OBSERVE)) {
+    option_len = uint32_2_bytes(option+1, ((coap_packet_t *)packet)->observe);
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_OBSERVE - index;
     ((coap_header_option_t *)option)->s.length = option_len;
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_OBSERVE, option_len, COAP_OPTION_OBSERVE - index);
-    PRINTF("Observe [%lu]\n", packet->observe);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_OBSERVE, option_len, COAP_OPTION_OBSERVE - index);
+    PRINTF("Observe [%lu]\n", ((coap_packet_t *)packet)->observe);
     index = COAP_OPTION_OBSERVE;
     option += 1 + option_len;
-    ++(packet->option_count);
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_TOKEN)) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_TOKEN)) {
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_TOKEN - index;
-    ((coap_header_option_t *)option)->s.length = packet->token_len;
-    memcpy(++option, packet->token, packet->token_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_TOKEN, packet->token_len, COAP_OPTION_TOKEN - index);
-    PRINTF("Token %u [0x%02X%02X]\n", packet->token_len, packet->token[0], packet->token[1]); // FIXME always prints 2 bytes...
+    ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->token_len;
+    memcpy(++option, ((coap_packet_t *)packet)->token, ((coap_packet_t *)packet)->token_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_TOKEN, ((coap_packet_t *)packet)->token_len, COAP_OPTION_TOKEN - index);
+    PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
     index = COAP_OPTION_TOKEN;
-    option += packet->token_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->token_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_BLOCK)) {
-    uint32_t block = packet->block_num << 4;
-    if (packet->block_more) block |= 0x8;
-    block |= 0xF & log_2(packet->block_size/16);
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_BLOCK)) {
+    uint32_t block = ((coap_packet_t *)packet)->block_num << 4;
+    if (((coap_packet_t *)packet)->block_more) block |= 0x8;
+    block |= 0xF & log_2(((coap_packet_t *)packet)->block_size/16);
     option_len = uint32_2_bytes(option+1, block);
     ((coap_header_option_t *)option)->s.delta = COAP_OPTION_BLOCK - index;
     ((coap_header_option_t *)option)->s.length = option_len;
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_BLOCK, option_len, COAP_OPTION_BLOCK - index);
-    PRINTF("Block [%lu%s (%u B/blk)]\n", packet->block_num, packet->block_more ? "+" : "", packet->block_size);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_BLOCK, option_len, COAP_OPTION_BLOCK - index);
+    PRINTF("Block [%lu%s (%u B/blk)]\n", ((coap_packet_t *)packet)->block_num, ((coap_packet_t *)packet)->block_more ? "+" : "", ((coap_packet_t *)packet)->block_size);
     index = COAP_OPTION_BLOCK;
     option += 1 + option_len;
-    ++(packet->option_count);
+    ++(((coap_packet_t *)packet)->option_count);
   }
-  if (IS_OPTION(packet, COAP_OPTION_URI_QUERY)) {
-    if (packet->uri_query_len<15) {
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
+    if (((coap_packet_t *)packet)->uri_query_len<15) {
       ((coap_header_option_t *)option)->s.delta = COAP_OPTION_URI_QUERY - index;
-      ((coap_header_option_t *)option)->s.length = packet->uri_query_len;
+      ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->uri_query_len;
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_QUERY - index;
-      ((coap_header_option_t *)option)->l.length = packet->uri_query_len - 15;
+      ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_query_len - 15;
       option += 2;
     }
-    memcpy(option, packet->uri_query, packet->uri_query_len);
-    PRINTF("OPTION %u (type %u, len %u, delta %u): ", packet->option_count, COAP_OPTION_URI_QUERY, packet->uri_query_len, COAP_OPTION_URI_QUERY - index);
-    PRINTF("Uri-Query [%.*s]\n", packet->uri_query_len, packet->uri_query);
+    memcpy(option, ((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len);
+    PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_URI_QUERY, ((coap_packet_t *)packet)->uri_query_len, COAP_OPTION_URI_QUERY - index);
+    PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
     index = COAP_OPTION_URI_QUERY;
-    option += packet->uri_query_len;
-    ++(packet->option_count);
+    option += ((coap_packet_t *)packet)->uri_query_len;
+    ++(((coap_packet_t *)packet)->option_count);
   }
 
   /* pack payload */
-  if ((option - packet->header)<=COAP_MAX_HEADER_SIZE)
+  if ((option - ((coap_packet_t *)packet)->header)<=COAP_MAX_HEADER_SIZE)
   {
-    memmove(option, packet->payload, packet->payload_len);
+    memmove(option, ((coap_packet_t *)packet)->payload, ((coap_packet_t *)packet)->payload_len);
   }
   else
   {
-    packet->code = INTERNAL_SERVER_ERROR_500;
-    packet->payload_len = (uint32_t) snprintf((char *)packet->header + COAP_HEADER_LEN, REST_MAX_CHUNK_SIZE+1, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - packet->header));
+    ((coap_packet_t *)packet)->code = INTERNAL_SERVER_ERROR_500;
+    ((coap_packet_t *)packet)->payload_len = (uint32_t) snprintf((char *)((coap_packet_t *)packet)->header + COAP_HEADER_LEN, REST_MAX_CHUNK_SIZE+1, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - ((coap_packet_t *)packet)->header));
   }
 
   /* set header fields */
-  packet->header[0]  = 0x00;
-  packet->header[0] |= COAP_HEADER_VERSION_MASK & (packet->version)<<COAP_HEADER_VERSION_POSITION;
-  packet->header[0] |= COAP_HEADER_TYPE_MASK & (packet->type)<<COAP_HEADER_TYPE_POSITION;
-  packet->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (packet->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
-  packet->header[1] = packet->code;
-  packet->header[2] = 0xFF & (packet->tid)>>8;
-  packet->header[3] = 0xFF & packet->tid;
+  ((coap_packet_t *)packet)->header[0]  = 0x00;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_VERSION_MASK & (((coap_packet_t *)packet)->version)<<COAP_HEADER_VERSION_POSITION;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_TYPE_MASK & (((coap_packet_t *)packet)->type)<<COAP_HEADER_TYPE_POSITION;
+  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (((coap_packet_t *)packet)->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
+  ((coap_packet_t *)packet)->header[1] = ((coap_packet_t *)packet)->code;
+  ((coap_packet_t *)packet)->header[2] = 0xFF & (((coap_packet_t *)packet)->tid)>>8;
+  ((coap_packet_t *)packet)->header[3] = 0xFF & ((coap_packet_t *)packet)->tid;
 
-  PRINTF("Serialized %u options, header len %u, payload len %u\n", packet->option_count, option - packet->header, packet->payload_len);
+  PRINTF("Serialized %u options, header len %u, payload len %u\n", ((coap_packet_t *)packet)->option_count, option - ((coap_packet_t *)packet)->header, ((coap_packet_t *)packet)->payload_len);
 
-  return (option - packet->header) + packet->payload_len; /* packet length */
+  return (option - ((coap_packet_t *)packet)->header) + ((coap_packet_t *)packet)->payload_len; /* packet length */
 }
 /*-----------------------------------------------------------------------------------*/
 error_t
-coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
+coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 {
   /* pointer to packet bytes */
-  packet->header = data;
+  ((coap_packet_t *)packet)->header = data;
 
   /* parse header fields */
-  packet->version = (COAP_HEADER_VERSION_MASK & packet->header[0])>>COAP_HEADER_VERSION_POSITION;
-  packet->type = (COAP_HEADER_TYPE_MASK & packet->header[0])>>COAP_HEADER_TYPE_POSITION;
-  packet->option_count = (COAP_HEADER_OPTION_COUNT_MASK & packet->header[0])>>COAP_HEADER_OPTION_COUNT_POSITION;
-  packet->code = packet->header[1];
-  packet->tid = packet->header[2]<<8 | packet->header[3];
+  ((coap_packet_t *)packet)->version = (COAP_HEADER_VERSION_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_VERSION_POSITION;
+  ((coap_packet_t *)packet)->type = (COAP_HEADER_TYPE_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_TYPE_POSITION;
+  ((coap_packet_t *)packet)->option_count = (COAP_HEADER_OPTION_COUNT_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_OPTION_COUNT_POSITION;
+  ((coap_packet_t *)packet)->code = ((coap_packet_t *)packet)->header[1];
+  ((coap_packet_t *)packet)->tid = ((coap_packet_t *)packet)->header[2]<<8 | ((coap_packet_t *)packet)->header[3];
 
   /* parse options */
-  packet->options = 0x0000;
+  ((coap_packet_t *)packet)->options = 0x0000;
   coap_header_option_t *current_option = (coap_header_option_t *) (data + COAP_HEADER_LEN);
 
-  if (packet->option_count) {
+  if (((coap_packet_t *)packet)->option_count) {
     uint8_t option_index = 0;
     uint8_t option_type = 0;
 
@@ -333,7 +370,7 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
 
     uint8_t *last_option = NULL;
 
-    for (option_index=0; option_index < packet->option_count; ++option_index) {
+    for (option_index=0; option_index < ((coap_packet_t *)packet)->option_count; ++option_index) {
 
       option_type += current_option->s.delta;
 
@@ -347,69 +384,69 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
 
       PRINTF("OPTION %u (type %u, len %u, delta %u): ", option_index, option_type, option_len, current_option->s.delta);
 
-      SET_OPTION(packet, option_type);
+      SET_OPTION((coap_packet_t *)packet, option_type);
 
       switch (option_type) {
         case COAP_OPTION_CONTENT_TYPE:
-          packet->content_type = option_data[0];
-          PRINTF("Content-Type [%u]\n", packet->content_type);
+          ((coap_packet_t *)packet)->content_type = option_data[0];
+          PRINTF("Content-Type [%u]\n", ((coap_packet_t *)packet)->content_type);
           break;
         case COAP_OPTION_MAX_AGE:
-          packet->max_age = bytes_2_uint32(option_data, option_len);
-          PRINTF("Max-Age [%lu]\n", packet->max_age);
+          ((coap_packet_t *)packet)->max_age = bytes_2_uint32(option_data, option_len);
+          PRINTF("Max-Age [%lu]\n", ((coap_packet_t *)packet)->max_age);
           break;
         case COAP_OPTION_ETAG:
-          packet->etag_len = MIN(COAP_ETAG_LEN, option_len);
-          memcpy(packet->etag, option_data, packet->etag_len);
-          PRINTF("ETag %u [0x%02X", packet->etag_len, packet->etag[0]); // FIXME always prints 4 bytes...
-          PRINTF("%02X", packet->etag[1]);
-          PRINTF("%02X", packet->etag[2]);
-          PRINTF("%02X", packet->etag[3]);
+          ((coap_packet_t *)packet)->etag_len = MIN(COAP_ETAG_LEN, option_len);
+          memcpy(((coap_packet_t *)packet)->etag, option_data, ((coap_packet_t *)packet)->etag_len);
+          PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); // FIXME always prints 4 bytes...
+          PRINTF("%02X", ((coap_packet_t *)packet)->etag[1]);
+          PRINTF("%02X", ((coap_packet_t *)packet)->etag[2]);
+          PRINTF("%02X", ((coap_packet_t *)packet)->etag[3]);
           PRINTF("]\n");
           break;
         case COAP_OPTION_URI_HOST:
-          packet->uri_host = (char *) option_data;
-          packet->uri_host_len = option_len;
-          PRINTF("Uri-Auth [%.*s]\n", packet->uri_host_len, packet->uri_host);
+          ((coap_packet_t *)packet)->uri_host = (char *) option_data;
+          ((coap_packet_t *)packet)->uri_host_len = option_len;
+          PRINTF("Uri-Auth [%.*s]\n", ((coap_packet_t *)packet)->uri_host_len, ((coap_packet_t *)packet)->uri_host);
           break;
         case COAP_OPTION_LOCATION_PATH:
-          packet->location_path = (char *) option_data;
-          packet->location_path_len = option_len;
-          PRINTF("Location [%.*s]\n", packet->location_path_len, packet->location_path);
+          ((coap_packet_t *)packet)->location_path = (char *) option_data;
+          ((coap_packet_t *)packet)->location_path_len = option_len;
+          PRINTF("Location [%.*s]\n", ((coap_packet_t *)packet)->location_path_len, ((coap_packet_t *)packet)->location_path);
           break;
         case COAP_OPTION_URI_PATH:
-          packet->uri_path = (char *) option_data;
-          packet->uri_path_len = option_len;
-          PRINTF("Uri-Path [%.*s]\n", packet->uri_path_len, packet->uri_path);
+          ((coap_packet_t *)packet)->uri_path = (char *) option_data;
+          ((coap_packet_t *)packet)->uri_path_len = option_len;
+          PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
 
           // REST framework uses ->url
-          packet->url = packet->uri_path;
-          packet->url_len = packet->uri_path_len;
+          ((coap_packet_t *)packet)->url = ((coap_packet_t *)packet)->uri_path;
+          ((coap_packet_t *)packet)->url_len = ((coap_packet_t *)packet)->uri_path_len;
           break;
         case COAP_OPTION_OBSERVE:
-          packet->observe = bytes_2_uint32(option_data, option_len);
-          PRINTF("Observe [%lu]\n", packet->observe);
+          ((coap_packet_t *)packet)->observe = bytes_2_uint32(option_data, option_len);
+          PRINTF("Observe [%lu]\n", ((coap_packet_t *)packet)->observe);
           break;
         case COAP_OPTION_TOKEN:
-          packet->token_len = MIN(COAP_TOKEN_LEN, option_len);
-          memcpy(packet->token, option_data, packet->token_len);
-          PRINTF("Token %u [0x%02X%02X]\n", packet->token_len, packet->token[0] packet->token[1]); // FIXME always prints 2 bytes...
+          ((coap_packet_t *)packet)->token_len = MIN(COAP_TOKEN_LEN, option_len);
+          memcpy(((coap_packet_t *)packet)->token, option_data, ((coap_packet_t *)packet)->token_len);
+          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0] ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
           break;
         case COAP_OPTION_BLOCK:
-          packet->block_num = bytes_2_uint32(option_data, option_len);
-          packet->block_more = (packet->block_num & 0x08);
-          packet->block_size = 16 << (packet->block_num & 0x07);
-          packet->block_offset = (packet->block_num & ~0x0F)<<(packet->block_num & 0x07);
-          packet->block_num >>= 4;
-          PRINTF("Block [%lu%s (%u B/blk)]\n", packet->block_num, packet->block_more ? "+" : "", packet->block_size);
+          ((coap_packet_t *)packet)->block_num = bytes_2_uint32(option_data, option_len);
+          ((coap_packet_t *)packet)->block_more = (((coap_packet_t *)packet)->block_num & 0x08);
+          ((coap_packet_t *)packet)->block_size = 16 << (((coap_packet_t *)packet)->block_num & 0x07);
+          ((coap_packet_t *)packet)->block_offset = (((coap_packet_t *)packet)->block_num & ~0x0F)<<(((coap_packet_t *)packet)->block_num & 0x07);
+          ((coap_packet_t *)packet)->block_num >>= 4;
+          PRINTF("Block [%lu%s (%u B/blk)]\n", ((coap_packet_t *)packet)->block_num, ((coap_packet_t *)packet)->block_more ? "+" : "", ((coap_packet_t *)packet)->block_size);
           break;
         case COAP_OPTION_NOOP:
           PRINTF("Noop-Fencepost\n");
           break;
         case COAP_OPTION_URI_QUERY:
-          packet->uri_query = (char *) option_data;
-          packet->uri_query_len = option_len;
-          PRINTF("Uri-Query [%.*s]\n", packet->uri_query_len, packet->uri_query);
+          ((coap_packet_t *)packet)->uri_query = (char *) option_data;
+          ((coap_packet_t *)packet)->uri_query_len = option_len;
+          PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
           break;
         default:
           PRINTF("unknown (%u)\n", option_type);
@@ -429,8 +466,8 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
     } /* for () */
   } /* if (oc) */
 
-  packet->payload = (uint8_t *) current_option;
-  packet->payload_len = data_len - (packet->payload - data);
+  ((coap_packet_t *)packet)->payload = (uint8_t *) current_option;
+  ((coap_packet_t *)packet)->payload_len = data_len - (((coap_packet_t *)packet)->payload - data);
 
   return NO_ERROR;
 }
@@ -438,257 +475,250 @@ coap_parse_message(coap_packet_t *packet, uint8_t *data, uint16_t data_len)
 /*- REST FRAMEWORK FUNCTIONS --------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 coap_method_t
-coap_get_method(coap_packet_t *packet)
+coap_get_method(void *packet)
 {
-  return (coap_method_t) packet->code;
+  return (coap_method_t) ((coap_packet_t *)packet)->code;
 }
 
 void
-coap_set_method(coap_packet_t *packet, coap_method_t method)
+coap_set_method(void *packet, coap_method_t method)
 {
-  packet->code = (uint8_t)method;
+  ((coap_packet_t *)packet)->code = (uint8_t)method;
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_set_code(coap_packet_t *packet, rest_status_t code)
+coap_set_status(void *packet, coap_status_t code)
 {
-  packet->code = (uint8_t) code;
+  ((coap_packet_t *)packet)->code = (uint8_t) code;
 }
 /*-----------------------------------------------------------------------------------*/
-// FIXME return in-place pointer to save memory
 int
-coap_get_query_variable(coap_packet_t *packet, const char *name, const char **output)
+coap_get_query_variable(void *packet, const char *name, const char **output)
 {
-  if (IS_OPTION(packet, COAP_OPTION_URI_QUERY)) {
-      // FIXME 2
-    get_variable(name, packet->uri_query, packet->uri_query_len, *output, 1, 0);
-    return strlen(*output);
+  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
+    return coap_get_variable(((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, name, output);
   }
-
   return 0;
 }
 
-// FIXME return in-place pointer to save memory
 int
-coap_get_post_variable(coap_packet_t *packet, const char *name, const char **output)
+coap_get_post_variable(void *packet, const char *name, const char **output)
 {
-  if (packet->payload_len) {
-      // FIXME 2
-      get_variable(name, (const char *)packet->payload, packet->payload_len, *output, 1, 0);
-      return strlen(*output);
-    }
-
-    return 0;
+  if (((coap_packet_t *)packet)->payload_len) {
+    return coap_get_variable((const char *)((coap_packet_t *)packet)->payload, ((coap_packet_t *)packet)->payload_len, name, output);
+  }
+  return 0;
 }
 /*-----------------------------------------------------------------------------------*/
 /*- HEADER OPTION GETTERS AND SETTERS -----------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-rest_content_type_t
-coap_get_header_content_type(coap_packet_t *packet)
+coap_content_type_t
+coap_get_header_content_type(void *packet)
 {
-  return packet->content_type;
+  return ((coap_packet_t *)packet)->content_type;
 }
 
 int
-coap_set_header_content_type(coap_packet_t *packet, rest_content_type_t content_type)
+coap_set_header_content_type(void *packet, coap_content_type_t content_type)
 {
-  packet->content_type = (uint8_t) content_type;
-  SET_OPTION(packet, COAP_OPTION_CONTENT_TYPE);
+  ((coap_packet_t *)packet)->content_type = (uint8_t) content_type;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_CONTENT_TYPE);
   return 1;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_max_age(coap_packet_t *packet, uint32_t *age)
+coap_get_header_max_age(void *packet, uint32_t *age)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_MAX_AGE)) {
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_MAX_AGE)) {
     *age = COAP_DEFAULT_MAX_AGE;
   } else {
-    *age = packet->max_age;
+    *age = ((coap_packet_t *)packet)->max_age;
   }
   return 1;
 }
 
-int coap_set_header_max_age(coap_packet_t *packet, uint32_t age)
+int
+coap_set_header_max_age(void *packet, uint32_t age)
 {
-  packet->max_age = age;
-  SET_OPTION(packet, COAP_OPTION_MAX_AGE);
+  ((coap_packet_t *)packet)->max_age = age;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_MAX_AGE);
   return 1;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_etag(coap_packet_t *packet, const uint8_t **etag)
+coap_get_header_etag(void *packet, const uint8_t **etag)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_ETAG)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_ETAG)) return 0;
 
-  *etag = packet->etag;
-  return packet->etag_len;
+  *etag = ((coap_packet_t *)packet)->etag;
+  return ((coap_packet_t *)packet)->etag_len;
 }
 
 int
-coap_set_header_etag(coap_packet_t *packet, uint8_t *etag, int etag_len)
+coap_set_header_etag(void *packet, uint8_t *etag, size_t etag_len)
 {
-  packet->etag_len = MIN(COAP_ETAG_LEN, etag_len);
-  memcpy(packet->etag, etag, packet->etag_len);
+  ((coap_packet_t *)packet)->etag_len = MIN(COAP_ETAG_LEN, etag_len);
+  memcpy(((coap_packet_t *)packet)->etag, etag, ((coap_packet_t *)packet)->etag_len);
 
-  SET_OPTION(packet, COAP_OPTION_ETAG);
-  return packet->etag_len;
-}
-/*-----------------------------------------------------------------------------------*/
-int
-coap_get_header_uri_host(coap_packet_t *packet, const char **host) // in-place host might not be 0-terminated
-{
-  if (!IS_OPTION(packet, COAP_OPTION_URI_HOST)) return 0;
-
-  *host = packet->uri_host;
-  return packet->uri_host_len;
-}
-
-int
-coap_set_header_uri_host(coap_packet_t *packet, char *uri)
-{
-  packet->uri_host = uri;
-  packet->uri_host_len = strlen(uri);
-
-  SET_OPTION(packet, COAP_OPTION_URI_HOST);
-  return packet->uri_host_len;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_ETAG);
+  return ((coap_packet_t *)packet)->etag_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_location(coap_packet_t *packet, const char **uri) // in-place uri might not be 0-terminated
+coap_get_header_uri_host(void *packet, const char **host) // in-place host might not be 0-terminated
 {
-  if (!IS_OPTION(packet, COAP_OPTION_LOCATION_PATH)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST)) return 0;
 
-  *uri = packet->location_path;
-  return packet->location_path_len;
+  *host = ((coap_packet_t *)packet)->uri_host;
+  return ((coap_packet_t *)packet)->uri_host_len;
 }
 
 int
-coap_set_header_location(coap_packet_t *packet, char *uri)
+coap_set_header_uri_host(void *packet, char *host)
 {
-  while (uri[0]=='/') ++uri;
+  ((coap_packet_t *)packet)->uri_host = (char *) host;
+  ((coap_packet_t *)packet)->uri_host_len = strlen(host);
 
-  packet->location_path = uri;
-  packet->location_path_len = strlen(uri);
-
-  SET_OPTION(packet, COAP_OPTION_LOCATION_PATH);
-  return packet->location_path_len;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST);
+  return ((coap_packet_t *)packet)->uri_host_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_uri_path(coap_packet_t *packet, const char **uri)
+coap_get_header_location(void *packet, const char **uri) // in-place uri might not be 0-terminated
 {
-  if (!IS_OPTION(packet, COAP_OPTION_URI_PATH)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH)) return 0;
 
-  *uri = packet->uri_path;
-  return packet->uri_path_len;
+  *uri = ((coap_packet_t *)packet)->location_path;
+  return ((coap_packet_t *)packet)->location_path_len;
 }
 
 int
-coap_set_header_uri_path(coap_packet_t *packet, char *uri)
+coap_set_header_location(void *packet, char *location)
 {
-  while (uri[0]=='/') ++uri;
+  while (location[0]=='/') ++location;
 
-  packet->uri_path = uri;
-  packet->uri_path_len = strlen(uri);
+  ((coap_packet_t *)packet)->location_path = (char *) location;
+  ((coap_packet_t *)packet)->location_path_len = strlen(location);
 
-  SET_OPTION(packet, COAP_OPTION_URI_PATH);
-  return packet->uri_path_len;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH);
+  return ((coap_packet_t *)packet)->location_path_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_observe(coap_packet_t *packet, uint32_t *observe)
+coap_get_header_uri_path(void *packet, const char **path)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_OBSERVE)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_PATH)) return 0;
 
-  *observe = packet->observe;
+  *path = ((coap_packet_t *)packet)->uri_path;
+  return ((coap_packet_t *)packet)->uri_path_len;
+}
+
+int
+coap_set_header_uri_path(void *packet, char *path)
+{
+  while (path[0]=='/') ++path;
+
+  ((coap_packet_t *)packet)->uri_path = (char *) path;
+  ((coap_packet_t *)packet)->uri_path_len = strlen(path);
+
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_PATH);
+  return ((coap_packet_t *)packet)->uri_path_len;
+}
+/*-----------------------------------------------------------------------------------*/
+int
+coap_get_header_observe(void *packet, uint32_t *observe)
+{
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_OBSERVE)) return 0;
+
+  *observe = ((coap_packet_t *)packet)->observe;
   return 1;
 }
 
 int
-coap_set_header_observe(coap_packet_t *packet, uint32_t observe)
+coap_set_header_observe(void *packet, uint32_t observe)
 {
-  packet->observe = observe;
-  SET_OPTION(packet, COAP_OPTION_OBSERVE);
+  ((coap_packet_t *)packet)->observe = observe;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_OBSERVE);
   return 1;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_token(coap_packet_t *packet, const uint8_t **token)
+coap_get_header_token(void *packet, const uint8_t **token)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_TOKEN)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_TOKEN)) return 0;
 
-  *token = packet->token;
-  return packet->token_len;
+  *token = ((coap_packet_t *)packet)->token;
+  return ((coap_packet_t *)packet)->token_len;
 }
 
 int
-coap_set_header_token(coap_packet_t *packet, uint8_t *token, int token_len)
+coap_set_header_token(void *packet, uint8_t *token, size_t token_len)
 {
-  packet->token_len = MIN(COAP_TOKEN_LEN, token_len);
-  memcpy(packet->token, token, packet->token_len);
+  ((coap_packet_t *)packet)->token_len = MIN(COAP_TOKEN_LEN, token_len);
+  memcpy(((coap_packet_t *)packet)->token, token, ((coap_packet_t *)packet)->token_len);
 
-  SET_OPTION(packet, COAP_OPTION_TOKEN);
-  return packet->token_len;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_TOKEN);
+  return ((coap_packet_t *)packet)->token_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_block(coap_packet_t *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset)
+coap_get_header_block(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_BLOCK)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_BLOCK)) return 0;
 
   /* pointers may be NULL to get only specific block parameters */
-  if (num!=NULL) *num = packet->block_num;
-  if (more!=NULL) *more = packet->block_more;
-  if (size!=NULL) *size = packet->block_size;
-  if (offset!=NULL) *offset = packet->block_offset;
+  if (num!=NULL) *num = ((coap_packet_t *)packet)->block_num;
+  if (more!=NULL) *more = ((coap_packet_t *)packet)->block_more;
+  if (size!=NULL) *size = ((coap_packet_t *)packet)->block_size;
+  if (offset!=NULL) *offset = ((coap_packet_t *)packet)->block_offset;
 
   return 1;
 }
 
 int
-coap_set_header_block(coap_packet_t *packet, uint32_t num, uint8_t more, uint16_t size)
+coap_set_header_block(void *packet, uint32_t num, uint8_t more, uint16_t size)
 {
   if (size<16) return 0;
   if (size>2048) return 0;
   if (num>0x0FFFFF) return 0;
 
-  packet->block_num = num;
-  packet->block_more = more;
-  packet->block_size = size;
+  ((coap_packet_t *)packet)->block_num = num;
+  ((coap_packet_t *)packet)->block_more = more;
+  ((coap_packet_t *)packet)->block_size = size;
 
-  SET_OPTION(packet, COAP_OPTION_BLOCK);
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_BLOCK);
   return 1;
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_uri_query(coap_packet_t *packet, const char **query)
+coap_get_header_uri_query(void *packet, const char **query)
 {
-  if (!IS_OPTION(packet, COAP_OPTION_URI_QUERY)) return 0;
+  if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) return 0;
 
-  *query = packet->uri_query;
-  return packet->uri_query_len;
+  *query = ((coap_packet_t *)packet)->uri_query;
+  return ((coap_packet_t *)packet)->uri_query_len;
 }
 
 int
-coap_set_header_uri_query(coap_packet_t *packet, char *query)
+coap_set_header_uri_query(void *packet, char *query)
 {
   while (query[0]=='?') ++query;
 
-  packet->uri_query = query;
-  packet->uri_query_len = strlen(query);
+  ((coap_packet_t *)packet)->uri_query = query;
+  ((coap_packet_t *)packet)->uri_query_len = strlen(query);
 
-  SET_OPTION(packet, COAP_OPTION_URI_QUERY);
-  return packet->uri_query_len;
+  SET_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY);
+  return ((coap_packet_t *)packet)->uri_query_len;
 }
 /*-----------------------------------------------------------------------------------*/
 /*- PAYLOAD -------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_payload(coap_packet_t *packet, uint8_t **payload)
+coap_get_payload(void *packet, uint8_t **payload)
 {
-  if (packet->payload) {
-    *payload = packet->payload;
-    return packet->payload_len;
+  if (((coap_packet_t *)packet)->payload) {
+    *payload = ((coap_packet_t *)packet)->payload;
+    return ((coap_packet_t *)packet)->payload_len;
   } else {
     *payload = NULL;
     return 0;
@@ -696,13 +726,13 @@ coap_get_payload(coap_packet_t *packet, uint8_t **payload)
 }
 
 int
-coap_set_payload(coap_packet_t *packet, uint8_t *payload, int length)
+coap_set_payload(void *packet, uint8_t *payload, size_t length)
 {
   PRINTF("setting payload (%u/%u)\n", length, REST_MAX_CHUNK_SIZE);
 
-  packet->payload = payload;
-  packet->payload_len = MIN(REST_MAX_CHUNK_SIZE, length);
+  ((coap_packet_t *)packet)->payload = payload;
+  ((coap_packet_t *)packet)->payload_len = MIN(REST_MAX_CHUNK_SIZE, length);
 
-  return packet->payload_len;
+  return ((coap_packet_t *)packet)->payload_len;
 }
 /*-----------------------------------------------------------------------------------*/

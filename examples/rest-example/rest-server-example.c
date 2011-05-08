@@ -16,7 +16,6 @@
 
 #define DEBUG 0
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
 #define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
@@ -39,13 +38,12 @@ RESOURCE(helloworld, METHOD_GET, "hello", "title=\"Hello world (set length with 
  * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
  */
 void
-helloworld_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   /* response might be NULL for non-confirmable CoAP requests. */
   if (response)
   {
-    char alen[4];
-    char *len = alen;
+    const char *len = NULL;
     int length = 12; /* ------->| */
     char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now100..105..110..115..120..125..130..135..140..145..150..155..160";
 
@@ -59,7 +57,7 @@ helloworld_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16
       memcpy(buffer, message, length);
     }
 
-    REST.set_header_content_type(response, TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
     REST.set_header_etag(response, (uint8_t *) &length, 1);
     REST.set_response_payload(response, buffer, length);
   }
@@ -69,7 +67,7 @@ helloworld_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16
 RESOURCE(mirror, METHOD_GET, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
 
 void
-mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   if (response)
   {
@@ -81,7 +79,7 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
     static char location[] = {'/','f','a','k','e', 0};
 
     /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
-    rest_content_type_t content_type = REST.get_header_content_type(request);
+    unsigned int content_type = REST.get_header_content_type(request);
 
     /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
     uint32_t max_age = 0;
@@ -113,6 +111,7 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, host);
     }
 #if WITH_COAP > 1
+#include "coap-03.h"
     if (coap_get_header_observe(request, &observe))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Ob %lu\n", observe);
@@ -140,11 +139,12 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
     PRINTF("/mirror options received: %s\n", buffer);
 
     /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
-    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     REST.set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
     REST.set_header_etag(response, opaque, 3);
     REST.set_header_location(response, location); /* Initial slash is omitted by framework */
 #if WITH_COAP > 1
+#include "coap-03.h"
     coap_set_header_observe(response, 10);
     opaque[0] = 0x01;
     opaque[1] = 0xCC;
@@ -164,15 +164,15 @@ mirror_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
 RESOURCE(chunks, METHOD_GET, "chunks", "title=\"Blockwise demo\";rt=\"Data\"");
 
 void
-chunks_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 #define CHUNKS_TOTAL    1030
 
   /* Check the offset for boundaries of the resource data. */
   if (*offset>=CHUNKS_TOTAL)
   {
-    coap_set_code(response, BAD_REQUEST_400);
-    coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+    REST.set_response_payload(response, (uint8_t*)"Block out of scope", 18);
     return;
   }
 
@@ -182,7 +182,7 @@ chunks_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
 
     /* Generate data until reaching CHUNKS_TOTAL. */
     while (strpos<REST_MAX_CHUNK_SIZE) {
-      strpos += snprintf(buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "|%ld|", *offset);
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "|%ld|", *offset);
     }
     /* Truncate if above. */
     if (*offset+strpos > CHUNKS_TOTAL)
@@ -211,12 +211,12 @@ chunks_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t p
 PERIODIC_RESOURCE(polling, METHOD_GET, "poll", "title=\"Periodic demo\";rt=\"Observable\"", 5*CLOCK_SECOND);
 
 void
-polling_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+polling_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     REST.set_response_payload(response, (uint8_t *)"It's periodic!", 14);
   }
 
@@ -238,7 +238,7 @@ polling_periodic_handler(resource_t *r)
 
   // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
   /* Notify the registered observers with the given message type, observe option, and payload. */
-  REST.notify_subscribers(r->url, COAP_TYPE_NON, periodic_i, content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
+  REST.notify_subscribers(r->url, 1, periodic_i, content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
 
   return 1;
 }
@@ -252,12 +252,12 @@ polling_periodic_handler(resource_t *r)
 EVENT_RESOURCE(event, METHOD_GET, "event", "title=\"Event demo\";rt=\"Observable\"");
 
 void
-event_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+event_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   /* Response might be NULL for non-confirmable requests. */
   if (response)
   {
-    REST.set_header_content_type(response, TEXT_PLAIN);
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     REST.set_response_payload(response, (uint8_t *)"It's eventful!", 14);
   }
 
@@ -279,7 +279,7 @@ event_event_handler(resource_t *r)
    * The token will be set automatically. */
 
   // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
-  REST.notify_subscribers(r->url, COAP_TYPE_CON, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
+  REST.notify_subscribers(r->url, 0, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
   return 1;
 }
 
@@ -287,23 +287,22 @@ event_event_handler(resource_t *r)
 RESOURCE(led, METHOD_POST | METHOD_PUT , "leds", "title=\"Led control (use ?color=red|green|blue and POST/PUT mode=on|off)\";rt=\"Control\"");
 
 void
-led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+led_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  char acolor[10];
-  char *color = acolor;
-  char amode[10];
-  char *mode = amode;
+  size_t len = 0;
+  const char *color = NULL;
+  const char *mode = NULL;
   uint8_t led = 0;
   int success = 1;
 
-  if (REST.get_query_variable(request, "color", &color)) {
-    PRINTF("color %s\n", color);
+  if ((len=REST.get_query_variable(request, "color", &color))) {
+    PRINTF("color %.*s\n", len, color);
 
-    if (!strcmp(color,"red")) {
+    if (strncmp(color, "red", len)==0) {
       led = LEDS_RED;
-    } else if(!strcmp(color,"green")) {
+    } else if(strncmp(color,"green", len)==0) {
       led = LEDS_GREEN;
-    } else if ( !strcmp(color,"blue") ) {
+    } else if (strncmp(color,"blue", len)==0) {
       led = LEDS_BLUE;
     } else {
       success = 0;
@@ -312,12 +311,12 @@ led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pref
     success = 0;
   }
 
-  if (success && REST.get_post_variable(request, "mode", &mode)) {
+  if (success && (len=REST.get_post_variable(request, "mode", &mode))) {
     PRINTF("mode %s\n", mode);
 
-    if (!strcmp(mode, "on")) {
+    if (strncmp(mode, "on", len)==0) {
       leds_on(led);
-    } else if (!strcmp(mode, "off")) {
+    } else if (strncmp(mode, "off", len)==0) {
       leds_off(led);
     } else {
       success = 0;
@@ -327,14 +326,14 @@ led_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pref
   }
 
   if (!success && response) {
-    REST.set_response_status(response, BAD_REQUEST_400);
+    REST.set_response_status(response, REST.status.BAD_REQUEST_400);
   }
 }
 
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
 RESOURCE(light, METHOD_GET, "light", "title=\"Photosynthetic and solar light (supports JSON)\";rt=\"LightSensor\"");
 void
-light_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   static uint8_t etag[] = {0xAB, 0xCD};
 
@@ -344,21 +343,21 @@ light_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pr
     uint16_t light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
     uint16_t light_solar = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
 
-    if (REST.get_header_content_type(request)==TEXT_PLAIN || REST.get_header_content_type(request)==TEXT_HTML) {
-      REST.set_header_content_type(response, TEXT_PLAIN);
+    if (REST.get_header_content_type(request)==REST.type.TEXT_PLAIN || REST.get_header_content_type(request)==REST.type.TEXT_HTML) {
+      REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "%u;%u", light_photosynthetic, light_solar);
 
       REST.set_header_etag(response, etag, 2);
       REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-    } else if (REST.get_header_content_type(request)==APPLICATION_JSON) {
-      REST.set_header_content_type(response, APPLICATION_JSON);
+    } else if (REST.get_header_content_type(request)==REST.type.APPLICATION_JSON) {
+      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
 
       REST.set_header_etag(response, etag, 2);
       REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      REST.set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE_415);
       REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }
@@ -367,7 +366,7 @@ light_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t pr
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
 RESOURCE(battery, METHOD_GET, "battery", "title=\"Battery status\";rt=\"Battery\"");
 void
-battery_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   static uint8_t etag[] = {0xAB, 0xCD};
 
@@ -376,21 +375,21 @@ battery_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t 
   {
     int battery = battery_sensor.value(0);
 
-    if (REST.get_header_content_type(request)==TEXT_PLAIN || REST.get_header_content_type(request)==TEXT_HTML) {
-      REST.set_header_content_type(response, TEXT_PLAIN);
+    if (REST.get_header_content_type(request)==REST.type.TEXT_PLAIN || REST.get_header_content_type(request)==REST.type.TEXT_HTML) {
+      REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
 
       REST.set_header_etag(response, etag, 2);
       REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-    } else if (REST.get_header_content_type(request)==APPLICATION_JSON) {
-      REST.set_header_content_type(response, APPLICATION_JSON);
+    } else if (REST.get_header_content_type(request)==REST.type.APPLICATION_JSON) {
+      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
       snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
 
       REST.set_header_etag(response, etag, 2);
       REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      REST.set_response_status(response, UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE_415);
       REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }
@@ -399,7 +398,7 @@ battery_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t 
 /* A simple actuator example. Toggles the red led */
 RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "toggle", "title=\"Red LED\";rt=\"Control\"");
 void
-toggle_handler(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   leds_toggle(LEDS_RED);
 }

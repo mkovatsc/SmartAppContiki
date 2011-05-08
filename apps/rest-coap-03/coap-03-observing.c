@@ -6,8 +6,10 @@
  */
 
 #include <stdio.h>
-#include "coap-observing.h"
-#include "coap-transactions.h"
+#include <string.h>
+
+#include "coap-03-transactions.h"
+#include "coap-03-observing.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -132,30 +134,30 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_observe_handler(coap_packet_t *request, coap_packet_t *response)
+coap_observe_handler(void *request, void *response)
 {
   static char content[26];
 
-  if (response && response->code<128) /* response without error code */
+  if (response && ((coap_packet_t *)response)->code<128) /* response without error code */
   {
-    if (IS_OPTION(request, COAP_OPTION_OBSERVE))
+    if (IS_OPTION((coap_packet_t *)request, COAP_OPTION_OBSERVE))
     {
-      if (IS_OPTION(request, COAP_OPTION_TOKEN))
+      if (IS_OPTION((coap_packet_t *)request, COAP_OPTION_TOKEN))
       {
-        if (coap_add_observer(request->url, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport, request->token, request->token_len))
+        if (coap_add_observer(((coap_packet_t *)request)->url, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
         {
           coap_set_header_observe(response, 0);
           coap_set_payload(response, (uint8_t *)content, snprintf(content, sizeof(content), "Added as observer %u/%u", list_length(observers_list), COAP_MAX_OBSERVERS));
         }
         else
         {
-          coap_set_code(response, SERVICE_UNAVAILABLE_503);
+          coap_set_status(response, SERVICE_UNAVAILABLE_503);
           coap_set_payload(response, (uint8_t *)"Too many observers", 18);
         } /* if (added observer) */
       }
       else /* if (token) */
       {
-          coap_set_code(response, TOKEN_OPTION_REQUIRED);
+        coap_set_status(response, TOKEN_OPTION_REQUIRED);
         coap_set_payload(response, (uint8_t *)"Observing requires token", 24);
       } /* if (token) */
     }

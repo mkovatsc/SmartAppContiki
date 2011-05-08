@@ -112,21 +112,22 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 }
 
 int
-rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
+rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
   int found = 0;
 
   PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
   resource_t* resource = NULL;
+  const char *url = NULL;
 
   for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
   {
     /*if the web service handles that kind of requests and urls matches*/
-    if (request->url && strlen(resource->url) == request->url_len && strncmp(resource->url, request->url, request->url_len) == 0)
+    if (REST.get_url(request, &url)==strlen(resource->url) && strncmp(resource->url, url, strlen(resource->url)) == 0)
     {
       /* The resource URL is '\0'-terminated: a much better handle, e.g., for observing */
-      request->url = resource->url;
+      REST.set_url(request, (char *) resource->url);
 
       found = 1;
       rest_method_t method = REST.get_method_type(request);
@@ -148,14 +149,14 @@ rest_invoke_restful_service(REQUEST* request, RESPONSE* response, uint8_t *buffe
           }
         }
       } else {
-        REST.set_response_status(response, METHOD_NOT_ALLOWED_405);
+        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED_405);
       }
       break;
     }
   }
 
   if (!found) {
-    REST.set_response_status(response, NOT_FOUND_404);
+    REST.set_response_status(response, REST.status.NOT_FOUND_404);
   }
 
   return found;
