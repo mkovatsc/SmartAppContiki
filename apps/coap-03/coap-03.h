@@ -172,8 +172,6 @@ typedef struct {
   uint16_t payload_len;
   uint8_t *payload;
 
-  uint16_t url_len;
-  const char *url; /* for the REST framework */
 } coap_packet_t;
 
 /*error definitions*/

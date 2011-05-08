@@ -64,7 +64,7 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 }
 
 /* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response. */
-RESOURCE(mirror, METHOD_GET, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
+RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
 
 void
 mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -132,7 +132,11 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 #endif
     if ((len = REST.get_query(request, &query)))
     {
-      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s", len, query);
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s\n", len, query);
+    }
+    if ((len = REST.get_request_payload(request, &token)))
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%.*s", len, token);
     }
     REST.set_response_payload(response, buffer, strpos);
 

@@ -98,7 +98,7 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
   coap_observer_t* obs = NULL;
   for (obs = (coap_observer_t*)list_head(observers_list); obs; obs = obs->next)
   {
-    if (obs->url==url)
+    if (obs->url==url) /* using RESOURCE url string as handle */
     {
       coap_transaction_t *transaction = NULL;
 
@@ -144,7 +144,9 @@ coap_observe_handler(void *request, void *response)
     {
       if (IS_OPTION((coap_packet_t *)request, COAP_OPTION_TOKEN))
       {
-        if (coap_add_observer(((coap_packet_t *)request)->url, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
+        const char *url;
+        REST.get_url(request, &url); /* request url was set to RESOURCE url string as handle. */
+        if (coap_add_observer(url, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
         {
           coap_set_header_observe(response, 0);
           coap_set_payload(response, (uint8_t *)content, snprintf(content, sizeof(content), "Added as observer %u/%u", list_length(observers_list), COAP_MAX_OBSERVERS));

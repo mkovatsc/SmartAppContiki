@@ -90,7 +90,7 @@ handle_incoming_data(void)
       // duplicates suppression
 
       PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
-      PRINTF("  URL: %.*s\n", request->url_len, request->url);
+      PRINTF("  URL: %.*s\n", request->uri_path_len, request->uri_path);
       PRINTF("  Payload: %.*s\n", request->payload_len, request->payload);
 
       if (request->type==COAP_TYPE_CON)

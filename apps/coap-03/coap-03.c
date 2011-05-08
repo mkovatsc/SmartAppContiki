@@ -418,10 +418,6 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           ((coap_packet_t *)packet)->uri_path = (char *) option_data;
           ((coap_packet_t *)packet)->uri_path_len = option_len;
           PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
-
-          // REST framework uses ->url
-          ((coap_packet_t *)packet)->url = ((coap_packet_t *)packet)->uri_path;
-          ((coap_packet_t *)packet)->url_len = ((coap_packet_t *)packet)->uri_path_len;
           break;
         case COAP_OPTION_OBSERVE:
           ((coap_packet_t *)packet)->observe = bytes_2_uint32(option_data, option_len);
