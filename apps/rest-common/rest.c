@@ -1,6 +1,7 @@
 #include "contiki.h"
 #include <string.h> /*for string operations in match_addresses*/
 #include <stdio.h> /*for sprintf in rest_set_header_**/
+
 #include "rest.h"
 
 #define DEBUG 0
@@ -20,9 +21,7 @@ LIST(restful_services);
 LIST(restful_periodic_services);
 
 
-#ifdef WITH_COAP
-
-#else
+#ifdef WITH_HTTP
 
 char *
 rest_to_http_max_age(uint32_t age)

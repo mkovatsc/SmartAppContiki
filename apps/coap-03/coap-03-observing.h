@@ -8,10 +8,6 @@
 #ifndef COAP_OBSERVING_H_
 #define COAP_OBSERVING_H_
 
-#if !defined(WITH_COAP) || WITH_COAP!=3
-#error "WITH_COAP must be set to 3"
-#endif
-
 #include "coap-03.h"
 #include "coap-03-transactions.h"
 

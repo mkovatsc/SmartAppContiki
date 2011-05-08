@@ -1,8 +1,8 @@
 #ifndef COAP_SERVER_H_
 #define COAP_SERVER_H_
 
-#if !defined(WITH_COAP) || WITH_COAP!=3
-#error "WITH_COAP must be set to 3"
+#if !defined(REST)
+#error "Define REST as \"coap_rest_implementation\""
 #endif
 
 #include "rest.h"

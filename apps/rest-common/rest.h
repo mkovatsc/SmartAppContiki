@@ -13,6 +13,10 @@
 #define REST_MAX_CHUNK_SIZE     128
 #endif
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)? (a) : (b))
+#endif /* MIN */
+
 /*REST method types*/
 typedef enum {
   METHOD_GET = (1 << 0),
@@ -143,16 +147,6 @@ struct rest_implementation {
 struct resource_s;
 struct periodic_resource_s;
 
-
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b)? (a) : (b))
-#endif /* MIN */
-
-
-
-
-
 /*Signature of handler functions*/
 typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 typedef int (*restful_pre_handler) (void* request, void* response);
@@ -214,8 +208,9 @@ void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
 resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_event_handler(resource_t*)
 
-
-
+/*
+ * All REST implementations must be listed here
+ */
 extern const struct rest_implementation coap_rest_implementation;
 
 /*

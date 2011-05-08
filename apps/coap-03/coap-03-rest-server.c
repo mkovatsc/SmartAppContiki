@@ -4,7 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "coap-03-server.h"
+#include "coap-03-rest-server.h"
 #include "coap-03-transactions.h"
 #include "coap-03-observing.h"
 

@@ -10,10 +10,6 @@
 
 #include "coap-03.h"
 
-#if !defined(WITH_COAP) || WITH_COAP!=3
-#error "WITH_COAP must be set to 3"
-#endif
-
 /*
  * The number of concurrent messages that can be stored for retransmission in the transaction layer.
  */
