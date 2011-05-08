@@ -141,8 +141,12 @@ struct rest_implementation {
 
   /* REST content-types. */
   const struct rest_implementation_type type;
-
 };
+
+/*
+ * Instance of REST implementation
+ */
+extern const struct rest_implementation REST;
 
 struct resource_s;
 struct periodic_resource_s;
@@ -207,11 +211,6 @@ periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, 
 void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
 resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_event_handler(resource_t*)
-
-/*
- * All REST implementations must be listed here
- */
-extern const struct rest_implementation coap_rest_implementation;
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
