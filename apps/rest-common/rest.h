@@ -158,6 +158,8 @@ typedef void (*restful_post_handler) (void* request, void* response);
 
 typedef int (*restful_periodic_handler) (struct resource_s* resource);
 
+typedef void (*restful_response_handler) (void *data, void* response);
+
 /*
  * Data structure representing a resource in REST.
  */

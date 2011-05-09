@@ -104,8 +104,8 @@ coap_clear_transaction(coap_transaction_t *t)
   memb_free(&transactions_memb, t);
 }
 
-int
-coap_clear_transaction_by_tid(uint16_t tid)
+coap_transaction_t *
+coap_get_transaction_by_tid(uint16_t tid)
 {
   coap_transaction_t *t = NULL;
 
@@ -113,11 +113,10 @@ coap_clear_transaction_by_tid(uint16_t tid)
   {
     if (t->tid==tid)
     {
-      coap_clear_transaction(t);
-      return 1;
+      return t;
     }
   }
-  return 0;
+  return NULL;
 }
 
 void

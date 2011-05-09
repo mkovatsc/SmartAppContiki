@@ -184,12 +184,18 @@ handle_incoming_data(void)
       else if (request->type==COAP_TYPE_ACK)
       {
         PRINTF("Received ACK\n");
-        coap_clear_transaction_by_tid(request->tid);
+
+        coap_transaction_t *t = coap_get_transaction_by_tid(request->tid);
+
+        if(t->callback) {
+        	t->callback(t->data, request);
+        }
+        coap_clear_transaction(t);
       }
       else if (request->type==COAP_TYPE_RST)
       {
         PRINTF("Received RST\n");
-        coap_clear_transaction_by_tid(request->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
         if (IS_OPTION(request, COAP_OPTION_TOKEN))
         {
           PRINTF("  Token 0x%02X%02X\n", request->token[0], request->token[1]);

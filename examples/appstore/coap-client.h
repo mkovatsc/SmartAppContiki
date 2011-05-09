@@ -5,17 +5,22 @@
 #include "contiki-net.h"
 #include "rest.h"
 #include "coap-03.h"
+#include "coap-03-transactions.h"
 
 struct request_state_t {
     struct pt pt;
+    struct process *process;
+    coap_transaction_t *transaction;
+    coap_packet_t *response;
+    uint32_t block_num;
 };
-typedef void (coap_request_callback)(uint16_t, uint8_t *, uint16_t);
+typedef void (*blocking_response_handler) (void* response);
 
 PT_THREAD(blocking_rest_request(struct request_state_t *request_state,
 		process_event_t ev,
 		uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
 		coap_packet_t *request,
-		restful_response_handler request_callback)
+		blocking_response_handler request_callback)
 );
 
 #endif /* __COAP_CLIENT_H__ */

@@ -142,7 +142,9 @@ coap_init_connection(uint16_t port)
 uint16_t
 coap_get_tid()
 {
-  return ++current_tid;
+  ++current_tid;
+  PRINTF("Get tid %u\n", current_tid);
+  return current_tid;
 }
 /*-----------------------------------------------------------------------------------*/
 void
@@ -438,7 +440,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
         case COAP_OPTION_TOKEN:
           ((coap_packet_t *)packet)->token_len = MIN(COAP_TOKEN_LEN, option_len);
           memcpy(((coap_packet_t *)packet)->token, option_data, ((coap_packet_t *)packet)->token_len);
-          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0] ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
+          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
           break;
         case COAP_OPTION_BLOCK:
           ((coap_packet_t *)packet)->block_num = bytes_2_uint32(option_data, option_len);

@@ -212,23 +212,22 @@ public class COAPPacket {
       //System.out.println("# of options :" + options);
 
       // read options
-      byte delta = 0;
+      byte hdrType = 0;
       for (int i = 0; i < options; i++) {
-        tempByte = inputStream.read();
-        byte hdrType = (byte) ((tempByte >> 0x4) & 0xF);
-        hdrType += delta;
-        delta = hdrType;
-        int hdrLen = tempByte & 0x0F;
-        //System.out.println(" hdrLen1: " + hdrLen);
-        if (hdrLen == 0xF) {
-          hdrLen = 0xF + inputStream.read();
+          tempByte = inputStream.read();
+          byte delta = (byte) ((tempByte >> 0x4) & 0xF);
+          hdrType += delta;
+          int hdrLen = tempByte & 0x0F;
+          //System.out.println(" hdrLen1: " + hdrLen);
+          if (hdrLen == 0xF) {
+            hdrLen = 0xF + inputStream.read();
+          }
+
+          byte[] hdrData = new byte[hdrLen];
+          inputStream.read(hdrData);
+
+          this.headerOptions.put(hdrType, hdrData);
         }
-
-        byte[] hdrData = new byte[hdrLen];
-        inputStream.read(hdrData);
-
-        this.headerOptions.put(hdrType, hdrData);
-      }
 
       // read payload
       int plLen = inputStream.available();
@@ -566,13 +565,14 @@ public class COAPPacket {
       sb.append(" Block #:" + block.number + " M:" + block.more + " size:" + block.size);
     }
 
-//    if (payload != null) {
-//      byte[] plBytes = payload;
-//      if (plBytes.length > 0) {
-//        //sb.append(" PL:" + toHex(plBytes, plBytes.length));
-//        sb.append(" pl:'" + new String(plBytes) + "'");
-//      }
-//    }
+    if (payload != null) {
+      byte[] plBytes = payload;
+      sb.append(" plen:'" + plBytes.length);
+      if (plBytes.length > 0) {
+        //sb.append(" PL:" + toHex(plBytes, plBytes.length));
+        sb.append(" pl:'" + new String(plBytes) + "'");
+      }
+    }
 
     return sb.toString();
   }

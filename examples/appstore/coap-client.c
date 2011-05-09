@@ -16,69 +16,46 @@
 #define PRINTLLADDR(addr)
 #endif
 
-void blocking_request_callback(coap_transaction_t *transaction, void *response) {
-	coap_packet_t *r = (coap_packet_t*)response;
-	process_poll(transaction->process);
+void blocking_request_callback(void *data, void *response) {
+	struct request_state_t *state = (struct request_state_t *)data;
+	state->response = (coap_packet_t*)response;
+	process_poll(state->process);
 }
 
 PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t ev,
-		uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
-		coap_packet_t *request,
-		restful_response_handler request_callback)) {
+	uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
+	coap_packet_t *request,
+	blocking_response_handler request_callback)) {
 
 	PT_BEGIN(&state->pt);
 
-	static coap_transaction_t *transaction;
+	state->block_num = 0;
+	state->response = NULL;
+	state->process = PROCESS_CURRENT();
 
-	transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port);
-	if(transaction == NULL) {
-		PT_EXIT(&state->pt);
-	}
+	uint8_t more;
+	do {
+		extern char elf_filename[];
+		request->option_count = 0;
+	    request->tid = coap_get_tid();
+		state->transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port);
+		if(state->transaction == NULL) {
+			PRINTF("Could not allocate transaction");
+			PT_EXIT(&state->pt);
+		}
+		request->header = state->transaction->packet;
+		state->transaction->callback = blocking_request_callback;
+		state->transaction->data = state;
+		coap_set_header_block(request, state->block_num, 1, REST_MAX_CHUNK_SIZE);
+		state->transaction->packet_len = coap_serialize_message(request);
+		PRINTF("Sending #%lu (%u bytes)\n", state->block_num, state->transaction->packet_len);
+		coap_send_transaction(state->transaction);
+		PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
+		request_callback(state->response);
+		coap_get_header_block(state->response, NULL, &more, NULL, NULL);
+		state->block_num++;
+	} while(more != 0);
 
-	request->header = transaction->packet;
-	transaction->packet_len = coap_serialize_message(request);
-	transaction->process = PROCESS_CURRENT();
-	transaction->callback = blocking_request_callback;
-
-	PRINTF("Sending to /%.*s\n", request->uri_path_len, request->uri_path);
-	PRINTF("  %.*s\n", request->payload_len, request->payload);
-	coap_send_transaction(transaction);
-
-PRINTF("Before yield\n");
-	PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
-PRINTF("After yield \n");
-request_callback(transaction->response);
-
-//    do { /* transmit the packet periodically until a response is received */
-//      /* send CoAP request */
-//
-//      /* Add block header only if it is necessary*/
-//      if (state->block.size) {
-//        PRINTF("CoAP client request, chunk: %d\n", state->block.number + 1);
-//        coap_set_header_block(&coap_packet, state->block.number + 1, 1, state->block.size);
-//      }
-//      coap_packet.tid = xact_id;
-//      PRINTF("Request TID %d\n", coap_packet.tid);
-//      request_size = serialize_packet(&coap_packet, buf);
-//      uip_udp_packet_send(conn, buf, request_size);
-//      etimer_set(&state->et, 2*CLOCK_SECOND);
-//      PT_WAIT_UNTIL(&state->pt, uip_newdata() || etimer_expired(&state->et));
-//      if(uip_newdata()) {
-//        /* receive CoAP response */
-//        parse_message(&coap_packet, uip_appdata, uip_datalen());
-//        PRINTF("Reply TID %d\n", coap_packet.tid);
-//        if(coap_packet.tid == xact_id) {
-//          resp_received = 1;
-//          state->block.more = 0;
-//          if (coap_get_header_block(&coap_packet, &state->block)) {
-//            PRINTF("CoAP client reply, chunk: %u %u %u\n", (uint16_t)state->block.number, state->block.more, state->block.size);
-//          }
-//          if(request_callback) request_callback(state->block.number, coap_packet.payload, coap_packet.payload_len);
-//        }
-//      }
-//    } while(!resp_received);
-//    etimer_stop(&state->et);
-//  }
 
   PT_END(&state->pt);
 }

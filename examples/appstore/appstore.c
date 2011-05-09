@@ -26,7 +26,7 @@ AUTOSTART_PROCESSES(&appstore_example);
 #define PRINTLLADDR(addr)
 #endif
 
-static char elf_filename[100] = {0};
+char elf_filename[100] = {0};
 #define MARKET_PORT UIP_HTONS(2222)
 #define NOTIF_PORT UIP_HTONS(3333)
 #define COLLECT_PORT UIP_HTONS(6666)
@@ -67,48 +67,48 @@ void loader_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 }
 
 ///*---------------------------------------------------------------------------*/
-//static void load_elf() {
-//  fd = cfs_open(elf_filename, CFS_READ | CFS_WRITE);
-//  int ret;
-//  ret = elfloader_load(fd);
-//
-//  char *print, *symbol = NULL;
-//
-//  if(ret != ELFLOADER_OK) {
-//    switch(ret) {
-//    case ELFLOADER_BAD_ELF_HEADER:
-//      print = "Bad ELF header";
-//      break;
-//    case ELFLOADER_NO_SYMTAB:
-//      print = "No symbol table";
-//      break;
-//    case ELFLOADER_NO_STRTAB:
-//      print = "No string table";
-//      break;
-//    case ELFLOADER_NO_TEXT:
-//      print = "No text segment";
-//      break;
-//    case ELFLOADER_SYMBOL_NOT_FOUND:
-//      print = "Symbol not found: ";
-//      symbol = elfloader_unknown;
-//      break;
-//    case ELFLOADER_SEGMENT_NOT_FOUND:
-//      print = "Segment not found: ";
-//      symbol = elfloader_unknown;
-//      break;
-//    case ELFLOADER_NO_STARTPOINT:
-//      print = "No starting point";
-//      break;
-//    default:
-//      print = "Unknown return code from the ELF loader (internal bug)";
-//      break;
-//    }
-//    PRINTF("ELF loading error: %s, %s\n", print, symbol);
-//  }
-//
-//  cfs_close(fd);
-//  cfs_remove(elf_filename);
-//}
+static void load_elf() {
+  fd = cfs_open(elf_filename, CFS_READ | CFS_WRITE);
+  int ret;
+  ret = elfloader_load(fd);
+
+  char *print, *symbol = NULL;
+
+  if(ret != ELFLOADER_OK) {
+    switch(ret) {
+    case ELFLOADER_BAD_ELF_HEADER:
+      print = "Bad ELF header";
+      break;
+    case ELFLOADER_NO_SYMTAB:
+      print = "No symbol table";
+      break;
+    case ELFLOADER_NO_STRTAB:
+      print = "No string table";
+      break;
+    case ELFLOADER_NO_TEXT:
+      print = "No text segment";
+      break;
+    case ELFLOADER_SYMBOL_NOT_FOUND:
+      print = "Symbol not found: ";
+      symbol = elfloader_unknown;
+      break;
+    case ELFLOADER_SEGMENT_NOT_FOUND:
+      print = "Segment not found: ";
+      symbol = elfloader_unknown;
+      break;
+    case ELFLOADER_NO_STARTPOINT:
+      print = "No starting point";
+      break;
+    default:
+      print = "Unknown return code from the ELF loader (internal bug)";
+      break;
+    }
+    PRINTF("ELF loading error: %s, %s\n", print, symbol);
+  }
+
+  cfs_close(fd);
+  cfs_remove(elf_filename);
+}
 
 /*---------------------------------------------------------------------------*/
 static void write_to_coffee(void *response) {
@@ -172,7 +172,7 @@ PROCESS_THREAD(appstore_example, ev, data) {
 
   while(1) {
 	static struct request_state_t request_state;
-	coap_packet_t request[1]; /* This way the packet can be treated as pointer as usual. */
+	static coap_packet_t request[1]; /* This way the packet can be treated as pointer as usual. */
 
     PROCESS_YIELD_UNTIL(ev == loading_requested_event);
 
@@ -192,9 +192,9 @@ PROCESS_THREAD(appstore_example, ev, data) {
     }
     file_len = 0;
 
-    coap_init_message(request, NULL, COAP_TYPE_CON, COAP_GET, coap_get_tid());
-    coap_set_header_uri_path(request, "market");
-    coap_set_payload(request, elf_filename, strlen(elf_filename));
+    coap_init_message(request, NULL, COAP_TYPE_CON, COAP_GET, 0);
+	coap_set_header_uri_path(request, "market");
+	coap_set_payload(request, elf_filename, strlen(elf_filename));
     /* request the elf to the market and store it in CFS */
     PT_SPAWN(process_pt, &request_state.pt,
     		blocking_rest_request(&request_state, ev,
@@ -202,11 +202,10 @@ PROCESS_THREAD(appstore_example, ev, data) {
     				request, write_to_coffee)
     );
 
-//
-//    PRINTF("%s received and stored (%d bytes)\n", elf_filename, file_len);
-//
+    PRINTF("%s received and stored (%d bytes)\n", elf_filename, file_len);
+
 //#ifndef DONT_LOAD
-//    /* load the elf */
+    /* load the elf */
 //    load_elf();
 //    /* execute the program */
 //    if(elfloader_autostart_processes) {
