@@ -19,6 +19,13 @@ CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 #CFLAGS += -DUIP_CONF_TCP=1
 
+#used to be able to use sscanf
+LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
+
+
+#extmem
+#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
+
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
