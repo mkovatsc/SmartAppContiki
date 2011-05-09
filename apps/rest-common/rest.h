@@ -116,7 +116,7 @@ struct rest_implementation {
   int (* set_header_location)(void *response, char *location);
 
   /** Get the payload option of a request. */
-  int (* get_request_payload)(void *request, uint8_t **payload);
+  int (* get_request_payload)(void *request, const uint8_t **payload);
 
   /** Set the payload option of a response. */
   int (* set_response_payload)(void *response, uint8_t *payload, size_t length);
@@ -131,7 +131,7 @@ struct rest_implementation {
   int (* get_post_variable)(void *request, const char *name, const char **value);
 
   /** Send the payload to all subscribers of the resource at url. */
-  void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t observe, uint8_t *payload, size_t payload_len);
+  void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t counter, uint8_t *payload, size_t payload_len);
 
   /** The handler for resource subscriptions. */
   void (* subscription_handler)(void *request, void *response);

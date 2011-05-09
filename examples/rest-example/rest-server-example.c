@@ -242,7 +242,7 @@ polling_periodic_handler(resource_t *r)
 
   // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
   /* Notify the registered observers with the given message type, observe option, and payload. */
-  REST.notify_subscribers(r->url, 1, periodic_i, content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
+  REST.notify_subscribers(r->url, 1, periodic_i, (uint8_t *)content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
 
   return 1;
 }
