@@ -39,3 +39,7 @@ connect-router:	$(CONTIKI)/tools/tunslip6
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
+
+connect-router-tag:	$(CONTIKI)/tools/tunslip6
+	sudo $(CONTIKI)/tools/tunslip6  -s /dev/ttyUSB1 aaaa::1/64
+

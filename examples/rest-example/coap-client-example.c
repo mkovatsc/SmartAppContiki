@@ -1,92 +1,110 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "contiki.h"
 #include "contiki-net.h"
-#include "rest.h"
-#include "buffer.h"
 
-#define DEBUG 1
+#ifdef CONTIKI_TARGET_SKY /* Any other targets will be added here (&& defined (OTHER))*/
+#include "dev/button-sensor.h"
+#include "dev/battery-sensor.h"
+#endif
+
+#include "coap-03.h"
+#include "coap-03-transactions.h"
+
+#define TOGGLE_INTERVAL 10
+
+
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
-#define PRINT6ADDR(addr) PRINTF("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
-#define PRINTLLADDR(lladdr) PRINTF(" %02x:%02x:%02x:%02x:%02x:%02x ",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
+#define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
+#define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
 #else
 #define PRINTF(...)
 #define PRINT6ADDR(addr)
 #define PRINTLLADDR(addr)
 #endif
 
-#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xfe80, 0, 0, 0, 0x0212, 0x7401, 0x0001, 0x0101)
-#define LOCAL_PORT 61617
-#define REMOTE_PORT 61616
+#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xaaaa, 0, 0, 0, 0x0212, 0x7400, 0x0da0, 0xd748)
+#define LOCAL_PORT      UIP_HTONS(61617)
+#define REMOTE_PORT     UIP_HTONS(61616)
 
-char temp[100];
-int xact_id;
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
+
 static uip_ipaddr_t server_ipaddr;
-static struct uip_udp_conn *client_conn;
 static struct etimer et;
-#define MAX_PAYLOAD_LEN   100
 
-#define NUMBER_OF_URLS 3
-char* service_urls[NUMBER_OF_URLS] = {"light", ".well-known/core", "helloworld"};
-
-static void
-response_handler(coap_packet_t* response)
-{
-  uint16_t payload_len = 0;
-  uint8_t* payload = NULL;
-  payload_len = coap_get_payload(response, &payload);
-
-  PRINTF("Response transaction id: %u", response->tid);
-  if (payload) {
-    memcpy(temp, payload, payload_len);
-    temp[payload_len] = 0;
-    PRINTF(" payload: %s\n", temp);
-  }
-}
+#define NUMBER_OF_URLS 4
+char* service_urls[NUMBER_OF_URLS] = {".well-known/core", "toggle", "battery", "poll"};
 
 static void
 send_data(void)
 {
-  char buf[MAX_PAYLOAD_LEN];
+  coap_transaction_t *transaction = NULL;
 
-  if (init_buffer(COAP_DATA_BUFF_SIZE)) {
-    int data_size = 0;
-    int service_id = random_rand() % NUMBER_OF_URLS;
-    coap_packet_t* request = (coap_packet_t*)allocate_buffer(sizeof(coap_packet_t));
-    init_packet(request);
+  if ( (transaction = coap_new_transaction(coap_get_tid(), &server_ipaddr, REMOTE_PORT)) )
+  {
 
-    coap_set_method(request, COAP_GET);
-    request->tid = xact_id++;
-    request->type = MESSAGE_TYPE_CON;
-    coap_set_header_uri(request, service_urls[service_id]);
+    /* prepare response */
+    coap_packet_t request[1]; /* This way the packet can be treated as pointer as usual. */
+    coap_init_message(request, transaction->packet, COAP_TYPE_CON, COAP_GET, transaction->tid );
+    coap_set_header_uri_path(request, service_urls[1]);
+    coap_set_payload(request, (uint8_t *)"Toggling...", 11);
+    transaction->packet_len = coap_serialize_message(request);
 
-    data_size = serialize_packet(request, buf);
+    PRINTF("Sending to /%.*s\n", request->uri_path_len, request->uri_path);
+    PRINTF("  %.*s\n", request->payload_len, request->payload);
 
-    PRINTF("Client sending request to:[");
-    PRINT6ADDR(&client_conn->ripaddr);
-    PRINTF("]:%u/%s\n", (uint16_t)REMOTE_PORT, service_urls[service_id]);
-    uip_udp_packet_send(client_conn, buf, data_size);
-
-    delete_buffer();
+    coap_send_transaction(transaction);
   }
 }
 
 static void
 handle_incoming_data()
 {
-  PRINTF("Incoming packet size: %u \n", (u16_t)uip_datalen());
-  if (init_buffer(COAP_DATA_BUFF_SIZE)) {
-    if (uip_newdata()) {
-      coap_packet_t* response = (coap_packet_t*)allocate_buffer(sizeof(coap_packet_t));
-      if (response) {
-        parse_message(response, uip_appdata, uip_datalen());
-        response_handler(response);
+  int error = NO_ERROR;
+
+  PRINTF("handle_incoming_data(): received uip_datalen=%u \n",(uint16_t)uip_datalen());
+
+  uint8_t *data = uip_appdata + uip_ext_len;
+  uint16_t data_len = uip_datalen() - uip_ext_len;
+
+  if (uip_newdata()) {
+    PRINTF("receiving UDP datagram from: ");
+    PRINT6ADDR(&UIP_IP_BUF->srcipaddr);
+    PRINTF(":%u\n  Length: %u\n", uip_ntohs(UIP_UDP_BUF->srcport), data_len );
+
+    coap_packet_t response[1] = {{0}};
+
+    error = coap_parse_message(response, data, data_len);
+
+    if (error==NO_ERROR)
+    {
+      if (response->type==COAP_TYPE_ACK)
+      {
+        PRINTF("Received ACK %u\n", response->tid);
+        if (response->payload_len)
+        {
+          PRINTF("  %.*s\n", response->payload_len, response->payload);
+        }
+        coap_clear_transaction_by_tid(response->tid);
       }
-    }
-    delete_buffer();
+      else if (response->type==COAP_TYPE_RST)
+      {
+        PRINTF("Received RST %u\n", response->tid);
+        coap_clear_transaction_by_tid(response->tid);
+      }
+      else if (response->type==COAP_TYPE_CON)
+      {
+        /* reuse input buffer */
+        coap_init_message(response, response->header, COAP_TYPE_ACK, 0, response->tid);
+        coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, response->header, coap_serialize_message(response));
+      }
+    } /* if (parsed correctly) */
   }
 }
 
@@ -99,16 +117,18 @@ PROCESS_THREAD(coap_client_example, ev, data)
 
   SERVER_NODE(&server_ipaddr);
 
-  /* new connection with server */
-  client_conn = udp_new(&server_ipaddr, UIP_HTONS(REMOTE_PORT), NULL);
-  udp_bind(client_conn, UIP_HTONS(LOCAL_PORT));
+#ifdef CONTIKI_TARGET_SKY
+  SENSORS_ACTIVATE(button_sensor);
+  SENSORS_ACTIVATE(battery_sensor);
+#endif
 
-  PRINTF("Created a connection with the server ");
-  PRINT6ADDR(&client_conn->ripaddr);
-  PRINTF(" local/remote port %u/%u\n",
-  UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
+  /* retransmission timers will be set for this process. */
+  coap_register_as_transaction_handler();
 
-  etimer_set(&et, 5 * CLOCK_SECOND);
+  coap_init_connection(LOCAL_PORT);
+
+  etimer_set(&et, TOGGLE_INTERVAL * CLOCK_SECOND);
+
   while(1) {
     PROCESS_YIELD();
     if (etimer_expired(&et)) {
@@ -116,6 +136,13 @@ PROCESS_THREAD(coap_client_example, ev, data)
       etimer_reset(&et);
     } else if (ev == tcpip_event) {
       handle_incoming_data();
+    } else if (ev == PROCESS_EVENT_TIMER) {
+      /* retransmissions are handled here */
+      coap_check_transactions();
+#if defined (CONTIKI_TARGET_SKY)
+    } else if (ev == sensors_event && data == &button_sensor) {
+      send_data();
+#endif
     }
   }
 

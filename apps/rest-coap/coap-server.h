@@ -23,7 +23,7 @@ int coap_set_header_content_type(coap_packet_t* packet, content_type_t content_t
 int coap_get_header_subscription_lifetime(coap_packet_t* packet, uint32_t* lifetime);
 int coap_set_header_subscription_lifetime(coap_packet_t* packet, uint32_t lifetime);
 
-int coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size);
+int coap_get_header_block(coap_packet_t* packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block(coap_packet_t* packet, uint32_t num, uint8_t more, uint16_t size);
 
 int coap_set_header_uri(coap_packet_t* packet, char* uri);

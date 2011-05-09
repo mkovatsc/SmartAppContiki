@@ -134,7 +134,7 @@ main(void)
 #else /* !UIP_CONF_IPV6 */
   uint8_t i;
   uip_ipaddr_t ipaddr;
-  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);   
+  uip_ip6addr(&ipaddr, 0xcccc, 0, 0, 0, 0, 0, 0, 0);
 #if UIP_CONF_ROUTER
   uip_ds6_prefix_add(&ipaddr, UIP_DEFAULT_PREFIX_LEN, 0, 0, 0, 0);
 #else /* UIP_CONF_ROUTER */

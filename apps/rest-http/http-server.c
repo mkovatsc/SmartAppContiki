@@ -11,7 +11,7 @@
 #include "static-routing.h"
 #endif
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -67,7 +67,7 @@ http_set_status(http_response_t* response, status_code_t status)
 static http_header_t*
 allocate_header(uint16_t variable_len)
 {
-  PRINTF("sizeof http_header_t %u variable size %u\n", sizeof(http_header_t), variable_len);
+  PRINTF("ALLOCATE: sizeof http_header_t %u variable size %u\n", sizeof(http_header_t), variable_len);
   uint8_t* buffer = allocate_buffer(sizeof(http_header_t) + variable_len);
   if (buffer) {
     http_header_t* option = (http_header_t*) buffer;
@@ -527,6 +527,7 @@ PT_THREAD(handle_request(connection_state_t* conn_state))
         /*init the static variable again*/
         read_bytes = 0;
 
+        PRINTF("ALLOCATE: 1 + sizeof payload_len %u\n", conn_state->request.payload_len);
         conn_state->request.payload = allocate_buffer(conn_state->request.payload_len + 1);
 
         if (conn_state->request.payload) {
@@ -579,7 +580,9 @@ PT_THREAD(send_data(connection_state_t* conn_state))
 
   response = &conn_state->response;
   header = response->headers;
-  buffer = allocate_buffer(200);
+
+  PRINTF("ALLOCATE: send buffer %u\n", REST_MAX_CHUNK_SIZE);
+  buffer = allocate_buffer(REST_MAX_CHUNK_SIZE);
 
   /*FIXME: what is the best solution here to send the data. Right now, if buffer is not allocated, no data is sent!*/
   if (buffer) {
@@ -671,6 +674,8 @@ PROCESS_THREAD(http_server, ev, data)
       PRINTF("##Connected##\n");
 
       if(init_buffer(HTTP_DATA_BUFF_SIZE)) {
+
+        PRINTF("ALLOCATE: sizeof connection_state_t %u\n", sizeof(connection_state_t));
         conn_state = (connection_state_t*)allocate_buffer(sizeof(connection_state_t));
 
         if (conn_state) {

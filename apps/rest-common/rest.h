@@ -5,23 +5,17 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 
-struct resource_t;
-struct periodic_resource_t;
+/*
+ * The maximum buffer size that is provided for resource responses and must be respected due to the limited IP buffer.
+ * Larger data must be handled by the resource and will be sent chunk-wise through a TCP stream or CoAP blocks.
+ */
+#ifndef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE     128
+#endif
 
-#ifdef WITH_COAP
-  #include "coap-server.h"
-  #define REQUEST coap_packet_t
-  #define RESPONSE coap_packet_t
-  #define SERVER_PROCESS (&coap_server)
-#else /*WITH_COAP*/
-  /*WITH_HTTP*/
-  #include "http-common.h"
-  #include "http-server.h"
-  #define REQUEST http_request_t
-  #define RESPONSE http_response_t
-  #define SERVER_PROCESS (&http_server)
-#endif /*WITH_COAP*/
-
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)? (a) : (b))
+#endif /* MIN */
 
 /*REST method types*/
 typedef enum {
@@ -29,69 +23,199 @@ typedef enum {
   METHOD_POST = (1 << 1),
   METHOD_PUT = (1 << 2),
   METHOD_DELETE = (1 << 3)
-} method_t;
+} rest_method_t;
+
+typedef int (* service_callback_t)(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+
+/**
+ * The structure of a MAC protocol driver in Contiki.
+ */
+struct rest_implementation_status
+{
+  const unsigned int CONTINUE_100;
+  const unsigned int OK_200;
+  const unsigned int CREATED_201;
+  const unsigned int NOT_MODIFIED_304;
+  const unsigned int BAD_REQUEST_400;
+  const unsigned int NOT_FOUND_404;
+  const unsigned int METHOD_NOT_ALLOWED_405;
+  const unsigned int UNSUPPORTED_MADIA_TYPE_415;
+  const unsigned int INTERNAL_SERVER_ERROR_500;
+  const unsigned int BAD_GATEWAY_502;
+  const unsigned int SERVICE_UNAVAILABLE_503;
+  const unsigned int GATEWAY_TIMEOUT_504;
+  const unsigned int TOKEN_OPTION_REQUIRED;
+  const unsigned int HOST_REQUIRED;
+  const unsigned int CRITICAL_OPTION_NOT_SUPPORTED;
+};
+struct rest_implementation_type
+{
+  unsigned int TEXT_PLAIN;
+  unsigned int TEXT_XML;
+  unsigned int TEXT_CSV;
+  unsigned int TEXT_HTML;
+  unsigned int IMAGE_GIF;
+  unsigned int IMAGE_JPEG;
+  unsigned int IMAGE_PNG;
+  unsigned int IMAGE_TIFF;
+  unsigned int AUDIO_RAW;
+  unsigned int VIDEO_RAW;
+  unsigned int APPLICATION_LINK_FORMAT;
+  unsigned int APPLICATION_XML;
+  unsigned int APPLICATION_OCTET_STREAM;
+  unsigned int APPLICATION_RDF_XML;
+  unsigned int APPLICATION_SOAP_XML;
+  unsigned int APPLICATION_ATOM_XML;
+  unsigned int APPLICATION_XMPP_XML;
+  unsigned int APPLICATION_EXI;
+  unsigned int APPLICATION_X_BXML;
+  unsigned int APPLICATION_FASTINFOSET;
+  unsigned int APPLICATION_SOAP_FASTINFOSET;
+  unsigned int APPLICATION_JSON;
+};
+
+struct rest_implementation {
+  char *name;
+
+  /** Initialize the REST implementation. */
+  void (* init)(void);
+
+  /** Register the RESTful service callback at implementation */
+  void (* set_service_callback)(service_callback_t callback);
+
+  /** Get request URI path */
+  int (* get_url)(void *request, const char **url);
+
+  int (* set_url)(void *request, char *url);
+
+  /** Get the method of a request. */
+  rest_method_t (* get_method_type)(void *request);
+
+  /** Set the status code of a response. */
+  void (* set_response_status)(void *response, unsigned int code);
+
+  /** Get the content-type of a request. */
+  unsigned int (* get_header_content_type)(void *request);
+
+  /** Set the content-type of a response. */
+  int (* set_header_content_type)(void *response, unsigned int content_type);
+
+  /** Get the Max-Age option of a request. */
+  int (* get_header_max_age)(void *request, uint32_t *age);
+
+  /** Set the Max-Age option of a response. */
+  int (* set_header_max_age)(void *response, uint32_t age);
+
+  /** Set the ETag option of a response. */
+  int (* set_header_etag)(void *response, uint8_t *etag, size_t length);
+
+  /** Get the Host option of a request. */
+  int (* get_header_host)(void *request, const char **host);
+
+  /** Set the location option of a response. */
+  int (* set_header_location)(void *response, char *location);
+
+  /** Get the payload option of a request. */
+  int (* get_request_payload)(void *request, const uint8_t **payload);
+
+  /** Set the payload option of a response. */
+  int (* set_response_payload)(void *response, uint8_t *payload, size_t length);
+
+  /** Get the query string of a request. */
+  int (* get_query)(void *request, const char **value);
+
+  /** Get the value of a request query key-value pair. */
+  int (* get_query_variable)(void *request, const char *name, const char **value);
+
+  /** Get the value of a request POST key-value pair. */
+  int (* get_post_variable)(void *request, const char *name, const char **value);
+
+  /** Send the payload to all subscribers of the resource at url. */
+  void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t counter, uint8_t *payload, size_t payload_len);
+
+  /** The handler for resource subscriptions. */
+  void (* subscription_handler)(void *request, void *response);
+
+  /* REST status codes. */
+  const struct rest_implementation_status status;
+
+  /* REST content-types. */
+  const struct rest_implementation_type type;
+};
+
+/*
+ * Instance of REST implementation
+ */
+extern const struct rest_implementation REST;
+
+struct resource_s;
+struct periodic_resource_s;
 
 /*Signature of handler functions*/
-typedef void (*restful_handler) (REQUEST* request, RESPONSE* response);
-typedef int (*restful_pre_handler) (REQUEST* request, RESPONSE* response);
-typedef void (*restful_post_handler) (REQUEST* request, RESPONSE* response);
+typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+typedef int (*restful_pre_handler) (void* request, void* response);
+typedef void (*restful_post_handler) (void* request, void* response);
 
-typedef int (*restful_periodic_handler) (struct resource_t* resource);
-typedef void (*restful_periodic_request_generator) (REQUEST* request);
+typedef int (*restful_periodic_handler) (struct resource_s* resource);
 
 /*
  * Data structure representing a resource in REST.
  */
-struct resource_t {
-  struct resource_t *next; /*points to next resource defined*/
-  method_t methods_to_handle; /*handled HTTP methods*/
+struct resource_s {
+  struct resource_s *next; /* for LIST, points to next resource defined */
+  rest_method_t methods_to_handle; /* handled RESTful methods */
   const char* url; /*handled URL*/
-  restful_handler handler; /*handler function*/
-  restful_pre_handler pre_handler; /*to be called before handler, may perform initializations*/
-  restful_post_handler post_handler; /*to be called after handler, may perform finalizations (cleanup, etc)*/
-  void* user_data; /*pointer to user specific data*/
+  const char* attributes; /* link-format attributes; can be omitted for HTTP */
+  restful_handler handler; /* handler function */
+  restful_pre_handler pre_handler; /* to be called before handler, may perform initializations */
+  restful_post_handler post_handler; /* to be called after handler, may perform finalizations (cleanup, etc) */
+  void* user_data; /* pointer to user specific data */
 };
-typedef struct resource_t resource_t;
+typedef struct resource_s resource_t;
 
-struct periodic_resource_t {
-  struct periodic_resource_t *next;
+struct periodic_resource_s {
+  struct periodic_resource_s *next; /* for LIST, points to next resource defined */
   resource_t *resource;
   uint32_t period;
-  struct etimer* handler_cb_timer;
-  struct stimer* lifetime_timer;
+  struct etimer periodic_timer;
   restful_periodic_handler periodic_handler;
-  restful_periodic_request_generator periodic_request_generator;
-  uint32_t lifetime;
-  uip_ipaddr_t addr;
-  struct uip_udp_conn *client_conn;
 };
-typedef struct periodic_resource_t periodic_resource_t;
-
+typedef struct periodic_resource_s periodic_resource_t;
 
 /*
  * Macro to define a Resource
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
-#define RESOURCE(name, methods_to_handle, url) \
-void name##_handler(REQUEST*, RESPONSE*); \
-resource_t resource_##name = {NULL, methods_to_handle, url, name##_handler, NULL, NULL, NULL}
+#define RESOURCE(name, methods_to_handle, url, attributes) \
+void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}
 
 /*
- * Macro to define a Periodic Resource
+ * Macro to define a periodic resource
+ * The corresponding [name]_periodic_handler() function will be called every period.
+ * For instance polling a sensor and publishing a changed value to subscribed clients would be done there.
+ * The subscriber list will be maintained by the post_handler rest_subscription_handler() (see rest-mapping header file).
  */
-#define PERIODIC_RESOURCE(name, methods_to_handle, url, period) \
-RESOURCE(name, methods_to_handle, url); \
+#define PERIODIC_RESOURCE(name, methods_to_handle, url, attributes, period) \
+void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_periodic_handler(resource_t*); \
-void name##_periodic_request_generator(REQUEST*); \
-struct etimer handler_cb_timer_##name; \
-struct stimer lifetime_timer_##name; \
-periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, &handler_cb_timer_##name, &lifetime_timer_##name, name##_periodic_handler, name##_periodic_request_generator, 0}
+periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
 
+/*
+ * Macro to define an event resource
+ * Like periodic resources, event resources have a post_handler that manages a subscriber list.
+ * Instead of a periodic_handler, an event_callback must be provided.
+ */
+#define EVENT_RESOURCE(name, methods_to_handle, url, attributes) \
+void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
+int name##_event_handler(resource_t*)
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
  */
-void rest_init(void);
+void rest_init_framework(void);
 
 /*
  * Resources wanted to be accessible should be activated with the following code.
@@ -99,6 +223,12 @@ void rest_init(void);
 void rest_activate_resource(resource_t* resource);
 
 void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
+
+/*
+ * To be called by HTTP/COAP server as a callback function when a new service request appears.
+ * This function dispatches the corresponding RESTful service.
+ */
+int rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset);
 
 /*
  * Returns the resource list
@@ -128,80 +258,5 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  * Can be used to do cleanup (deallocate memory, etc) after resource handling.
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
-
-/*
- * To be called by HTTP/COAP server as a callback function when a new service request appears.
- * This function dispatches the corresponding RESTful service.
- */
-int rest_invoke_restful_service(REQUEST* request, RESPONSE* response);
-
-
-/*
- * Returns the RESTful method
- */
-method_t rest_get_method_type(REQUEST* request);
-
-// FIXME remove, servers do not send requests, dependency for periodic example
-void rest_set_method_type(REQUEST* request, method_t method);
-
-/*
- * Setter for the status code (200, 201, etc) of the response.
- */
-void rest_set_response_status(RESPONSE* response, status_code_t status);
-
-/*
- * Returns query variable in the URL.
- * Returns true if the variable found, false otherwise.
- * Variable is put in the buffer provided.
- */
-int rest_get_query_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
-
-/*
- * Returns variable in the Post Data/Payload.
- * Returns true if the variable found, false otherwise.
- * Variable is put in the buffer provided.
- */
-int rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size);
-
-/*
- * Getter for the request content type
- */
-content_type_t rest_get_header_content_type(REQUEST* request);
-int rest_set_header_content_type(RESPONSE* response, content_type_t content_type);
-
-int rest_get_header_max_age(REQUEST* request, uint32_t *age);
-int rest_set_header_max_age(RESPONSE* response, uint32_t age);
-
-int rest_get_header_etag(RESPONSE* response, const uint8_t **etag); // in-place string might not be 0-terminated
-int rest_set_header_etag(RESPONSE* response, uint8_t *etag);
-
-int rest_get_header_host(REQUEST* request, const char **host); // in-place string might not be 0-terminated
-int rest_set_header_host(REQUEST* request, char *uri);
-
-int rest_get_header_location(RESPONSE* response, const char **uri); // in-place string might not be 0-terminated
-int rest_set_header_location(RESPONSE* response, char *uri);
-
-int rest_get_path(REQUEST* request, const char **uri); // in-place string might not be 0-terminated
-int rest_set_path(REQUEST* request, char *uri);
-
-// TODO request/response distinction awkward for CoAP-only options
-int rest_get_header_observe(REQUEST* request, uint32_t *observe);
-int rest_set_header_observe(RESPONSE* response, uint32_t observe);
-
-int rest_get_header_token(REQUEST* request, uint16_t *token);
-int rest_set_header_token(RESPONSE* response, uint16_t token);
-
-int rest_get_header_block(REQUEST* request, uint32_t *num, uint8_t *more, uint16_t *size);
-int rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size);
-
-int rest_get_query(REQUEST* request, const char **query); // in-place string might not be 0-terminated
-int rest_set_query(REQUEST* request, char *query);
-
-/*
- * Setter for the payload of the request and response
- */
-int rest_get_request_payload(REQUEST* request, uint8_t **payload);
-//int rest_set_request_payload(REQUEST* request, uint8_t *payload, uint16_t size); // FIXME remove, servers do not send requests, dependency for periodic example
-int rest_set_response_payload(RESPONSE* response, uint8_t *payload, uint16_t size);
 
 #endif /*REST_H_*/

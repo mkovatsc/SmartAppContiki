@@ -1,4 +1,4 @@
-all: rest-server-example # coap-client-example
+all: rest-server-example coap-client-example
 
 CONTIKI=../..
 
@@ -21,19 +21,26 @@ CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
+# REST framework, requires WITH_COAP
 ifeq ($(WITH_COAP), 3)
+${info INFO: compiling with CoAP-03}
 CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=0
-APPS += rest-coap-03
+APPS += coap-03
 else ifeq ($(WITH_COAP), 1)
+${info INFO: compiling with rest-CoAP}
 CFLAGS += -DWITH_COAP
 CFLAGS += -DUIP_CONF_TCP=0
 APPS += rest-coap
 else
+${info INFO: compiling with HTTP}
 CFLAGS += -DWITH_HTTP
 CFLAGS += -DUIP_CONF_TCP=1
 APPS += rest-http
 endif
+APPS += rest-common
+
 
 include $(CONTIKI)/Makefile.include
 

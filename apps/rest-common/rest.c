@@ -1,8 +1,8 @@
 #include "contiki.h"
 #include <string.h> /*for string operations in match_addresses*/
 #include <stdio.h> /*for sprintf in rest_set_header_**/
+
 #include "rest.h"
-#include "buffer.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -15,40 +15,68 @@
 #define PRINTLLADDR(addr)
 #endif
 
-/*FIXME it is possible to define some of the rest functions as MACROs rather than functions full of ifdefs.*/
+PROCESS_NAME(rest_manager_process);
 
 LIST(restful_services);
-#if WITH_COAP <= 1
 LIST(restful_periodic_services);
-#endif
+
+
+#ifdef WITH_HTTP
+
+char *
+rest_to_http_max_age(uint32_t age)
+{
+  /* Cache-Control: max-age=age for HTTP */
+  static char temp_age[19];
+  snprintf(temp_age, sizeof(temp_age), "max-age=%lu", age);
+  return temp_age;
+}
+
+char *
+rest_to_http_etag(uint8_t *etag, uint8_t etag_len)
+{
+  static char temp_etag[17];
+  int index = 0;
+
+  for (index = 0; index<sizeof(temp_etag) && index<etag_len; ++index) {
+    snprintf(temp_etag+2*index, sizeof(temp_etag), "%02x", etag[index]);
+  }
+  temp_etag[2*index] = '\0';
+
+  return temp_etag;
+}
+#endif /*WITH_COAP*/
+
 
 void
-rest_init(void)
+rest_init_framework(void)
 {
   list_init(restful_services);
 
-  set_service_callback(rest_invoke_restful_service);
+  REST.set_service_callback(rest_invoke_restful_service);
 
-  /*Start rest server process*/
-  process_start(SERVER_PROCESS, NULL);
+  /* Start the RESTful server implementation. */
+  REST.init();
+
+  /*Start rest manager process*/
+  process_start(&rest_manager_process, NULL);
 }
 
 void
 rest_activate_resource(resource_t* resource)
 {
   /*add it to the restful web service link list*/
+  PRINTF("Activating: %s", resource->url);
   list_add(restful_services, resource);
 }
 
 void
 rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
-#if WITH_COAP > 1
-  coap_activate_periodic_resource(periodic_resource);
-#elif WITH_COAP == 1
   list_add(restful_periodic_services, periodic_resource);
-#endif /*WITH_COAP*/
   rest_activate_resource(periodic_resource->resource);
+
+  rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
 }
 
 list_t
@@ -63,7 +91,6 @@ rest_get_user_data(resource_t* resource)
 {
   return resource->user_data;
 }
-
 
 void
 rest_set_user_data(resource_t* resource, void* user_data)
@@ -84,382 +111,92 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 }
 
 int
-rest_invoke_restful_service(REQUEST* request, RESPONSE* response)
+rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
   int found = 0;
-  const char* url = request->url;
-  uint16_t url_len = request->url_len;
 
-  PRINTF("rest_invoke_restful_service url %s url_len %d -->\n", url, url_len);
+  PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
   resource_t* resource = NULL;
+  const char *url = NULL;
 
-  for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next) {
+  for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
+  {
     /*if the web service handles that kind of requests and urls matches*/
-    if (url && strlen(resource->url) == url_len && strncmp(resource->url, url, url_len) == 0){
+    if (REST.get_url(request, &url)==strlen(resource->url) && strncmp(resource->url, url, strlen(resource->url)) == 0)
+    {
+      /* The resource URL is '\0'-terminated: a much better handle, e.g., for observing */
+      REST.set_url(request, (char *) resource->url);
+
       found = 1;
-      method_t method = rest_get_method_type(request);
+      rest_method_t method = REST.get_method_type(request);
 
       PRINTF("method %u, resource->methods_to_handle %u\n", (uint16_t)method, resource->methods_to_handle);
 
-      if (resource->methods_to_handle & method) {
-
+      if (resource->methods_to_handle & method)
+      {
         /*call pre handler if it exists*/
-        if (!resource->pre_handler || resource->pre_handler(request, response)) {
+        if (!resource->pre_handler || resource->pre_handler(request, response))
+        {
           /* call handler function*/
-          resource->handler(request, response);
+          resource->handler(request, response, buffer, buffer_size, offset);
 
           /*call post handler if it exists*/
-          if (resource->post_handler) {
+          if (resource->post_handler)
+          {
             resource->post_handler(request, response);
           }
         }
       } else {
-        rest_set_response_status(response, METHOD_NOT_ALLOWED_405);
+        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED_405);
       }
       break;
     }
   }
 
   if (!found) {
-    rest_set_response_status(response, NOT_FOUND_404);
+    REST.set_response_status(response, REST.status.NOT_FOUND_404);
   }
 
   return found;
 }
+/*-----------------------------------------------------------------------------------*/
 
+PROCESS(rest_manager_process, "Rest Process");
 
-#ifdef WITH_COAP
-static method_t coap_to_rest_method(coap_method_t method)
+PROCESS_THREAD(rest_manager_process, ev, data)
 {
-  return (method_t)(1 << (method - 1));
-}
+  PROCESS_BEGIN();
 
-static coap_method_t rest_to_coap_method(method_t method)
-{
-  coap_method_t coap_method = COAP_GET;
-  switch (method) {
-  case METHOD_GET:
-    coap_method = COAP_GET;
-    break;
-  case METHOD_POST:
-    coap_method = COAP_POST;
-      break;
-  case METHOD_PUT:
-    coap_method = COAP_PUT;
-      break;
-  case METHOD_DELETE:
-    coap_method = COAP_DELETE;
-      break;
-  default:
-    break;
+  PROCESS_PAUSE();
+
+  /* Initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
+  periodic_resource_t* periodic_resource = NULL;
+  for (periodic_resource = (periodic_resource_t*) list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
+    if (periodic_resource->period) {
+      PRINTF("Periodic: Set timer for %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
+      etimer_set(&periodic_resource->periodic_timer, periodic_resource->period);
+    }
   }
-  return coap_method;
-}
-#endif /*WITH_COAP*/
-/*-----------------------------------------------------------------------------------*/
-method_t
-rest_get_method_type(REQUEST* request)
-{
-#ifdef WITH_COAP
-  return coap_to_rest_method(coap_get_method(request));
-#else
-  return (method_t)(request->request_type);
-#endif
-}
 
-void
-rest_set_method_type(REQUEST* request, method_t method)
-{
-/*Only defined for COAP for now.*/
-#ifdef WITH_COAP
-  coap_set_method(request, rest_to_coap_method(method));
-#endif /*WITH_COAP*/
-}
+  while (1) {
+    PROCESS_WAIT_EVENT();
+    if (ev == PROCESS_EVENT_TIMER) {
+      for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
+        if (periodic_resource->period && etimer_expired(&periodic_resource->periodic_timer)) {
 
-void
-rest_set_response_status(RESPONSE* response, status_code_t status)
-{
-#ifdef WITH_COAP
-  coap_set_code(response, status);
-#else /*WITH_COAP*/
-  http_set_status(response, status);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_query_variable(REQUEST* request, const char *name, char* output, uint16_t output_size)
-{
-#ifdef WITH_COAP
-  return coap_get_query_variable(request, name, output, output_size);
-#else
-  return http_get_query_variable(request, name, output, output_size);
-#endif /*WITH_COAP*/
-}
+          PRINTF("Periodic: etimer expired for /%s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
 
-int
-rest_get_post_variable(REQUEST* request, const char *name, char* output, uint16_t output_size)
-{
-#ifdef WITH_COAP
-  return coap_get_post_variable(request, name, output, output_size);
-#else
-  return http_get_post_variable(request, name, output, output_size);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------*/
-content_type_t
-rest_get_header_content_type(REQUEST* request)
-{
-#ifdef WITH_COAP
-  return coap_get_header_content_type(request);
-#else
-  return http_get_header_content_type(request);
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_content_type(RESPONSE* response, content_type_t content_type)
-{
-#ifdef WITH_COAP
-  return coap_set_header_content_type(response, content_type);
-#else
-  return http_set_res_header(response, HTTP_HEADER_NAME_CONTENT_TYPE, http_get_content_type_string(content_type), 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_max_age(REQUEST* request, uint32_t *age)
-{
-#if WITH_COAP > 1
-  return coap_get_header_max_age(request, age);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_max_age(RESPONSE* response, uint32_t age)
-{
-#if WITH_COAP > 1
-  return coap_set_header_max_age(response, age);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  /* Cache-Control: max-age=age for HTTP */
-  char temp_age[19];
-  sprintf(temp_age, "max-age=%lu", age);
-  return http_set_res_header(response, HTTP_HEADER_NAME_CACHE_CONTROL, temp_age, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_etag(RESPONSE* response, const uint8_t **etag)
-{
-#if WITH_COAP > 1
-  return coap_get_header_etag(response, etag);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_etag(RESPONSE* response, uint8_t *etag)
-{
-#if WITH_COAP > 1
-  return coap_set_header_etag(response, etag);
-#elif defined( WITH_COAP )
-  return coap_set_header_etag(response, etag, strlen(etag)>4 ? 4 : strlen(etag));
-#else
-  char temp_etag[9];
-  int index = 0;
-
-  while(index<sizeof(temp_etag) && index<strlen(etag)) {
-    sprintf(temp_etag, "%02x", etag[index++]);
+          /* Call the periodic_handler function if it exists. */
+          if (periodic_resource->periodic_handler) {
+            (periodic_resource->periodic_handler)(periodic_resource->resource);
+          }
+          etimer_reset(&periodic_resource->periodic_timer);
+        }
+      }
+    }
   }
-  temp_etag[index] = 0;
 
-  return http_set_res_header(response, HTTP_HEADER_NAME_ETAG, temp_etag, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_host(REQUEST* request, const char **host)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_host(request, host);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  return http_get_header_host(request, host);
-#endif /*WITH_COAP*/
+  PROCESS_END();
 }
 
-int
-rest_set_header_host(REQUEST* request, char *host)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_host(request, host);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_location(RESPONSE* response, const char **uri)
-{
-#if WITH_COAP > 1
-  return coap_get_header_location(response, uri);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_location(RESPONSE* response, char *uri)
-{
-#if WITH_COAP > 1
-  return coap_set_header_location(response, uri);
-#elif defined( WITH_COAP )
-  return 0;
-#else
-  return http_set_res_header(response, HTTP_HEADER_NAME_LOCATION, uri, 1);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_path(REQUEST* request, const char **path)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_path(request, path);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_path(REQUEST* request, char *path)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_path(request, path);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_observe(REQUEST* request, uint32_t *observe)
-{
-#if WITH_COAP > 1
-  return coap_get_header_observe(request, observe);
-#elif defined( WITH_COAP )
-  return coap_get_header_subscription_lifetime(request, observe);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_observe(RESPONSE* response, uint32_t observe)
-{
-#if WITH_COAP > 1
-  return coap_set_header_observe(response, observe);
-#elif defined( WITH_COAP )
-  return coap_set_header_subscription_lifetime(response, observe);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_token(REQUEST* request, uint16_t *token)
-{
-#if WITH_COAP > 1
-  return coap_get_header_token(request, token);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_token(RESPONSE* response, uint16_t token)
-{
-#if WITH_COAP > 1
-  return coap_set_header_token(response, token);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_header_block(REQUEST* request, uint32_t *num, uint8_t *more, uint16_t *size)
-{
-#ifdef WITH_COAP
-  return coap_get_header_block(request, num, more, size);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_header_block(RESPONSE* response, uint32_t num, uint8_t more, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_header_block(response, num, more, size);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_query(REQUEST* request, const char **query)
-{
-#if WITH_COAP > 1
-  return coap_get_header_uri_query(request, query);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-
-int
-rest_set_query(REQUEST* request, char *query)
-{
-#if WITH_COAP > 1
-  return coap_set_header_uri_query(request, query);
-#else
-  return 0;
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
-int
-rest_get_request_payload(REQUEST *request, uint8_t **payload)
-{
-#ifdef WITH_COAP
-  return coap_get_payload(request, payload);
-#else
-  return http_get_req_payload(request, payload);
-#endif /*WITH_COAP*/
-}
-
-/*
-int
-rest_set_request_payload(REQUEST *request, uint8_t *payload, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_payload(request, payload, size);
-#else
-  return 0;
-#endif
-}
-*/
-
-int
-rest_set_response_payload(RESPONSE *response, uint8_t *payload, uint16_t size)
-{
-#ifdef WITH_COAP
-  return coap_set_payload(response, payload, size);
-#else
-  return http_set_res_payload(response, payload, size);
-#endif /*WITH_COAP*/
-}
-/*-----------------------------------------------------------------------------------*/
