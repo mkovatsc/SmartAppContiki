@@ -7,11 +7,11 @@
 #include "buffer.h"
 #include "rest-util.h"
 
-#if !UIP_CONF_IPV6_RPL
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
 #include "static-routing.h"
 #endif
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -67,7 +67,7 @@ http_set_status(http_response_t* response, status_code_t status)
 static http_header_t*
 allocate_header(uint16_t variable_len)
 {
-  PRINTF("sizeof http_header_t %u variable size %u\n", sizeof(http_header_t), variable_len);
+  PRINTF("ALLOCATE: sizeof http_header_t %u variable size %u\n", sizeof(http_header_t), variable_len);
   uint8_t* buffer = allocate_buffer(sizeof(http_header_t) + variable_len);
   if (buffer) {
     http_header_t* option = (http_header_t*) buffer;
@@ -117,11 +117,18 @@ http_set_res_header(http_response_t* response, const char* name, const char* val
 static const char* is_request_hdr_needed(const char* header_name)
 {
   const char* header = NULL;
-  /*FIXME add needed headers here*/
+  /*
+   * FIXME add needed headers here
+   *    Requests must use the Accept header to define the preferred content-type.
+   */
   if (strcmp(header_name, HTTP_HEADER_NAME_CONTENT_LENGTH) == 0) {
     header = HTTP_HEADER_NAME_CONTENT_LENGTH;
+  } else if (strcmp(header_name, HTTP_HEADER_NAME_ACCEPT) == 0) {
+    header = HTTP_HEADER_NAME_ACCEPT;
   } else if (strcmp(header_name, HTTP_HEADER_NAME_CONTENT_TYPE) == 0) {
     header = HTTP_HEADER_NAME_CONTENT_TYPE;
+  } else if (strcmp(header_name, HTTP_HEADER_NAME_HOST) == 0) {
+    header = HTTP_HEADER_NAME_HOST;
   }
 
   return header;
@@ -130,7 +137,7 @@ static const char* is_request_hdr_needed(const char* header_name)
 static service_callback service_cbk = NULL;
 
 void
-http_set_service_callback(service_callback callback)
+set_service_callback(service_callback callback)
 {
   service_cbk = callback;
 }
@@ -229,14 +236,25 @@ http_get_post_variable(http_request_t* request, const char *name, char* output, 
   return 0;
 }
 
+int
+http_get_req_payload(http_request_t* request, uint8_t **payload)
+{
+  if (request->payload)
+  {
+    *payload = request->payload;
+    return request->payload_len;
+  } else {
+    *payload = NULL;
+    return 0;
+  }
+}
+
 static int
 is_method_handled(connection_state_t* conn_state, const char* method)
 {
   /*other method types can be added here if needed*/
   if(strncmp(method, http_get_string, 3) == 0) {
     conn_state->request.request_type = HTTP_METHOD_GET;
-  } else if(strncmp(method, http_head_string, 4) == 0) {
-    conn_state->request.request_type = HTTP_METHOD_HEAD;
   } else if (strncmp(method, http_post_string, 4) == 0) {
     conn_state->request.request_type = HTTP_METHOD_POST;
   } else if (strncmp(method, http_put_string, 3) == 0) {
@@ -318,14 +336,33 @@ parse_header(connection_state_t* conn_state, char* inputbuf)
     if (header_name && delimiter) {
       char* buffer = delimiter;
 
-      if (buffer[0] == ' ') {
+      PRINTF("HEADER %s\n", header_name);
+
+      /* remove CARRIAGE_RETURN_CHAR */
+      if (buffer[strlen(buffer)-1]==CARRIAGE_RETURN_CHAR) {
+        PRINTF("removing \\r\n");
+        buffer[strlen(buffer)-1] = 0;
+      }
+
+      while (buffer[0] == ' ') {
         buffer++;
+      }
+
+      PRINTF("   VAL %s (%u)\n", buffer, strlen(buffer));
+
+      if (header_name==HTTP_HEADER_NAME_ACCEPT) {
+        delimiter = strchr(buffer, ',');
+        if (delimiter) {
+          PRINTF("selecting first Accept content-type\n");
+          *delimiter = 0;
+        }
       }
 
       http_header_t* current_header = NULL;
       http_header_t* head = NULL;
 
-      current_header = allocate_header(strlen(buffer));
+      /* FIXME dirty quick fix for bug */
+      current_header = allocate_header(strlen(buffer)+1);
 
       if (current_header) {
         current_header->name = (char*)header_name;
@@ -374,28 +411,47 @@ const char* http_get_req_header(http_request_t* request, const char* name)
   return get_header(request->headers, name);
 }
 
-content_type_t http_get_header_content_type(http_request_t* request)
+content_type_t
+http_get_header_content_type(http_request_t* request)
 {
-  const char* content_type_string = http_get_req_header(request, HTTP_HEADER_NAME_CONTENT_TYPE);
+  const char* content_type_string = http_get_req_header(request, HTTP_HEADER_NAME_ACCEPT);
+
   if (content_type_string) {
     int i = 0;
-    for(; i < sizeof(content_types)/sizeof(const char*) ; i++) {
-      if (strcmp(content_types[i], content_type_string)) {
-        return (content_type_t)i;
+    for(; i < sizeof(content_types)/sizeof(const char*); ++i) {
+      if (strcmp(content_types[i], content_type_string)==0) {
+        return (content_type_t) i;
       }
     }
+    return UNKNOWN_CONTENT_TYPE;
   }
 
-  return UNKNOWN_CONTENT_TYPE;
+  /* default if no Content-Type is set*/
+  return TEXT_PLAIN;
 }
+
+int
+http_get_header_host(http_request_t *request, const char **host)
+{
+  const char* host_string = http_get_req_header(request, HTTP_HEADER_NAME_HOST);
+  if (host_string) {
+    *host = host_string;
+    return strlen(host_string);
+  }
+
+  return 0;
+}
+
 
 static
 PT_THREAD(handle_request(connection_state_t* conn_state))
 {
+  static int error;
+  const char* content_len;
+
   PSOCK_BEGIN(&(conn_state->sin));
 
-  static int error;
-  const char* content_len = NULL;
+  content_len = NULL;
 
   error = HTTP_NO_ERROR; /*always reinit static variables due to protothreads*/
 
@@ -471,6 +527,7 @@ PT_THREAD(handle_request(connection_state_t* conn_state))
         /*init the static variable again*/
         read_bytes = 0;
 
+        PRINTF("ALLOCATE: 1 + sizeof payload_len %u\n", conn_state->request.payload_len);
         conn_state->request.payload = allocate_buffer(conn_state->request.payload_len + 1);
 
         if (conn_state->request.payload) {
@@ -512,14 +569,20 @@ PT_THREAD(handle_request(connection_state_t* conn_state))
 static
 PT_THREAD(send_data(connection_state_t* conn_state))
 {
+  uint16_t index = 0;
+  http_response_t* response = NULL;
+  http_header_t* header = NULL;
+  uint8_t* buffer = NULL;
+
   PSOCK_BEGIN(&(conn_state->sout));
 
   PRINTF("send_data -> \n");
 
-  uint16_t index = 0;
-  http_response_t* response = &conn_state->response;
-  http_header_t* header = response->headers;
-  uint8_t* buffer = allocate_buffer(200);
+  response = &conn_state->response;
+  header = response->headers;
+
+  PRINTF("ALLOCATE: send buffer %u\n", REST_MAX_CHUNK_SIZE);
+  buffer = allocate_buffer(REST_MAX_CHUNK_SIZE);
 
   /*FIXME: what is the best solution here to send the data. Right now, if buffer is not allocated, no data is sent!*/
   if (buffer) {
@@ -583,10 +646,12 @@ PROCESS(http_server, "Httpd Process");
 
 PROCESS_THREAD(http_server, ev, data)
 {
+  connection_state_t *conn_state;
+
   PROCESS_BEGIN();
 
   /* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
   set_global_address();
   configure_routing();
 #endif /*!UIP_CONF_IPV6_RPL*/
@@ -603,12 +668,14 @@ PROCESS_THREAD(http_server, ev, data)
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(ev == tcpip_event);
 
-    connection_state_t *conn_state = (connection_state_t *)data;
+    conn_state = (connection_state_t *)data;
 
     if(uip_connected()) {
       PRINTF("##Connected##\n");
 
       if(init_buffer(HTTP_DATA_BUFF_SIZE)) {
+
+        PRINTF("ALLOCATE: sizeof connection_state_t %u\n", sizeof(connection_state_t));
         conn_state = (connection_state_t*)allocate_buffer(sizeof(connection_state_t));
 
         if (conn_state) {

@@ -15,6 +15,7 @@ endif
 	@echo "setup object directory for dev board"
 	mkdir $(OBJDIR)
 
-$(OBJDIR)/board.h: $(OBJDIR) 
-	ln -sf ../$(MC1322X)/board/$(BOARD).h $(OBJDIR)/board.h
+$(OBJDIR)/board.h: $(OBJDIR)
+	# Always copy for CIFS mounts
+	cp ../$(MC1322X)/board/$(BOARD).h $(OBJDIR)/board.h
 

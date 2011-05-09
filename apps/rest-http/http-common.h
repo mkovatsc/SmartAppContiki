@@ -31,6 +31,7 @@ extern const char* close;
 
 /*header names*/
 extern const char* HTTP_HEADER_NAME_CONTENT_TYPE;
+extern const char* HTTP_HEADER_NAME_ACCEPT;
 extern const char* HTTP_HEADER_NAME_CONTENT_LENGTH;
 extern const char* HTTP_HEADER_NAME_LOCATION;
 extern const char* HTTP_HEADER_NAME_CONNECTION;
@@ -38,22 +39,22 @@ extern const char* HTTP_HEADER_NAME_SERVER;
 extern const char* HTTP_HEADER_NAME_HOST;
 extern const char* HTTP_HEADER_NAME_IF_NONE_MATCH;
 extern const char* HTTP_HEADER_NAME_ETAG;
+extern const char* HTTP_HEADER_NAME_CACHE_CONTROL;
 
 extern const char* header_delimiter;
 
 
 /*Configuration parameters*/
 #define HTTP_PORT 8080
-#define HTTP_DATA_BUFF_SIZE 600
-#define INCOMING_DATA_BUFF_SIZE 102 /*100+2, 100 = max url len, 2 = space char+'\0'*/
+#define HTTP_DATA_BUFF_SIZE 600     /* depending on connection_state_t (2+232 bytes), number of headers (2+12+x bytes each), and OUTGOING_DATA_BUFF_SIZE (+2 for buffer_index) */
+#define INCOMING_DATA_BUFF_SIZE 102 /* 100+2, 100 = max url len, 2 = space char+'\0' */
 
 /*HTTP method types*/
 typedef enum {
   HTTP_METHOD_GET = (1 << 0),
-  HTTP_METHOD_HEAD = (1 << 1),
-  HTTP_METHOD_POST = (1 << 2),
-  HTTP_METHOD_PUT = (1 << 3),
-  HTTP_METHOD_DELETE = (1 << 4)
+  HTTP_METHOD_POST = (1 << 1),
+  HTTP_METHOD_PUT = (1 << 2),
+  HTTP_METHOD_DELETE = (1 << 3)
 } http_method_t;
 
 //DY : FIXME right now same enum names with COAP with different values. Will this work fine?
@@ -95,7 +96,7 @@ typedef struct http_header_t http_header_t;
 
 /*This structure contains information about the HTTP request.*/
 struct http_request_t {
-  char* url;
+  const char* url;
   uint16_t url_len;
   http_method_t request_type; /* GET, POST, etc */
   char* query;

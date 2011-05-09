@@ -87,7 +87,17 @@
 #define BLOCKING_TX 1
 #define NULLRDC_CONF_802154_AUTOACK_HW 1
 
+#define USE_WDT 0
+
+#ifndef WDT_TIMEOUT
+#define WDT_TIMEOUT 5000 /* watchdog timeout in ms */
+#endif
+
 /* end of mc1322x specific config. */
+
+#ifndef RF_CHANNEL
+#define RF_CHANNEL              26
+#endif /* RF_CHANNEL */
 
 /* start of conitki config. */
 #define RIMEADDR_CONF_SIZE              8
@@ -104,12 +114,23 @@
 
 #if WITH_UIP6
 /* Network setup for IPv6 */
+#ifndef NETSTACK_CONF_RADIO
+#define NETSTACK_CONF_RADIO       contiki_maca_driver
+#endif /* NETSTACK_CONF_RADIO */
+
+#ifndef NETSTACK_CONF_MAC
+#define NETSTACK_CONF_MAC         csma_driver
+#endif /* NETSTACK_CONF_MAC */
+
+#ifndef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC         nullrdc_driver
+#endif /* NETSTACK_CONF_RDC */
+
+#ifndef NETSTACK_CONF_FRAMER
+#define NETSTACK_CONF_FRAMER      framer_802154
+#endif /* NETSTACK_CONF_FRAMER */
+
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
-#define NETSTACK_CONF_MAC     nullmac_driver 
-/*#define NETSTACK_CONF_RDC     contikimac_driver*/ /* contikimac for redbee hasn't been well tested */
-#define NETSTACK_CONF_RDC     nullrdc_driver
-#define NETSTACK_CONF_RADIO   contiki_maca_driver
-#define NETSTACK_CONF_FRAMER  framer_802154
 
 #define MAC_CONF_CHANNEL_CHECK_RATE      8
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
@@ -144,10 +165,6 @@
 #define QUEUEBUF_CONF_NUM          16
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
-
-#ifndef RF_CHANNEL
-#define RF_CHANNEL              26
-#endif /* RF_CHANNEL */
 
 #define CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT 0
 

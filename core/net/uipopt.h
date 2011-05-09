@@ -293,9 +293,9 @@
  */
 #ifdef UIP_CONF_TCP
 #define UIP_TCP (UIP_CONF_TCP)
-#else /* UIP_CONF_TCP */
+#else /* UIP_CONF_UDP */
 #define UIP_TCP           1
-#endif /* UIP_CONF_TCP */
+#endif /* UIP_CONF_UDP */
 
 /**
  * Determines if support for opening connections from uIP should be

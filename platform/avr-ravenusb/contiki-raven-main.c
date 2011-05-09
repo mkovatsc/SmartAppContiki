@@ -206,7 +206,7 @@ FUSES ={.low = 0xde, .high = 0x99, .extended = 0xff,};
 
 /* Put default MAC address in EEPROM */
 #if !JACKDAW_CONF_USE_SETTINGS
-#if RAVEN_ADDRESS_LAST_BYTE
+#ifdef RAVEN_ADDRESS_LAST_BYTE
 uint8_t mac_address[8] EEMEM = {0x02, 0x12, 0x13, 0xff, 0xfe, 0x14, 0x15, RAVEN_ADDRESS_LAST_BYTE};
 #else
 uint8_t mac_address[8] EEMEM = {0x02, 0x12, 0x13, 0xff, 0xfe, 0x14, 0x15, 0x16};

@@ -209,8 +209,7 @@ static int rf230_receiving_packet(void);
 static int pending_packet(void);
 static int rf230_cca(void);
 
-signed char rf230_last_rssi;
-uint8_t rf230_last_correlation;
+uint8_t rf230_last_correlation,rf230_last_rssi,rf230_smallest_rssi;
 
 const struct radio_driver rf230_driver =
   {
@@ -703,6 +702,27 @@ rf230_init(void)
     PRINTF("rf230: Unsupported manufacturer ID %u\n",tmanu);
 
   PRINTF("rf230: Version %u, ID %u\n",tvers,tmanu);
+  
+  rf230_warm_reset();
+ 
+ /* Start the packet receive process */
+  process_start(&rf230_process, NULL);
+ 
+ /* Leave radio in on state (?)*/
+  on();
+
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
+/* Used to reinitialize radio parameters without losing pan and mac address, channel, power, etc. */
+void rf230_warm_reset(void) {
+#if RF230_CONF_SNEEZER && JACKDAW
+  /* Take jackdaw radio out of test mode */
+#warning Manipulating PORTB pins for RF230 Sneezer mode!
+  PORTB &= ~(1<<7);
+  DDRB  &= ~(1<<7);
+#endif
+  
   hal_register_write(RG_IRQ_MASK, RF230_SUPPORTED_INTERRUPT_MASK);
 
   /* Set up number of automatic retries 0-15 (0 implies PLL_ON sends instead of the extended TX_ARET mode */
@@ -714,6 +734,30 @@ rf230_init(void)
   hal_register_write(RG_CSMA_SEED_0,hal_register_read(RG_PHY_RSSI) );//upper two RSSI reg bits RND_VALUE are random in rf231
  // hal_register_write(CSMA_SEED_1,42 );
 
+  /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either (RF231 only) */
+//hal_subregister_write(SR_CCA_MODE,1);  //1 is the power-on default
+
+  /* Carrier sense threshold (not implemented in RF230 or RF231) */
+// hal_subregister_write(SR_CCA_CS_THRES,1);
+
+  /* CCA energy threshold = -91dB + 2*SR_CCA_ED_THRESH. Reset defaults to -77dB */
+  /* Use RF230 base of -91;  RF231 base is -90 according to datasheet */
+#ifdef RF230_CONF_CCA_THRES
+#if RF230_CONF_CCA_THRES < -91
+#warning
+#warning RF230_CONF_CCA_THRES below hardware limit, setting to -91dBm
+#warning
+  hal_subregister_write(SR_CCA_ED_THRES,0);  
+#elif RF230_CONF_CCA_THRES > -61
+#warning
+#warning RF230_CONF_CCA_THRES above hardware limit, setting to -61dBm
+#warning
+  hal_subregister_write(SR_CCA_ED_THRES,15);  
+#else
+  hal_subregister_write(SR_CCA_ED_THRES,(RF230_CONF_CCA_THRES+91)/2);  
+#endif
+#endif
+
   /* Use automatic CRC unless manual is specified */
 #if RF230_CONF_CHECKSUM
   hal_subregister_write(SR_TX_AUTO_CRC_ON, 0);
@@ -721,19 +765,10 @@ rf230_init(void)
   hal_subregister_write(SR_TX_AUTO_CRC_ON, 1);
 #endif
 
-  /* Start the packet receive process */
-  process_start(&rf230_process, NULL);
-
 /* Limit tx power for testing miniature Raven mesh */
 #ifdef RF230_MAX_TX_POWER
   set_txpower(RF230_MAX_TX_POWER);  //0=3dbm 15=-17.2dbm
 #endif
-
-  /* Leave radio in on state (?)*/
-  on();
-
-  
-  return 1;
 }
 /*---------------------------------------------------------------------------*/
 static uint8_t buffer[RF230_MAX_TX_FRAME_LENGTH+AUX_LEN];
@@ -883,7 +918,6 @@ rf230_transmit(unsigned short payload_len)
   }
 
   RELEASE_LOCK();
-
   if (tx_result==1) {               //success, data pending from adressee
     tx_result=0;                    //Just show success?
   } else if (tx_result==3) {        //CSMA channel access failure
@@ -1332,6 +1366,10 @@ if (RF230_receive_on) {
 #endif
 #endif /* speed vs. generality */
 
+  /* Save the smallest rssi. The display routine can reset by setting it to zero */
+  if ((rf230_smallest_rssi==0) || (rf230_last_rssi<rf230_smallest_rssi))
+     rf230_smallest_rssi=rf230_last_rssi;
+
  //   rf230_last_correlation = rxframe[rxframe_head].lqi;
     packetbuf_set_attr(PACKETBUF_ATTR_RSSI, rf230_last_rssi);
     packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, rf230_last_correlation);
@@ -1451,10 +1489,18 @@ rf230_cca(void)
     rf230_on();
   }
 
- // cca = CCA_IS_1;
   DEBUGFLOW('c');
-  cca=1;
+  /* CCA Mode Mode 1=Energy above threshold  2=Carrier sense only  3=Both 0=Either (RF231 only) */
+  /* Use the current mode. Note triggering a manual CCA is not recommended in extended mode */
+//hal_subregister_write(SR_CCA_MODE,1);
 
+  /* Start the CCA, wait till done, return result */
+  hal_subregister_write(SR_CCA_REQUEST,1);
+  delay_us(TIME_CCA);
+//while ((hal_register_read(RG_TRX_STATUS) & 0x80) == 0 ) {continue;}
+  while (!hal_subregister_read(SR_CCA_DONE)) {continue;}
+  cca=hal_subregister_read(SR_CCA_STATUS);
+  
   if(radio_was_off) {
     rf230_off();
   }
@@ -1481,4 +1527,46 @@ pending_packet(void)
   return pending;
 }
 /*---------------------------------------------------------------------------*/
+#if RF230_CONF_SNEEZER && JACKDAW
+/* See A.2 in the datasheet for the sequence needed.
+ * This version for RF230 only, hence Jackdaw.
+ * A full reset seems not necessary and allows keeping the pan address, etc.
+ * for an easy reset back to network mode.
+ */
+void rf230_start_sneeze(void) {
+//write buffer with random data for uniform spectral noise
 
+//uint8_t txpower = hal_register_read(0x05);  //save auto_crc bit and power
+//  hal_set_rst_low();
+//  hal_set_slptr_low();
+//  delay_us(TIME_RESET);
+//  hal_set_rst_high();
+    hal_register_write(0x0E, 0x01);
+    hal_register_write(0x02, 0x03);
+    hal_register_write(0x03, 0x10);
+ // hal_register_write(0x08, 0x20+26);    //channel 26
+    hal_subregister_write(SR_CCA_MODE,1); //leave channel unchanged
+
+ // hal_register_write(0x05, 0x00);       //output power maximum
+    hal_subregister_write(SR_TX_AUTO_CRC_ON, 0);  //clear AUTO_CRC, leave output power unchanged
+ 
+    hal_register_read(0x01);             //should be trx-off state=0x08  
+    hal_frame_write(buffer, 127);        //maximum length, random for spectral noise 
+
+    hal_register_write(0x36,0x0F);       //configure continuous TX
+    hal_register_write(0x3D,0x00);       //Modulated frame, other options are:
+//  hal_register_write(RG_TX_2,0x10);    //CW -2MHz
+//  hal_register_write(RG_TX_2,0x80);    //CW -500KHz
+//  hal_register_write(RG_TX_2,0xC0);    //CW +500KHz
+
+    DDRB  |= 1<<7;                       //Raven USB stick has PB7 connected to the RF230 TST pin.   
+    PORTB |= 1<<7;                       //Raise it to enable continuous TX Test Mode.
+
+    hal_register_write(0x02,0x09);       //Set TRX_STATE to PLL_ON
+    delay_us(TIME_TRX_OFF_TO_PLL_ACTIVE);
+    delay_us(TIME_PLL_LOCK);
+    delay_us(TIME_PLL_LOCK);
+ // while (hal_register_read(0x0f)!=1) {continue;}  //wait for pll lock-hangs
+    hal_register_write(0x02,0x02);       //Set TRX_STATE to TX_START
+}
+#endif

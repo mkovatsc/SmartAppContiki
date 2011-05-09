@@ -52,6 +52,7 @@
 #define NEIGHBOR_INFO_FIX2ETX(fix)    ((fix) / NEIGHBOR_INFO_ETX_DIVISOR)
 
 typedef void (*neighbor_info_subscriber_t)(const rimeaddr_t *, int known, int etx);
+typedef uint8_t link_metric_t;
 
 /**
  * Notify the neighbor information module about the status of
@@ -81,10 +82,10 @@ int neighbor_info_subscribe(neighbor_info_subscriber_t);
 
 
 /**
- * Get link ETX value for a specific neighbor.
+ * Get link metric value for a specific neighbor.
  *
- * \return Returns ETX if the neighbor exists, and 0 if not.
+ * \return Returns link metric if the neighbor exists, and 0 if not.
  */
-uint8_t neighbor_info_get_etx(const rimeaddr_t *addr);
+link_metric_t neighbor_info_get_metric(const rimeaddr_t *addr);
 
 #endif /* NEIGHBOR_INFO_H */

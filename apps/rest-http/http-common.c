@@ -18,6 +18,7 @@ const char* close = "close";
 
 /*header names*/
 const char* HTTP_HEADER_NAME_CONTENT_TYPE = "Content-Type";
+const char* HTTP_HEADER_NAME_ACCEPT = "Accept";
 const char* HTTP_HEADER_NAME_CONTENT_LENGTH = "Content-Length";
 const char* HTTP_HEADER_NAME_LOCATION = "Location";
 const char* HTTP_HEADER_NAME_CONNECTION = "Connection";
@@ -25,5 +26,6 @@ const char* HTTP_HEADER_NAME_SERVER = "Server";
 const char* HTTP_HEADER_NAME_HOST = "Host";
 const char* HTTP_HEADER_NAME_IF_NONE_MATCH = "If-None-Match";
 const char* HTTP_HEADER_NAME_ETAG = "ETag";
+const char* HTTP_HEADER_NAME_CACHE_CONTROL = "Cache-Control";
 
 const char* header_delimiter = ": ";

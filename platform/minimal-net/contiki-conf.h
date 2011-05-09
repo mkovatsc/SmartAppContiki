@@ -58,13 +58,18 @@ typedef unsigned short uip_stats_t;
 #define UIP_CONF_TCP_SPLIT            0
 #define UIP_CONF_IP_FORWARD           0
 #define UIP_CONF_LOGGING              0
-#define UIP_CONF_UDP_CHECKSUMS        0
+#define UIP_CONF_UDP_CHECKSUMS        1
 
 /* Not used but avoids compile errors while sicslowpan.c is being developed */
 #define SICSLOWPAN_CONF_COMPRESSION       SICSLOWPAN_COMPRESSION_HC06
 
+#ifndef UIP_CONF_UDP
 #define UIP_CONF_UDP                  1
+#endif
+
+#ifndef UIP_CONF_TCP
 #define UIP_CONF_TCP                  1
+#endif
 
 #if UIP_CONF_IPV6
 #define UIP_CONF_IPV6_QUEUE_PKT       1
