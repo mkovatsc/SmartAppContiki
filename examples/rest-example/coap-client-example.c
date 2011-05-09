@@ -91,12 +91,12 @@ handle_incoming_data()
         {
           PRINTF("  %.*s\n", response->payload_len, response->payload);
         }
-        coap_clear_transaction_by_tid(response->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(response->tid));
       }
       else if (response->type==COAP_TYPE_RST)
       {
         PRINTF("Received RST %u\n", response->tid);
-        coap_clear_transaction_by_tid(response->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(response->tid));
       }
       else if (response->type==COAP_TYPE_CON)
       {
