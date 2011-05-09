@@ -5,7 +5,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/mrm</project>
   <simulation>
     <title>Appstore</title>
-    <delaytime>-2147483648</delaytime>
+    <delaytime>0</delaytime>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -46,7 +46,7 @@
       <identifier>skyweb</identifier>
       <description>Rest</description>
       <source EXPORT="discard">[CONTIKI_DIR]/examples/appstore/appstore.c</source>
-      <commands EXPORT="discard">make appstore.sky</commands>
+      <commands EXPORT="discard">make appstore.sky TARGET=sky</commands>
       <firmware EXPORT="copy">[CONTIKI_DIR]/examples/appstore/appstore.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
@@ -96,7 +96,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>259</width>
-    <z>5</z>
+    <z>0</z>
     <height>179</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -111,7 +111,7 @@
       <viewport>4.932070048977571 0.0 0.0 4.932070048977571 -112.81444094632381 -81.51263451161498</viewport>
     </plugin_config>
     <width>253</width>
-    <z>1</z>
+    <z>2</z>
     <height>238</height>
     <location_x>3</location_x>
     <location_y>252</location_y>
@@ -123,7 +123,7 @@
       <coloring />
     </plugin_config>
     <width>944</width>
-    <z>0</z>
+    <z>1</z>
     <height>682</height>
     <location_x>259</location_x>
     <location_y>1</location_y>
@@ -135,7 +135,7 @@
       <analyzers name="6lowpan" />
     </plugin_config>
     <width>711</width>
-    <z>4</z>
+    <z>5</z>
     <height>684</height>
     <location_x>1205</location_x>
     <location_y>-1</location_y>
@@ -144,7 +144,7 @@
     SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
-    <z>3</z>
+    <z>4</z>
     <height>74</height>
     <location_x>4</location_x>
     <location_y>177</location_y>
@@ -160,7 +160,7 @@
       <zoomfactor>25.49079397896416</zoomfactor>
     </plugin_config>
     <width>1912</width>
-    <z>2</z>
+    <z>3</z>
     <height>149</height>
     <location_x>-2</location_x>
     <location_y>947</location_y>
