@@ -56,6 +56,5 @@ PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t e
 		state->block_num++;
 	} while(more != 0);
 
-
   PT_END(&state->pt);
 }

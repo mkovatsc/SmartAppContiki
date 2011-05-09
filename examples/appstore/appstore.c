@@ -126,15 +126,19 @@ static void write_to_coffee(void *response) {
 	}
 }
 
-///*---------------------------------------------------------------------------*/
-//static void appstore_final(uint16_t bloc, uint8_t *payload, uint16_t len) {
-//  uint16_t i;
-//  PRINTF("Notification acknowledged: ");
-//  for(i=0; i<len; i++) {
-//    PRINTF("%c", payload[i]);
-//  }
-//  PRINTF("\n");
-//}
+/*---------------------------------------------------------------------------*/
+static void appstore_final(void *response) {
+	uint8_t *payload;
+	uint32_t offset;
+	size_t plen;
+	uint16_t i;
+	plen = coap_get_payload(response, &payload);
+	PRINTF("Notification acknowledged: ");
+	for(i=0; i<plen; i++) {
+		PRINTF("%c", payload[i]);
+	}
+  PRINTF("\n");
+}
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(appstore_example, ev, data) {
@@ -217,8 +221,16 @@ PROCESS_THREAD(appstore_example, ev, data) {
 //#endif
 //
 //
-//    /* send a request to notify the end of the process */
-//    PT_SPAWN(process_pt, &coap_client.pt, coap_client_request(&coap_client, COAP_GET, "notify", elf_filename, connection, appstore_final));
+    /* send a request to notify the end of the process */
+    coap_init_message(request, NULL, COAP_TYPE_CON, COAP_GET, 0);
+	coap_set_header_uri_path(request, "notify");
+	coap_set_payload(request, elf_filename, strlen(elf_filename));
+	/* request the elf to the market and store it in CFS */
+	PT_SPAWN(process_pt, &request_state.pt,
+			blocking_rest_request(&request_state, ev,
+					&host_ipaddr, NOTIF_PORT,
+					request, appstore_final)
+	);
 
 end:
     if(fd != -1) {
