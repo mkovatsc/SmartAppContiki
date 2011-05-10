@@ -148,14 +148,14 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
           }
         }
       } else {
-        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED_405);
+        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
       }
       break;
     }
   }
 
   if (!found) {
-    REST.set_response_status(response, REST.status.NOT_FOUND_404);
+    REST.set_response_status(response, REST.status.NOT_FOUND);
   }
 
   return found;

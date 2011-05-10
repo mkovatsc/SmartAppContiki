@@ -163,35 +163,24 @@ coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t len
 /*- MEASSAGE PROCESSING -------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 void
-coap_init_message(void *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid)
+coap_init_message(void *packet, coap_message_type_t type, uint8_t code, uint16_t tid)
 {
   memset(packet, 0, sizeof(coap_packet_t));
 
-  ((coap_packet_t *)packet)->header = buffer;
-
-  ((coap_packet_t *)packet)->version = 1;
   ((coap_packet_t *)packet)->type = type;
-  ((coap_packet_t *)packet)->option_count = 0;
   ((coap_packet_t *)packet)->code = code;
   ((coap_packet_t *)packet)->tid = tid;
-
-  /* set header fields */
-  /*
-  ((coap_packet_t *)packet)->header[0]  = 0x00;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_VERSION_MASK & (((coap_packet_t *)packet)->version)<<COAP_HEADER_VERSION_POSITION;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_TYPE_MASK & (((coap_packet_t *)packet)->type)<<COAP_HEADER_TYPE_POSITION;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (((coap_packet_t *)packet)->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
-  ((coap_packet_t *)packet)->header[1] = ((coap_packet_t *)packet)->code;
-  ((coap_packet_t *)packet)->header[2] = 0xFF & ((coap_packet_t *)packet)->tid;
-  ((coap_packet_t *)packet)->header[3] = 0xFF & (((coap_packet_t *)packet)->tid)>>8;
-  */
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_serialize_message(void *packet)
+coap_serialize_message(void *packet, uint8_t *buffer)
 {
+  ((coap_packet_t *)packet)->buffer = buffer;
+  ((coap_packet_t *)packet)->version = 1;
+  ((coap_packet_t *)packet)->option_count = 0;
+
   /* serialize options */
-  uint8_t *option = ((coap_packet_t *)packet)->header + COAP_HEADER_LEN;
+  uint8_t *option = ((coap_packet_t *)packet)->buffer + COAP_HEADER_LEN;
   size_t option_len = 0;
   int index = 0;
 
@@ -332,7 +321,7 @@ coap_serialize_message(void *packet)
   }
 
   /* pack payload */
-  if ((option - ((coap_packet_t *)packet)->header)<=COAP_MAX_HEADER_SIZE)
+  if ((option - ((coap_packet_t *)packet)->buffer)<=COAP_MAX_HEADER_SIZE)
   {
     memmove(option, ((coap_packet_t *)packet)->payload, ((coap_packet_t *)packet)->payload_len);
   }
@@ -343,31 +332,31 @@ coap_serialize_message(void *packet)
   }
 
   /* set header fields */
-  ((coap_packet_t *)packet)->header[0]  = 0x00;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_VERSION_MASK & (((coap_packet_t *)packet)->version)<<COAP_HEADER_VERSION_POSITION;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_TYPE_MASK & (((coap_packet_t *)packet)->type)<<COAP_HEADER_TYPE_POSITION;
-  ((coap_packet_t *)packet)->header[0] |= COAP_HEADER_OPTION_COUNT_MASK & (((coap_packet_t *)packet)->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
-  ((coap_packet_t *)packet)->header[1] = ((coap_packet_t *)packet)->code;
-  ((coap_packet_t *)packet)->header[2] = 0xFF & (((coap_packet_t *)packet)->tid)>>8;
-  ((coap_packet_t *)packet)->header[3] = 0xFF & ((coap_packet_t *)packet)->tid;
+  ((coap_packet_t *)packet)->buffer[0]  = 0x00;
+  ((coap_packet_t *)packet)->buffer[0] |= COAP_HEADER_VERSION_MASK & (((coap_packet_t *)packet)->version)<<COAP_HEADER_VERSION_POSITION;
+  ((coap_packet_t *)packet)->buffer[0] |= COAP_HEADER_TYPE_MASK & (((coap_packet_t *)packet)->type)<<COAP_HEADER_TYPE_POSITION;
+  ((coap_packet_t *)packet)->buffer[0] |= COAP_HEADER_OPTION_COUNT_MASK & (((coap_packet_t *)packet)->option_count)<<COAP_HEADER_OPTION_COUNT_POSITION;
+  ((coap_packet_t *)packet)->buffer[1] = ((coap_packet_t *)packet)->code;
+  ((coap_packet_t *)packet)->buffer[2] = 0xFF & (((coap_packet_t *)packet)->tid)>>8;
+  ((coap_packet_t *)packet)->buffer[3] = 0xFF & ((coap_packet_t *)packet)->tid;
 
-  PRINTF("Serialized %u options, header len %u, payload len %u\n", ((coap_packet_t *)packet)->option_count, option - ((coap_packet_t *)packet)->header, ((coap_packet_t *)packet)->payload_len);
+  PRINTF("Serialized %u options, header len %u, payload len %u\n", ((coap_packet_t *)packet)->option_count, option - ((coap_packet_t *)packet)->buffer, ((coap_packet_t *)packet)->payload_len);
 
-  return (option - ((coap_packet_t *)packet)->header) + ((coap_packet_t *)packet)->payload_len; /* packet length */
+  return (option - ((coap_packet_t *)packet)->buffer) + ((coap_packet_t *)packet)->payload_len; /* packet length */
 }
 /*-----------------------------------------------------------------------------------*/
 error_t
 coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 {
   /* pointer to packet bytes */
-  ((coap_packet_t *)packet)->header = data;
+  ((coap_packet_t *)packet)->buffer = data;
 
   /* parse header fields */
-  ((coap_packet_t *)packet)->version = (COAP_HEADER_VERSION_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_VERSION_POSITION;
-  ((coap_packet_t *)packet)->type = (COAP_HEADER_TYPE_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_TYPE_POSITION;
-  ((coap_packet_t *)packet)->option_count = (COAP_HEADER_OPTION_COUNT_MASK & ((coap_packet_t *)packet)->header[0])>>COAP_HEADER_OPTION_COUNT_POSITION;
-  ((coap_packet_t *)packet)->code = ((coap_packet_t *)packet)->header[1];
-  ((coap_packet_t *)packet)->tid = ((coap_packet_t *)packet)->header[2]<<8 | ((coap_packet_t *)packet)->header[3];
+  ((coap_packet_t *)packet)->version = (COAP_HEADER_VERSION_MASK & ((coap_packet_t *)packet)->buffer[0])>>COAP_HEADER_VERSION_POSITION;
+  ((coap_packet_t *)packet)->type = (COAP_HEADER_TYPE_MASK & ((coap_packet_t *)packet)->buffer[0])>>COAP_HEADER_TYPE_POSITION;
+  ((coap_packet_t *)packet)->option_count = (COAP_HEADER_OPTION_COUNT_MASK & ((coap_packet_t *)packet)->buffer[0])>>COAP_HEADER_OPTION_COUNT_POSITION;
+  ((coap_packet_t *)packet)->code = ((coap_packet_t *)packet)->buffer[1];
+  ((coap_packet_t *)packet)->tid = ((coap_packet_t *)packet)->buffer[2]<<8 | ((coap_packet_t *)packet)->buffer[3];
 
   /* parse options */
   ((coap_packet_t *)packet)->options = 0x0000;

@@ -32,21 +32,27 @@ typedef int (* service_callback_t)(void *request, void *response, uint8_t *buffe
  */
 struct rest_implementation_status
 {
-  const unsigned int CONTINUE_100;
-  const unsigned int OK_200;
-  const unsigned int CREATED_201;
-  const unsigned int NOT_MODIFIED_304;
-  const unsigned int BAD_REQUEST_400;
-  const unsigned int NOT_FOUND_404;
-  const unsigned int METHOD_NOT_ALLOWED_405;
-  const unsigned int UNSUPPORTED_MADIA_TYPE_415;
-  const unsigned int INTERNAL_SERVER_ERROR_500;
-  const unsigned int BAD_GATEWAY_502;
-  const unsigned int SERVICE_UNAVAILABLE_503;
-  const unsigned int GATEWAY_TIMEOUT_504;
-  const unsigned int TOKEN_OPTION_REQUIRED;
-  const unsigned int HOST_REQUIRED;
-  const unsigned int CRITICAL_OPTION_NOT_SUPPORTED;
+  const unsigned int OK;                        /* CONTENT_2_05,                  OK_200 */
+  const unsigned int CREATED;                   /* CREATED_2_01,                  CREATED_201 */
+  const unsigned int CHANGED;                   /* CHANGED_2_04,                  NO_CONTENT_204 */
+  const unsigned int DELETED;                   /* DELETED_2_02,                  NO_CONTENT_204 */
+  const unsigned int NOT_MODIFIED;              /* VALID_2_03,                    NOT_MODIFIED_304 */
+
+  const unsigned int BAD_REQUEST;               /* BAD_REQUEST_4_00,              BAD_REQUEST_400 */
+  const unsigned int UNAUTHORIZED;              /* UNAUTHORIZED_4_01,             UNAUTHORIZED_401 */
+  const unsigned int BAD_OPTION;                /* BAD_OPTION_4_02,               BAD_REQUEST_400 */
+  const unsigned int FORBIDDEN;                 /* FORBIDDEN_4_03,                FORBIDDEN_403 */
+  const unsigned int NOT_FOUND;                 /* NOT_FOUND_4_04,                NOT_FOUND_404 */
+  const unsigned int METHOD_NOT_ALLOWED;        /* METHOD_NOT_ALLOWED_4_05,       METHOD_NOT_ALLOWED_405 */
+  const unsigned int REQUEST_ENTITY_TOO_LARGE;  /* REQUEST_ENTITY_TOO_LARGE_4_13, REQUEST_ENTITY_TOO_LARGE_413 */
+  const unsigned int UNSUPPORTED_MADIA_TYPE;    /* UNSUPPORTED_MADIA_TYPE_4_15,   UNSUPPORTED_MADIA_TYPE_415 */
+
+  const unsigned int INTERNAL_SERVER_ERROR;     /* INTERNAL_SERVER_ERROR_5_00,    INTERNAL_SERVER_ERROR_500 */
+  const unsigned int NOT_IMPLEMENTED;           /* NOT_IMPLEMENTED_5_01,          NOT_IMPLEMENTED_501 */
+  const unsigned int BAD_GATEWAY;               /* BAD_GATEWAY_5_02,              BAD_GATEWAY_502 */
+  const unsigned int SERVICE_UNAVAILABLE;       /* SERVICE_UNAVAILABLE_5_03,      SERVICE_UNAVAILABLE_503 */
+  const unsigned int GATEWAY_TIMEOUT;           /* GATEWAY_TIMEOUT_5_04,          GATEWAY_TIMEOUT_504 */
+  const unsigned int PROXYING_NOT_SUPPORTED;    /* PROXYING_NOT_SUPPORTED_5_05,   INTERNAL_SERVER_ERROR_500 */
 };
 struct rest_implementation_type
 {
@@ -68,10 +74,10 @@ struct rest_implementation_type
   unsigned int APPLICATION_ATOM_XML;
   unsigned int APPLICATION_XMPP_XML;
   unsigned int APPLICATION_EXI;
-  unsigned int APPLICATION_X_BXML;
   unsigned int APPLICATION_FASTINFOSET;
   unsigned int APPLICATION_SOAP_FASTINFOSET;
   unsigned int APPLICATION_JSON;
+  unsigned int APPLICATION_X_OBIX_BINARY;
 };
 
 struct rest_implementation {

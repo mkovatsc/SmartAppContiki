@@ -1,12 +1,41 @@
+/*
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "coap-03-rest-server.h"
-#include "coap-03-transactions.h"
-#include "coap-03-observing.h"
+#include "coap-06-rest-engine.h"
+#include "coap-06-transactions.h"
+#include "coap-06-observing.h"
 
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
 #include "static-routing.h"
@@ -39,20 +68,6 @@
 PROCESS(coap_server, "Coap Server");
 
 /*-----------------------------------------------------------------------------------*/
-/*- Constants -----------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------*/
-const char* error_messages[] = {
-  "",
-
-  /* Memory errors */
-  "Transaction buffer allocation failed",
-  "Memory boundary exceeded",
-
-  /* CoAP errors */
-  "Request has unknown critical option", //FIXME which one?
-  "Packet could not be serialized"
-};
-/*-----------------------------------------------------------------------------------*/
 /*- Variables -----------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 static service_callback_t service_cbk = NULL;
@@ -63,7 +78,7 @@ static
 int
 handle_incoming_data(void)
 {
-  int error = NO_ERROR;
+  coap_error_code = NO_ERROR;
 
   PRINTF("handle_incoming_data(): received uip_datalen=%u \n",(uint16_t)uip_datalen());
 
@@ -81,9 +96,9 @@ handle_incoming_data(void)
     coap_packet_t request[1] = {{0}};
     coap_transaction_t *transaction = NULL;
 
-    error = coap_parse_message(request, data, data_len);
+    coap_error_code = coap_parse_message(request, data, data_len);
 
-    if (error==NO_ERROR)
+    if (coap_error_code==NO_ERROR)
     {
 
       // FIXME
@@ -105,7 +120,7 @@ handle_incoming_data(void)
 
             /* prepare response */
             coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
-            coap_init_message(response, COAP_TYPE_ACK, OK_200, request->tid);
+            coap_init_message(response, COAP_TYPE_ACK, CONTENT_2_05, request->tid);
 
             /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
             if (IS_OPTION(request, COAP_OPTION_TOKEN))
@@ -132,7 +147,7 @@ handle_incoming_data(void)
 
 
             /* apply blockwise transfers */
-            if ( IS_OPTION(request, COAP_OPTION_BLOCK) ) //|| new_offset!=0 && new_offset!=block_offset
+            if ( IS_OPTION(request, COAP_OPTION_BLOCK2) ) //|| new_offset!=0 && new_offset!=block_offset
             {
               /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
               if (new_offset==block_offset)
@@ -140,7 +155,7 @@ handle_incoming_data(void)
                 PRINTF("Blockwise: unaware resource with payload length %u/%u\n", response->payload_len, block_size);
                 if (block_offset >= response->payload_len)
                 {
-                  coap_set_status(response, BAD_REQUEST_400);
+                  coap_set_status(response, BAD_OPTION_4_02);
                   coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
                 }
                 else
@@ -167,11 +182,12 @@ handle_incoming_data(void)
 
             if ((transaction->packet_len = coap_serialize_message(response, transaction->packet))==0)
             {
-              error = PACKET_SERIALIZATION_ERROR;
+              coap_error_code = PACKET_SERIALIZATION_ERROR;
             }
 
         } else {
-            error = MEMORY_ALLOC_ERR;
+            coap_error_code = MEMORY_ALLOC_ERR;
+            coap_error_message = "Transaction buffer allocation failed";
         }
       }
       else if (request->type==COAP_TYPE_NON)
@@ -198,21 +214,26 @@ handle_incoming_data(void)
       }
     } /* if (parsed correctly) */
 
-    if (error==NO_ERROR) {
+    if (coap_error_code==NO_ERROR) {
       if (transaction) coap_send_transaction(transaction);
     }
     else
     {
-      PRINTF("ERROR %u: %s\n", error, error_messages[error]);
+      PRINTF("ERROR %u: %s\n", coap_error_code, coap_error_message);
 
+      /* Set to sendable error code. */
+      if (coap_error_code >= 192)
+      {
+        coap_error_code = INTERNAL_SERVER_ERROR_5_00;
+      }
       /* reuse input buffer */
-      coap_init_message(request, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
-      coap_set_payload(request, (uint8_t *) error_messages[error], strlen(error_messages[error]));
+      coap_init_message(request, COAP_TYPE_ACK, coap_error_code, request->tid);
+      coap_set_payload(request, (uint8_t *) coap_error_message, strlen(coap_error_message));
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->buffer, coap_serialize_message(request, request->buffer));
     }
   } /* if (new data) */
 
-  return error;
+  return coap_error_code;
 }
 /*-----------------------------------------------------------------------------------*/
 /* The discover resource should be included when using CoAP. */
@@ -330,7 +351,7 @@ PROCESS_THREAD(coap_server, ev, data)
 }
 /*-----------------------------------------------------------------------------------*/
 const struct rest_implementation coap_rest_implementation = {
-    "CoAP-03",
+    "CoAP-06",
 
     coap_server_init,
     coap_set_service_callback,
@@ -360,27 +381,25 @@ const struct rest_implementation coap_rest_implementation = {
     coap_observe_handler,
 
     {
-      OK_200,
-      CREATED_201,
-      OK_200,
-      OK_200,
-      NOT_MODIFIED_304,
-
-      BAD_REQUEST_400,
-      METHOD_NOT_ALLOWED_405,
-      CRITICAL_OPTION_NOT_SUPPORTED,
-      METHOD_NOT_ALLOWED_405,
-      NOT_FOUND_404,
-      METHOD_NOT_ALLOWED_405,
-      BAD_REQUEST_400,
-      UNSUPPORTED_MADIA_TYPE_415,
-
-      INTERNAL_SERVER_ERROR_500,
-      INTERNAL_SERVER_ERROR_500,
-      BAD_GATEWAY_502,
-      SERVICE_UNAVAILABLE_503,
-      GATEWAY_TIMEOUT_504,
-      INTERNAL_SERVER_ERROR_500
+      CONTENT_2_05,
+      CREATED_2_01,
+      CHANGED_2_04,
+      DELETED_2_02,
+      VALID_2_03,
+      BAD_REQUEST_4_00,
+      UNAUTHORIZED_4_01,
+      BAD_OPTION_4_02,
+      FORBIDDEN_4_03,
+      NOT_FOUND_4_04,
+      METHOD_NOT_ALLOWED_4_05,
+      REQUEST_ENTITY_TOO_LARGE_4_13,
+      UNSUPPORTED_MADIA_TYPE_4_15,
+      INTERNAL_SERVER_ERROR_5_00,
+      NOT_IMPLEMENTED_5_01,
+      BAD_GATEWAY_5_02,
+      SERVICE_UNAVAILABLE_5_03,
+      GATEWAY_TIMEOUT_5_04,
+      PROXYING_NOT_SUPPORTED_5_05
     },
 
     {
@@ -405,6 +424,6 @@ const struct rest_implementation coap_rest_implementation = {
       APPLICATION_FASTINFOSET,
       APPLICATION_SOAP_FASTINFOSET,
       APPLICATION_JSON,
-      APPLICATION_OCTET_STREAM
+      APPLICATION_X_OBIX_BINARY
     }
 };

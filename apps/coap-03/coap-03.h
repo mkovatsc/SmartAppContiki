@@ -139,7 +139,7 @@ typedef union {
 } coap_header_option_t;
 
 typedef struct {
-  uint8_t *header; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
+  uint8_t *buffer; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
 
   uint8_t version;
   coap_message_type_t type;
@@ -192,8 +192,8 @@ void coap_init_connection(uint16_t port);
 uint16_t coap_get_tid(void);
 void coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length);
 
-void coap_init_message(void *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
-int coap_serialize_message(void *packet);
+void coap_init_message(void *packet, coap_message_type_t type, uint8_t code, uint16_t tid);
+int coap_serialize_message(void *packet, uint8_t *buffer);
 error_t coap_parse_message(void *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(void *packet);

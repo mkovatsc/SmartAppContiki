@@ -1,0 +1,1 @@
+coap-06_src = coap-06-rest-engine.c coap-06.c coap-06-transactions.c coap-06-observing.c

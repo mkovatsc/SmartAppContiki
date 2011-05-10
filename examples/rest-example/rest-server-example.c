@@ -14,6 +14,14 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
+#if WITH_COAP == 3
+#include "coap-03.h"
+#elif WITH_COAP == 6
+#include "coap-06.h"
+#else
+#error "CoAP version defined by WITH_COAP not implemented"
+#endif
+
 #define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -111,7 +119,6 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, host);
     }
 #if WITH_COAP > 1
-#include "coap-03.h"
     if (coap_get_header_observe(request, &observe))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Ob %lu\n", observe);
@@ -148,7 +155,6 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
     REST.set_header_etag(response, opaque, 3);
     REST.set_header_location(response, location); /* Initial slash is omitted by framework */
 #if WITH_COAP > 1
-#include "coap-03.h"
     coap_set_header_observe(response, 10);
     opaque[0] = 0x01;
     opaque[1] = 0xCC;
@@ -175,7 +181,7 @@ chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   /* Check the offset for boundaries of the resource data. */
   if (*offset>=CHUNKS_TOTAL)
   {
-    REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+    REST.set_response_status(response, REST.status.BAD_OPTION);
     REST.set_response_payload(response, (uint8_t*)"Block out of scope", 18);
     return;
   }
@@ -330,7 +336,7 @@ led_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
   }
 
   if (!success && response) {
-    REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+    REST.set_response_status(response, REST.status.BAD_REQUEST);
   }
 }
 
@@ -361,7 +367,7 @@ light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
       REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
       REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }
@@ -393,7 +399,7 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
       REST.set_response_payload(response, buffer, strlen(buffer));
     } else {
       char *info = "Supporting content-types text/plain, text/html, and application/json";
-      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE_415);
+      REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
       REST.set_response_payload(response, (uint8_t *)info, strlen(info));
     }
   }

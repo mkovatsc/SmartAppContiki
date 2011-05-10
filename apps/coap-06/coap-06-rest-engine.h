@@ -1,7 +1,4 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
- * All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,32 +23,28 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * This file is part of the Contiki operating system.
  *
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+#ifndef COAP_SERVER_H_
+#define COAP_SERVER_H_
 
-#define SICSLOWPAN_CONF_FRAG	1
-
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
+#if !defined(REST)
+#error "Define REST as \"coap_rest_implementation\""
 #endif
 
-#ifndef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    128
-#endif
+#include "rest.h"
+#include "coap-06.h"
 
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    214
-#endif
+/* Declare server process */
+PROCESS_NAME(coap_server);
 
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
+#define SERVER_LISTEN_PORT      UIP_HTONS(61616)
 
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
+typedef coap_packet_t rest_request_t;
+typedef coap_packet_t rest_response_t;
 
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+extern const struct rest_implementation coap_rest_implementation;
+
+#endif /* COAP_SERVER_H_ */

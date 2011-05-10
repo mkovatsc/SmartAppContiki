@@ -10,8 +10,15 @@
 #include "dev/battery-sensor.h"
 #endif
 
+#if WITH_COAP == 3
 #include "coap-03.h"
 #include "coap-03-transactions.h"
+#elif WITH_COAP == 6
+#include "coap-06.h"
+#include "coap-06-transactions.h"
+#else
+#error "CoAP version defined by WITH_COAP not implemented"
+#endif
 
 #define TOGGLE_INTERVAL 10
 
@@ -28,7 +35,9 @@
 #define PRINTLLADDR(addr)
 #endif
 
-#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xaaaa, 0, 0, 0, 0x0212, 0x7400, 0x0da0, 0xd748)
+//#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xaaaa, 0, 0, 0, 0x0212, 0x7400, 0x0da0, 0xd748)
+#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xfe80, 0, 0, 0, 0x0212, 0x7402, 0x0002, 0x0202) /* cooja1 */
+
 #define LOCAL_PORT      UIP_HTONS(61617)
 #define REMOTE_PORT     UIP_HTONS(61616)
 
@@ -38,8 +47,10 @@
 static uip_ipaddr_t server_ipaddr;
 static struct etimer et;
 
-#define NUMBER_OF_URLS 4
-char* service_urls[NUMBER_OF_URLS] = {".well-known/core", "toggle", "battery", "poll"};
+#define NUMBER_OF_URLS 5
+char* service_urls[NUMBER_OF_URLS] = {".well-known/core", "/toggle", "battery/", "poll/me/not", "error/in//path"};
+
+static int uri_switch = 0;
 
 static void
 send_data(void)
@@ -51,10 +62,10 @@ send_data(void)
 
     /* prepare response */
     coap_packet_t request[1]; /* This way the packet can be treated as pointer as usual. */
-    coap_init_message(request, transaction->packet, COAP_TYPE_CON, COAP_GET, transaction->tid );
-    coap_set_header_uri_path(request, service_urls[1]);
-    coap_set_payload(request, (uint8_t *)"Toggling...", 11);
-    transaction->packet_len = coap_serialize_message(request);
+    coap_init_message(request, COAP_TYPE_CON, COAP_GET, transaction->tid );
+    coap_set_header_uri_path(request, service_urls[uri_switch]);
+    coap_set_payload(request, (uint8_t *)"GETting URL...", 14);
+    transaction->packet_len = coap_serialize_message(request, transaction->packet);
 
     PRINTF("Sending to /%.*s\n", request->uri_path_len, request->uri_path);
     PRINTF("  %.*s\n", request->payload_len, request->payload);
@@ -101,8 +112,8 @@ handle_incoming_data()
       else if (response->type==COAP_TYPE_CON)
       {
         /* reuse input buffer */
-        coap_init_message(response, response->header, COAP_TYPE_ACK, 0, response->tid);
-        coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, response->header, coap_serialize_message(response));
+        coap_init_message(response, COAP_TYPE_ACK, 0, response->tid);
+        coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, response->buffer, coap_serialize_message(response, response->buffer));
       }
     } /* if (parsed correctly) */
   }
@@ -141,6 +152,7 @@ PROCESS_THREAD(coap_client_example, ev, data)
       coap_check_transactions();
 #if defined (CONTIKI_TARGET_SKY)
     } else if (ev == sensors_event && data == &button_sensor) {
+        uri_switch = (uri_switch+1) % NUMBER_OF_URLS;
       send_data();
 #endif
     }
