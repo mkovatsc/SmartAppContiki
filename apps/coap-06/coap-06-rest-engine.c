@@ -199,18 +199,20 @@ handle_incoming_data(void)
       }
       else if (request->type==COAP_TYPE_ACK)
       {
-        PRINTF("Received ACK\n");
+        PRINTF("Received ACK %u\n", request->tid);
+        /* Clean up afterwards. */
         coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
       }
       else if (request->type==COAP_TYPE_RST)
       {
-        PRINTF("Received RST\n");
-        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
+        PRINTF("Received RST %u\n", request->tid);
         if (IS_OPTION(request, COAP_OPTION_TOKEN))
         {
           PRINTF("  Token 0x%02X%02X\n", request->token[0], request->token[1]);
           coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->token, request->token_len);
         }
+        /* Clean up afterwards. RST might be response to NON, so coap_get_transaction_by_tid() might return NULL.  */
+        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
       }
     } /* if (parsed correctly) */
 

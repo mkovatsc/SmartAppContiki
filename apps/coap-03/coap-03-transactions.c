@@ -97,11 +97,15 @@ coap_send_transaction(coap_transaction_t *t)
 void
 coap_clear_transaction(coap_transaction_t *t)
 {
-  list_remove(transactions_list, t);
+  if (t)
+  {
+    PRINTF("Freeing transaction %u: %p\n", t->tid, t);
 
-  PRINTF("Freeing transaction %u\n", t->tid);
-  etimer_stop(&t->retrans_timer);
-  memb_free(&transactions_memb, t);
+    list_remove(transactions_list, t);
+
+    etimer_stop(&t->retrans_timer);
+    memb_free(&transactions_memb, t);
+  }
 }
 
 coap_transaction_t *
@@ -113,6 +117,8 @@ coap_get_transaction_by_tid(uint16_t tid)
   {
     if (t->tid==tid)
     {
+      PRINTF("Found transaction for TID %u: %p\n", t->tid, t);
+
       return t;
     }
   }

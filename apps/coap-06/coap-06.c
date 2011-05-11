@@ -36,7 +36,7 @@
 #include "coap-06-transactions.h"
 
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -294,7 +294,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
     int j = 0;
     while (length>0)
     {
-        option += serialize_array_option(COAP_OPTION_PROXY_URI, current_number, option, ((coap_packet_t *)packet)->proxy_uri + j*270, MIN(270, length), NULL);
+        option += serialize_array_option(COAP_OPTION_PROXY_URI, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->proxy_uri + j*270, MIN(270, length), NULL);
         ((coap_packet_t *)packet)->option_count += 1;
         current_number = COAP_OPTION_PROXY_URI;
 
@@ -321,7 +321,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST)) {
     PRINTF("Uri-Host [%.*s]\n", ((coap_packet_t *)packet)->uri_host_len, ((coap_packet_t *)packet)->uri_host);
 
-    option += serialize_array_option(COAP_OPTION_URI_HOST, current_number, option, ((coap_packet_t *)packet)->uri_host, ((coap_packet_t *)packet)->uri_host_len, NULL);
+    option += serialize_array_option(COAP_OPTION_URI_HOST, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_host, ((coap_packet_t *)packet)->uri_host_len, NULL);
     ((coap_packet_t *)packet)->option_count += 1;
     current_number = COAP_OPTION_URI_HOST;
   }
@@ -330,7 +330,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
 
     uint8_t split_options;
 
-    option += serialize_array_option(COAP_OPTION_LOCATION_PATH, current_number, option, ((coap_packet_t *)packet)->location_path, ((coap_packet_t *)packet)->location_path_len, &split_options);
+    option += serialize_array_option(COAP_OPTION_LOCATION_PATH, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->location_path, ((coap_packet_t *)packet)->location_path_len, &split_options);
     ((coap_packet_t *)packet)->option_count += split_options;
     current_number = COAP_OPTION_LOCATION_PATH;
   }
@@ -344,7 +344,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_QUERY)) {
     PRINTF("Location-Query [%.*s]\n", ((coap_packet_t *)packet)->location_query_len, ((coap_packet_t *)packet)->location_query);
 
-    option += serialize_array_option(COAP_OPTION_LOCATION_QUERY, current_number, option, ((coap_packet_t *)packet)->location_query, ((coap_packet_t *)packet)->location_query_len, NULL);
+    option += serialize_array_option(COAP_OPTION_LOCATION_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->location_query, ((coap_packet_t *)packet)->location_query_len, NULL);
     ((coap_packet_t *)packet)->option_count += 1;
     current_number = COAP_OPTION_LOCATION_QUERY;
   }
@@ -353,7 +353,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
 
     uint8_t split_options;
 
-    option += serialize_array_option(COAP_OPTION_URI_PATH, current_number, option, ((coap_packet_t *)packet)->uri_path, ((coap_packet_t *)packet)->uri_path_len, &split_options);
+    option += serialize_array_option(COAP_OPTION_URI_PATH, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_path, ((coap_packet_t *)packet)->uri_path_len, &split_options);
     ((coap_packet_t *)packet)->option_count += split_options;
     current_number = COAP_OPTION_URI_PATH;
   }
@@ -386,7 +386,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
     PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
 
-    option += serialize_array_option(COAP_OPTION_URI_QUERY, current_number, option, ((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, NULL);
+    option += serialize_array_option(COAP_OPTION_URI_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, NULL);
     ((coap_packet_t *)packet)->option_count +=  1 + (COAP_OPTION_URI_QUERY-current_number)/COAP_OPTION_FENCE_POST;
     current_number = COAP_OPTION_URI_QUERY;
   }

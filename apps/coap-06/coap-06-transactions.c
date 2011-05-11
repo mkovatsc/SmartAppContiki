@@ -119,11 +119,14 @@ coap_send_transaction(coap_transaction_t *t)
 void
 coap_clear_transaction(coap_transaction_t *t)
 {
-  list_remove(transactions_list, t);
+  if (t)
+  {
+    list_remove(transactions_list, t);
 
-  PRINTF("Freeing transaction %u\n", t->tid);
-  etimer_stop(&t->retrans_timer);
-  memb_free(&transactions_memb, t);
+    PRINTF("Freeing transaction %u\n", t->tid);
+    etimer_stop(&t->retrans_timer);
+    memb_free(&transactions_memb, t);
+  }
 }
 
 coap_transaction_t *
