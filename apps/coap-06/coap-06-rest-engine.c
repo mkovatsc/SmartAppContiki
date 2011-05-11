@@ -230,8 +230,11 @@ handle_incoming_data(void)
       }
       /* reuse input buffer */
       coap_init_message(request, COAP_TYPE_ACK, coap_error_code, request->tid);
+      PRINTF("INIT\n");
       coap_set_payload(request, (uint8_t *) coap_error_message, strlen(coap_error_message));
-      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->buffer, coap_serialize_message(request, request->buffer));
+      PRINTF("PAY\n");
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(request, data));
+      PRINTF("SEND\n");
     }
   } /* if (new data) */
 
@@ -291,15 +294,18 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
       }
     }
 
-    coap_set_payload(response, buffer, bufpos );
-    coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
-
-    if (resource==NULL && bufpos==0) {
-        coap_set_status(response, BAD_OPTION_4_02);
-        coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    if (bufpos>0) {
+      coap_set_payload(response, buffer, bufpos );
+      coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
     }
-    else if (resource==NULL) {
-        *offset = -1;
+    else
+    {
+      coap_set_status(response, BAD_OPTION_4_02);
+      coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    }
+
+    if (resource==NULL) {
+      *offset = -1;
     }
     else
     {

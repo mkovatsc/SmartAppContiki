@@ -208,7 +208,7 @@ handle_incoming_data(void)
       /* reuse input buffer */
       coap_init_message(request, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
       coap_set_payload(request, (uint8_t *) error_messages[error], strlen(error_messages[error]));
-      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->buffer, coap_serialize_message(request, request->buffer));
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(request, data));
     }
   } /* if (new data) */
 
@@ -268,11 +268,18 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
       }
     }
 
-    coap_set_payload(response, buffer, bufpos );
-    coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+    if (bufpos>0) {
+      coap_set_payload(response, buffer, bufpos );
+      coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
+    }
+    else
+    {
+      coap_set_status(response, BAD_REQUEST_400);
+      coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    }
 
     if (resource==NULL) {
-        *offset = -1;
+      *offset = -1;
     }
     else
     {
@@ -368,7 +375,7 @@ const struct rest_implementation coap_rest_implementation = {
 
       BAD_REQUEST_400,
       METHOD_NOT_ALLOWED_405,
-      CRITICAL_OPTION_NOT_SUPPORTED,
+      BAD_REQUEST_400,
       METHOD_NOT_ALLOWED_405,
       NOT_FOUND_404,
       METHOD_NOT_ALLOWED_405,
@@ -376,7 +383,7 @@ const struct rest_implementation coap_rest_implementation = {
       UNSUPPORTED_MADIA_TYPE_415,
 
       INTERNAL_SERVER_ERROR_500,
-      INTERNAL_SERVER_ERROR_500,
+      CRITICAL_OPTION_NOT_SUPPORTED,
       BAD_GATEWAY_502,
       SERVICE_UNAVAILABLE_503,
       GATEWAY_TIMEOUT_504,
