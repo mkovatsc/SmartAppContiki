@@ -511,10 +511,13 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Max-Age [%lu]\n", ((coap_packet_t *)packet)->max_age);
           break;
         case COAP_OPTION_PROXY_URI:
+          // FIXME check for own end-point
           ((coap_packet_t *)packet)->proxy_uri = (char *) current_option;
           ((coap_packet_t *)packet)->proxy_uri_len = option_len;
-          PRINTF("Proxy-Uri [%.*s]\n", ((coap_packet_t *)packet)->proxy_uri_len, ((coap_packet_t *)packet)->proxy_uri);
-          // FIXME long URIs > 270
+          // TODO lengeh > 270 not implemented (actually not required)
+          PRINTF("Proxy-Uri NOT IMPLEMENTED [%.*s]\n", ((coap_packet_t *)packet)->proxy_uri_len, ((coap_packet_t *)packet)->proxy_uri);
+          coap_error_message = "This is a constrained server (Contiki)";
+          return PROXYING_NOT_SUPPORTED_5_05;
           break;
         case COAP_OPTION_ETAG:
           ((coap_packet_t *)packet)->etag_len = MIN(COAP_ETAG_LEN, option_len);
