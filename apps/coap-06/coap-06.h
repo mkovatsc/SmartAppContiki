@@ -200,10 +200,14 @@ typedef struct {
   uint16_t observe;
   uint8_t token_len;
   uint8_t token[COAP_TOKEN_LEN];
-  uint32_t block_num;
-  uint8_t block_more;
-  uint16_t block_size;
-  uint32_t block_offset;
+  uint32_t block2_num;
+  uint8_t block2_more;
+  uint16_t block2_size;
+  uint32_t block2_offset;
+  uint32_t block1_num;
+  uint8_t block1_more;
+  uint16_t block1_size;
+  uint32_t block1_offset;
   uint8_t uri_query_len;
   char *uri_query;
 
@@ -240,26 +244,37 @@ int coap_set_header_max_age(void *packet, uint32_t age);
 int coap_get_header_etag(void *packet, const uint8_t **etag);
 int coap_set_header_etag(void *packet, uint8_t *etag, size_t etag_len);
 
-int coap_get_header_uri_host(void *packet, const char **host); // in-place string might not be 0-terminated
+int coap_get_header_token(void *packet, const uint8_t **token);
+int coap_set_header_token(void *packet, uint8_t *token, size_t token_len);
+
+int coap_get_header_proxy_uri(void *packet, const char **uri); /* In-place string might not be 0-terminated. */
+int coap_set_header_proxy_uri(void *packet, char *uri);
+
+int coap_get_header_uri_host(void *packet, const char **host); /* In-place string might not be 0-terminated. */
 int coap_set_header_uri_host(void *packet, char *host);
 
-int coap_get_header_location(void *packet, const char **uri); // in-place string might not be 0-terminated
-int coap_set_header_location(void *packet, char *uri);
+int coap_get_header_uri_path(void *packet, const char **path); /* In-place string might not be 0-terminated. */
+int coap_set_header_uri_path(void *packet, char *path);
 
-int coap_get_header_uri_path(void *packet, const char **uri); // in-place string might not be 0-terminated
-int coap_set_header_uri_path(void *packet, char *uri);
+int coap_get_header_uri_query(void *packet, const char **query); /* In-place string might not be 0-terminated. */
+int coap_set_header_uri_query(void *packet, char *query);
+
+int coap_get_header_location_path(void *packet, const char **path); /* In-place string might not be 0-terminated. */
+int coap_set_header_location_path(void *packet, char *path);
+
+int coap_get_header_location_query(void *packet, const char **query); /* In-place string might not be 0-terminated. */
+int coap_set_header_location_query(void *packet, char *query);
+
+int coap_set_header_location(void *packet, char *uri); /* For REST framework: Splits string into path and query. */
 
 int coap_get_header_observe(void *packet, uint32_t *observe);
 int coap_set_header_observe(void *packet, uint32_t observe);
 
-int coap_get_header_token(void *packet, const uint8_t **token);
-int coap_set_header_token(void *packet, uint8_t *token, size_t token_len);
+int coap_get_header_block2(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
+int coap_set_header_block2(void *packet, uint32_t num, uint8_t more, uint16_t size);
 
-int coap_get_header_block(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
-int coap_set_header_block(void *packet, uint32_t num, uint8_t more, uint16_t size);
-
-int coap_get_header_uri_query(void *packet, const char **query); // in-place string might not be 0-terminated
-int coap_set_header_uri_query(void *packet, char *query);
+int coap_get_header_block1(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
+int coap_set_header_block1(void *packet, uint32_t num, uint8_t more, uint16_t size);
 
 int coap_get_payload(void *packet, const uint8_t **payload);
 int coap_set_payload(void *packet, uint8_t *payload, size_t length);

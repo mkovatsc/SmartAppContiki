@@ -130,7 +130,7 @@ handle_incoming_data(void)
             }
 
             /* get offset for blockwise transfers */
-            if (coap_get_header_block(request, &block_num, NULL, &block_size, &block_offset))
+            if (coap_get_header_block2(request, &block_num, NULL, &block_size, &block_offset))
             {
                 PRINTF("Blockwise: block request %lu (%u/%u) @ %lu bytes\n", block_num, block_size, REST_MAX_CHUNK_SIZE, block_offset);
                 block_size = MIN(block_size, REST_MAX_CHUNK_SIZE);
@@ -160,7 +160,7 @@ handle_incoming_data(void)
                 }
                 else
                 {
-                  coap_set_header_block(response, block_num, response->payload_len - block_offset > block_size, block_size);
+                  coap_set_header_block2(response, block_num, response->payload_len - block_offset > block_size, block_size);
                   coap_set_payload(response, response->payload+block_offset, MIN(response->payload_len - block_offset, block_size));
                 } /* if (valid offset) */
               }
@@ -168,7 +168,7 @@ handle_incoming_data(void)
               {
                 /* resource provides chunk-wise data */
                 PRINTF("Blockwise: blockwise resource, new offset %ld\n", new_offset);
-                coap_set_header_block(response, block_num, new_offset!=-1 || response->payload_len > block_size, block_size);
+                coap_set_header_block2(response, block_num, new_offset!=-1 || response->payload_len > block_size, block_size);
                 if (response->payload_len > block_size) coap_set_payload(response, response->payload, block_size);
               } /* if (resource aware of blockwise) */
             }
@@ -176,7 +176,7 @@ handle_incoming_data(void)
             {
               PRINTF("Blockwise: no block option for blockwise resource, using block size %u\n", REST_MAX_CHUNK_SIZE);
 
-              coap_set_header_block(response, 0, new_offset!=-1, REST_MAX_CHUNK_SIZE);
+              coap_set_header_block2(response, 0, new_offset!=-1, REST_MAX_CHUNK_SIZE);
               coap_set_payload(response, response->payload, MIN(response->payload_len, REST_MAX_CHUNK_SIZE));
             } /* if (blockwise request) */
 

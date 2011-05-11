@@ -84,7 +84,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 
     /* Strings are not copied and should be static or in program memory (char *str = "string in .text";).
      * They must be '\0'-terminated as the setters use strlen(). */
-    static char location[] = {'/','f','a','k','e', 0};
+    static char location[] = {'/','f','a','k','e','?','q','=','0', 0};
 
     /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
     unsigned int content_type = REST.get_header_content_type(request);
@@ -132,10 +132,19 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
       }
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
     }
+#if WITH_COAP == 3
     if (coap_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
     }
+#elif WITH_COAP == 6
+    if (coap_get_header_block2(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+    }
+    // TODO Block1
+#endif
+
 #endif
     if ((len = REST.get_query(request, &query)))
     {
@@ -159,7 +168,12 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
     opaque[0] = 0x01;
     opaque[1] = 0xCC;
     coap_set_header_token(response, opaque, 2); /* If this function is not called, the Token is copied from the request by default. */
+#if WITH_COAP == 3
     coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
+#elif WITH_COAP == 6
+    coap_set_header_block2(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
+    // TODO Block1
+#endif
 #endif
   }
 }
