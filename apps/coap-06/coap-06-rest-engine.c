@@ -294,7 +294,11 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     coap_set_payload(response, buffer, bufpos );
     coap_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 
-    if (resource==NULL) {
+    if (resource==NULL && bufpos==0) {
+        coap_set_status(response, BAD_OPTION_4_02);
+        coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
+    }
+    else if (resource==NULL) {
         *offset = -1;
     }
     else
