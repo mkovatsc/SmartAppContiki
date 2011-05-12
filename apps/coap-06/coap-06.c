@@ -782,18 +782,18 @@ coap_get_header_proxy_uri(void *packet, const char **uri) // in-place host might
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_PROXY_URI)) return 0;
 
-  *uri = ((coap_packet_t *)packet)->uri_host;
-  return ((coap_packet_t *)packet)->uri_host_len;
+  *uri = ((coap_packet_t *)packet)->proxy_uri;
+  return ((coap_packet_t *)packet)->proxy_uri_len;
 }
 
 int
 coap_set_header_proxy_uri(void *packet, char *uri)
 {
   ((coap_packet_t *)packet)->proxy_uri = uri;
-  ((coap_packet_t *)packet)->uri_host_len = strlen(uri);
+  ((coap_packet_t *)packet)->proxy_uri_len = strlen(uri);
 
   SET_OPTION((coap_packet_t *)packet, COAP_OPTION_PROXY_URI);
-  return ((coap_packet_t *)packet)->uri_host_len;
+  return ((coap_packet_t *)packet)->proxy_uri_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int
@@ -869,10 +869,21 @@ coap_get_header_location_path(void *packet, const char **path) // in-place uri m
 int
 coap_set_header_location_path(void *packet, char *path)
 {
+  char *query;
+
   while (path[0]=='/') ++path;
 
+  if ((query = strchr(path, '?')))
+  {
+    coap_set_header_location_query(packet, query+1);
+    ((coap_packet_t *)packet)->location_path_len = query - path;
+  }
+  else
+  {
+    ((coap_packet_t *)packet)->location_path_len = strlen(path);
+  }
+
   ((coap_packet_t *)packet)->location_path = path;
-  ((coap_packet_t *)packet)->location_path_len = strlen(path);
 
   SET_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH);
   return ((coap_packet_t *)packet)->location_path_len;
@@ -897,19 +908,6 @@ coap_set_header_location_query(void *packet, char *query)
 
   SET_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_QUERY);
   return ((coap_packet_t *)packet)->location_query_len;
-}
-/*-----------------------------------------------------------------------------------*/
-int
-coap_set_header_location(void *packet, char *location)
-{
-  char *query;
-  size_t query_len = 0;
-  if ((query = strchr(location, '?')))
-  {
-    query[0] = '\0';
-    query_len = coap_set_header_location_query(packet, query+1);
-  }
-  return coap_set_header_location_path(packet, location) + query_len;
 }
 /*-----------------------------------------------------------------------------------*/
 int

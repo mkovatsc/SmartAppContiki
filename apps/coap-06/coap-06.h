@@ -57,7 +57,7 @@
  * Conservative size limit, as not all options have to be set at the same time.
  */
 /*                            Hdr CoT Age  Tag              Obs  Tok               Blo strings */
-#define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 0)
+#define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 6) // 44
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
 
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
@@ -260,12 +260,10 @@ int coap_get_header_uri_query(void *packet, const char **query); /* In-place str
 int coap_set_header_uri_query(void *packet, char *query);
 
 int coap_get_header_location_path(void *packet, const char **path); /* In-place string might not be 0-terminated. */
-int coap_set_header_location_path(void *packet, char *path);
+int coap_set_header_location_path(void *packet, char *path); /* Also splits optional query into Location-Query option. */
 
 int coap_get_header_location_query(void *packet, const char **query); /* In-place string might not be 0-terminated. */
 int coap_set_header_location_query(void *packet, char *query);
-
-int coap_set_header_location(void *packet, char *uri); /* For REST framework: Splits string into path and query. */
 
 int coap_get_header_observe(void *packet, uint32_t *observe);
 int coap_set_header_observe(void *packet, uint32_t observe);

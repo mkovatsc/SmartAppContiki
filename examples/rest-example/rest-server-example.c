@@ -80,20 +80,20 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   if (response)
   {
     /* The ETag and Token is copied to the header. */
-    uint8_t opaque[] = {0xCB, 0xCD, 0xEF};
+    uint8_t opaque[] = {0x0A, 0xBC, 0xDE};
 
     /* Strings are not copied and should be static or in program memory (char *str = "string in .text";).
      * They must be '\0'-terminated as the setters use strlen(). */
-    static char location[] = {'/','f','a','k','e','?','q','=','0', 0};
+    static char location[] = {'/','f','a','?','k','e', 0};
 
     /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
     unsigned int content_type = REST.get_header_content_type(request);
 
     /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
     uint32_t max_age = 0;
-    const char *host = "";
+    const char *str = "";
     uint32_t observe = 0;
-    const uint8_t *token = NULL;
+    const uint8_t *bytes = NULL;
     uint32_t block_num = 0;
     uint8_t block_more = 0;
     uint16_t block_size = 0;
@@ -114,35 +114,59 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "MA %lu\n", max_age);
     }
-    if ((len = REST.get_header_host(request, &host)))
+    if ((len = REST.get_header_host(request, &str)))
     {
-      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, host);
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, str);
     }
 #if WITH_COAP > 1
     if (coap_get_header_observe(request, &observe))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Ob %lu\n", observe);
     }
-    if ((len = coap_get_header_token(request, &token)))
+    if ((len = coap_get_header_token(request, &bytes)))
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "To 0x");
       int index = 0;
       for (index = 0; index<len; ++index) {
-          strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", token[index]);
+          strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
+      }
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+    }
+    if ((len = coap_get_header_etag(request, &bytes)))
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "ET 0x");
+      int index = 0;
+      for (index = 0; index<len; ++index) {
+          strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
       }
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
     }
 #if WITH_COAP == 3
+    if ((len = coap_get_header_location(request, &str)))
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Lo %.*s\n", len, str);
+    }
     if (coap_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
     }
 #elif WITH_COAP == 6
+    if ((len = coap_get_header_location_path(request, &str)))
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "LP %.*s\n", len, str);
+    }
+    if ((len = coap_get_header_location_query(request, &str)))
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "LQ %.*s\n", len, str);
+    }
     if (coap_get_header_block2(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
     {
-      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "B2 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
     }
-    // TODO Block1
+    if (coap_get_header_block1(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
+    {
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "B1 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+    }
 #endif
 
 #endif
@@ -150,10 +174,16 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
     {
       strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s\n", len, query);
     }
-    if ((len = REST.get_request_payload(request, &token)))
+    if ((len = REST.get_request_payload(request, &bytes)))
     {
-      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%.*s", len, token);
+      strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%.*s", len, bytes);
     }
+
+    if (strpos == REST_MAX_CHUNK_SIZE)
+    {
+        buffer[REST_MAX_CHUNK_SIZE-1] = 0xBB;
+    }
+
     REST.set_response_payload(response, buffer, strpos);
 
     PRINTF("/mirror options received: %s\n", buffer);
@@ -164,6 +194,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
     REST.set_header_etag(response, opaque, 3);
     REST.set_header_location(response, location); /* Initial slash is omitted by framework */
 #if WITH_COAP > 1
+    coap_set_header_uri_host(response, "tiki");
     coap_set_header_observe(response, 10);
     opaque[0] = 0x01;
     opaque[1] = 0xCC;
@@ -171,8 +202,9 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 #if WITH_COAP == 3
     coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
 #elif WITH_COAP == 6
+    coap_set_header_proxy_uri(response, "ftp://x");
     coap_set_header_block2(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
-    // TODO Block1
+    coap_set_header_block1(response, 23, 0, 16);
 #endif
 #endif
   }
