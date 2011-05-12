@@ -34,6 +34,8 @@
 #include "contiki-net.h"
 #include "rest.h"
 
+#define COAP_DEFAULT_PORT                    5683
+
 #define COAP_DEFAULT_MAX_AGE                 60
 #define COAP_RESPONSE_TIMEOUT                2
 #define COAP_RESPONSE_RANDOM_FACTOR          1.5

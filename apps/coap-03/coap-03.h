@@ -12,13 +12,15 @@
 #include "contiki-net.h"
 #include "rest.h"
 
-#define COAP_DEFAULT_MAX_AGE    60
-#define COAP_RESPONSE_TIMEOUT   1
-#define COAP_MAX_RETRANSMIT     5
+#define COAP_DEFAULT_PORT                    61616
 
-#define COAP_HEADER_LEN         4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
-#define COAP_ETAG_LEN           4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
-#define COAP_TOKEN_LEN          2 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+#define COAP_DEFAULT_MAX_AGE                 60
+#define COAP_RESPONSE_TIMEOUT                1
+#define COAP_MAX_RETRANSMIT                  5
+
+#define COAP_HEADER_LEN                      4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
+#define COAP_ETAG_LEN                        4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+#define COAP_TOKEN_LEN                       2 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
 
 #define COAP_HEADER_VERSION_MASK             0xC0
 #define COAP_HEADER_VERSION_POSITION         6

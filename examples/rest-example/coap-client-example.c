@@ -38,8 +38,8 @@
 //#define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xaaaa, 0, 0, 0, 0x0212, 0x7400, 0x0da0, 0xd748)
 #define SERVER_NODE(ipaddr)   uip_ip6addr(ipaddr, 0xfe80, 0, 0, 0, 0x0212, 0x7402, 0x0002, 0x0202) /* cooja1 */
 
-#define LOCAL_PORT      UIP_HTONS(61617)
-#define REMOTE_PORT     UIP_HTONS(61616)
+#define LOCAL_PORT      UIP_HTONS(COAP_DEFAULT_PORT+1)
+#define REMOTE_PORT     UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
@@ -47,8 +47,8 @@
 static uip_ipaddr_t server_ipaddr;
 static struct etimer et;
 
-#define NUMBER_OF_URLS 5
-char* service_urls[NUMBER_OF_URLS] = {".well-known/core", "/toggle", "battery/", "poll/me/not", "error/in//path"};
+#define NUMBER_OF_URLS 6
+char* service_urls[NUMBER_OF_URLS] = {".well-known/core", "/toggle", "battery/", "poll/me/not", "error/in//path", "//more/errors//"};
 
 static int uri_switch = 0;
 
