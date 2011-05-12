@@ -41,7 +41,7 @@
 #endif
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    224
+#define UIP_CONF_BUFFER_SIZE    240
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
