@@ -5,7 +5,7 @@ CONTIKI=../../..
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
-#Override inclusion of internal webserver with make WITH_WEBSERVER=0
+# Override inclusion of internal webserver with make WITH_WEBSERVER=0
 WITH_WEBSERVER=1
 
 # radio configuration
@@ -14,6 +14,12 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
+
+# Enables DMA for the MSP430 to fix the problem of losing bytes with much traffic over SLIP
+ifdef DEPLOY
+${info INFO: enabling DMA for deployed border-router}
+CFLAGS += -DCONF_DEPLOY_BR=$(DEPLOY)
+endif
 
 # linker optimizations
 CFLAGS += -ffunction-sections
