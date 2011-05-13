@@ -173,7 +173,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
-	//etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
 	printf_P(PSTR("G01\n"));
 	request_state = auto_temperatures;
@@ -281,13 +281,6 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 	char temp[128];
 	sprintf_P(temp, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 	
-	/*printf_P(PSTR("D\n"));
-	request_state = poll;
-
-	while(request_state != idle){
-		process_post_synch(&honeywell_process, PROCESS_EVENT_CONTINUE, NULL);
-	}*/
-
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
