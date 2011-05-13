@@ -162,12 +162,13 @@ static enum request_type request_state = idle;
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(honeywell_process, ev, data)
 {
+	PROCESS_BEGIN();
+	
 	static struct etimer etimer;
 	int rx;
 	int buf_pos;
 	char buf[128];
 
-	PROCESS_BEGIN();
 
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
@@ -663,6 +664,18 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
+static char * getModeString(int mode){
+	char * string;
+	switch(mode){
+		case 0: string = PSTR("frost"); break;
+		case 1: string = PSTR("energy"); break;
+		case 2: string = PSTR("comfort"); break;
+		case 3: string = PSTR("supercomfort"); break;
+		default: string = PSTR("undefined");
+	}
+	return string;
+}
+
 static void handleTimer(int day, int slot, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_POST){
@@ -720,10 +733,12 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 								success = 0; 
 							}
 							else{
-								//sprintf_P(temp, PSTR("Set timer of day %d in slot %d to the mode %s at time %s"), day, slot, mode, time);
 								request_state = get_timer;
 								printf_P(PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
-								sprintf_P(temp, PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
+								int index = 0;
+								index += sprintf_P(temp + index, PSTR("Set slot %d of "), slot+1);
+								index += sprintf_P(temp + index, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
+								index += sprintf_P(temp + index, PSTR(" to time %02d:%02d and mode %S"), hour, minute, getModeString(level));
 							}
 						}
 						else{
@@ -747,16 +762,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 			sprintf_P(temp, PSTR("disabled"));
 		}
 		else{
-			char * mode;
-			switch(poll_data.timers[day][slot].mode){
-				case 0: mode = PSTR("frost"); break;
-				case 1: mode = PSTR("energy"); break;
-				case 2: mode = PSTR("comfort"); break;
-				case 3: mode = PSTR("supercomfort"); break;
-				default: mode = PSTR("undefined");
-			}
-
-			sprintf_P(temp, PSTR("%S at %02d:%02d"), mode, time/60, time%60 );
+			sprintf_P(temp, PSTR("%S at %02d:%02d"), getModeString(poll_data.timers[day][slot].mode), time/60, time%60 );
 		}
 	}
 
