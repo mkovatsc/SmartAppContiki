@@ -664,6 +664,20 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
+static void handleTopTimer(int day, void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+}
+
+RESOURCE(weektimer, METHOD_GET, "auto/weektimer", "auto/weektimer");
+RESOURCE(daytimer1, METHOD_GET, "auto/daytimer1", "auto/daytimer1");
+
+void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTopTimer(0, request, response, buffer, preferred_size, offset);
+}
+void daytimer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTopTimer(1, request, response, buffer, preferred_size, offset);
+}
+
+
 static char * getModeString(int mode){
 	char * string;
 	switch(mode){
