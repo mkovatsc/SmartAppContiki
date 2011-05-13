@@ -23,16 +23,24 @@ LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 
 # REST framework, requires WITH_COAP
+ifeq ($(WITH_COAP), 3)
+${info INFO: compiling with CoAP-03}
+CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += coap-03
+else ifeq ($(WITH_COAP), 1)
+${info INFO: compiling with rest-CoAP}
+CFLAGS += -DWITH_COAP
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += rest-coap
+else
+${info INFO: compiling with HTTP}
+CFLAGS += -DWITH_HTTP
+CFLAGS += -DUIP_CONF_TCP=1
+APPS += rest-http
+endif
 APPS += rest-common
-include $(CONTIKI)/apps/rest-common/Makefile.rest-common
-
-#ifeq ($WITH_COAP),3)
-#CFLAGS += -DWITH_COAP
-#APPS += rest-coap03
-#else ifeq ($(WITH_COAP),1)
-#CFLAGS += -DWITH_COAP
-#APPS += rest-coap
-#endif
 
 
 # set the baud rate
