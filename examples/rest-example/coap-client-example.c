@@ -35,7 +35,6 @@
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
-int current_tid = 0;
 static uip_ipaddr_t server_ipaddr;
 static struct etimer et;
 
@@ -47,7 +46,7 @@ send_data(void)
 {
   coap_transaction_t *transaction = NULL;
 
-  if ( (transaction = coap_new_transaction(current_tid++, &server_ipaddr, REMOTE_PORT)) )
+  if ( (transaction = coap_new_transaction(coap_get_tid(), &server_ipaddr, REMOTE_PORT)) )
   {
 
     /* prepare response */
@@ -92,12 +91,12 @@ handle_incoming_data()
         {
           PRINTF("  %.*s\n", response->payload_len, response->payload);
         }
-        coap_cancel_transaction_by_tid(response->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(response->tid));
       }
       else if (response->type==COAP_TYPE_RST)
       {
         PRINTF("Received RST %u\n", response->tid);
-        coap_cancel_transaction_by_tid(response->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(response->tid));
       }
       else if (response->type==COAP_TYPE_CON)
       {
@@ -123,9 +122,9 @@ PROCESS_THREAD(coap_client_example, ev, data)
   SENSORS_ACTIVATE(battery_sensor);
 #endif
 
-  current_tid = random_rand();
-
+  /* retransmission timers will be set for this process. */
   coap_register_as_transaction_handler();
+
   coap_init_connection(LOCAL_PORT);
 
   etimer_set(&et, TOGGLE_INTERVAL * CLOCK_SECOND);

@@ -29,7 +29,7 @@ LIST(observers_list);
 
 /*-----------------------------------------------------------------------------------*/
 coap_observer_t *
-coap_add_observer(const char *url, uip_ipaddr_t *addr, uint16_t port, const uint8_t *token, uint8_t token_len)
+coap_add_observer(const char *url, uip_ipaddr_t *addr, uint16_t port, const uint8_t *token, size_t token_len)
 {
   coap_observer_t *o = memb_alloc(&observers_memb);
 
@@ -76,7 +76,7 @@ coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port)
   return removed;
 }
 int
-coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, uint8_t token_len)
+coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, size_t token_len)
 {
   int removed = 0;
   coap_observer_t* obs = NULL;
@@ -93,7 +93,7 @@ coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token,
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, uint16_t payload_len)
+coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, size_t payload_len)
 {
   coap_observer_t* obs = NULL;
   for (obs = (coap_observer_t*)list_head(observers_list); obs; obs = obs->next)
@@ -104,7 +104,7 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
 
       // FIXME CON vs NON, implement special transaction for CON, sharing the same buffer, updating retransmissions with newer notifications, etc.
       //       Maybe even less max retransmissions.
-      if ( (transaction = coap_new_transaction(random_rand(), &obs->addr, obs->port)) )
+      if ( (transaction = coap_new_transaction(coap_get_tid(), &obs->addr, obs->port)) )
       {
         /* Use CON to check whether client is still there/interested after COAP_OBSERVING_REFRESH_INTERVAL. */
         if (stimer_expired(&obs->refresh_timer))

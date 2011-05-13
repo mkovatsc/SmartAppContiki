@@ -85,17 +85,17 @@ coap_send_transaction(coap_transaction_t *t)
       /* handle observers */
       coap_remove_observer_by_client(&t->addr, t->port);
 
-      coap_cancel_transaction(t);
+      coap_clear_transaction(t);
     }
   }
   else
   {
-    coap_cancel_transaction(t);
+    coap_clear_transaction(t);
   }
 }
 
 void
-coap_cancel_transaction(coap_transaction_t *t)
+coap_clear_transaction(coap_transaction_t *t)
 {
   list_remove(transactions_list, t);
 
@@ -104,8 +104,8 @@ coap_cancel_transaction(coap_transaction_t *t)
   memb_free(&transactions_memb, t);
 }
 
-int
-coap_cancel_transaction_by_tid(uint16_t tid)
+coap_transaction_t *
+coap_get_transaction_by_tid(uint16_t tid)
 {
   coap_transaction_t *t = NULL;
 
@@ -113,11 +113,10 @@ coap_cancel_transaction_by_tid(uint16_t tid)
   {
     if (t->tid==tid)
     {
-      coap_cancel_transaction(t);
-      return 1;
+      return t;
     }
   }
-  return 0;
+  return NULL;
 }
 
 void

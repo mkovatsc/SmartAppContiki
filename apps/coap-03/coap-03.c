@@ -43,6 +43,7 @@
 
 
 static struct uip_udp_conn *udp_conn = NULL;
+static uint16_t current_tid = 0;
 
 /*-----------------------------------------------------------------------------------*/
 /*- LOCAL HELP FUNCTIONS ------------------------------------------------------------*/
@@ -61,6 +62,7 @@ bytes_2_uint32(uint8_t *bytes, uint16_t length)
   return var;
 }
 /*-----------------------------------------------------------------------------------*/
+/* Unused in coap-03.
 static
 int
 uint16_2_bytes(uint8_t *bytes, uint16_t var)
@@ -71,6 +73,7 @@ uint16_2_bytes(uint8_t *bytes, uint16_t var)
 
   return i;
 }
+*/
 /*-----------------------------------------------------------------------------------*/
 static
 int
@@ -130,7 +133,16 @@ coap_init_connection(uint16_t port)
   /* new connection with remote host */
   udp_conn = udp_new(NULL, 0, NULL);
   udp_bind(udp_conn, port);
-  PRINTF("Local/remote port %u/%u\n", uip_ntohs(udp_conn->lport), uip_ntohs(udp_conn->rport));
+  PRINTF("Listening on port %u\n", uip_ntohs(udp_conn->lport));
+
+  /* Initialize transaction ID. */
+  current_tid = random_rand();
+}
+/*-----------------------------------------------------------------------------------*/
+uint16_t
+coap_get_tid()
+{
+  return ++current_tid;
 }
 /*-----------------------------------------------------------------------------------*/
 void
@@ -326,8 +338,8 @@ coap_serialize_message(void *packet)
   }
   else
   {
-    ((coap_packet_t *)packet)->code = INTERNAL_SERVER_ERROR_500;
-    ((coap_packet_t *)packet)->payload_len = (uint32_t) snprintf((char *)((coap_packet_t *)packet)->header + COAP_HEADER_LEN, REST_MAX_CHUNK_SIZE+1, "Header (4) and options (%u) exceed COAP_MAX_HEADER_SIZE", (option - ((coap_packet_t *)packet)->header));
+    /* An error occured. Caller must check for !=0. */
+    return 0;
   }
 
   /* set header fields */
@@ -426,7 +438,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
         case COAP_OPTION_TOKEN:
           ((coap_packet_t *)packet)->token_len = MIN(COAP_TOKEN_LEN, option_len);
           memcpy(((coap_packet_t *)packet)->token, option_data, ((coap_packet_t *)packet)->token_len);
-          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0] ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
+          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
           break;
         case COAP_OPTION_BLOCK:
           ((coap_packet_t *)packet)->block_num = bytes_2_uint32(option_data, option_len);
@@ -710,7 +722,7 @@ coap_set_header_uri_query(void *packet, char *query)
 /*- PAYLOAD -------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_payload(void *packet, uint8_t **payload)
+coap_get_payload(void *packet, const uint8_t **payload)
 {
   if (((coap_packet_t *)packet)->payload) {
     *payload = ((coap_packet_t *)packet)->payload;

@@ -49,12 +49,12 @@ const char* error_messages[] = {
   "Memory boundary exceeded",
 
   /* CoAP errors */
-  "Request has unknown critical option" //FIXME which one?
+  "Request has unknown critical option", //FIXME which one?
+  "Packet could not be serialized"
 };
 /*-----------------------------------------------------------------------------------*/
 /*- Variables -----------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-static uint16_t current_tid;
 static service_callback_t service_cbk = NULL;
 /*-----------------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
@@ -165,7 +165,10 @@ handle_incoming_data(void)
               coap_set_payload(response, response->payload, MIN(response->payload_len, REST_MAX_CHUNK_SIZE));
             } /* if (blockwise request) */
 
-            transaction->packet_len = coap_serialize_message(response);
+            if ((transaction->packet_len = coap_serialize_message(response))==0)
+            {
+              error = PACKET_SERIALIZATION_ERROR;
+            }
 
         } else {
             error = MEMORY_ALLOC_ERR;
@@ -181,12 +184,12 @@ handle_incoming_data(void)
       else if (request->type==COAP_TYPE_ACK)
       {
         PRINTF("Received ACK\n");
-        coap_cancel_transaction_by_tid(request->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
       }
       else if (request->type==COAP_TYPE_RST)
       {
         PRINTF("Received RST\n");
-        coap_cancel_transaction_by_tid(request->tid);
+        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
         if (IS_OPTION(request, COAP_OPTION_TOKEN))
         {
           PRINTF("  Token 0x%02X%02X\n", request->token[0], request->token[1]);
@@ -308,7 +311,7 @@ PROCESS_THREAD(coap_server, ev, data)
 #endif
 
   rest_activate_resource(&resource_well_known_core);
-  current_tid = random_rand();
+
   coap_register_as_transaction_handler();
   coap_init_connection(SERVER_LISTEN_PORT);
 

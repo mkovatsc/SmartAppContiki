@@ -184,10 +184,12 @@ typedef enum
   MEMORY_BOUNDARY_EXCEEDED,
 
   /* CoAP errors */
-  UNKNOWN_CRITICAL_OPTION
+  UNKNOWN_CRITICAL_OPTION,
+  PACKET_SERIALIZATION_ERROR
 } error_t;
 
 void coap_init_connection(uint16_t port);
+uint16_t coap_get_tid(void);
 void coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length);
 
 void coap_init_message(void *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
@@ -231,7 +233,7 @@ int coap_set_header_block(void *packet, uint32_t num, uint8_t more, uint16_t siz
 int coap_get_header_uri_query(void *packet, const char **query); // in-place string might not be 0-terminated
 int coap_set_header_uri_query(void *packet, char *query);
 
-int coap_get_payload(void *packet, uint8_t* *payload);
+int coap_get_payload(void *packet, const uint8_t **payload);
 int coap_set_payload(void *packet, uint8_t *payload, size_t length);
 
 #endif /* COAP_03_H_ */
