@@ -8,8 +8,21 @@
 #include "rs232.h"
 #include "ringbuf.h"
 #include "rest.h"
+/*
+#include "UsefulMicropendousDefines.h"
+// set up external SRAM prior to anything else to make sure malloc() has access to it
+void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
+void EnableExternalSRAM(void)
+{
+  PORTE_EXT_SRAM_SETUP;  // set up control port
+  ENABLE_EXT_SRAM;       // enable the external SRAM
+  XMCRA = ((1 << SRE));  // enable XMEM interface with 0 wait states
+  XMCRB = 0;
+  SELECT_EXT_SRAM_BANK0; // select Bank 0
+}
+*/
 
-PROCESS(coap_process, "Coap Handler");
+PROCESS(coap_process, "Coap");
 PROCESS(plogg_process, "Plogg comm");
 
 
@@ -37,9 +50,73 @@ PROCESS(plogg_process, "Plogg comm");
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 static char state = 0;
+static uint8_t poll_number = 0;
+
+static char poll_return[128];
+uint8_t poll_return_index;
 
 static struct {
 	char activated;
+ 	uint16_t date_y;
+ 	char date_m[4];
+ 	uint16_t date_d;
+	uint16_t time_h;
+	uint16_t time_m;
+  uint16_t time_s;
+	uint16_t plogg_time_d;
+	uint16_t plogg_time_h;
+	uint16_t plogg_time_m;
+	uint16_t plogg_time_s;
+	uint16_t equipment_time_d;
+	uint16_t equipment_time_h;
+	uint16_t equipment_time_m;
+	uint16_t equipment_time_s;
+
+	long current_max_value;
+ 	uint16_t current_max_date_y;
+	char current_max_date_m[4];
+ 	uint16_t current_max_date_d;
+	uint16_t current_max_time_h;
+	uint16_t current_max_time_m;
+  uint16_t current_max_time_s;
+
+	long voltage_max_value;
+ 	uint16_t voltage_max_date_y;
+ 	char voltage_max_date_m[4];
+ 	uint16_t voltage_max_date_d;
+	uint16_t voltage_max_time_h;
+	uint16_t voltage_max_time_m;
+  uint16_t voltage_max_time_s;
+	
+	long watts_max_value;
+ 	uint16_t watts_max_date_y;
+ 	char watts_max_date_m[4];
+ 	uint16_t watts_max_date_d;
+	uint16_t watts_max_time_h;
+	uint16_t watts_max_time_m;
+  uint16_t watts_max_time_s;
+
+	long watts_total;
+	unsigned long watts_con;
+	unsigned long watts_gen;
+	long frequency;
+	long current;
+	long voltage;
+	long power_total;
+	unsigned long power_gen;
+	unsigned long power_con;
+	long phase_angle;
+
+	uint16_t tariff_zone;
+	uint16_t tariff0_start;
+	uint16_t tariff0_end;
+	
+	long tariff0;
+	long tariff1;
+	unsigned long tariff0_consumed;
+	unsigned long tariff0_cost;
+	unsigned long tariff1_consumed;
+	unsigned long tariff1_cost;
 
 } poll_data;
 
@@ -56,26 +133,185 @@ static int uart_get_char(unsigned char c)
   return 1;
 }
 
-static void parse_payload(char* payload)
-{
-	
+static long get_signed_pseudo_float_3(char* string){
+	long number=0;
+	char deci = '0';
+	char centi = '0';
+	char mili = '0';
+	sscanf_P(string,PSTR("%ld%*c%c%c%c"),&number, &deci, &centi, &mili);
+	if (number< 0){
+		number *= 1000;
+		if (isdigit(deci)){
+			number -= (deci -'0') * 100;
+			if(isdigit(centi)){
+				number -= (centi - '0') *10;
+				if(isdigit(mili)){
+					number-= (mili - '0');
+				}
+			}
+		}
+	}
+	else {
+		number *= 1000;
+		if (isdigit(deci)){
+			number += (deci -'0') * 100;
+			if(isdigit(centi)){
+				number += (centi - '0')*10;
+				if(isdigit(mili)){
+					number+= (mili - '0');
+				}
+			}
+		}
+	}
+	return number;
+}
 
+static unsigned long get_unsigned_pseudo_float_3(char* string){
+	unsigned long number=0;
+	char deci = '0';
+	char centi = '0';
+	char mili = '0';
+	sscanf_P(string,PSTR("%lu%*c%c%c%c"),&number, &deci, &centi, &mili);
+	number *= 1000;
+	if (isdigit(deci)){
+		number += (deci -'0') * 100;
+		if(isdigit(centi)){
+			number += (centi - '0') * 10;
+			if(isdigit(mili)){
+				number+= (mili - '0');
+			}
+		}
+	}
+	return number;
+}
+
+static void parse_Poll(){
+
+	//printf("%s\r\n",poll_return);
+
+	if( strncmp_P(poll_return,PSTR("Time entry"),10) == 0) {
+		sscanf_P(poll_return+27,PSTR("%u %3s %u %u:%u:%u"),&poll_data.date_y,&poll_data.date_m,&poll_data.date_d,&poll_data.time_h,&poll_data.time_m,&poll_data.time_s);
+		poll_data.date_m[3]='\0';
+		//printf("%u %s %02u\r\n",poll_data.date_y, poll_data.date_m, poll_data.date_d);
+		//printf("%02u:%02u:%02u\r\n",poll_data.time_h,poll_data.time_m,poll_data.time_s);
+	}
+	else if (strncmp_P(poll_return,PSTR("Watts (-Gen +Con)"),17) == 0) {
+		poll_data.watts_total = get_signed_pseudo_float_3(poll_return+27);
+	//	printf("Total Watts: %ld.%03ld\r\n",poll_data.watts_total/1000, (poll_data.watts_total <0 ) ? ((poll_data.watts_total % 1000)*-1) : (poll_data.watts_total %1000) );
+	}
+	
+	else if (strncmp_P(poll_return,PSTR("Cumulative Watts (Gen)"),22) == 0) {
+		poll_data.watts_gen = get_unsigned_pseudo_float_3(poll_return+27);
+	//	printf("Cumulative Watts (gen): %lu.%03lu\r\n",poll_data.watts_gen/1000, poll_data.watts_gen % 1000 );
+	}
+	else if (strncmp_P(poll_return,PSTR("Cumulative Watts (Con)"),22) == 0) {
+		poll_data.watts_con = get_unsigned_pseudo_float_3(poll_return+27);
+	//	printf("Cumulative Watts (con): %lu.%03lu\r\n",poll_data.watts_con/1000, poll_data.watts_con % 1000 );
+	}
+	else if (strncmp_P(poll_return,PSTR("Frequency"),9) == 0){
+		poll_data.frequency = get_signed_pseudo_float_3(poll_return+27);
+		printf("%d", sizeof(poll_data));
+	}
+	else if (strncmp_P(poll_return,PSTR("RMS Voltage"),11) == 0){
+		poll_data.voltage = get_signed_pseudo_float_3(poll_return+27);
+	}
+	else if (strncmp_P(poll_return,PSTR("RMS Current"),11) == 0){
+		poll_data.current = get_signed_pseudo_float_3(poll_return+27);
+	}
+	else if (strncmp_P(poll_return,PSTR("Reactive Power (-G/+C)"),22) == 0){
+		poll_data.power_total = get_signed_pseudo_float_3(poll_return+27);
+	}
+	else if (strncmp_P(poll_return,PSTR("Acc Reactive Pwr (Gen)"),22) == 0){
+		poll_data.power_gen = get_unsigned_pseudo_float_3(poll_return+27);
+	}
+	else if (strncmp_P(poll_return,PSTR("Acc Reactive Pwr (Con)"),22) == 0){
+		poll_data.power_con = get_unsigned_pseudo_float_3(poll_return+27);
+	}
+	else if (strncmp_P(poll_return,PSTR("Phase Angle (V/I)"),17) == 0){
+		poll_data.phase_angle = get_signed_pseudo_float_3(poll_return+27);
+		//printf("Phase: %ld.%03ld\r\n",poll_data.phase_angle/1000, (poll_data.phase_angle <0 ) ? ((poll_data.phase_angle % 1000)*-1) : (poll_data.phase_angle %1000) );
+	}
+	else if (strncmp_P(poll_return,PSTR("Plogg on time"),13) == 0){
+		sscanf_P(poll_return+27,PSTR("%u %*s %u:%u:%u"),&poll_data.plogg_time_d,&poll_data.plogg_time_h,&poll_data.plogg_time_m,&poll_data.plogg_time_s);
+		//printf("%u days %02u:%02u:%02u\r\n",poll_data.plogg_time_d,poll_data.plogg_time_h,poll_data.plogg_time_m,poll_data.plogg_time_s);
+	}
+	else if (strncmp_P(poll_return,PSTR("Equipment on time"),17) == 0){
+		sscanf_P(poll_return+27,PSTR("%u %*s %u:%u:%u"),&poll_data.equipment_time_d,&poll_data.equipment_time_h,&poll_data.equipment_time_m,&poll_data.equipment_time_s);
+		//printf("%u days %02u:%02u:%02u\r\n",poll_data.equipment_time_d,poll_data.equipment_time_h,poll_data.equipment_time_m,poll_data.equipment_time_s);
+	}
+	else if (strncmp_P(poll_return,PSTR("Highest RMS voltage"),19) == 0){
+		poll_data.voltage_max_value = get_signed_pseudo_float_3(poll_return+24);
+		sscanf_P(poll_return+24,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.voltage_max_date_y,&poll_data.voltage_max_date_m,&poll_data.voltage_max_date_d,&poll_data.voltage_max_time_h,&poll_data.voltage_max_time_m,&poll_data.voltage_max_time_s);
+		poll_data.voltage_max_date_m[3]='\0';
+	//	printf("Max Voltage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.voltage_max_value/1000, (poll_data.voltage_max_value <0 ) ? ((poll_data.voltage_max_value % 1000)*-1) : (poll_data.voltage_max_value %1000), poll_data.voltage_max_date_y, poll_data.voltage_max_date_m, poll_data.voltage_max_date_d,poll_data.voltage_max_time_h, poll_data.voltage_max_time_m, poll_data.voltage_max_time_s);
+
+	}
+	else if (strncmp_P(poll_return,PSTR("Highest RMS current"),19) == 0){
+		poll_data.current_max_value = get_signed_pseudo_float_3(poll_return+24);
+
+		sscanf_P(poll_return+24,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.current_max_date_y,&poll_data.current_max_date_m,&poll_data.current_max_date_d,&poll_data.current_max_time_h,&poll_data.current_max_time_m,&poll_data.current_max_time_s);
+		poll_data.current_max_date_m[3]='\0';
+//		printf("Max Current: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
+
+	}
+	else if (strncmp_P(poll_return,PSTR("Highest wattage"),15) == 0){
+		poll_data.watts_max_value = get_signed_pseudo_float_3(poll_return+20);
+		sscanf_P(poll_return+20,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.watts_max_date_y,&poll_data.watts_max_date_m,&poll_data.watts_max_date_d,&poll_data.watts_max_time_h,&poll_data.watts_max_time_m,&poll_data.watts_max_time_s);
+		poll_data.watts_max_date_m[3]='\0';
+//		printf("Max Wattage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
+
+	}
+	else if (strncmp_P(poll_return,PSTR("Timers are currently enabled"),29) == 0){
+		poll_data.activated = 1;
+	}
+	else if (strncmp_P(poll_return,PSTR("Timers are currently disabled"),30) == 0){
+		poll_data.activated = 0;
+	}
+
+	else if (strncmp_P(poll_return,PSTR("Tarrif 0 Cost"),13) == 0){ //Tarrif is not a typo. Plogg returns Tarrif in this case
+		poll_data.tariff0 = get_signed_pseudo_float_3(poll_return+16);
+	}
+
+	else if (strncmp_P(poll_return,PSTR("Tarrif 1 Cost"),13) == 0){//Tarrif is not a typo. Plogg returns Tarrif in this case
+		poll_data.tariff1 = get_signed_pseudo_float_3(poll_return+16);
+	}
+	else if (strncmp_P(poll_return,PSTR("Current tarrif zone"),19)==0){
+		sscanf_P(poll_return+22,PSTR("%d"),&poll_data.tariff_zone);
+	}
+	else if (strncmp_P(poll_return,PSTR("Tariff 0 from"),13) ==0){
+		sscanf_P(poll_return+22,PSTR("%d%*c%d"),&poll_data.tariff0_start,&poll_data.tariff0_end);
+	}
+	else if (strncmp_P(poll_return,PSTR("Tariff0 :"),7)==0){
+		poll_data.tariff0_consumed = get_unsigned_pseudo_float_3(poll_return+12);
+		char* cost = strstr_P(poll_return,PSTR("Cost"));
+		poll_data.tariff0_cost = get_unsigned_pseudo_float_3(cost+5);
+	//	printf("Tariff 0: %lu.%03lukWh Cost: %lu.%02lu\r\n",poll_data.tariff0_consumed/1000, poll_data.tariff0_consumed % 1000,poll_data.tariff0_cost/1000, (poll_data.tariff0_cost % 1000) / 10 );
+
+	}
+	else if (strncmp_P(poll_return,PSTR("Tariff1 :"),7)==0){
+		poll_data.tariff1_consumed = get_unsigned_pseudo_float_3(poll_return+12);
+		char* cost = strstr_P(poll_return,PSTR("Cost"));
+		poll_data.tariff1_cost = get_unsigned_pseudo_float_3(cost+5);
+	}
 
 }
+
+
+
 
 static void ATInterpreterProcessCommand(char* command)
 {
 	// HACK: dummy commands we need to accept
-	if ((strcmp(command, "ATS01=31f4") == 0) ||
-			(strcmp(command, "ATS00=0001") == 0) ||
-			(strcmp(command, "at+dassl") == 0))
+	if ((strcmp_P(command, PSTR("ATS01=31f4")) == 0) ||
+			(strcmp_P(command, PSTR("ATS00=0001")) == 0) ||
+			(strcmp_P(command, PSTR("at+dassl")) == 0))
 	{
 		printf("%s\r\n", AT_RESPONSE_OK);
 	}
 	// we need to process the join command
-	else if (strcmp(command, "at+jn") == 0)
+	else if (strcmp_P(command, PSTR("at+jn")) == 0)
 	{
-		printf("JPAN:11,31F4\r\n");
+		printf_P(PSTR("JPAN:11,31F4\r\n"));
 		printf("%s\r\n", AT_RESPONSE_OK);
 	}
 	// check if the command starts with "AT". if not, we return ERROR
@@ -98,12 +334,12 @@ static void ATInterpreterProcessCommand(char* command)
 	// check if we have an simple "ATZ" command
 	else if (strncmp(command, AT_COMMAND_RESET, strlen(command)) == 0)
 	{
-		printf("Resetting...\r\n%s\r\n", AT_RESPONSE_OK);
+		printf_P(PSTR("Resetting...\r\n%s\r\n"), AT_RESPONSE_OK);
 	}
 	// check if we have a unicast command
 	else if (strncmp(command, AT_COMMAND_UNICAST, strlen(AT_COMMAND_UNICAST)) == 0)
 	{
-		// we need to parse the remaining part
+		// we need to parse the remaining part (payload points  after AT+UCAST:0021ED000004699D,)
 		char* address = &command[strlen(AT_COMMAND_UNICAST)];
 		char* payload = address;
 		while ( *payload != ',' && *payload != '\0' )
@@ -127,7 +363,18 @@ static void ATInterpreterProcessCommand(char* command)
 			}
 		}
 
-		// replace = ~~ with \r\n
+		uint8_t length = strlen(poll_return);
+		strcpy(poll_return+length,payload);
+		while (strstr(poll_return,"~~") != NULL){
+			char * start= strstr(poll_return,"~~");
+			start[0]='\0';
+			parse_Poll();
+			uint8_t rest_length = strlen(start+2);
+			memmove(poll_return,start+2,rest_length+1);
+		}
+
+
+	/*	// replace = ~~ with \r\n
 		int idx = 0;
 		while (payload[idx] != '\0')
 		{
@@ -144,14 +391,12 @@ static void ATInterpreterProcessCommand(char* command)
 			}
 			idx++;
 		}
+*/
+		printf_P(PSTR("+UCAST:00\r\n%s\r\n"), AT_RESPONSE_OK);
 
-		printf("+UCAST:00\r\n%s\r\n", AT_RESPONSE_OK);
-
-		// now we can parse payload and store it
 //		telnet( payload );
-		
 		// HOST is waiting for "ACK:00" or NACK
-		printf("ACK:00\r\n");
+		printf_P(PSTR("ACK:00\r\n"));
 	}
 	else
 	{
@@ -167,7 +412,7 @@ PROCESS_THREAD(plogg_process, ev, data)
   static struct etimer etimer;
   int rx;
   unsigned int buf_pos;
-  char buf[255];
+  char buf[128];
 
   PROCESS_BEGIN();
 
@@ -180,16 +425,35 @@ PROCESS_THREAD(plogg_process, ev, data)
   while (1) {
     PROCESS_WAIT_EVENT();
     if(ev == PROCESS_EVENT_TIMER) {
-     // etimer_reset(&etimer);
-      printf("UCAST:0021ED000004699D=SV\r\n");
+      etimer_reset(&etimer);
+			if (poll_number == 0){
+	      printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+			}
+			else if (poll_number == 1){
+	      printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
+			}
+			else if (poll_number == 2){
+	      printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
+			}
+			else if (poll_number == 3){
+	      printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
+			}
+			else if (poll_number == 4){
+	      printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
+			}
+			else if (poll_number == 5){
+	      printf_P(PSTR("UCAST:0021ED000004699D=SE\r\n"));
+			}
+			poll_number = (poll_number+1) % 6;
+
     } else if (ev == PROCESS_EVENT_MSG) {
       buf_pos = 0;
       while ((rx=ringbuf_get(&uart_buf))!=-1) {
-        if (buf_pos<254 && (char)rx=='\r') {
+        if (buf_pos<126 && (char)rx=='\r') {
           rx = ringbuf_get(&uart_buf);
           if ((char)rx=='\n') {
             buf[buf_pos] = '\0';
-       //     printf("%s\r\n", buf);
+            //printf("%s\r\n", buf);
             ATInterpreterProcessCommand(buf);
             buf_pos = 0;
             continue;
@@ -200,7 +464,7 @@ PROCESS_THREAD(plogg_process, ev, data)
         } else {
           buf[buf_pos++] = (char)rx;
         }
-        if (buf_pos==255) {
+        if (buf_pos==127) {
           buf[buf_pos] = 0;
 //          telnet("ERROR: RX buffer overflow\r\n");
 
@@ -215,40 +479,103 @@ PROCESS_THREAD(plogg_process, ev, data)
 /*_______________________________COAP________________________________________*/
 /*---------------------------------------------------------------------------*/
 
-char temp[100];
 
-/* Resources are defined by RESOURCE macro, signature: resource name, the http methods it handles and its url*/
-RESOURCE(hello, METHOD_GET, "hello");
+/****************************** Reset ****************************************/ 
+RESOURCE(reset, METHOD_POST, "reset");
 
-/* For each resource defined, there corresponds an handler method which should be defined too.
- * Name of the handler method should be [resource name]_handler
- * */
 void
-hello_handler(REQUEST* request, RESPONSE* response)
-{
-  //sprintf(temp,"Two things are infinite: the universe and human stupidity; and I'm not sure about the the universe.\n");
-  sprintf(temp,"Hello World\n");
-	
-  rest_set_header_content_type(response, TEXT_PLAIN);
-  rest_set_response_payload(response, temp , strlen(temp));
+reset_handler(REQUEST* request, RESPONSE* response){
+
+	char temp[50];
+	char section[10];
+	char success=1;
+
+	if (rest_get_post_variable(request, "section", section, 10)){
+		if (!strcmp_P(section, PSTR("cost"))){
+			printf_P(PSTR("UCAST:0021ED000004699D=SC 1\r\n"));
+		}
+		else if(!strcmp_P(section, PSTR("max"))){
+			printf_P(PSTR("UCAST:0021ED000004699D=SM 1\r\n"));
+		}
+
+		else if(!strcmp_P(section, PSTR("acc"))){
+			printf_P(PSTR("UCAST:0021ED000004699D=SR\r\n"));
+		}
+		else if(!strcmp_P(section, PSTR("log"))){
+			printf_P(PSTR("UCAST:0021ED000004699D=SX\r\n"));
+		}
+		else{
+			success=0;
+		}
+	}
+	else{
+		success=0;
+	}
+  if(!success){
+		sprintf_P(temp,PSTR("Section is missing\nTry section=[max,cost,acc]"));
+  	rest_set_header_content_type(response, TEXT_PLAIN);
+  	rest_set_response_payload(response, temp , strlen(temp));
+ 	 	rest_set_response_status(response, BAD_REQUEST_400);
+	}
 }
 
-/*A simple actuator example*/
+/**************************** Max Values *************************************/
+RESOURCE(max, METHOD_GET, "max");
+void
+max_handler(REQUEST* request, RESPONSE* response)
+{
+	char type[10];
+	char reset[5];
+	char temp[100];
+	char success=1;
+	
+	if (rest_get_query_variable(request, "type", type, 10)){
+		if (!strcmp_P(type, PSTR("current"))){
+			sprintf_P(temp,PSTR("Max Current: %ld.%03ld at %u %s %02u %02u:%02u:%02u\n"),poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
+
+		}
+		else if (!strcmp_P(type, PSTR("voltage"))){
+			sprintf_P(temp,PSTR("Max Voltage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\n"),poll_data.voltage_max_value/1000, (poll_data.voltage_max_value <0 ) ? ((poll_data.voltage_max_value % 1000)*-1) : (poll_data.voltage_max_value %1000), poll_data.voltage_max_date_y, poll_data.voltage_max_date_m, poll_data.voltage_max_date_d,poll_data.voltage_max_time_h, poll_data.voltage_max_time_m, poll_data.voltage_max_time_s);
+		}
+		else if (!strcmp_P(type, PSTR("wattage"))){
+			sprintf_P(temp,PSTR("Max Wattage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\n"),poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
+		}
+		else{
+			success=0;
+		}
+	}
+	else{
+		success=0;
+	}
+	if(success){
+  	rest_set_header_content_type(response, TEXT_PLAIN);
+		rest_set_response_payload(response, temp , strlen(temp));
+	}
+	else{
+		sprintf_P(temp,PSTR("Query variable missing or not known\nAppend ?type=[current,voltage,wattage] to url"));
+  	rest_set_header_content_type(response, TEXT_PLAIN);
+  	rest_set_response_payload(response, temp , strlen(temp));
+ 	 	rest_set_response_status(response, BAD_REQUEST_400);
+	}
+}
+
+/************************* Enable/disable Timers ******************************/
 RESOURCE(activate, METHOD_GET | METHOD_POST, "activate");
 void
 activate_handler(REQUEST* request, RESPONSE* response)
 {
   char state[5];
   char success = 1;
+	char temp[50];
 	if (rest_get_method_type(request) == METHOD_GET){
 		if (poll_data.activated){
-	  	sprintf(temp,"Timers are enabled\n");
+	  	sprintf_P(temp,PSTR("Timers are enabled\n"));
 		}
 		else{
-	  	sprintf(temp,"Timers are disabled\n");
+	  	sprintf_P(temp,PSTR("Timers are disabled\n"));
 		}
   	rest_set_header_content_type(response, TEXT_PLAIN);
- 		rest_set_response_payload(response, temp , strlen(temp));
+ 		rest_set_response_payload(response, temp, strlen(temp));
 
 	}
 	else{
@@ -256,12 +583,10 @@ activate_handler(REQUEST* request, RESPONSE* response)
 			if(!strcmp(state,"on")){
 	 	    Led2_on();
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 1\r\n"));
-				poll_data.activated=1;
 			}
 			else if(!strcmp(state, "off")){
 	 	    Led2_off();
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
-				poll_data.activated=0;
 			}
  			else{
 	 	   	success = 0;
@@ -276,13 +601,14 @@ activate_handler(REQUEST* request, RESPONSE* response)
 	}
 }
 
-/****************Date & Time******************************/
+/***************************** Date & Time ***********************************/
 RESOURCE(clock, METHOD_GET, "clock");
 void
 clock_handler(REQUEST* request, RESPONSE* response){
+	char temp[100];
 	int index = 0;
-  index += sprintf(temp + index, "%s,", "</clock/time>;rt=\"Time\"");
-  index += sprintf(temp + index, "%s", "</clock/date>;rt=\"Date\"");
+  index += sprintf_P(temp + index, PSTR("</clock/time>,"));
+  index += sprintf_P(temp + index, PSTR("</clock/date>"));
 	
   rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
   rest_set_response_payload(response, temp , strlen(temp));
@@ -292,18 +618,16 @@ clock_handler(REQUEST* request, RESPONSE* response){
 RESOURCE(time, METHOD_GET | METHOD_POST, "clock/time");
 void
 time_handler(REQUEST* request, RESPONSE* response){
-	
+
+	char temp[100];
 	char success = 1;
-	int index = 0;
 	char time[10];
 	int hour, min;
 
 	if (rest_get_method_type(request) == METHOD_GET){
-		success = 0;
-		sprintf_P(temp + index, PSTR("Not yet implemented\n"));
+		sprintf_P(temp,PSTR("Time: %02d:%02d:%02d\n"), poll_data.time_h,poll_data.time_m,poll_data.time_s);
   	rest_set_header_content_type(response, TEXT_PLAIN);
  		rest_set_response_payload(response, temp , strlen(temp));
- 		rest_set_response_status(response, BAD_REQUEST_400);
 	}
 	else{
 	  if (rest_get_post_variable(request, "value", time, 6)){
@@ -321,10 +645,10 @@ time_handler(REQUEST* request, RESPONSE* response){
 		}
 
 	 	if (success){
-			printf("UCAST:0021ED000004699D=rtt%02i.%02i.00\r\n",hour,min);
+			printf_P(PSTR("UCAST:0021ED000004699D=rtt%02i.%02i.00\r\n"),hour,min);
 		}
 		else{
-			sprintf_P(temp + index, PSTR("Excpected Format: value=hh:mm\n"));
+			sprintf_P(temp, PSTR("Excpected Format: value=hh:mm\n"));
   		rest_set_header_content_type(response, TEXT_PLAIN);
  			rest_set_response_payload(response, temp , strlen(temp));
  		  rest_set_response_status(response, BAD_REQUEST_400);
@@ -336,18 +660,16 @@ time_handler(REQUEST* request, RESPONSE* response){
 RESOURCE(date, METHOD_GET | METHOD_POST, "clock/date");
 void
 date_handler(REQUEST* request, RESPONSE* response){
-	
+		
+	char temp[100];
 	char success = 1;
-	int index = 0;
 	char date[10];
 	int month, day, year;
 
 	if (rest_get_method_type(request) == METHOD_GET){
-		success = 0;
-		sprintf_P(temp + index, PSTR("Not yet implemented\n"));
+		sprintf_P(temp, PSTR("Date: %02d %s %d\n"),poll_data.date_d,poll_data.date_m,poll_data.date_y);
   	rest_set_header_content_type(response, TEXT_PLAIN);
  		rest_set_response_payload(response, temp , strlen(temp));
- 		rest_set_response_status(response, BAD_REQUEST_400);
 	}
 	else{
 	  if (rest_get_post_variable(request, "value", date, 9)){
@@ -378,10 +700,10 @@ date_handler(REQUEST* request, RESPONSE* response){
 		}
 
 	 	if (success){
-			printf("UCAST:0021ED000004699D=rtd%02i.%02i.%02i\r\n",year,month,day);
+			printf_P(PSTR("UCAST:0021ED000004699D=rtd%02i.%02i.%02i\r\n"),year,month,day);
 		}
 		else{
-			sprintf_P(temp + index, PSTR("Excpected Format: value=dd.mm.yy\n"));
+			sprintf_P(temp, PSTR("Excpected Format: value=dd.mm.yy\n"));
   		rest_set_header_content_type(response, TEXT_PLAIN);
  			rest_set_response_payload(response, temp , strlen(temp));
  		  rest_set_response_status(response, BAD_REQUEST_400);
@@ -394,10 +716,12 @@ date_handler(REQUEST* request, RESPONSE* response){
 RESOURCE(discover, METHOD_GET, ".well-known/core");
 void
 discover_handler(REQUEST* request, RESPONSE* response){
+	char temp[100];
   int index = 0;
-  index += sprintf(temp + index, "%s,", "</activate>;rt=\"Activate\"");
-  index += sprintf(temp + index, "%s,", "</clock>;rt=\"Clock\"");
-  index += sprintf(temp + index, "%s", "</dummy>;rt=\"Dummy\"");
+  index += sprintf_P(temp + index, PSTR("</max>,"));
+  index += sprintf_P(temp + index, PSTR("</activate>,"));
+  index += sprintf_P(temp + index, PSTR("</clock>,"));
+  index += sprintf_P(temp + index, PSTR("</reset>"));
   rest_set_response_payload(response, temp, strlen(temp));
   rest_set_header_content_type(response, APPLICATION_LINK_FORMAT);
 
@@ -414,9 +738,60 @@ PROCESS_THREAD(coap_process, ev, data)
   rest_activate_resource(&resource_date);
 	rest_activate_resource(&resource_activate);
   rest_activate_resource(&resource_discover);
+  rest_activate_resource(&resource_max);
+  rest_activate_resource(&resource_reset);
 
-	//initialize poll_data struct
+	strcpy_P(poll_return,PSTR("\0"));
 	poll_data.activated=0;
+ 	poll_data.date_y=0;
+	strcpy_P(poll_data.date_m,PSTR("\0"));
+ 	poll_data.date_d=0;
+	poll_data.time_h=0;
+	poll_data.time_m=0;
+  poll_data.time_s=0;
+	poll_data.watts_total=0;
+	poll_data.watts_con=0;
+	poll_data.watts_gen=0;
+	poll_data.frequency=0;
+	poll_data.current=0;
+	poll_data.voltage=0;
+	poll_data.power_total=0;
+	poll_data.power_gen=0;
+	poll_data.power_con=0;
+	poll_data.phase_angle=0;
+	poll_data.plogg_time_d=0;
+	poll_data.plogg_time_h=0;
+	poll_data.plogg_time_m=0;
+	poll_data.plogg_time_s=0;
+	poll_data.equipment_time_d=0;
+	poll_data.equipment_time_h=0;
+	poll_data.equipment_time_m=0;
+	poll_data.equipment_time_s=0;
+
+	poll_data.current_max_value=0;
+	poll_data.current_max_date_y=0;
+	strcpy_P(poll_data.current_max_date_m,PSTR("\0"));
+ 	poll_data.current_max_date_d=0;
+	poll_data.current_max_time_h=0;
+	poll_data.current_max_time_m=0;
+	poll_data.current_max_time_s=0;
+
+	poll_data.voltage_max_value=0;
+ 	poll_data.voltage_max_date_y=0;
+	strcpy_P(poll_data.voltage_max_date_m,PSTR("\0"));
+ 	poll_data.voltage_max_date_d=0;
+	poll_data.voltage_max_time_h=0;
+	poll_data.voltage_max_time_m=0;
+  poll_data.voltage_max_time_s=0;
+	
+	poll_data.watts_max_value=0;
+ 	poll_data.watts_max_date_y=0;
+	strcpy_P(poll_data.watts_max_date_m,PSTR("\0"));
+ 	poll_data.watts_max_date_d=0;
+	poll_data.watts_max_time_h=0;
+	poll_data.watts_max_time_m=0;
+  poll_data.watts_max_time_s=0;
+
 
   PROCESS_END();
 }
