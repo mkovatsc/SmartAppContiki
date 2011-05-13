@@ -5,7 +5,7 @@ CONTIKI = ../..
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
-WITH_COAP=1
+WITH_COAP=3
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
@@ -21,13 +21,18 @@ LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 #extmem
 LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
-ifeq ($WITH_COAP),3)
-CFLAGS += -DWITH_COAP
-APPS += rest-coap03
-else ifeq ($(WITH_COAP),1)
-CFLAGS += -DWITH_COAP
-APPS += rest-coap
-endif
+
+# REST framework, requires WITH_COAP
+APPS += rest-common
+include $(CONTIKI)/apps/rest-common/Makefile.rest-common
+
+#ifeq ($WITH_COAP),3)
+#CFLAGS += -DWITH_COAP
+#APPS += rest-coap03
+#else ifeq ($(WITH_COAP),1)
+#CFLAGS += -DWITH_COAP
+#APPS += rest-coap
+#endif
 
 
 # set the baud rate
