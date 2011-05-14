@@ -142,7 +142,9 @@ coap_init_connection(uint16_t port)
 uint16_t
 coap_get_tid()
 {
-  return ++current_tid;
+  ++current_tid;
+  PRINTF("Get TID %u\n", current_tid);
+  return current_tid;
 }
 /*-----------------------------------------------------------------------------------*/
 void
@@ -348,6 +350,9 @@ coap_serialize_message(void *packet, uint8_t *buffer)
 error_t
 coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 {
+  /* Initialize packet */
+  memset(packet, 0, sizeof(coap_packet_t));
+
   /* pointer to packet bytes */
   ((coap_packet_t *)packet)->buffer = data;
 

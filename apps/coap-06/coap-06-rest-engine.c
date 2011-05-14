@@ -93,7 +93,7 @@ handle_incoming_data(void)
     PRINTBITS(data, data_len);
     PRINTF("\n");
 
-    coap_packet_t request[1] = {{0}};
+    coap_packet_t request[1];
     coap_transaction_t *transaction = NULL;
 
     coap_error_code = coap_parse_message(request, data, data_len);
@@ -208,8 +208,18 @@ handle_incoming_data(void)
       else if (request->type==COAP_TYPE_ACK)
       {
         PRINTF("Received ACK %u\n", request->tid);
-        /* Clean up afterwards. */
-        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
+
+        coap_transaction_t *t = coap_get_transaction_by_tid(request->tid);
+
+        /* Free transaction memory before callback, as it may create a new transaction. */
+        restful_response_handler callback = t->callback;
+        void *callback_data = t->callback_data;
+        coap_clear_transaction(t);
+
+        /* Check if someone registered for the response */
+        if (callback) {
+          callback(callback_data, message);
+        }
       }
       else if (request->type==COAP_TYPE_RST)
       {
@@ -340,6 +350,8 @@ coap_get_rest_method(void *packet)
   return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
 }
 /*-----------------------------------------------------------------------------------*/
+/*- Server part ---------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
@@ -369,6 +381,63 @@ PROCESS_THREAD(coap_server, ev, data)
 
   PROCESS_END();
 }
+/*-----------------------------------------------------------------------------------*/
+/*- Client part ---------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
+void blocking_request_callback(void *callback_data, void *response) {
+  struct request_state_t *state = (struct request_state_t *) callback_data;
+  state->response = (coap_packet_t*) response;
+  process_poll(state->process);
+}
+/*-----------------------------------------------------------------------------------*/
+PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t ev,
+                                uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
+                                coap_packet_t *request,
+                                blocking_response_handler request_callback)) {
+
+  PT_BEGIN(&state->pt);
+
+  state->block_num = 0;
+  state->response = NULL;
+  state->process = PROCESS_CURRENT();
+
+  uint8_t more;
+  uint32_t res_block;
+  do {
+    extern char elf_filename[];
+    request->tid = coap_get_tid();
+    if ((state->transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port)))
+    {
+      state->transaction->callback = blocking_request_callback;
+      state->transaction->callback_data = state;
+
+      coap_set_header_block(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+
+      state->transaction->packet_len = coap_serialize_message(request, state->transaction->packet);
+
+      PRINTF("Sending #%lu (%u bytes)\n", state->block_num, state->transaction->packet_len);
+      coap_send_transaction(state->transaction);
+
+      PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
+
+      coap_get_header_block(state->response, &res_block, &more, NULL, NULL);
+      if (res_block==state->block_num)
+      {
+        request_callback(state->response);
+        state->block_num++;
+      }
+    }
+    else
+    {
+      PRINTF("Could not allocate transaction");
+      PT_EXIT(&state->pt);
+    }
+  } while (more);
+
+  PT_END(&state->pt);
+}
+/*-----------------------------------------------------------------------------------*/
+/*- Engine Interface ----------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 const struct rest_implementation coap_rest_implementation = {
   "CoAP-06",

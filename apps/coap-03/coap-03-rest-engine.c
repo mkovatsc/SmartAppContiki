@@ -4,9 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "coap-03-rest-server.h"
-#include "coap-03-transactions.h"
-#include "coap-03-observing.h"
+#include "coap-03-rest-engine.h"
 
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
 #include "static-routing.h"
@@ -78,10 +76,10 @@ handle_incoming_data(void)
     PRINTBITS(data, data_len);
     PRINTF("\n");
 
-    coap_packet_t request[1] = {{0}};
+    coap_packet_t message[1];
     coap_transaction_t *transaction = NULL;
 
-    error = coap_parse_message(request, data, data_len);
+    error = coap_parse_message(message, data, data_len);
 
     if (error==NO_ERROR)
     {
@@ -89,14 +87,15 @@ handle_incoming_data(void)
       // FIXME
       // duplicates suppression
 
-      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
-      PRINTF("  URL: %.*s\n", request->uri_path_len, request->uri_path);
-      PRINTF("  Payload: %.*s\n", request->payload_len, request->payload);
+      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", message->version, message->type, message->option_count, message->code, message->tid);
+      PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
+      PRINTF("  Payload: %.*s\n", message->payload_len, message->payload);
 
-      if (request->type==COAP_TYPE_CON)
+      /* Handle requests. */
+      if (message->code >= COAP_GET && message->code <= COAP_DELETE)
       {
         /* Use transaction buffer for response to confirmable request. */
-        if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+        if ( (transaction = coap_new_transaction(message->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
         {
             uint32_t block_num = 0;
             uint16_t block_size = REST_MAX_CHUNK_SIZE;
@@ -105,17 +104,26 @@ handle_incoming_data(void)
 
             /* prepare response */
             coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
-            coap_init_message(response, COAP_TYPE_ACK, OK_200, request->tid);
+            if (message->type==COAP_TYPE_CON)
+            {
+              /* Reliable CON requests are answered with an ACK. */
+              coap_init_message(response, COAP_TYPE_ACK, OK_200, message->tid);
+            }
+            else
+            {
+              /* Unreliable NON requests are answered with a NON as well. */
+              coap_init_message(response, COAP_TYPE_NON, OK_200, coap_get_tid());
+            }
 
             /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
-            if (IS_OPTION(request, COAP_OPTION_TOKEN))
+            if (IS_OPTION(message, COAP_OPTION_TOKEN))
             {
-                coap_set_header_token(response, request->token, request->token_len);
+                coap_set_header_token(response, message->token, message->token_len);
                 SET_OPTION(response, COAP_OPTION_TOKEN);
             }
 
             /* get offset for blockwise transfers */
-            if (coap_get_header_block(request, &block_num, NULL, &block_size, &block_offset))
+            if (coap_get_header_block(message, &block_num, NULL, &block_size, &block_offset))
             {
                 PRINTF("Blockwise: block request %lu (%u/%u) @ %lu bytes\n", block_num, block_size, REST_MAX_CHUNK_SIZE, block_offset);
                 block_size = MIN(block_size, REST_MAX_CHUNK_SIZE);
@@ -126,13 +134,13 @@ handle_incoming_data(void)
             /* call application-specific handler        */
             /*------------------------------------------*/
             if (service_cbk) {
-              service_cbk(request, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset);
+              service_cbk(message, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset);
             }
             /*------------------------------------------*/
 
 
             /* apply blockwise transfers */
-            if ( IS_OPTION(request, COAP_OPTION_BLOCK) ) //|| new_offset!=0 && new_offset!=block_offset
+            if ( IS_OPTION(message, COAP_OPTION_BLOCK) ) //|| new_offset!=0 && new_offset!=block_offset
             {
               /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
               if (new_offset==block_offset)
@@ -174,27 +182,33 @@ handle_incoming_data(void)
             error = MEMORY_ALLOC_ERR;
         }
       }
-      else if (request->type==COAP_TYPE_NON)
-      {
-        /* Call application-specific handler without response. */
-        if (service_cbk) {
-          service_cbk(request, NULL, NULL, 0, 0);
-        }
-      }
-      else if (request->type==COAP_TYPE_ACK)
+      else if (message->type==COAP_TYPE_ACK)
       {
         PRINTF("Received ACK\n");
-        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
+
+        coap_transaction_t *t = coap_get_transaction_by_tid(message->tid);
+
+        /* Free transaction memory before callback, as it may create a new transaction. */
+        restful_response_handler callback = t->callback;
+        void *callback_data = t->callback_data;
+        coap_clear_transaction(t);
+
+        /* Check if someone registered for the response */
+        if (callback) {
+          callback(callback_data, message);
+        }
       }
-      else if (request->type==COAP_TYPE_RST)
+      else if (message->type==COAP_TYPE_RST)
       {
         PRINTF("Received RST\n");
-        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
-        if (IS_OPTION(request, COAP_OPTION_TOKEN))
+        coap_clear_transaction(coap_get_transaction_by_tid(message->tid));
+        if (IS_OPTION(message, COAP_OPTION_TOKEN))
         {
-          PRINTF("  Token 0x%02X%02X\n", request->token[0], request->token[1]);
-          coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->token, request->token_len);
+          PRINTF("  Token 0x%02X%02X\n", message->token[0], message->token[1]);
+          coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, message->token, message->token_len);
         }
+        /* Clean up afterwards. RST might be response to NON, so coap_get_transaction_by_tid() might return NULL.  */
+        coap_clear_transaction(coap_get_transaction_by_tid(message->tid));
       }
     } /* if (parsed correctly) */
 
@@ -206,9 +220,9 @@ handle_incoming_data(void)
       PRINTF("ERROR %u: %s\n", error, error_messages[error]);
 
       /* reuse input buffer */
-      coap_init_message(request, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, request->tid);
-      coap_set_payload(request, (uint8_t *) error_messages[error], strlen(error_messages[error]));
-      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(request, data));
+      coap_init_message(message, COAP_TYPE_ACK, INTERNAL_SERVER_ERROR_500, message->tid);
+      coap_set_payload(message, (uint8_t *) error_messages[error], strlen(error_messages[error]));
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(message, data));
     }
   } /* if (new data) */
 
@@ -306,6 +320,8 @@ coap_get_rest_method(void *packet)
   return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
 }
 /*-----------------------------------------------------------------------------------*/
+/*- Server part ---------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
@@ -335,6 +351,66 @@ PROCESS_THREAD(coap_server, ev, data)
 
   PROCESS_END();
 }
+/*-----------------------------------------------------------------------------------*/
+/*- Client part ---------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
+void blocking_request_callback(void *callback_data, void *response) {
+  struct request_state_t *state = (struct request_state_t *) callback_data;
+  state->response = (coap_packet_t*) response;
+  process_poll(state->process);
+}
+
+PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t ev,
+                                uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
+                                coap_packet_t *request,
+                                blocking_response_handler request_callback)) {
+
+  PT_BEGIN(&state->pt);
+
+  state->block_num = 0;
+  state->response = NULL;
+  state->process = PROCESS_CURRENT();
+
+  uint8_t more = 0;
+  uint32_t res_block = 0;
+  do {
+    extern char elf_filename[];
+    request->tid = coap_get_tid();
+    if ((state->transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port)))
+    {
+      state->transaction->callback = blocking_request_callback;
+      state->transaction->callback_data = state;
+
+      coap_set_header_block(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+
+      state->transaction->packet_len = coap_serialize_message(request, state->transaction->packet);
+
+      printf("Sending #%lu (%u bytes)\n", state->block_num, state->transaction->packet_len);
+      coap_send_transaction(state->transaction);
+
+      PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
+
+      coap_get_header_block(state->response, &res_block, &more, NULL, NULL);
+
+      printf("Got block %lu%s\n", res_block, more ? "+" : "");
+
+      if (res_block==state->block_num)
+      {
+        request_callback(state->response);
+        state->block_num++;
+      }
+    }
+    else
+    {
+        printf("Could not allocate transaction");
+      PT_EXIT(&state->pt);
+    }
+  } while (more);
+
+  PT_END(&state->pt);
+}
+/*-----------------------------------------------------------------------------------*/
+/*- Engine Interface ----------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 const struct rest_implementation coap_rest_implementation = {
     "CoAP-03",

@@ -8,6 +8,7 @@
 #ifndef COAP_TRANSACTIONS_H_
 #define COAP_TRANSACTIONS_H_
 
+#include "rest.h"
 #include "coap-03.h"
 
 /*
@@ -16,8 +17,6 @@
 #ifndef COAP_MAX_OPEN_TRANSACTIONS
 #define COAP_MAX_OPEN_TRANSACTIONS  4
 #endif /* COAP_MAX_OPEN_TRANSACTIONS */
-
-#include "coap-03.h"
 
 /* container for transactions with message buffer and retransmission info */
 typedef struct coap_transaction {
@@ -29,6 +28,9 @@ typedef struct coap_transaction {
 
   uip_ipaddr_t addr;
   uint16_t port;
+
+  restful_response_handler callback;
+  void *callback_data;
 
   uint16_t packet_len;
   uint8_t packet[COAP_MAX_PACKET_SIZE+1]; /* +1 for the terminating '\0' to simply and savely use snprintf(buf, len+1, "", ...) in the resource handler. */
