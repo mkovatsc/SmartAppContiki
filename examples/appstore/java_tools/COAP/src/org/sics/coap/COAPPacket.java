@@ -11,11 +11,6 @@ import java.util.Map;
 
 public class COAPPacket {
 
-  // public static final Charset DEFAULT_CHARSET = Charset.forName("US-ASCII");
-  // public static final byte MSG_TYPE_REQUEST = 0x0;
-  // public static final byte MSG_TYPE_RESPONSE = 0x1;
-  // public static final byte MSG_TYPE_NOTIFY = 0x2;
-
   public static final byte MSG_TYPE_CONFIRMABLE = 0x0;
   public static final byte MSG_TYPE_NON_CONFIRMABLE = 0x1;
   public static final byte MSG_TYPE_ACKNOWLEDGMENT = 0x2;
@@ -45,6 +40,7 @@ public class COAPPacket {
   public static final byte OPTION_BLOCK2 = 17;
   
   
+  private int draft = 6;
 
   private byte version = 1;
   private byte type = MSG_TYPE_CONFIRMABLE;
@@ -151,7 +147,8 @@ public class COAPPacket {
     }
   }
 
-  public COAPPacket() {
+  public COAPPacket(int draft) {
+	  this.draft = draft;
   }
 
   // public COAPPacket(byte[] rawData) throws COAPException {
@@ -159,7 +156,9 @@ public class COAPPacket {
   // readFrom(inputStream);
   // }
 
-  public COAPPacket(byte[] rawData, int length) throws COAPException {
+  public COAPPacket(int draft, byte[] rawData, int length) throws COAPException {
+	this.draft = draft;
+	  
     ByteArrayInputStream inputStream = new ByteArrayInputStream(rawData, 0,
         length);
     readFrom(inputStream);
@@ -210,7 +209,7 @@ public class COAPPacket {
       transationId = inputStream.read() << 8;
       transationId = transationId | inputStream.read();
 
-      System.out.println("# of options :" + options);
+      //System.out.println("# of options :" + options);
 
       // read options
       byte hdrType = 0;
@@ -218,7 +217,7 @@ public class COAPPacket {
           tempByte = inputStream.read();
           byte delta = (byte) ((tempByte >> 0x4) & 0xF);
           hdrType += delta;
-          System.out.println("Option "+hdrType + " (delta "+delta+")");
+          //System.out.println("Option "+hdrType + " (delta "+delta+")");
           int hdrLen = tempByte & 0x0F;
           //System.out.println(" hdrLen1: " + hdrLen);
           if (hdrLen == 0xF) {
@@ -336,22 +335,18 @@ public class COAPPacket {
     public int number;
     public boolean more;
     public int size;
-    public int version;
     
-    public Block(int option, int ver) {
+    public Block(int option) {
       this.option = option;
       number = (option >> 4);
       byte temp = (byte) (option & 0xF);
       this.more = ((temp >> 3) != 0);
       this.size = 16 << (temp & 0x7);
       
-      System.out.println("SZX "+(temp & 0x7)+" = "+this.size);
-      
-      this.version = ver;
-      System.out.println("BlockO: " + option + " number: " + number + " more:" + more + " size:" + size);
+      //System.out.println("BlockO: " + option + " number: " + number + " more:" + more + " size:" + size);
     }
     
-    public Block(int number, boolean more, int size, int ver) {
+    public Block(int number, boolean more, int size) {
 	  this.number = number;
 	  this.more = more;
       this.size = size;
@@ -366,46 +361,42 @@ public class COAPPacket {
       
       this.option |= size;
       
-      this.version = ver;
-      System.out.println("BlockI: " + this.option + " ("+this.number+"/"+more+"/"+this.size+")");
+      //System.out.println("BlockI: " + this.option + " ("+this.number+"/"+more+"/"+this.size+")");
     }
   }
   
   public Block getHeaderBlock() {
-    Integer value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK));
+    Integer value;
+	if (this.draft==6) {
+		value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK2));
+	} else {
+		value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK));
+	}
     if (value != null) {
-    	System.out.println("VER 3: "+Integer.toHexString(value));
-      return new Block(value, 3);
+      return new Block(value);
     } else {
-	  value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK2));
-	  if (value != null) {
-		System.out.println("VER 6: "+Integer.toHexString(value));
-        return new Block(value, 6);
-      } else {
-    	return new Block(0, 6);
-      }
+    	return new Block(0);
     }
   }
 
   public void setHeaderBlock(Block block) {
-	  System.out.println("SETTING "+(16 << (block.option & 0x7))+" = "+block.size);
-	  if (block.version==6) {
+	  if (this.draft==6) {
 		  headerOptions.put(COAPPacket.OPTION_BLOCK2, writeVariableUInt(block.option));
 	  } else {
 		  headerOptions.put(COAPPacket.OPTION_BLOCK, writeVariableUInt(block.option));
 	  }
   }
 
-   public COAPPacket createResponse() {
-     return createResponse(Code._200_OK);
+   public COAPPacket createResponse(int draft) {
+     return createResponse(draft, Code._200_OK);
    }
   
-   public COAPPacket createResponse(Code responseCode) {
+   public COAPPacket createResponse(int draft, Code responseCode) {
      if (this.getType() != COAPPacket.MSG_TYPE_CONFIRMABLE) {
        return null;
      }
      
-     COAPPacket response = new COAPPacket();
+     COAPPacket response = new COAPPacket(draft);
      response.setTransactionId(this.transationId);
      response.setType(COAPPacket.MSG_TYPE_ACKNOWLEDGMENT);
      response.setCode(responseCode);
@@ -483,10 +474,10 @@ public class COAPPacket {
     	  delta += 14 - delta%14;
     	  ++options;
     	  
-    	  System.out.println("OPTION 14");
+    	  //System.out.println("OPTION 14");
         }
         
-        System.out.println("OPTION "+optType+" ("+optLen+")");
+        //System.out.println("OPTION "+optType+" ("+optLen+")");
 
         tempByte = (optType - delta) << 4;
         delta = optType;

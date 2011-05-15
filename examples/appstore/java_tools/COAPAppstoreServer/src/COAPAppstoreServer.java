@@ -27,6 +27,8 @@ public class COAPAppstoreServer implements Runnable {
   private String coapResource;
   private boolean repeat;
   
+  private int draft = 6;
+  
   public static byte[] getBytesFromFile(File file) throws IOException {
     InputStream is = new FileInputStream(file);
 
@@ -60,7 +62,8 @@ public class COAPAppstoreServer implements Runnable {
 
 
   
-  public COAPAppstoreServer(String coapResource, int port, boolean repeat) throws SocketException {
+  public COAPAppstoreServer(int draft, String coapResource, int port, boolean repeat) throws SocketException {
+	  this.draft = draft;
 	  this.coapResource = coapResource;
 	  this.repeat = repeat;
     datagramSocket = new DatagramSocket(port);
@@ -78,7 +81,7 @@ public class COAPAppstoreServer implements Runnable {
     while (true) {
     	try {
     		DatagramPacket p = packetQueue.take();
-    		COAPPacket coapPacket = new COAPPacket(p.getData(), p.getLength());
+    		COAPPacket coapPacket = new COAPPacket(this.draft, p.getData(), p.getLength());
     		System.out.println("COAP_SERVER: received " + coapPacket);
 
     		if (coapPacket.getType() == COAPPacket.MSG_TYPE_CONFIRMABLE || coapPacket.getType() == COAPPacket.MSG_TYPE_NON_CONFIRMABLE) {
@@ -88,7 +91,7 @@ public class COAPAppstoreServer implements Runnable {
     			COAPPacket response = null;
     			if (this.coapResource.equals(uri)){
     				if (this.coapResource.equals("notify")) {
-    					response = request.createResponse();
+    					response = request.createResponse(this.draft);
     					response.setPayload("Well done!");
     					response.setCode(COAPPacket.Code._200_OK);
     					response.setHeaderContentType(ContentType.TEXT_PLAIN);
@@ -100,7 +103,7 @@ public class COAPAppstoreServer implements Runnable {
     						elf_binary = getBytesFromFile(elf_file);
     					}
 
-    					response = request.createResponse();
+    					response = request.createResponse(this.draft);
     					Block incBlock = request.getHeaderBlock();
     					byte [] outPayload = null;
     					int blocknum = incBlock == null ? 0 : incBlock.number;
@@ -126,9 +129,9 @@ public class COAPAppstoreServer implements Runnable {
     						}
 
     						if (islast) {
-    							outBlock = response.new Block(blocknum, false, 64, incBlock.version);
+    							outBlock = response.new Block(blocknum, false, 64);
     						} else {
-    							outBlock = response.new Block(blocknum, true, 64, incBlock.version);
+    							outBlock = response.new Block(blocknum, true, 64);
     						}
     						System.out.println("OUTBLOCK "+outBlock.size);
 
@@ -138,20 +141,20 @@ public class COAPAppstoreServer implements Runnable {
     	    				System.out.println("COAP_SERVER: packing     " + response);
     						response.setPayload(outPayload);
     					} else {
-    						outBlock = response.new Block(blocknum, false, 64, 6);
-    						response = request.createResponse(Code._404_NOT_FOUND);
+    						outBlock = response.new Block(blocknum, false, 64);
+    						response = request.createResponse(this.draft, Code._404_NOT_FOUND);
     						response.setHeaderBlock(outBlock);
     					}
     				} else {
-    					response = request.createResponse(Code._404_NOT_FOUND);
+    					response = request.createResponse(this.draft, Code._404_NOT_FOUND);
     				}
     			} else {
-    				response = request.createResponse(Code._404_NOT_FOUND);
+    				response = request.createResponse(this.draft, Code._404_NOT_FOUND);
     			}
 
     			if (coapPacket.getType() == COAPPacket.MSG_TYPE_CONFIRMABLE) {
     				if (response == null) {
-    					response = request.createResponse(Code._500_INTERNAL_SERVER_ERROR);
+    					response = request.createResponse(this.draft, Code._500_INTERNAL_SERVER_ERROR);
     				}
     				System.out.println("SENDING");
     				System.out.println("COAP_SERVER: sent     " + response);
@@ -179,7 +182,7 @@ public class COAPAppstoreServer implements Runnable {
 }
   
   private COAPPacket testResource(COAPPacket request) throws COAPException {
-    COAPPacket response = request.createResponse();
+    COAPPacket response = request.createResponse(this.draft);
 
     switch (request.getMethod()) {
         case GET:
@@ -211,10 +214,10 @@ public class COAPAppstoreServer implements Runnable {
       }
     }
     
-    private static void runNodeEmulator(String coapResource, int coapServerPort, boolean repeat) {
+    private static void runNodeEmulator(int draft, String coapResource, int coapServerPort, boolean repeat) {
       COAPAppstoreServer nodeEmulator = null;
       try {
-          nodeEmulator = new COAPAppstoreServer(coapResource, coapServerPort, repeat);
+          nodeEmulator = new COAPAppstoreServer(draft, coapResource, coapServerPort, repeat);
       } catch (SocketException ex){
         System.out.println("COAP_SERVER ERROR: Can not make UDP connection " + ex.getMessage());
           return;
@@ -226,18 +229,19 @@ public class COAPAppstoreServer implements Runnable {
     
     public static void main(String[] args) {
       //default configuration
-    	if(args.length != 3) {
-    		System.out.println("Usage: COAPServer <resource> <port> <repeat: 0/1>");
+    	if(args.length != 4) {
+    		System.out.println("Usage: COAPServer <draft> <resource> <port> <repeat: 0/1>");
     		System.exit(1);
     	}
-      String coapResource = args[0];
-      int coapServerPort = Integer.parseInt(args[1]);
-      boolean repeat = Integer.parseInt(args[2]) > 0;
+      int coapServerDraft = Integer.parseInt(args[0]);
+    	String coapResource = args[1];
+      int coapServerPort = Integer.parseInt(args[2]);
+      boolean repeat = Integer.parseInt(args[3]) > 0;
 
 //      int coapTimeout = COAP_TIMEOUT;
 //      int maxRetransmit = MAX_RETRANSMIT;
 
-      runNodeEmulator(coapResource, coapServerPort, repeat);
+      runNodeEmulator(coapServerDraft, coapResource, coapServerPort, repeat);
   }
     
 }
