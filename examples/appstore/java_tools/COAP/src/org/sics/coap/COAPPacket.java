@@ -42,6 +42,7 @@ public class COAPPacket {
   public static final byte OPTION_TOKEN = 11;
   public static final byte OPTION_BLOCK = 13;
   public static final byte OPTION_URI_QUERY = 15;
+  public static final byte OPTION_BLOCK2 = 17;
   
   
 
@@ -209,7 +210,7 @@ public class COAPPacket {
       transationId = inputStream.read() << 8;
       transationId = transationId | inputStream.read();
 
-      //System.out.println("# of options :" + options);
+      System.out.println("# of options :" + options);
 
       // read options
       byte hdrType = 0;
@@ -217,6 +218,7 @@ public class COAPPacket {
           tempByte = inputStream.read();
           byte delta = (byte) ((tempByte >> 0x4) & 0xF);
           hdrType += delta;
+          System.out.println("Option "+hdrType + " (delta "+delta+")");
           int hdrLen = tempByte & 0x0F;
           //System.out.println(" hdrLen1: " + hdrLen);
           if (hdrLen == 0xF) {
@@ -326,7 +328,7 @@ public class COAPPacket {
   }
 
   public void setHeaderETag(int etag) {
-    headerOptions.put(OPTION_BLOCK, writeVariableUInt(etag));
+    headerOptions.put(COAPPacket.OPTION_ETAG, writeVariableUInt(etag));
   }
   
   public class Block {
@@ -334,39 +336,59 @@ public class COAPPacket {
     public int number;
     public boolean more;
     public int size;
-    public Block (int option) {
+    public int version;
+    
+    public Block(int option, int ver) {
       this.option = option;
       number = (option >> 4);
       byte temp = (byte) (option & 0xF);
-      more = ((temp >> 3) != 0);
-      size = 1 << ((temp & 0x7) + 4);
-//      System.out.println("Block: " + option + " number: " + number + " more:" + more + " size:" + size);
+      this.more = ((temp >> 3) != 0);
+      this.size = 16 << (temp & 0x7);
+      
+      System.out.println("SZX "+(temp & 0x7)+" = "+this.size);
+      
+      this.version = ver;
+      System.out.println("BlockO: " + option + " number: " + number + " more:" + more + " size:" + size);
     }
     
-    public Block (int number, boolean more, int size) {
-      option = number << 4;
+    public Block(int number, boolean more, int size, int ver) {
+      this.option = number << 4;
       if (more) {
-        option |= 0x8;
+    	  this.option |= 0x8;
       }
       size = size >> 4;
-      this.size = (int) (Math.log(size) / Math.log(2));
+      this.size = (int) Math.floor(Math.log(size) / Math.log(2));
       this.number = number;
-      option |= size;
-//      System.out.println("Block: " + option);
+      this.option |= this.size;
+      
+      this.version = ver;
+      System.out.println("BlockI: " + this.option + " ("+this.number+"/"+more+"/"+this.size+")");
     }
   }
   
   public Block getHeaderBlock() {
     Integer value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK));
     if (value != null) {
-      return new Block(value);
+    	System.out.println("VER 3: "+Integer.toHexString(value));
+      return new Block(value, 3);
     } else {
-      return null;
+	  value = readVariableUInt(getHeaderOption(COAPPacket.OPTION_BLOCK2));
+	  if (value != null) {
+		System.out.println("VER 6: "+Integer.toHexString(value));
+        return new Block(value, 6);
+      } else {
+    	return new Block(0, 6);
+      }
     }
   }
 
   public void setHeaderBlock(Block block) {
-    headerOptions.put(OPTION_BLOCK, writeVariableUInt(block.option));
+	  System.out.println("SETTING "+(16 << (block.option & 0x7))+" = "+block.size);
+	  if (block.version==6) {
+		  headerOptions.put(COAPPacket.OPTION_BLOCK2, writeVariableUInt(block.option));
+	  } else {
+		  headerOptions.put(COAPPacket.OPTION_BLOCK, writeVariableUInt(block.option));
+	  }
   }
 
    public COAPPacket createResponse() {
@@ -462,9 +484,15 @@ public class COAPPacket {
       for (Byte optType : headerOptions.keySet()) {
         byte[] optData = headerOptions.get(optType);
         int optLen = optData.length;
+        
+        while (optType - delta > 15) {
+    	  tempByte = (14 - delta%14) << 4;
+    	  outputStream.write(tempByte);
+    	  delta += 14 - delta%14;
+        }
 
         tempByte = (optType - delta) << 4;
-        delta = delta + optType;
+        delta = optType;
 
         if (optLen < 0xF) {
           tempByte = tempByte | optLen;

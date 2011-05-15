@@ -12,7 +12,7 @@ PROJECT_SOURCEFILES += symbols-subset.c
 UIP_CONF_IPV6=1
 
 # variable for this Makefile
-WITH_COAP=3
+WITH_COAP=6
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
