@@ -14,6 +14,10 @@
 
 #define COAP_DEFAULT_PORT                    61616
 
+#ifndef COAP_SERVER_PORT
+#define COAP_SERVER_PORT                     COAP_DEFAULT_PORT
+#endif
+
 #define COAP_DEFAULT_MAX_AGE                 60
 #define COAP_RESPONSE_TIMEOUT                1
 #define COAP_MAX_RETRANSMIT                  5
@@ -46,7 +50,9 @@
 /*
  * Maximum number of failed request attempts before action
  */
+#ifndef COAP_MAX_ATTEMPTS
 #define COAP_MAX_ATTEMPTS             4
+#endif /* COAP_MAX_ATTEMPTS */
 
 #define SET_OPTION(packet, opt) ((packet)->options |= 1<<opt)
 #define IS_OPTION(packet, opt) ((packet)->options & 1<<opt)

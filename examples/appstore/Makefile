@@ -67,7 +67,7 @@ connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 
 appstore-server: java_tools/COAPAppstoreServer/src/COAPAppstoreServer.java java_tools/COAP/src/org/sics/coap/COAPPacket.java
 	javac -classpath java_tools/bin -d java_tools/bin java_tools/COAP/src/org/sics/coap/*.java
-	javac -classpath java_tools/bin -d java_tools/bin java_tools/COAPAppstoreServer/src/COAPAppstoreServer.java
+	javac -classpath java_tools/bin -d java_tools/bin java_tools/COAPAppstoreServer/src/*.java
 
 run-appstore-server: appstore-server
 	java -cp java_tools/bin COAPAppstoreServer $(WITH_COAP) market 2222 1

@@ -42,7 +42,7 @@
 /* Declare server process */
 PROCESS_NAME(coap_server);
 
-#define SERVER_LISTEN_PORT      UIP_HTONS(COAP_DEFAULT_PORT)
+#define SERVER_LISTEN_PORT      UIP_HTONS(COAP_SERVER_PORT)
 
 typedef coap_packet_t rest_request_t;
 typedef coap_packet_t rest_response_t;
