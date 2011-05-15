@@ -1,14 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "contiki.h"
 #include "contiki-net.h"
 
 #include "rest.h"
+#if WITH_COAP==3
 #include "coap-03-rest-engine.h"
+#elif WITH_COAP==6
+#include "coap-06-rest-engine.h"
+#endif
 
+#ifndef CONTIKI_TARGET_MINIMAL_NET
 #include "loader/elfloader.h"
 #include "loader/symbols.h"
 #include "dev/leds.h"
+#endif
 
 //#define DONT_LOAD /* to be used for files larger than 800 bytes, on which the loader fails */
 
@@ -35,17 +42,16 @@ static process_event_t loading_requested_event;
 static int fd;
 static int file_len;
 static uip_ipaddr_t host_ipaddr;
+static uint16_t host_port;
+
 uip_ipaddr_t market_ipaddr;
 
 static uip_ipaddr_t collect_ipaddr;
 struct uip_udp_conn *collect_conn;
 
+/*---------------------------------------------------------------------------*/
 RESOURCE(loader, METHOD_GET | METHOD_POST, "loader", "");
 
-/* For each resource defined, there corresponds an handler method which should be defined too.
- * Name of the handler method should be [resource name]_handler
- * */
-/*---------------------------------------------------------------------------*/
 void loader_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset) {
 
   size_t payload_len;
@@ -55,19 +61,21 @@ void loader_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
   if ((payload_len = REST.get_request_payload(request, &payload))) {
     /* store the host address  */
     memcpy(&host_ipaddr, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, sizeof(uip_ipaddr_t));
+    host_port = ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport;
     /* store the filename as a C string */
     memcpy(elf_filename, payload, payload_len);
     elf_filename[payload_len] = '\0';
     PRINTF("Loader request received: %s\n", elf_filename);
 
     /* send response */
-    REST.set_response_payload(response, response_txt, strlen(response_txt));
+    REST.set_response_payload(response, (uint8_t *)response_txt, strlen(response_txt));
     process_post(&appstore_example, loading_requested_event, NULL);
   }
 }
 
-///*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 static void load_elf() {
+#ifndef CONTIKI_TARGET_MINIMAL_NET
   fd = cfs_open(elf_filename, CFS_READ | CFS_WRITE);
   int ret;
   ret = elfloader_load(fd);
@@ -108,6 +116,7 @@ static void load_elf() {
 
   cfs_close(fd);
   cfs_remove(elf_filename);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
@@ -116,27 +125,28 @@ static void write_to_coffee(void *response) {
   size_t payload_len;
   const uint8_t *payload;
 
+#if WITH_COAP==3
   coap_get_header_block(response, NULL, NULL, NULL, &offset);
-  payload_len = coap_get_payload(response, &payload);
-  if (payload_len) {
+#elif WITH_COAP==6
+  coap_get_header_block2(response, NULL, NULL, NULL, &offset);
+#endif
+  if ( (payload_len = coap_get_payload(response, &payload)) ) {
     file_len = offset + payload_len;
-    PRINTF("cfs write %u bytes at %u\n", offset, payload_len);
+    PRINTF("cfs write %u bytes at %lu\n", payload_len, offset);
+#ifndef CONTIKI_TARGET_MINIMAL_NET
     cfs_seek(fd, offset, CFS_SEEK_SET);
     cfs_write(fd, payload, payload_len);
+#endif
   }
 }
+
 /*---------------------------------------------------------------------------*/
 static void appstore_final(void *response) {
   size_t payload_len;
   const uint8_t *payload;
-  uint16_t i;
 
   payload_len = coap_get_payload(response, &payload);
-  PRINTF("Notification acknowledged: ");
-  for(i = 0; i<payload_len; i++) {
-    PRINTF("%c", payload[i]);
-  }
-  PRINTF("\n");
+  PRINTF("Notification acknowledged: %.*s\n", payload_len, (char *)payload);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -147,16 +157,20 @@ PROCESS_THREAD(appstore_example, ev, data) {
   PRINTF("Appstore\n");
 
   /* init */
+#ifndef CONTIKI_TARGET_MINIMAL_NET
   uip_ip6addr(&market_ipaddr, 0xaaaa,0,0,0,0,0,0,0x1);
+#else
+  uip_ip6addr(&market_ipaddr, 0xcccc,0,0,0,0,0,0,0x1);
+#endif
   loading_requested_event = process_alloc_event();
 
   /* static routing */
-#if !UIP_CONF_IPV6_RPL
+#if !UIP_CONF_IPV6_RPL && !defined(CONTIKI_TARGET_MINIMAL_NET)
     set_global_address();
     configure_routing();
 #endif /*!UIP_CONF_IPV6_RPL*/
 
-#if !IN_COOJA
+#if !IN_COOJA && !defined (CONTIKI_TARGET_MINIMAL_NET)
   /* motes need format */
   PRINTF("CFS format\n");
   cfs_coffee_format();
@@ -177,36 +191,44 @@ PROCESS_THREAD(appstore_example, ev, data) {
     static struct request_state_t request_state;
     static coap_packet_t request[1]; /* This way the packet can be treated as pointer as usual. */
 
+    PRINTF("Waiting for loader request\n");
     PROCESS_YIELD_UNTIL(ev == loading_requested_event);
+
+    PRINTF("Resumed process\n");
 
     if(process_started) {
     	PRINTF("Exit loaded processes\n");
+#ifndef CONTIKI_TARGET_MINIMAL_NET
     	autostart_exit(elfloader_autostart_processes);
-    	process_started = 0;
     	leds_off(LEDS_ALL);
+#endif
+        process_started = 0;
     }
 
     PRINTF("Requesting ELF file %s\n", elf_filename);
     /* open file in which the elf will be stored */
+#ifndef CONTIKI_TARGET_MINIMAL_NET
     fd = cfs_open(elf_filename, CFS_WRITE);
     if(fd == -1) {
     	PRINTF("Couldn't open CFS file\n");
     	goto end;
     }
+#endif
     file_len = 0;
 
+    /* Issue blocking block-wise request. */
     coap_init_message(request, COAP_TYPE_CON, COAP_GET, 0);
     coap_set_header_uri_path(request, "market");
-    coap_set_payload(request, elf_filename, strlen(elf_filename));
+    coap_set_payload(request, (uint8_t *)elf_filename, strlen(elf_filename));
     /* request the elf to the market and store it in CFS */
     PT_SPAWN(process_pt, &request_state.pt,
-    		blocking_rest_request(&request_state, ev,
-    				&market_ipaddr, MARKET_PORT,
-    				request, write_to_coffee)
+             coap_blocking_request(&request_state, ev,
+                                   &market_ipaddr, MARKET_PORT,
+                                   request, write_to_coffee)
     );
-
     PRINTF("%s received and stored (%d bytes)\n", elf_filename, file_len);
 
+    // FIXME memory footprint
 //#ifndef DONT_LOAD
     /* load the elf */
 //    load_elf();
@@ -218,25 +240,26 @@ PROCESS_THREAD(appstore_example, ev, data) {
 //      process_started = 1;
 //    }
 //#endif
-//
-//
+
     /* send a request to notify the end of the process */
-    coap_init_message(request, COAP_TYPE_CON, COAP_GET, 0);
-	coap_set_header_uri_path(request, "notify");
-	coap_set_payload(request, elf_filename, strlen(elf_filename));
-	/* request the elf to the market and store it in CFS */
-	PT_SPAWN(process_pt, &request_state.pt,
-			blocking_rest_request(&request_state, ev,
-					&host_ipaddr, NOTIF_PORT,
-					request, appstore_final)
-	);
+    coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
+    coap_set_header_uri_path(request, "notify");
+    coap_set_payload(request, (uint8_t *)elf_filename, strlen(elf_filename));
+    /* request the elf to the market and store it in CFS */
+    PT_SPAWN(process_pt, &request_state.pt,
+             coap_blocking_request(&request_state, ev,
+                                   &host_ipaddr, host_port,
+                                   request, appstore_final)
+    );
 
 end:
+#ifndef CONTIKI_TARGET_MINIMAL_NET
     if(fd != -1) {
-    	cfs_close(fd);
+      cfs_close(fd);
     }
     /* remove the file from coffee */
     cfs_remove(elf_filename);
+#endif
     PRINTF("End.\n");
   }
 

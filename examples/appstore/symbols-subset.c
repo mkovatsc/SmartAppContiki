@@ -1,3 +1,5 @@
+#ifndef CONTIKI_TARGET_MINIMAL_NET
+
 #include "loader/symbols.h"
 
 int printf(const char *, ...);
@@ -49,3 +51,5 @@ const struct symbols symbols[] = {
 //{ "unicast_open", (void *)&unicast_open },
 //{ "unicast_send", (void *)&unicast_send },
 { (const char *)0, (void *)0} };
+
+#endif

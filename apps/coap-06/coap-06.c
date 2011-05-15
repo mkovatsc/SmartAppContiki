@@ -633,7 +633,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           break;
         case COAP_OPTION_BLOCK2:
           ((coap_packet_t *)packet)->block2_num = parse_int_option(current_option, option_len);
-          ((coap_packet_t *)packet)->block2_more = (((coap_packet_t *)packet)->block2_num & 0x08);
+          ((coap_packet_t *)packet)->block2_more = (((coap_packet_t *)packet)->block2_num & 0x08)>>3;
           ((coap_packet_t *)packet)->block2_size = 16 << (((coap_packet_t *)packet)->block2_num & 0x07);
           ((coap_packet_t *)packet)->block2_offset = (((coap_packet_t *)packet)->block2_num & ~0x0F)<<(((coap_packet_t *)packet)->block2_num & 0x07);
           ((coap_packet_t *)packet)->block2_num >>= 4;

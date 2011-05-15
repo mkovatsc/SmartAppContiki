@@ -58,11 +58,11 @@ struct request_state_t {
 
 typedef void (*blocking_response_handler) (void* response);
 
-PT_THREAD(blocking_rest_request(struct request_state_t *request_state,
-                process_event_t ev,
-                uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
-                coap_packet_t *request,
-                blocking_response_handler request_callback)
+PT_THREAD(coap_blocking_request(struct request_state_t *request_state,
+                                process_event_t ev,
+                                uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
+                                coap_packet_t *request,
+                                blocking_response_handler request_callback)
 );
 
 extern const struct rest_implementation coap_rest_implementation;

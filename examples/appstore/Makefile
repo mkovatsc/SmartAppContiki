@@ -1,4 +1,4 @@
-all: appstore
+all: appstore temp.ce light.ce humidity.ce
 
 ifndef TARGET
 TARGET=sky
@@ -28,7 +28,13 @@ CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
 # REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 3)
+ifeq ($(WITH_COAP), 6)
+${info INFO: compiling with CoAP-06}
+CFLAGS += -DWITH_COAP=6
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += coap-06
+else ifeq ($(WITH_COAP), 3)
 ${info INFO: compiling with CoAP-03}
 CFLAGS += -DWITH_COAP=3
 CFLAGS += -DREST=coap_rest_implementation

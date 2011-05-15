@@ -182,33 +182,38 @@ handle_incoming_data(void)
             error = MEMORY_ALLOC_ERR;
         }
       }
-      else if (message->type==COAP_TYPE_ACK)
+      else
       {
-        PRINTF("Received ACK\n");
+        /* Responses */
+        coap_transaction_t *t;
 
-        coap_transaction_t *t = coap_get_transaction_by_tid(message->tid);
-
-        /* Free transaction memory before callback, as it may create a new transaction. */
-        restful_response_handler callback = t->callback;
-        void *callback_data = t->callback_data;
-        coap_clear_transaction(t);
-
-        /* Check if someone registered for the response */
-        if (callback) {
-          callback(callback_data, message);
-        }
-      }
-      else if (message->type==COAP_TYPE_RST)
-      {
-        PRINTF("Received RST\n");
-        coap_clear_transaction(coap_get_transaction_by_tid(message->tid));
-        if (IS_OPTION(message, COAP_OPTION_TOKEN))
+        if (message->type==COAP_TYPE_ACK)
         {
-          PRINTF("  Token 0x%02X%02X\n", message->token[0], message->token[1]);
-          coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, message->token, message->token_len);
+          PRINTF("Received ACK\n");
         }
-        /* Clean up afterwards. RST might be response to NON, so coap_get_transaction_by_tid() might return NULL.  */
-        coap_clear_transaction(coap_get_transaction_by_tid(message->tid));
+        else if (message->type==COAP_TYPE_RST)
+        {
+          PRINTF("Received RST\n");
+          /* Cancel possible subscriptions. */
+          if (IS_OPTION(message, COAP_OPTION_TOKEN))
+          {
+            PRINTF("  Token 0x%02X%02X\n", message->token[0], message->token[1]);
+            coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, message->token, message->token_len);
+          }
+        }
+
+        if ( (t = coap_get_transaction_by_tid(message->tid)) )
+        {
+          /* Free transaction memory before callback, as it may create a new transaction. */
+          restful_response_handler callback = t->callback;
+          void *callback_data = t->callback_data;
+          coap_clear_transaction(t);
+
+          /* Check if someone registered for the response */
+          if (callback) {
+            callback(callback_data, message);
+          }
+        } /* if (transaction) */
       }
     } /* if (parsed correctly) */
 
@@ -359,50 +364,65 @@ void blocking_request_callback(void *callback_data, void *response) {
   state->response = (coap_packet_t*) response;
   process_poll(state->process);
 }
-
-PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t ev,
+/*-----------------------------------------------------------------------------------*/
+PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t ev,
                                 uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
                                 coap_packet_t *request,
                                 blocking_response_handler request_callback)) {
-
   PT_BEGIN(&state->pt);
+
+  static uint8_t more;
+  static uint32_t res_block;
 
   state->block_num = 0;
   state->response = NULL;
   state->process = PROCESS_CURRENT();
 
-  uint8_t more = 0;
-  uint32_t res_block = 0;
+  more = 0;
+  res_block = 0;
+
   do {
-    extern char elf_filename[];
     request->tid = coap_get_tid();
     if ((state->transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port)))
     {
       state->transaction->callback = blocking_request_callback;
       state->transaction->callback_data = state;
 
-      coap_set_header_block(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+      if (state->block_num>0)
+      {
+        coap_set_header_block(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+      }
 
       state->transaction->packet_len = coap_serialize_message(request, state->transaction->packet);
 
-      printf("Sending #%lu (%u bytes)\n", state->block_num, state->transaction->packet_len);
       coap_send_transaction(state->transaction);
+      PRINTF("Requested #%lu (TID %u)\n", state->block_num, request->tid);
 
       PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
 
+      if (!state->response)
+      {
+        PRINTF("Server not responding\n");
+        PT_EXIT(&state->pt);
+      }
+
       coap_get_header_block(state->response, &res_block, &more, NULL, NULL);
 
-      printf("Got block %lu%s\n", res_block, more ? "+" : "");
+      PRINTF("Received #%lu%s (%u bytes)\n", res_block, more ? "+" : "", state->response->payload_len);
 
       if (res_block==state->block_num)
       {
         request_callback(state->response);
-        state->block_num++;
+        ++(state->block_num);
+      }
+      else
+      {
+        PRINTF("WRONG BLOCK %lu/%lu\n", res_block, state->block_num);
       }
     }
     else
     {
-        printf("Could not allocate transaction");
+      PRINTF("Could not allocate transaction");
       PT_EXIT(&state->pt);
     }
   } while (more);

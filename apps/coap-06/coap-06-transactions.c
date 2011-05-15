@@ -121,11 +121,17 @@ coap_send_transaction(coap_transaction_t *t)
     {
       /* timeout */
       PRINTF("Timeout\n");
+      restful_response_handler callback = t->callback;
+      void *callback_data = t->callback_data;
 
       /* handle observers */
       coap_remove_observer_by_client(&t->addr, t->port);
 
       coap_clear_transaction(t);
+
+      if (callback) {
+        callback(callback_data, NULL);
+      }
     }
   }
   else
@@ -139,7 +145,7 @@ coap_clear_transaction(coap_transaction_t *t)
 {
   if (t)
   {
-    PRINTF("Freeing transaction %u\n", t->tid);
+    PRINTF("Freeing transaction %u: %p\n", t->tid, t);
 
     etimer_stop(&t->retrans_timer);
     list_remove(transactions_list, t);

@@ -81,11 +81,17 @@ coap_send_transaction(coap_transaction_t *t)
     {
       /* timeout */
       PRINTF("Timeout\n");
+      restful_response_handler callback = t->callback;
+      void *callback_data = t->callback_data;
 
       /* handle observers */
       coap_remove_observer_by_client(&t->addr, t->port);
 
       coap_clear_transaction(t);
+
+      if (callback) {
+        callback(callback_data, NULL);
+      }
     }
   }
   else

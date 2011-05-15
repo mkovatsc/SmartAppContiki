@@ -93,10 +93,10 @@ handle_incoming_data(void)
     PRINTBITS(data, data_len);
     PRINTF("\n");
 
-    coap_packet_t request[1];
+    coap_packet_t message[1];
     coap_transaction_t *transaction = NULL;
 
-    coap_error_code = coap_parse_message(request, data, data_len);
+    coap_error_code = coap_parse_message(message, data, data_len);
 
     if (coap_error_code==NO_ERROR)
     {
@@ -104,15 +104,15 @@ handle_incoming_data(void)
       // FIXME
       // duplicates suppression
 
-      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", request->version, request->type, request->option_count, request->code, request->tid);
-      PRINTF("  URL: %.*s\n", request->uri_path_len, request->uri_path);
-      PRINTF("  Payload: %.*s\n", request->payload_len, request->payload);
+      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", message->version, message->type, message->option_count, message->code, message->tid);
+      PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
+      PRINTF("  Payload: %.*s\n", message->payload_len, message->payload);
 
       /* Handle requests. */
-      if (request->code >= COAP_GET && request->code <= COAP_DELETE)
+      if (message->code >= COAP_GET && message->code <= COAP_DELETE)
       {
         /* Use transaction buffer for response to confirmable request. */
-        if ( (transaction = coap_new_transaction(request->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
+        if ( (transaction = coap_new_transaction(message->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
         {
           uint32_t block_num = 0;
           uint16_t block_size = REST_MAX_CHUNK_SIZE;
@@ -121,10 +121,10 @@ handle_incoming_data(void)
 
           /* prepare response */
           coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
-          if (request->type==COAP_TYPE_CON)
+          if (message->type==COAP_TYPE_CON)
           {
             /* Reliable CON requests are answered with an ACK. */
-            coap_init_message(response, COAP_TYPE_ACK, CONTENT_2_05, request->tid);
+            coap_init_message(response, COAP_TYPE_ACK, CONTENT_2_05, message->tid);
           }
           else
           {
@@ -133,14 +133,14 @@ handle_incoming_data(void)
           }
 
           /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
-          if (IS_OPTION(request, COAP_OPTION_TOKEN))
+          if (IS_OPTION(message, COAP_OPTION_TOKEN))
           {
-              coap_set_header_token(response, request->token, request->token_len);
+              coap_set_header_token(response, message->token, message->token_len);
               SET_OPTION(response, COAP_OPTION_TOKEN);
           }
 
           /* get offset for blockwise transfers */
-          if (coap_get_header_block2(request, &block_num, NULL, &block_size, &block_offset))
+          if (coap_get_header_block2(message, &block_num, NULL, &block_size, &block_offset))
           {
               PRINTF("Blockwise: block request %lu (%u/%u) @ %lu bytes\n", block_num, block_size, REST_MAX_CHUNK_SIZE, block_offset);
               block_size = MIN(block_size, REST_MAX_CHUNK_SIZE);
@@ -151,10 +151,10 @@ handle_incoming_data(void)
           if (service_cbk)
           {
             /* Call REST framework and check if found and allowed. */
-            if (service_cbk(request, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset))
+            if (service_cbk(message, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset))
             {
               /* Apply blockwise transfers. */
-              if ( IS_OPTION(request, COAP_OPTION_BLOCK2) ) //|| new_offset!=0 && new_offset!=block_offset
+              if ( IS_OPTION(message, COAP_OPTION_BLOCK2) ) //|| new_offset!=0 && new_offset!=block_offset
               {
                 /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
                 if (new_offset==block_offset)
@@ -205,32 +205,38 @@ handle_incoming_data(void)
             coap_error_message = "Transaction buffer allocation failed";
         } /* if (transaction buffer) */
       }
-      else if (request->type==COAP_TYPE_ACK)
+      else
       {
-        PRINTF("Received ACK %u\n", request->tid);
+        /* Responses */
+        coap_transaction_t *t;
 
-        coap_transaction_t *t = coap_get_transaction_by_tid(request->tid);
-
-        /* Free transaction memory before callback, as it may create a new transaction. */
-        restful_response_handler callback = t->callback;
-        void *callback_data = t->callback_data;
-        coap_clear_transaction(t);
-
-        /* Check if someone registered for the response */
-        if (callback) {
-          callback(callback_data, message);
-        }
-      }
-      else if (request->type==COAP_TYPE_RST)
-      {
-        PRINTF("Received RST %u\n", request->tid);
-        if (IS_OPTION(request, COAP_OPTION_TOKEN))
+        if (message->type==COAP_TYPE_ACK)
         {
-          PRINTF("  Token 0x%02X%02X\n", request->token[0], request->token[1]);
-          coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, request->token, request->token_len);
+          PRINTF("Received ACK\n");
         }
-        /* Clean up afterwards. RST might be response to NON, so coap_get_transaction_by_tid() might return NULL.  */
-        coap_clear_transaction(coap_get_transaction_by_tid(request->tid));
+        else if (message->type==COAP_TYPE_RST)
+        {
+          PRINTF("Received RST\n");
+          /* Cancel possible subscriptions. */
+          if (IS_OPTION(message, COAP_OPTION_TOKEN))
+          {
+            PRINTF("  Token 0x%02X%02X\n", message->token[0], message->token[1]);
+            coap_remove_observer_by_token(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, message->token, message->token_len);
+          }
+        }
+
+        if ( (t = coap_get_transaction_by_tid(message->tid)) )
+        {
+          /* Free transaction memory before callback, as it may create a new transaction. */
+          restful_response_handler callback = t->callback;
+          void *callback_data = t->callback_data;
+          coap_clear_transaction(t);
+
+          /* Check if someone registered for the response */
+          if (callback) {
+            callback(callback_data, message);
+          }
+        } /* if (transaction) */
       }
     } /* if (parsed correctly) */
 
@@ -247,12 +253,9 @@ handle_incoming_data(void)
         coap_error_code = INTERNAL_SERVER_ERROR_5_00;
       }
       /* reuse input buffer */
-      coap_init_message(request, COAP_TYPE_ACK, coap_error_code, request->tid);
-      PRINTF("INIT\n");
-      coap_set_payload(request, (uint8_t *) coap_error_message, strlen(coap_error_message));
-      PRINTF("PAY\n");
-      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(request, data));
-      PRINTF("SEND\n");
+      coap_init_message(message, COAP_TYPE_ACK, coap_error_code, message->tid);
+      coap_set_payload(message, (uint8_t *) coap_error_message, strlen(coap_error_message));
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(message, data));
     }
   } /* if (new data) */
 
@@ -390,46 +393,64 @@ void blocking_request_callback(void *callback_data, void *response) {
   process_poll(state->process);
 }
 /*-----------------------------------------------------------------------------------*/
-PT_THREAD(blocking_rest_request(struct request_state_t *state, process_event_t ev,
+PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t ev,
                                 uip_ipaddr_t *remote_ipaddr, uint16_t remote_port,
                                 coap_packet_t *request,
                                 blocking_response_handler request_callback)) {
-
   PT_BEGIN(&state->pt);
+
+  static uint8_t more;
+  static uint32_t res_block;
 
   state->block_num = 0;
   state->response = NULL;
   state->process = PROCESS_CURRENT();
 
-  uint8_t more;
-  uint32_t res_block;
+  more = 0;
+  res_block = 0;
+
   do {
-    extern char elf_filename[];
     request->tid = coap_get_tid();
     if ((state->transaction = coap_new_transaction(request->tid, remote_ipaddr, remote_port)))
     {
       state->transaction->callback = blocking_request_callback;
       state->transaction->callback_data = state;
 
-      coap_set_header_block(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+      if (state->block_num>0)
+      {
+        coap_set_header_block2(request, state->block_num, 0, REST_MAX_CHUNK_SIZE);
+      }
 
       state->transaction->packet_len = coap_serialize_message(request, state->transaction->packet);
 
-      PRINTF("Sending #%lu (%u bytes)\n", state->block_num, state->transaction->packet_len);
       coap_send_transaction(state->transaction);
+      printf("Requested #%lu (TID %u)\n", state->block_num, request->tid);
 
       PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
 
-      coap_get_header_block(state->response, &res_block, &more, NULL, NULL);
+      if (!state->response)
+      {
+        printf("Server not responding\n");
+        PT_EXIT(&state->pt);
+      }
+
+      coap_get_header_block2(state->response, &res_block, &more, NULL, NULL);
+
+      printf("Received #%lu%s (%u bytes)\n", res_block, more ? "+" : "", state->response->payload_len);
+
       if (res_block==state->block_num)
       {
         request_callback(state->response);
-        state->block_num++;
+        ++(state->block_num);
+      }
+      else
+      {
+        printf("WRONG BLOCK %lu/%lu\n", res_block, state->block_num);
       }
     }
     else
     {
-      PRINTF("Could not allocate transaction");
+      printf("Could not allocate transaction");
       PT_EXIT(&state->pt);
     }
   } while (more);

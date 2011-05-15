@@ -2,6 +2,7 @@
 #define REST_H_
 
 /*includes*/
+#include <stdio.h>
 #include "contiki.h"
 #include "contiki-lib.h"
 
