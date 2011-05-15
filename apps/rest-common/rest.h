@@ -113,6 +113,9 @@ struct rest_implementation {
   /** Set the Max-Age option of a response. */
   int (* set_header_max_age)(void *response, uint32_t age);
 
+  /** Get the ETag option of a request (If-None-Match for HTTP). */
+  int (* get_header_etag)(void *request, const uint8_t **etag);
+
   /** Set the ETag option of a response. */
   int (* set_header_etag)(void *response, uint8_t *etag, size_t length);
 
