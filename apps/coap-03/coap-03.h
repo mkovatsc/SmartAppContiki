@@ -10,7 +10,7 @@
 
 #include <stddef.h> /* for size_t */
 #include "contiki-net.h"
-#include "rest.h"
+#include "rest-engine.h"
 
 #define COAP_DEFAULT_PORT                    61616
 
@@ -203,14 +203,13 @@ int coap_serialize_message(void *packet, uint8_t *buffer);
 error_t coap_parse_message(void *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(void *packet);
-void coap_set_method(void *packet, coap_method_t method);
-void coap_set_status(void *packet, coap_status_t code);
+void coap_set_status(void *packet, unsigned int code);
 
 int coap_get_query_variable(void *packet, const char *name, const char **output);
 int coap_get_post_variable(void *packet, const char *name, const char **output);
 
-coap_content_type_t coap_get_header_content_type(void *packet);
-int coap_set_header_content_type(void *packet, coap_content_type_t content_type);
+unsigned int coap_get_header_content_type(void *packet);
+int coap_set_header_content_type(void *packet, unsigned int content_type);
 
 int coap_get_header_max_age(void *packet, uint32_t *age);
 int coap_set_header_max_age(void *packet, uint32_t age);

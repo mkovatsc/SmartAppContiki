@@ -1,5 +1,5 @@
-#ifndef REST_H_
-#define REST_H_
+#ifndef REST_ENGINE_H_
+#define REST_ENGINE_H_
 
 /*includes*/
 #include <stdio.h>
@@ -99,7 +99,7 @@ struct rest_implementation {
   rest_method_t (* get_method_type)(void *request);
 
   /** Set the status code of a response. */
-  void (* set_response_status)(void *response, unsigned int code);
+  int (* set_response_status)(void *response, unsigned int code);
 
   /** Get the content-type of a request. */
   unsigned int (* get_header_content_type)(void *request);
@@ -271,4 +271,4 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
 
-#endif /*REST_H_*/
+#endif /*REST_ENGINE_H_*/

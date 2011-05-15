@@ -8,7 +8,6 @@
 #ifndef COAP_TRANSACTIONS_H_
 #define COAP_TRANSACTIONS_H_
 
-#include "rest.h"
 #include "coap-03.h"
 
 /*

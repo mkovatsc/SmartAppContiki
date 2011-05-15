@@ -5,7 +5,6 @@
 #error "Define REST to \"coap_rest_implementation\""
 #endif
 
-#include "rest.h"
 #include "coap-03.h"
 #include "coap-03-transactions.h"
 #include "coap-03-observing.h"

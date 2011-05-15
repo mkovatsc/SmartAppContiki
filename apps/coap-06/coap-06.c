@@ -668,24 +668,6 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 /*-----------------------------------------------------------------------------------*/
 /*- REST FRAMEWORK FUNCTIONS --------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-coap_method_t
-coap_get_method(void *packet)
-{
-  return (coap_method_t) ((coap_packet_t *)packet)->code;
-}
-
-void
-coap_set_method(void *packet, coap_method_t method)
-{
-  ((coap_packet_t *)packet)->code = (uint8_t)method;
-}
-/*-----------------------------------------------------------------------------------*/
-void
-coap_set_status(void *packet, coap_status_t code)
-{
-  ((coap_packet_t *)packet)->code = (uint8_t) code;
-}
-/*-----------------------------------------------------------------------------------*/
 int
 coap_get_query_variable(void *packet, const char *name, const char **output)
 {
@@ -706,16 +688,16 @@ coap_get_post_variable(void *packet, const char *name, const char **output)
 /*-----------------------------------------------------------------------------------*/
 /*- HEADER OPTION GETTERS AND SETTERS -----------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
-coap_content_type_t
+unsigned int
 coap_get_header_content_type(void *packet)
 {
   return ((coap_packet_t *)packet)->content_type;
 }
 
 int
-coap_set_header_content_type(void *packet, coap_content_type_t content_type)
+coap_set_header_content_type(void *packet, unsigned int content_type)
 {
-  ((coap_packet_t *)packet)->content_type = (uint8_t) content_type;
+  ((coap_packet_t *)packet)->content_type = (coap_content_type_t) content_type;
   SET_OPTION((coap_packet_t *)packet, COAP_OPTION_CONTENT_TYPE);
   return 1;
 }

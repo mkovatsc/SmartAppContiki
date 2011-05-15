@@ -148,7 +148,7 @@ handle_incoming_data(void)
                 PRINTF("Blockwise: unaware resource with payload length %u/%u\n", response->payload_len, block_size);
                 if (block_offset >= response->payload_len)
                 {
-                  coap_set_status(response, BAD_REQUEST_400);
+                  response->code = BAD_REQUEST_400;
                   coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
                 }
                 else
@@ -234,6 +234,40 @@ handle_incoming_data(void)
   return error;
 }
 /*-----------------------------------------------------------------------------------*/
+void
+coap_server_init()
+{
+  process_start(&coap_server, NULL);
+}
+/*-----------------------------------------------------------------------------------*/
+void
+coap_set_service_callback(service_callback_t callback)
+{
+  service_cbk = callback;
+}
+/*-----------------------------------------------------------------------------------*/
+rest_method_t
+coap_get_rest_method(void *packet)
+{
+  return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
+}
+/*-----------------------------------------------------------------------------------*/
+int
+coap_set_rest_status(void *packet, unsigned int code)
+{
+  if (code <= 0xFF)
+  {
+    ((coap_packet_t *)packet)->code = (uint8_t) code;
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+/*-----------------------------------------------------------------------------------*/
+/*- Server part ---------------------------------------------------------------------*/
+/*-----------------------------------------------------------------------------------*/
 /* The discover resource should be included when using CoAP. */
 RESOURCE(well_known_core, METHOD_GET, ".well-known/core", "");
 void
@@ -293,7 +327,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     }
     else
     {
-      coap_set_status(response, BAD_REQUEST_400);
+      coap_set_rest_status(response, BAD_REQUEST_400);
       coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
     }
 
@@ -306,26 +340,6 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     }
   }
 }
-/*-----------------------------------------------------------------------------------*/
-void
-coap_server_init()
-{
-  process_start(&coap_server, NULL);
-}
-/*-----------------------------------------------------------------------------------*/
-void
-coap_set_service_callback(service_callback_t callback)
-{
-  service_cbk = callback;
-}
-/*-----------------------------------------------------------------------------------*/
-rest_method_t
-coap_get_rest_method(void *packet)
-{
-  return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
-}
-/*-----------------------------------------------------------------------------------*/
-/*- Server part ---------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_server, ev, data)
 {
@@ -445,7 +459,7 @@ const struct rest_implementation coap_rest_implementation = {
     coap_get_header_uri_path,
     coap_set_header_uri_path,
     coap_get_rest_method,
-    coap_set_status,
+    coap_set_rest_status,
 
     coap_get_header_content_type,
     coap_set_header_content_type,

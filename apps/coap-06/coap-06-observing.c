@@ -184,7 +184,7 @@ coap_observe_handler(void *request, void *response)
       }
       else
       {
-        coap_set_status(response, SERVICE_UNAVAILABLE_5_03);
+        ((coap_packet_t *)response)->code = SERVICE_UNAVAILABLE_5_03;
         coap_set_payload(response, (uint8_t *)"Too many observers", 18);
       } /* if (added observer) */
     }

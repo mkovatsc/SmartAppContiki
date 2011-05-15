@@ -34,7 +34,6 @@
 #error "Define REST to \"coap_rest_implementation\""
 #endif
 
-#include "rest.h"
 #include "coap-06.h"
 #include "coap-06-transactions.h"
 #include "coap-06-observing.h"

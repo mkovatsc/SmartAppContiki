@@ -4,7 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "rest.h"
+#include "rest-engine.h"
 
 #if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
 #include "dev/light-sensor.h"

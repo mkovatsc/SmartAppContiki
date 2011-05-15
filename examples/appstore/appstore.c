@@ -4,7 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "rest.h"
+#include "rest-engine.h"
 #if WITH_COAP==3
 #include "coap-03-rest-engine.h"
 #elif WITH_COAP==6

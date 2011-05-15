@@ -153,13 +153,13 @@ coap_observe_handler(void *request, void *response)
         }
         else
         {
-          coap_set_status(response, SERVICE_UNAVAILABLE_503);
+          ((coap_packet_t *)response)->code = SERVICE_UNAVAILABLE_503;
           coap_set_payload(response, (uint8_t *)"Too many observers", 18);
         } /* if (added observer) */
       }
       else /* if (token) */
       {
-        coap_set_status(response, TOKEN_OPTION_REQUIRED);
+        ((coap_packet_t *)response)->code = TOKEN_OPTION_REQUIRED;
         coap_set_payload(response, (uint8_t *)"Observing requires token", 24);
       } /* if (token) */
     }
