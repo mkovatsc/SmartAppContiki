@@ -401,6 +401,7 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
 
   static uint8_t more;
   static uint32_t res_block;
+  static uint8_t block_error;
 
   state->block_num = 0;
   state->response = NULL;
@@ -408,6 +409,7 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
 
   more = 0;
   res_block = 0;
+  block_error = 0;
 
   do {
     request->tid = coap_get_tid();
@@ -424,19 +426,19 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
       state->transaction->packet_len = coap_serialize_message(request, state->transaction->packet);
 
       coap_send_transaction(state->transaction);
-      printf("Requested #%lu (TID %u)\n", state->block_num, request->tid);
+      PRINTF("Requested #%lu (TID %u)\n", state->block_num, request->tid);
 
       PT_YIELD_UNTIL(&state->pt, ev == PROCESS_EVENT_POLL);
 
       if (!state->response)
       {
-        printf("Server not responding\n");
+        PRINTF("Server not responding\n");
         PT_EXIT(&state->pt);
       }
 
       coap_get_header_block2(state->response, &res_block, &more, NULL, NULL);
 
-      printf("Received #%lu%s (%u bytes)\n", res_block, more ? "+" : "", state->response->payload_len);
+      PRINTF("Received #%lu%s (%u bytes)\n", res_block, more ? "+" : "", state->response->payload_len);
 
       if (res_block==state->block_num)
       {
@@ -445,15 +447,16 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
       }
       else
       {
-        printf("WRONG BLOCK %lu/%lu\n", res_block, state->block_num);
+        PRINTF("WRONG BLOCK %lu/%lu\n", res_block, state->block_num);
+        ++block_error;
       }
     }
     else
     {
-      printf("Could not allocate transaction");
+      PRINTF("Could not allocate transaction buffer");
       PT_EXIT(&state->pt);
     }
-  } while (more);
+  } while (more && block_error<COAP_MAX_ATTEMPTS);
 
   PT_END(&state->pt);
 }

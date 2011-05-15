@@ -38,11 +38,15 @@
 /*                            Hdr CoT Age Tag Obs Tok Blo strings */
 #define COAP_MAX_HEADER_SIZE  (4 + 2 + 5 + 5 + 5 + 5 + 4 + 0)
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
-
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
 #if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)
 #error "UIP_CONF_BUFFER_SIZE too small for REST_MAX_CHUNK_SIZE"
 #endif
+
+/*
+ * Maximum number of failed request attempts before action
+ */
+#define COAP_MAX_ATTEMPTS             4
 
 #define SET_OPTION(packet, opt) ((packet)->options |= 1<<opt)
 #define IS_OPTION(packet, opt) ((packet)->options & 1<<opt)

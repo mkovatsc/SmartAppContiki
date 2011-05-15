@@ -133,7 +133,7 @@ public class COAPAppstoreServer implements Runnable {
     						System.out.println("OUTBLOCK "+outBlock.size);
 
     						response.setCode(COAPPacket.Code._200_OK);
-    						response.setHeaderContentType(ContentType.TEXT_PLAIN);
+    						response.setHeaderContentType(ContentType.APPLICATION_OCTET_STREAM);
     						response.setHeaderBlock(outBlock);
     	    				System.out.println("COAP_SERVER: packing     " + response);
     						response.setPayload(outPayload);

@@ -6,7 +6,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Map;
 
 public class COAPPacket {
@@ -52,7 +52,7 @@ public class COAPPacket {
   private int transationId = -1;
   private Code code = Code._200_OK;
   private Method method = Method.GET;
-  private Map<Byte, byte[]> headerOptions = new HashMap<Byte, byte[]>();
+  private Map<Byte, byte[]> headerOptions = new TreeMap<Byte, byte[]>();
   private byte[] payload = new byte[0];
 
   public enum Code {
@@ -352,14 +352,19 @@ public class COAPPacket {
     }
     
     public Block(int number, boolean more, int size, int ver) {
+	  this.number = number;
+	  this.more = more;
+      this.size = size;
+	  
       this.option = number << 4;
+      
       if (more) {
     	  this.option |= 0x8;
       }
       size = size >> 4;
-      this.size = (int) Math.floor(Math.log(size) / Math.log(2));
-      this.number = number;
-      this.option |= this.size;
+      size = (int) Math.floor(Math.log(size) / Math.log(2));
+      
+      this.option |= size;
       
       this.version = ver;
       System.out.println("BlockI: " + this.option + " ("+this.number+"/"+more+"/"+this.size+")");
@@ -463,6 +468,46 @@ public class COAPPacket {
       byte options = (byte) this.headerOptions.size();
       int tempByte = 0;
 
+      ByteArrayOutputStream optionsBytes = new ByteArrayOutputStream();
+      
+      int delta = 0;
+      for (Byte optType : this.headerOptions.keySet()) {
+        byte[] optData = this.headerOptions.get(optType);
+        int optLen = optData.length;
+        
+        
+        
+        while (optType - delta > 15) {
+    	  tempByte = (14 - delta%14) << 4;
+    	  optionsBytes.write(tempByte);
+    	  delta += 14 - delta%14;
+    	  ++options;
+    	  
+    	  System.out.println("OPTION 14");
+        }
+        
+        System.out.println("OPTION "+optType+" ("+optLen+")");
+
+        tempByte = (optType - delta) << 4;
+        delta = optType;
+
+        if (optLen < 0xF) {
+          tempByte = tempByte | optLen;
+          optionsBytes.write(tempByte);
+        } else if (optLen <= 270) {
+          tempByte = tempByte | 0xF;
+          optionsBytes.write(tempByte);
+          optionsBytes.write(optLen - 0xF);
+        } else {
+          throw new COAPException(
+              "Option length larger that 270 is not supported");
+        }
+        optionsBytes.write(optData);
+      }
+      
+      // Header
+      tempByte = 0;
+
       tempByte = (0x3 & version) << COAP_HEADER_VERSION_POSITION; // Version
       tempByte |= (0x3 & type) << COAP_HEADER_TYPE_POSITION; // Message Type
       tempByte |= options & 0xF; // Number of Options
@@ -474,41 +519,15 @@ public class COAPPacket {
       } else {
         tempByte = method.getCode();
       }
-      
       outputStream.write(tempByte);
 
       outputStream.write(0xFF & (transationId >> 8));
       outputStream.write(0xFF & transationId);
 
-      int delta = 0;
-      for (Byte optType : headerOptions.keySet()) {
-        byte[] optData = headerOptions.get(optType);
-        int optLen = optData.length;
-        
-        while (optType - delta > 15) {
-    	  tempByte = (14 - delta%14) << 4;
-    	  outputStream.write(tempByte);
-    	  delta += 14 - delta%14;
-        }
-
-        tempByte = (optType - delta) << 4;
-        delta = optType;
-
-        if (optLen < 0xF) {
-          tempByte = tempByte | optLen;
-          outputStream.write(tempByte);
-        } else if (optLen <= 270) {
-          tempByte = tempByte | 0xF;
-          outputStream.write(tempByte);
-          outputStream.write(optLen - 0xF);
-        } else {
-          throw new COAPException(
-              "Option length larger that 270 is not supported");
-        }
-        outputStream.write(optData);
-      }
-
-      // payload
+      // Options
+      outputStream.write(optionsBytes.toByteArray());
+      
+      // Payload
       if (payload != null) {
         outputStream.write(payload);
       }
