@@ -6,7 +6,7 @@ CONTIKI = ../..
 UIP_CONF_IPV6=1
 
 # variable for this Makefile
-WITH_COAP=1
+WITH_COAP=3
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=26
@@ -17,35 +17,40 @@ CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
-#CFLAGS += -DUIP_CONF_TCP=1
+CFLAGS += -DUIP_CONF_TCP=0
 
 #used to be able to use sscanf
 LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 
 
 #extmem
-#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
-
-
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 # linker optimizations
 CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
-
-ifeq ($(WITH_COAP), 1)
+# REST framework, requires WITH_COAP
+ifeq ($(WITH_COAP), 3)
+${info INFO: compiling with CoAP-03}
+CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += coap-03
+else ifeq ($(WITH_COAP), 1)
+${info INFO: compiling with rest-CoAP}
 CFLAGS += -DWITH_COAP
+CFLAGS += -DUIP_CONF_TCP=0
 APPS += rest-coap
-CFLAGS += -DUIP_CONF_TCP=0
-else ifeq ($(WITH_COAP), 3)
-CFLAGS += -DWITH_COAP
-APPS += rest-coap-03
-CFLAGS += -DUIP_CONF_TCP=0
 else
+${info INFO: compiling with HTTP}
 CFLAGS += -DWITH_HTTP
-APPS += rest-http
 CFLAGS += -DUIP_CONF_TCP=1
+APPS += rest-http
 endif
+APPS += rest-common
+
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 include $(CONTIKI)/Makefile.include
