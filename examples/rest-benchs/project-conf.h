@@ -40,6 +40,9 @@
 #define NETSTACK_CONF_RDC             contikimac_driver
 #endif
 
+/* Default is 4. */
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE    4
+
 #define COAP_SERVER_PORT 61616
 #define COAP_MAX_OPEN_TRANSACTIONS 1
 
@@ -55,11 +58,11 @@
 #define SICSLOWPAN_CONF_FRAG	1
 
 #ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
+#define QUEUEBUF_CONF_NUM       6
 #endif
 
 #ifndef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    512
+#define REST_MAX_CHUNK_SIZE     512
 #endif
 
 #ifndef UIP_CONF_BUFFER_SIZE
