@@ -66,7 +66,8 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 
   if (length<0) length = 0;
   if (length>REST_MAX_CHUNK_SIZE) length = REST_MAX_CHUNK_SIZE;
-  memcpy(buffer, message, length);
+//  memcpy(buffer, message, length);
+  memset(buffer, 2, length);
 
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
   REST.set_header_etag(response, (uint8_t *) &length, 1);
@@ -118,11 +119,11 @@ PROCESS_THREAD(rest_server_example, ev, data)
 //  powertrace_start(CLOCK_SECOND * 4);
 //  powertrace_sniff(POWERTRACE_ON);
 
-  uart1_set_input(serial_line_input_byte);
-  serial_line_init();
-  serial_shell_init();
-  shell_sky_init();
-  shell_powertrace_init();
+//  uart1_set_input(serial_line_input_byte);
+//  serial_line_init();
+//  serial_shell_init();
+//  shell_sky_init();
+//  shell_powertrace_init();
 
   PROCESS_WAIT_UNTIL(0);
 

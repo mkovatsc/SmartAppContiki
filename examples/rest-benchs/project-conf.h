@@ -32,7 +32,9 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
-#define IN_COOJA 0
+#include "cooja-debug.h"
+
+#define IN_COOJA 1
 #define WITH_RPL 0
 
 #ifndef NETSTACK_CONF_RDC
@@ -81,5 +83,15 @@
 #define UIP_CONF_DS6_ADDR_NBU    2
 #define UIP_CONF_DS6_MADDR_NBU   0
 #define UIP_CONF_DS6_AADDR_NBU   0
+
+#define WITH_BURST						1
+#define WITH_LETHARGY    				1
+#define CCA_BEFORE_BURST                0
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
+
+#define BURST_DURATION    RTIMER_ARCH_SECOND
+#define CSMA_MAX_BACKOFF            8
+#define MAC_QUEUE_SIZE              8
+#define MAX_NEIGHBORS               4
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
