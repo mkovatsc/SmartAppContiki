@@ -6,10 +6,6 @@
 
 #include "coap-03-rest-engine.h"
 
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-#include "static-routing.h"
-#endif
-
 #define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -345,12 +341,6 @@ PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
   PRINTF("Starting CoAP server...\n");
-
-/* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-  set_global_address();
-  configure_routing();
-#endif
 
   rest_activate_resource(&resource_well_known_core);
 

@@ -1,1 +1,1 @@
-rest-engine_src = rest-engine.c static-routing.c
+rest-engine_src = rest-engine.c
