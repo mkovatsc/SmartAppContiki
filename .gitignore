@@ -9,8 +9,9 @@
 *.hex
 *.sky
 *.jcreate
-*.class
 *.minimal-net
+*.class
+*.pyc
 obj_*
 symbols.*
 Makefile.target
