@@ -484,7 +484,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   SENSORS_ACTIVATE(button_sensor);
   SENSORS_ACTIVATE(battery_sensor);
 
-  rest_activate_resource(&resource_event);
+  rest_activate_event_resource(&resource_event);
   rest_activate_resource(&resource_led);
   rest_activate_resource(&resource_light);
   rest_activate_resource(&resource_battery);

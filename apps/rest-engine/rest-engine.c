@@ -79,6 +79,13 @@ rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
   rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
 }
 
+void
+rest_activate_event_resource(resource_t* resource)
+{
+  rest_activate_resource(resource);
+  rest_set_post_handler(resource, REST.subscription_handler);
+}
+
 list_t
 rest_get_resources(void)
 {

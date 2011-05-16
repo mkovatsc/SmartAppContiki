@@ -233,8 +233,9 @@ void rest_init_framework(void);
  * Resources wanted to be accessible should be activated with the following code.
  */
 void rest_activate_resource(resource_t* resource);
-
 void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
+void rest_activate_event_resource(resource_t* resource);
+
 
 /*
  * To be called by HTTP/COAP server as a callback function when a new service request appears.
