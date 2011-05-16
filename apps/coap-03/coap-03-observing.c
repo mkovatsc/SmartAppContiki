@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "coap-03-transactions.h"
 #include "coap-03-observing.h"
 
 #define DEBUG 0
@@ -146,7 +145,7 @@ coap_observe_handler(void *request, void *response)
       {
         const char *url;
         REST.get_url(request, &url); /* request url was set to RESOURCE url string as handle. */
-        if (coap_add_observer(url, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
+        if (coap_add_observer(url, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
         {
           coap_set_header_observe(response, 0);
           coap_set_payload(response, (uint8_t *)content, snprintf(content, sizeof(content), "Added as observer %u/%u", list_length(observers_list), COAP_MAX_OBSERVERS));
@@ -166,7 +165,7 @@ coap_observe_handler(void *request, void *response)
     else /* if (observe) */
     {
       /* Remove client if it is currently observing. */
-      coap_remove_observer_by_client(&((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport);
+      coap_remove_observer_by_client(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport);
     } /* if (observe) */
   }
 }

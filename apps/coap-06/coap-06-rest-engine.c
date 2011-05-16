@@ -59,9 +59,6 @@
 #define PRINTBITS(buf,len)
 #endif
 
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
-
 PROCESS(coap_server, "Coap Server");
 
 /*-----------------------------------------------------------------------------------*/
@@ -249,7 +246,7 @@ handle_incoming_data(void)
       {
         coap_error_code = INTERNAL_SERVER_ERROR_5_00;
       }
-      /* reuse input buffer */
+      /* Reuse input buffer for error message. */
       coap_init_message(message, COAP_TYPE_ACK, coap_error_code, message->tid);
       coap_set_payload(message, (uint8_t *) coap_error_message, strlen(coap_error_message));
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(message, data));
@@ -496,9 +493,9 @@ const struct rest_implementation coap_rest_implementation = {
   coap_get_post_variable,
 
   coap_notify_observers,
-  coap_observe_handler,
+  (restful_post_handler) coap_observe_handler,
 
-  coap_separate_handler,
+  (restful_pre_handler) coap_separate_handler,
   NULL,
 
   {

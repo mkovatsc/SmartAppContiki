@@ -47,5 +47,35 @@
 /*-----------------------------------------------------------------------------------*/
 void coap_separate_handler(void *request, void *response)
 {
-  PRINTF("COAP SEPARATE HANDLER\n");
+  PRINTF("COAP SEPARATE HANDLER \n");
+  PRINTF("  Token %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", ((coap_packet_t *)request)->token_len,
+    ((coap_packet_t *)request)->token[0],
+    ((coap_packet_t *)request)->token[1],
+    ((coap_packet_t *)request)->token[2],
+    ((coap_packet_t *)request)->token[3],
+    ((coap_packet_t *)request)->token[4],
+    ((coap_packet_t *)request)->token[5],
+    ((coap_packet_t *)request)->token[6],
+    ((coap_packet_t *)request)->token[7]
+  ); // FIXME always prints 8 bytes...
+  PRINTF("  Token %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", ((coap_packet_t *)response)->token_len,
+    ((coap_packet_t *)response)->token[0],
+    ((coap_packet_t *)response)->token[1],
+    ((coap_packet_t *)response)->token[2],
+    ((coap_packet_t *)response)->token[3],
+    ((coap_packet_t *)response)->token[4],
+    ((coap_packet_t *)response)->token[5],
+    ((coap_packet_t *)response)->token[6],
+    ((coap_packet_t *)response)->token[7]
+  ); // FIXME always prints 8 bytes...
+  /* send separate ACK. */
+  coap_packet_t ack[1];
+  coap_init_message(ack, COAP_TYPE_ACK, 0, ((coap_packet_t *)request)->tid);
+  /* Should only overwrite Header which is already parsed to request. */
+  coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, (uip_appdata + uip_ext_len), coap_serialize_message(ack, (uip_appdata + uip_ext_len)));
+
+  /* Change response to separate response. */
+  ((coap_packet_t *)response)->type = COAP_TYPE_NON;
+  ((coap_packet_t *)response)->tid = coap_get_tid();
+
 }

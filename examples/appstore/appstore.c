@@ -64,8 +64,8 @@ void loader_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 
   if ((payload_len = REST.get_request_payload(request, &payload))) {
     /* store the host address  */
-    memcpy(&host_ipaddr, &((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])->srcipaddr, sizeof(uip_ipaddr_t));
-    host_port = ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])->srcport;
+    memcpy(&host_ipaddr, &UIP_IP_BUF->srcipaddr, sizeof(uip_ipaddr_t));
+    host_port = UIP_UDP_BUF->srcport;
     /* store the filename as a C string */
     memcpy(elf_filename, payload, payload_len);
     elf_filename[payload_len] = '\0';
