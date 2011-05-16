@@ -4,6 +4,10 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
+#include "static-routing.h"
+#endif
+
 #include "rest-engine.h"
 #if WITH_COAP==3
 #include "coap-03-rest-engine.h"

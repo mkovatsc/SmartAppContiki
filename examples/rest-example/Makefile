@@ -2,6 +2,8 @@ all: rest-server-example coap-client-example
 
 CONTIKI=../..
 
+PROJECT_SOURCEFILES += static-routing.c
+
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
