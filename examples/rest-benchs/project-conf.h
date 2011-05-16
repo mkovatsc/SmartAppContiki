@@ -32,7 +32,7 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
-#define IN_COOJA 0
+#define IN_COOJA 1
 #define WITH_RPL 0
 
 #ifndef NETSTACK_CONF_RDC
@@ -81,5 +81,9 @@
 #define UIP_CONF_DS6_ADDR_NBU    2
 #define UIP_CONF_DS6_MADDR_NBU   0
 #define UIP_CONF_DS6_AADDR_NBU   0
+
+#define WITH_SNOOPING				1
+#define SNOOP_CONF_FACTOR               8
+#define WITH_PHASE_OPTIMIZATION		!WITH_SNOOPING
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
