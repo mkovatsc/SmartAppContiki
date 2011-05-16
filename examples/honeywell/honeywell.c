@@ -105,7 +105,7 @@ static struct {
 	uint16_t supercomfort_temperature;
 
 	
-	hw_timer_slot_t timers[8][6];
+	hw_timer_slot_t timers[8][8];
 	
 
 	/* 0 : justOne
@@ -728,7 +728,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			c[0]=query[0];
 			c[1]='\0';
 			slot = atoi(c);
-			if(slot <= 6 && slot >= 1){
+			if(slot <= 8 && slot >= 1){
 				//slot is in interval [0;5] on honeywell but [1;6] on ravenmote
 				slot--;
 				success = 1;
@@ -737,14 +737,14 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		snprintf_P(temp, 128, PSTR("Add a get parameter that specifies the slot in [1;6] eg.: /auto/%s?3 to interact with slot 3"), timerString);
+		snprintf_P(temp, 128, PSTR("Add a get parameter that specifies the slot in [1;8] eg.: /auto/%s?3 to interact with slot 3"), timerString);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 		return;
 	}
 	if (REST.get_method_type(request)==METHOD_POST){
 		const char * disable = NULL;
-		len = REST.get_request_payload(request, "disable", &disable);
+		len = REST.get_post_variable(request, "disable", &disable);
 		if(len == 7){
 			if(strncmp_P(disable, PSTR("disable"), len)!=0){
 				success = 0;
