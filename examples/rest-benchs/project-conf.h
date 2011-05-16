@@ -74,7 +74,7 @@
 #define WEBSERVER_CONF_CFS_CONNS 2
 #endif
 
-#define UIP_CONF_DS6_ROUTE_NBU   2
+#define UIP_CONF_DS6_ROUTE_NBU   6
 #define UIP_CONF_DS6_NBR_NBU     2
 #define UIP_CONF_DS6_DEFRT_NBU   2
 #define UIP_CONF_DS6_PREFIX_NBU  2
