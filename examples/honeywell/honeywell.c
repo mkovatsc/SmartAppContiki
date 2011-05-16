@@ -183,7 +183,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
-	etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	//etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
 	printf_P(PSTR("G01\n"));
 	request_state = auto_temperatures;
@@ -290,7 +290,10 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 {
 	char temp[128];
 	sprintf_P(temp, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
-	
+
+	request_state = poll;
+	printf_P(PSTR("D\n"));
+
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
@@ -300,6 +303,9 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 {
 	char temp[128];
 	sprintf_P(temp, PSTR("%d"), poll_data.battery);
+
+	request_state = poll;
+	printf_P(PSTR("D\n"));
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
@@ -312,6 +318,8 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 {
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
+		request_state = poll;
+		printf_P(PSTR("D\n"));
 		switch(poll_data.mode){
 			case manual:
 				strcpy_P(temp, PSTR("manual"));
@@ -336,14 +344,17 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		else{
 			if(strncmp_P(string,PSTR("manual"),len)==0){
+				request_state = poll;
 				printf_P(PSTR("M00\n"));
 				strcpy_P(temp, PSTR("New mode is: manual"));
 			}
 			else if(strncmp_P(string,PSTR("auto"),len)==0){
+				request_state = poll;
 				printf_P(PSTR("M01\n"));
 				strcpy_P(temp, PSTR("New mode is: auto"));
 			}
 			else if(strncmp_P(string,PSTR("valve"),len)==0){
+				request_state = poll;
 				printf_P(PSTR("M02\n"));
 				strcpy_P(temp, PSTR("New mode is: valve"));
 			}
@@ -368,6 +379,8 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		sprintf_P(temp, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
+		request_state = poll;
+		printf_P(PSTR("D\n"));
 	}
 	else{
 		const char * string = NULL;
@@ -381,7 +394,8 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			} 
 			else{
 				uint16_t value = atoi(string);
-				printf("A%02x\n",value/5);
+				request_state = poll;
+				printf_P(PSTR("A%02x\n"),value/5);
 				sprintf_P(temp, PSTR("Successfully set value"));
 			}
 		}
@@ -440,6 +454,8 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		sprintf_P(temp, PSTR("%d"), poll_data.valve);
+		request_state = poll;
+		printf_P(PSTR("D\n"));
 	}
 	else{
 		const char * string = NULL;
@@ -453,6 +469,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 			} 
 			else{
 				int new_valve=atoi(string);
+				request_state = poll;
 				printf_P(PSTR("E%02x\n"),new_valve);
 				sprintf_P(temp, PSTR("Successfully set valve position"));
 			}
@@ -473,6 +490,8 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		sprintf_P(temp, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
+		request_state = poll;
+		printf_P(PSTR("D\n"));
 	}
 	else{
 		const char * string = NULL;
@@ -503,6 +522,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			}
 
 			if(success){
+				request_state = poll;
 				printf_P(PSTR("Y%02x%02x%02x\n"),year,month,day);
 				sprintf_P(temp, PSTR("Successfully set date"));
 			}
@@ -531,6 +551,8 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		int minute = poll_data.minute + (second / 60);
 		int hour = poll_data.hour + (minute / 60);
 		sprintf_P(temp, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
+		request_state = poll;
+		printf_P(PSTR("D\n"));
 	}
 	else{
 		const char * string = NULL;
@@ -552,6 +574,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			}
 
 			if(success){
+				request_state = poll;
 				printf_P(PSTR("H%02x%02x%02x\n"),hour,minute,second);
 				sprintf_P(temp, PSTR("Successfully set time"));
 			}
@@ -573,6 +596,8 @@ static void handle_temperature(char * identifier, int temperature, int index, vo
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		sprintf_P(temp, PSTR("%d.%02d"), temperature/100, temperature%100);
+		request_state = auto_temperatures;
+		printf_P(PSTR("G01\n"));
 	}
 	else{
 		const char * string = NULL;
@@ -667,6 +692,8 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	}
 	else{
 		sprintf_P(temp, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"));
+		request_state=auto_mode;
+		printf_P(PSTR("S22\n"));
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -712,7 +739,9 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 			else{
 				request_state = get_timer;
 				printf_P(PSTR("W%d%d0fff\n"),day, slot);
-				sprintf_P(temp, PSTR("W%d%d0fff\n"),day, slot);
+				int index = 0;
+				index += sprintf_P(temp + index, PSTR("Disabled slot %d of "), slot + 1);
+				index += sprintf_P(temp + index, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
 			}
 		}
 		else{
@@ -759,7 +788,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 								request_state = get_timer;
 								printf_P(PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
 								int index = 0;
-								index += sprintf_P(temp + index, PSTR("Set slot %d of "), slot+1);
+								index += sprintf_P(temp + index, PSTR("Set slot %d of "), slot + 1);
 								index += sprintf_P(temp + index, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
 								index += sprintf_P(temp + index, PSTR(" to time %02d:%02d and mode %S"), hour, minute, getModeString(level));
 							}
