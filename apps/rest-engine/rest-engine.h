@@ -156,7 +156,7 @@ struct rest_implementation {
   void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t counter, uint8_t *payload, size_t payload_len);
 
   /** The handler for resource subscriptions. */
-  restful_pre_handler subscription_handler;
+  restful_post_handler subscription_handler;
 
   /** A default pre-handler that is assigned with the RESOURCE macro. */
   restful_pre_handler default_pre_handler;
