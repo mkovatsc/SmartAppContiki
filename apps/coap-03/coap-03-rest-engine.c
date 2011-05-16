@@ -470,6 +470,9 @@ const struct rest_implementation coap_rest_implementation = {
     coap_notify_observers,
     coap_observe_handler,
 
+    NULL,
+    NULL,
+
     {
       OK_200,
       CREATED_201,

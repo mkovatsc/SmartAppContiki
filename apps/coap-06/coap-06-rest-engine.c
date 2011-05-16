@@ -36,6 +36,7 @@
 #include "coap-06-rest-engine.h"
 #include "coap-06-transactions.h"
 #include "coap-06-observing.h"
+#include "coap-06-separate.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -496,6 +497,9 @@ const struct rest_implementation coap_rest_implementation = {
 
   coap_notify_observers,
   coap_observe_handler,
+
+  coap_separate_handler,
+  NULL,
 
   {
     CONTENT_2_05,

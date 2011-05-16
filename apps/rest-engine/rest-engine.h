@@ -26,6 +26,18 @@ typedef enum {
   METHOD_DELETE = (1 << 3)
 } rest_method_t;
 
+
+struct resource_s;
+struct periodic_resource_s;
+
+/* Signatures of handler functions. */
+typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+typedef int (*restful_pre_handler) (void* request, void* response);
+typedef void (*restful_post_handler) (void* request, void* response);
+typedef int (*restful_periodic_handler) (struct resource_s* resource);
+typedef void (*restful_response_handler) (void *data, void* response);
+
+/* Signature of the rest-engine service function. */
 typedef int (* service_callback_t)(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 
 /**
@@ -144,7 +156,13 @@ struct rest_implementation {
   void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t counter, uint8_t *payload, size_t payload_len);
 
   /** The handler for resource subscriptions. */
-  void (* subscription_handler)(void *request, void *response);
+  restful_pre_handler subscription_handler;
+
+  /** A default pre-handler that is assigned with the RESOURCE macro. */
+  restful_pre_handler default_pre_handler;
+
+  /** A default post-handler that is assigned with the RESOURCE macro. */
+  restful_post_handler default_post_handler;
 
   /* REST status codes. */
   const struct rest_implementation_status status;
@@ -157,18 +175,6 @@ struct rest_implementation {
  * Instance of REST implementation
  */
 extern const struct rest_implementation REST;
-
-struct resource_s;
-struct periodic_resource_s;
-
-/*Signature of handler functions*/
-typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-typedef int (*restful_pre_handler) (void* request, void* response);
-typedef void (*restful_post_handler) (void* request, void* response);
-
-typedef int (*restful_periodic_handler) (struct resource_s* resource);
-
-typedef void (*restful_response_handler) (void *data, void* response);
 
 /*
  * Data structure representing a resource in REST.

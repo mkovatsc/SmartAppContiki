@@ -65,8 +65,17 @@ rest_init_framework(void)
 void
 rest_activate_resource(resource_t* resource)
 {
-  /*add it to the restful web service link list*/
   PRINTF("Activating: %s", resource->url);
+
+  if (!resource->pre_handler)
+  {
+    rest_set_pre_handler(resource, REST.default_pre_handler);
+  }
+  if (!resource->post_handler)
+  {
+    rest_set_post_handler(resource, REST.default_post_handler);
+  }
+
   list_add(restful_services, resource);
 }
 
