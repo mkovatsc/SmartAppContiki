@@ -286,7 +286,19 @@ void COM_print_debug(uint8_t type) {
 	COM_putchar(':');
 	print_decXX(RTC_GetSecond());
 	COM_putchar(' ');
-    COM_putchar((CTL_mode_auto)?(CTL_test_auto()?'A':'-'):'M');
+	switch(CTL_mode_auto){
+		case manual:
+			COM_putchar('M');
+			break;
+		case timers:
+			COM_putchar('A');
+			break;
+		case valve:
+			COM_putchar('V');
+			break;
+		default:
+			COM_putchar('-');
+	}
 	print_s_p(PSTR(" V: "));
 	print_decXX(valve_wanted);
 	print_s_p(PSTR(" I: "));
@@ -509,13 +521,14 @@ void COM_commad_parse (void) {
             if (COM_hex_parse(1*2)!='\0') { break; }
 			if (com_hex[0]>=0 && com_hex[0]<=2)
             	CTL_change_mode(com_hex[0]);
-            //COM_print_debug(1);
+            COM_print_debug(1);
             break;
         case 'A':
             if (COM_hex_parse(1*2)!='\0') { break; }
             if (com_hex[0]<TEMP_MIN-1) { break; }
             if (com_hex[0]>TEMP_MAX+1) { break; }
-            CTL_set_temp(com_hex[0]);
+			if (CTL_mode_auto==manual)
+            	CTL_set_temp(com_hex[0]);
             COM_print_debug(1);
             break;
         case 'L':
@@ -534,6 +547,7 @@ void COM_commad_parse (void) {
 				CTL_valve_wanted=com_hex[0];
 			}
 			PID_force_update = 0;
+			COM_print_debug(1);
 			break;
 #endif
 		//case '\n':
