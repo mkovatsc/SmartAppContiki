@@ -7,7 +7,17 @@
 #include "contiki-raven.h"
 #include "rs232.h"
 #include "ringbuf.h"
-#include "rest.h"
+
+#if WITH_COAP == 3
+#include "coap-03.h"
+#include "coap-03-transactions.h"
+#elif WITH_COAP == 6
+#include "coap-06.h"
+#include "coap-06-transactions.h"
+#else
+#error "CoAP version defined by WITH_COAP not implemented"
+#endif
+
 
 #include "UsefulMicropendousDefines.h"
 // set up external SRAM prior to anything else to make sure malloc() has access to it
@@ -545,7 +555,7 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		sprintf_P(temp,PSTR("Payload: section=[acc,cost,max]"));
   	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   	REST.set_response_payload(response, (uint8_t *) temp , strlen(temp));
- 	 	REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 	 	REST.set_response_status(response, REST.status.BAD_REQUEST);
 	}
 }
 
@@ -657,7 +667,7 @@ activate_handler(void* request, void* response, uint8_t *buffer, uint16_t prefer
 			sprintf_P(temp,PSTR("Payload: state=[in,off]"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   		REST.set_response_payload(response, (uint8_t *) temp , strlen(temp));
- 	 	  REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 	 	  REST.set_response_status(response, REST.status.BAD_REQUEST);
  	 	}
 	}
 }
@@ -721,7 +731,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			sprintf_P(temp, PSTR("Payload: value=hh:mm[:ss]\n"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  			REST.set_response_payload(response, (uint8_t *)temp , strlen(temp));
- 		 	REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 		 	REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
 }
@@ -778,7 +788,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			sprintf_P(temp, PSTR("Payload: value=dd.mm.yy\n"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  			REST.set_response_payload(response, (uint8_t *)temp , strlen(temp));
- 		  REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 		  REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
 }
@@ -1016,7 +1026,7 @@ tariff0_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t p
 			sprintf_P(temp, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  			REST.set_response_payload(response, (uint8_t *)temp , strlen(temp));
- 			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 		
 	}
@@ -1068,7 +1078,7 @@ handleTariff_rate(uint8_t tariff,void* request, void* response, uint8_t *buffer,
 			sprintf_P(temp, PSTR("Payload: value=ppp\n"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  			REST.set_response_payload(response, (uint8_t *)temp , strlen(temp));
- 			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
 }
@@ -1238,7 +1248,7 @@ handleTimer(uint8_t timer, void* request, void* response, uint8_t *buffer, uint1
 			sprintf_P(temp, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  			REST.set_response_payload(response, (uint8_t *)temp , strlen(temp));
- 			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+ 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 		
 	}
