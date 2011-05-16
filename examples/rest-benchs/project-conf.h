@@ -42,9 +42,6 @@
 #define NETSTACK_CONF_RDC             contikimac_driver
 #endif
 
-/* Default is 4. */
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE    4
-
 #define COAP_SERVER_PORT 61616
 #define COAP_MAX_OPEN_TRANSACTIONS 1
 
