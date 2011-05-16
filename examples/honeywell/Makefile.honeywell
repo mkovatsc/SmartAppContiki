@@ -13,7 +13,6 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variable
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
-CFLAGS += -DUIP_CONF_TCP=0 # not used anymore
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
@@ -24,7 +23,7 @@ CFLAGS += -DBAUD_RATE=USART_BAUD_9600
 LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 
 #extmem
-LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
+#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 
 # REST framework, requires WITH_COAP

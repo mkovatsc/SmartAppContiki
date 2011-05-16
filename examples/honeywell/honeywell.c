@@ -52,7 +52,7 @@
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
 
-#include "UsefulMicropendousDefines.h"
+/*#include "UsefulMicropendousDefines.h"
 // set up external SRAM prior to anything else to make sure malloc() has access to it
 void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
 void EnableExternalSRAM(void)
@@ -62,7 +62,7 @@ void EnableExternalSRAM(void)
   XMCRA = ((1 << SRE));  // enable XMEM interface with 0 wait states
   XMCRB = 0;
   SELECT_EXT_SRAM_BANK0; // select Bank 0
-}
+}*/
 
 
 #define MAX(a,b) ((a)<(b)?(b):(a))
@@ -289,7 +289,7 @@ RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperatur
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	char temp[128];
-	sprintf_P(temp, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
+	snprintf_P(temp, 128, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 
 	request_state = poll;
 	printf_P(PSTR("D\n"));
@@ -302,7 +302,7 @@ RESOURCE(battery, METHOD_GET, "battery", "battery");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	char temp[128];
-	sprintf_P(temp, PSTR("%d"), poll_data.battery);
+	snprintf_P(temp, 128, PSTR("%d"), poll_data.battery);
 
 	request_state = poll;
 	printf_P(PSTR("D\n"));
@@ -378,7 +378,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 {	
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
+		snprintf_P(temp, 128, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -396,12 +396,12 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 				uint16_t value = atoi(string);
 				request_state = poll;
 				printf_P(PSTR("A%02x\n"),value/5);
-				sprintf_P(temp, PSTR("Successfully set value"));
+				snprintf_P(temp, 128, PSTR("Successfully set value"));
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"));
+			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"));
 		}
 	}
 
@@ -414,7 +414,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 {	
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d"), poll_time);
+		snprintf_P(temp, 128, PSTR("%d"), poll_time);
 	}
 	else{
 		const char * string = NULL;
@@ -431,7 +431,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 				int poll_intervall = atoi(string);
 				if(temp > 0){
 					poll_time = poll_intervall;
-					sprintf_P(temp, PSTR("Successfully set poll intervall"));
+					snprintf_P(temp, 128, PSTR("Successfully set poll intervall"));
 				}
 				else{
 					success = 0;
@@ -440,7 +440,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"));
+			snprintf_P(temp, 128, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"));
 		}
 	}
 
@@ -453,7 +453,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 {	
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d"), poll_data.valve);
+		snprintf_P(temp, 128, PSTR("%d"), poll_data.valve);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -471,12 +471,12 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 				int new_valve=atoi(string);
 				request_state = poll;
 				printf_P(PSTR("E%02x\n"),new_valve);
-				sprintf_P(temp, PSTR("Successfully set valve position"));
+				snprintf_P(temp, 128, PSTR("Successfully set valve position"));
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
+			snprintf_P(temp, 128, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
 		}
 	}
 
@@ -489,7 +489,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 {	
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
+		snprintf_P(temp, 128, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -524,7 +524,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				request_state = poll;
 				printf_P(PSTR("Y%02x%02x%02x\n"),year,month,day);
-				sprintf_P(temp, PSTR("Successfully set date"));
+				snprintf_P(temp, 128, PSTR("Successfully set date"));
 			}
 		}
 		else{
@@ -532,7 +532,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=dd.mm.yy"));
+			snprintf_P(temp, 128, PSTR("Payload format: value=dd.mm.yy"));
 		}
 	}
 
@@ -550,7 +550,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		int second = poll_data.second + (now - poll_data.last_poll) / CLOCK_SECOND;
 		int minute = poll_data.minute + (second / 60);
 		int hour = poll_data.hour + (minute / 60);
-		sprintf_P(temp, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
+		snprintf_P(temp, 128, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -576,7 +576,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				request_state = poll;
 				printf_P(PSTR("H%02x%02x%02x\n"),hour,minute,second);
-				sprintf_P(temp, PSTR("Successfully set time"));
+				snprintf_P(temp, 128, PSTR("Successfully set time"));
 			}
 		}
 		else{
@@ -584,7 +584,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=hh:mm[:ss]"));
+			snprintf_P(temp, 128, PSTR("Payload format: value=hh:mm[:ss]"));
 		}
 	}
 
@@ -595,7 +595,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 static void handle_temperature(char * identifier, int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		sprintf_P(temp, PSTR("%d.%02d"), temperature/100, temperature%100);
+		snprintf_P(temp, 128, PSTR("%d.%02d"), temperature/100, temperature%100);
 		request_state = auto_temperatures;
 		printf_P(PSTR("G01\n"));
 	}
@@ -613,12 +613,12 @@ static void handle_temperature(char * identifier, int temperature, int index, vo
 				uint16_t value = atoi(string);
 				printf_P(PSTR("S0%d%02x\n"),index, value/5);
 				request_state = set_auto_temperatures;
-				sprintf_P(temp, PSTR("Successfully set value"));
+				snprintf_P(temp, 128, PSTR("Successfully set value"));
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees (just steps of 0.5 possible)"), identifier);
+			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"), identifier);
 		}
 	}
 
@@ -674,12 +674,12 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 			if(strncmp_P(string, PSTR("weekdays"), MAX(len,8))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2201\n"));
-				sprintf_P(temp, PSTR("Timermode set to weekdays"));
+				snprintf_P(temp, 128, PSTR("Timermode set to weekdays"));
 			}
 			else if(strncmp_P(string, PSTR("justOne"), MAX(len,7))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2200\n"));
-				sprintf_P(temp, PSTR("Timermode set to justOne"));
+				snprintf_P(temp, 128, PSTR("Timermode set to justOne"));
 			}
 			else{
 				success = 0;
@@ -687,11 +687,11 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: value={justOne, weekdays}"));
+			snprintf_P(temp, 128, PSTR("Payload format: value={justOne, weekdays}"));
 		}
 	}
 	else{
-		sprintf_P(temp, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"));
+		snprintf_P(temp, 128, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"));
 		request_state=auto_mode;
 		printf_P(PSTR("S22\n"));
 	}
@@ -699,20 +699,6 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
-
-static void handleTopTimer(int day, void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-}
-
-RESOURCE(weektimer, METHOD_GET, "auto/weektimer", "auto/weektimer");
-RESOURCE(daytimer1, METHOD_GET, "auto/daytimer1", "auto/daytimer1");
-
-void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTopTimer(0, request, response, buffer, preferred_size, offset);
-}
-void daytimer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTopTimer(1, request, response, buffer, preferred_size, offset);
-}
-
 
 static char * getModeString(int mode){
 	char * string;
@@ -726,12 +712,39 @@ static char * getModeString(int mode){
 	return string;
 }
 
-static void handleTimer(int day, int slot, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+static void handleTimer(int day, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[128];
+	const char * query = NULL;
+	int success = 0;
+	int len;
+	int slot;
+
+	char timerString[10];
+	snprintf_P(timerString, 10, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
+	
+	if ((len = REST.get_query(request, &query))){
+		if(isdigit(query[0]) && len == 1){
+			char c[2];
+			c[0]=query[0];
+			c[1]='\0';
+			slot = atoi(c);
+			if(slot <= 6 && slot >= 1){
+				//slot is in interval [0;5] on honeywell but [1;6] on ravenmote
+				slot--;
+				success = 1;
+			}
+		}
+	}
+	if(!success){
+		REST.set_response_status(response, REST.status.BAD_REQUEST);
+		snprintf_P(temp, 128, PSTR("Add a get parameter that specifies the slot in [1;6] eg.: /auto/%s?3 to interact with slot 3"), timerString);
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+		return;
+	}
 	if (REST.get_method_type(request)==METHOD_POST){
 		const char * disable = NULL;
-		int success = 1;
-		int len = REST.get_post_variable(request, "disable", &disable);
+		len = REST.get_request_payload(request, "disable", &disable);
 		if(len == 7){
 			if(strncmp_P(disable, PSTR("disable"), len)!=0){
 				success = 0;
@@ -739,9 +752,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 			else{
 				request_state = get_timer;
 				printf_P(PSTR("W%d%d0fff\n"),day, slot);
-				int index = 0;
-				index += sprintf_P(temp + index, PSTR("Disabled slot %d of "), slot + 1);
-				index += sprintf_P(temp + index, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
+				snprintf_P(temp, 64 , PSTR("Disabled slot %d of %s"), slot + 1, timerString);
 			}
 		}
 		else{
@@ -787,10 +798,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 							else{
 								request_state = get_timer;
 								printf_P(PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
-								int index = 0;
-								index += sprintf_P(temp + index, PSTR("Set slot %d of "), slot + 1);
-								index += sprintf_P(temp + index, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
-								index += sprintf_P(temp + index, PSTR(" to time %02d:%02d and mode %S"), hour, minute, getModeString(level));
+								snprintf_P(temp, 128, PSTR("Set slot %d of %s to time %02d:%02d and mode %S"), slot + 1, timerString, hour, minute, getModeString(level));
 							}
 						}
 						else{
@@ -802,7 +810,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			sprintf_P(temp, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
+			snprintf_P(temp, 128, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
 		}
 	}
 	else{
@@ -811,10 +819,10 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 
 		uint16_t time = poll_data.timers[day][slot].time;
 		if(time > 23*60 + 59){
-			sprintf_P(temp, PSTR("disabled"));
+			snprintf_P(temp, 128, PSTR("disabled"));
 		}
 		else{
-			sprintf_P(temp, PSTR("%S at %02d:%02d"), getModeString(poll_data.timers[day][slot].mode), time/60, time%60 );
+			snprintf_P(temp, 128, PSTR("%S at %02d:%02d"), getModeString(poll_data.timers[day][slot].mode), time/60, time%60 );
 		}
 	}
 
@@ -822,32 +830,43 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
-RESOURCE(weektimer1, METHOD_GET | METHOD_POST, "auto/weektimer/slot1", "auto/weektimer/slot1");
-RESOURCE(weektimer2, METHOD_GET | METHOD_POST, "auto/weektimer/slot2", "auto/weektimer/slot2");
-RESOURCE(weektimer3, METHOD_GET | METHOD_POST, "auto/weektimer/slot3", "auto/weektimer/slot3");
-RESOURCE(weektimer4, METHOD_GET | METHOD_POST, "auto/weektimer/slot4", "auto/weektimer/slot4");
-RESOURCE(weektimer5, METHOD_GET | METHOD_POST, "auto/weektimer/slot5", "auto/weektimer/slot5");
-RESOURCE(weektimer6, METHOD_GET | METHOD_POST, "auto/weektimer/slot6", "auto/weektimer/slot6");
-void weektimer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 0, request, response, buffer, preferred_size, offset);
-}
-void weektimer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 1, request, response, buffer, preferred_size, offset);
-}
-void weektimer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 2, request, response, buffer, preferred_size, offset);
-}
-void weektimer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 3, request, response, buffer, preferred_size, offset);
-}
-void weektimer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 4, request, response, buffer, preferred_size, offset);
-}
-void weektimer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, 5, request, response, buffer, preferred_size, offset);
+RESOURCE(weektimer, METHOD_GET | METHOD_POST, "auto/weektimer", "auto/weektimer");
+void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(0, request, response, buffer, preferred_size, offset);
 }
 
-RESOURCE(day1timer1, METHOD_GET | METHOD_POST, "auto/daytimer1/slot1", "auto/daytimer1/slot1");
+RESOURCE(day1timer, METHOD_GET | METHOD_POST, "auto/day1timer", "auto/day1timer");
+RESOURCE(day2timer, METHOD_GET | METHOD_POST, "auto/day2timer", "auto/day2timer");
+RESOURCE(day3timer, METHOD_GET | METHOD_POST, "auto/day3timer", "auto/day3timer");
+RESOURCE(day4timer, METHOD_GET | METHOD_POST, "auto/day4timer", "auto/day4timer");
+RESOURCE(day5timer, METHOD_GET | METHOD_POST, "auto/day5timer", "auto/day5timer");
+RESOURCE(day6timer, METHOD_GET | METHOD_POST, "auto/day6timer", "auto/day6timer");
+RESOURCE(day7timer, METHOD_GET | METHOD_POST, "auto/day7timer", "auto/day7timer");
+
+void day1timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(1, request, response, buffer, preferred_size, offset);
+}
+void day2timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(2, request, response, buffer, preferred_size, offset);
+}
+void day3timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(3, request, response, buffer, preferred_size, offset);
+}
+void day4timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(4, request, response, buffer, preferred_size, offset);
+}
+void day5timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(5, request, response, buffer, preferred_size, offset);
+}
+void day6timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(6, request, response, buffer, preferred_size, offset);
+}
+void day7timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(7, request, response, buffer, preferred_size, offset);
+}
+
+
+/*RESOURCE(day1timer1, METHOD_GET | METHOD_POST, "auto/daytimer1/slot1", "auto/daytimer1/slot1");
 RESOURCE(day1timer2, METHOD_GET | METHOD_POST, "auto/daytimer1/slot2", "auto/daytimer1/slot2");
 RESOURCE(day1timer3, METHOD_GET | METHOD_POST, "auto/daytimer1/slot3", "auto/daytimer1/slot3");
 RESOURCE(day1timer4, METHOD_GET | METHOD_POST, "auto/daytimer1/slot4", "auto/daytimer1/slot4");
@@ -1020,7 +1039,7 @@ void day7timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t
 }
 void day7timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
+}*/
 
 
 
@@ -1048,14 +1067,16 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_supercomfort);
 	rest_activate_resource(&resource_timermode);
 	
-	rest_activate_resource(&resource_weektimer1);
-	rest_activate_resource(&resource_weektimer2);
-	rest_activate_resource(&resource_weektimer3);
-	rest_activate_resource(&resource_weektimer4);
-	rest_activate_resource(&resource_weektimer5);
-	rest_activate_resource(&resource_weektimer6);
+	rest_activate_resource(&resource_weektimer);
+	rest_activate_resource(&resource_day1timer);
+	rest_activate_resource(&resource_day2timer);
+	rest_activate_resource(&resource_day3timer);
+	rest_activate_resource(&resource_day4timer);
+	rest_activate_resource(&resource_day5timer);
+	rest_activate_resource(&resource_day6timer);
+	rest_activate_resource(&resource_day7timer);
 
-	rest_activate_resource(&resource_day1timer1);
+	/*rest_activate_resource(&resource_day1timer1);
 	rest_activate_resource(&resource_day1timer2);
 	rest_activate_resource(&resource_day1timer3);
 	rest_activate_resource(&resource_day1timer4);
@@ -1102,7 +1123,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_day7timer3);
 	rest_activate_resource(&resource_day7timer4);
 	rest_activate_resource(&resource_day7timer5);
-	rest_activate_resource(&resource_day7timer6);
+	rest_activate_resource(&resource_day7timer6);*/
 
 	PROCESS_END();
 }

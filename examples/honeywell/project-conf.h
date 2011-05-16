@@ -32,16 +32,8 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
-#ifndef SICSLOWPAN_CONF_FRAG
-#define SICSLOWPAN_CONF_FRAG 1
-#endif
-
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
-#endif
-
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    180
+#define UIP_CONF_BUFFER_SIZE    220
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
