@@ -58,6 +58,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif
+
 typedef int32_t  s32_t;
 typedef unsigned char u8_t;
 typedef unsigned short u16_t;
@@ -177,7 +181,9 @@ unsigned long clock_seconds(void);
 #define SICSLOWPAN_CONF_ADDR_CONTEXT_2 {addr_contexts[2].prefix[0]=0x20;addr_contexts[2].prefix[1]=0x01;addr_contexts[2].prefix[2]=0x49;addr_contexts[2].prefix[3]=0x78,addr_contexts[2].prefix[4]=0x1d;addr_contexts[2].prefix[5]=0xb1;}
 
 /* 211 bytes per queue buffer */
+#ifndef QUEUEBUF_CONF_NUM
 #define QUEUEBUF_CONF_NUM        8
+#endif /*QUEUEBUF_CONF_NUM*/
 
 /* 54 bytes per queue ref buffer */
 #define QUEUEBUF_CONF_REF_NUM    2
@@ -287,7 +293,11 @@ unsigned long clock_seconds(void);
 #define UIP_CONF_ROUTER             1
 #define RPL_BORDER_ROUTER           1
 #define RPL_CONF_STATS              0
+
+#ifndef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE	 1300
+#endif
+
 //#define UIP_CONF_DS6_NBR_NBU       12
 //#define UIP_CONF_DS6_ROUTE_NBU     12
 #define UIP_CONF_ND6_SEND_RA		0
