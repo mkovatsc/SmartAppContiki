@@ -5,6 +5,7 @@
  *      Author: simonduq
  */
 
+#include <stdio.h>
 #include "static-routing.h"
 
 #define DEBUG 0
@@ -22,7 +23,6 @@
 #include "contiki-net.h"
 #include "node-id.h"
 
-#define NNODES 5
 int node_rank;
 
 struct id_to_addrs {
@@ -32,28 +32,29 @@ struct id_to_addrs {
 
 const struct id_to_addrs motes_addrs[] = {
 /*
-  aaaa::212:7400:1160:f62d        sky1
-  aaaa::212:7400:0da0:d748        sky2
-  aaaa::212:7400:116e:c325        sky3
-  aaaa::212:7400:116e:c444        sky4
-  aaaa::212:7400:115e:b717        sky5
-*/
+ * Static routing requires a map nodeid => address.
+ * The nodeid can be programmed with the sky-shell.
+ * The addresses should also be added to /etc/hosts.
+ *
+ * aaaa::212:7400:1160:f62d        sky1
+ * aaaa::212:7400:0da0:d748        sky2
+ * aaaa::212:7400:116e:c325        sky3
+ * aaaa::212:7400:116e:c444        sky4
+ * aaaa::212:7400:115e:b717        sky5
+ *
+ * Add the nodeid and last 4 bytes of the address to the map.
+ */
     {1, 0x1160f62d},
     {2, 0x0da0d748},
     {3, 0x116ec325},
     {4, 0x116ec444},
     {5, 0x115eb717},
 };
+/* Define the size of the map. */
+#define NODES_IN_MAP    5
 
 uint32_t get_mote_suffix(int rank) {
-    int i;
-//    for(i=0; i<(sizeof(motes_addrs)/sizeof(struct id_to_addrs)); i++) {
-//        if(id == motes_addrs[i].id) {
-//            return motes_addrs[i].addr;
-//        }
-//    }
-    rank--;
-    if(rank >=0 && rank<(sizeof(motes_addrs)/sizeof(struct id_to_addrs))) {
+    if(--rank >=0 && rank<(sizeof(motes_addrs)/sizeof(struct id_to_addrs))) {
       return motes_addrs[rank].addr;
     }
     return 0;
@@ -136,25 +137,25 @@ void configure_routing(void) {
   if (node_rank == 1) { /* border router #1 */
     int i;
     add_route_ext(2, 2);
-    for(i=2; i<=NNODES; i++) {
+    for(i=2; i<=NODES_IN_MAP; i++) {
       add_route(i, 2);
     }
-  } else if (node_rank < NNODES) { /* other node */
+  } else if (node_rank < NODES_IN_MAP) { /* other node */
     int i;
     add_route_ext(1, node_rank-1);
     add_route_ext(2, node_rank+1);
-    for(i=1; i<=NNODES; i++) {
+    for(i=1; i<=NODES_IN_MAP; i++) {
       if(i<node_rank) {
         add_route(i, node_rank-1);
       } else if(i>node_rank) {
         add_route(i, node_rank+1);
       }
     }
-  } else if (node_rank == NNODES) { /* 2nd border router */
+  } else if (node_rank == NODES_IN_MAP) { /* 2nd border router */
     int i;
-    add_route_ext(1, NNODES-1);
-    for(i=1; i<=NNODES-1; i++) {
-      add_route(i, NNODES-1);
+    add_route_ext(1, NODES_IN_MAP-1);
+    for(i=1; i<=NODES_IN_MAP-1; i++) {
+      add_route(i, NODES_IN_MAP-1);
     }
   }
 }
