@@ -95,7 +95,7 @@ static void add_route_ext(int dest, int next) {
     uip_ds6_route_add(&ipaddr_dest, 128, &ipaddr_next, 0);
 }
 
-static void add_route(int dest, int next) {
+void add_route(int dest, int next) {
   PRINTF("add route %d %d\n", dest, next);
     uip_ipaddr_t ipaddr_dest, ipaddr_next;
 #if IN_COOJA
@@ -112,14 +112,11 @@ static void add_route(int dest, int next) {
 
 void configure_routing(void) {
   int i;
-
-  cc2420_set_channel(15);
-
 #if IN_COOJA
   node_rank = node_id;
 #else
   node_rank = -1;
-  for(i=0; i<(sizeof(motes_addrs)/sizeof(struct id_to_addrs)); i++) {
+  for(i=0; i<(sizeof(motes_addrs)/sizeof(struct id_to_addrs)); ++i) {
     if(node_id == motes_addrs[i].id) {
       node_rank = i+1;
       break;
@@ -135,16 +132,14 @@ void configure_routing(void) {
   printf("configure_routing, node_id=%d, node_rank %d\n", node_id, node_rank);
 
   if (node_rank == 1) { /* border router #1 */
-    int i;
     add_route_ext(2, 2);
-    for(i=2; i<=NODES_IN_MAP; i++) {
+    for(i=2; i<=NODES_IN_MAP; ++i) {
       add_route(i, 2);
     }
   } else if (node_rank < NODES_IN_MAP) { /* other node */
-    int i;
     add_route_ext(1, node_rank-1);
     add_route_ext(2, node_rank+1);
-    for(i=1; i<=NODES_IN_MAP; i++) {
+    for(i=1; i<=NODES_IN_MAP; ++i) {
       if(i<node_rank) {
         add_route(i, node_rank-1);
       } else if(i>node_rank) {
@@ -152,9 +147,8 @@ void configure_routing(void) {
       }
     }
   } else if (node_rank == NODES_IN_MAP) { /* 2nd border router */
-    int i;
     add_route_ext(1, NODES_IN_MAP-1);
-    for(i=1; i<=NODES_IN_MAP-1; i++) {
+    for(i=1; i<=NODES_IN_MAP-1; ++i) {
       add_route(i, NODES_IN_MAP-1);
     }
   }

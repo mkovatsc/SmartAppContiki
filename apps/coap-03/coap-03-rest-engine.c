@@ -337,7 +337,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("Starting CoAP server...\n");
+  PRINTF("Starting CoAP-03 server...\n");
 
   rest_activate_resource(&resource_well_known_core);
 
