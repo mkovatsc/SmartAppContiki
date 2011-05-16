@@ -15,6 +15,11 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 CFLAGS += -DUIP_CONF_TCP=0 # not used anymore
 
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+# set the baud rate
+CFLAGS += -DBAUD_RATE=USART_BAUD_9600
+
 #used to be able to use sscanf
 LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 
@@ -23,29 +28,25 @@ LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 
 # REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 3)
+ifeq ($(WITH_COAP), 6)
+${info INFO: compiling with CoAP-06}
+CFLAGS += -DWITH_COAP=6
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += coap-06
+else ifeq ($(WITH_COAP), 3)
 ${info INFO: compiling with CoAP-03}
 CFLAGS += -DWITH_COAP=3
 CFLAGS += -DREST=coap_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=0
 APPS += coap-03
-else ifeq ($(WITH_COAP), 1)
-${info INFO: compiling with rest-CoAP}
-CFLAGS += -DWITH_COAP
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += rest-coap
 else
 ${info INFO: compiling with HTTP}
 CFLAGS += -DWITH_HTTP
 CFLAGS += -DUIP_CONF_TCP=1
-APPS += rest-http
+APPS += rest-http-engine
 endif
-APPS += rest-common
 
-
-# set the baud rate
-CFLAGS += -DBAUD_RATE=USART_BAUD_9600
-
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+APPS += rest-engine
 
 include $(CONTIKI)/Makefile.include

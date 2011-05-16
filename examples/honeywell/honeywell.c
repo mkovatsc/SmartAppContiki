@@ -40,8 +40,17 @@
 #include "contiki-raven.h"
 #include "rs232.h"
 #include "ringbuf.h"
-#include "rest.h"
 #include "sys/clock.h"
+
+#if WITH_COAP == 3
+#include "coap-03.h"
+#include "coap-03-transactions.h"
+#elif WITH_COAP == 6
+#include "coap-06.h"
+#include "coap-06-transactions.h"
+#else
+#error "CoAP version defined by WITH_COAP not implemented"
+#endif
 
 #include "UsefulMicropendousDefines.h"
 // set up external SRAM prior to anything else to make sure malloc() has access to it
@@ -344,7 +353,7 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			strcpy_P(temp, PSTR("Payload format: mode={auto, manual, valve}"));
 		}
 	}
@@ -377,7 +386,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"));
 		}
 	}
@@ -416,7 +425,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"));
 		}
 	}
@@ -449,7 +458,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
 		}
 	}
@@ -502,7 +511,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			success = 0;
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=dd.mm.yy"));
 		}
 	}
@@ -551,7 +560,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			success = 0;
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=hh:mm[:ss]"));
 		}
 	}
@@ -583,7 +592,7 @@ static void handle_temperature(char * identifier, int temperature, int index, vo
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees (just steps of 0.5 possible)"), identifier);
 		}
 	}
@@ -652,7 +661,7 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: value={justOne, weekdays}"));
 		}
 	}
@@ -763,7 +772,7 @@ static void handleTimer(int day, int slot, void * request, void* response, uint8
 			}
 		}
 		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST_400);
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			sprintf_P(temp, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
 		}
 	}
