@@ -35,6 +35,10 @@ CFLAGS += -DUIP_CONF_TCP=1
 PROJECT_SOURCEFILES += slip-bridge.c httpd-simple.c
 endif
 
+ifeq ($(TAG_PORT), )
+TAG_PORT = 1
+endif
+
 include $(CONTIKI)/Makefile.include
 
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
@@ -47,5 +51,5 @@ connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
 
 connect-router-tag:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6  -s /dev/ttyUSB1 aaaa::1/64
+	sudo $(CONTIKI)/tools/tunslip6 -s /dev/ttyUSB$(TAG_PORT) aaaa::1/64
 
