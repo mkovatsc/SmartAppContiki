@@ -1,7 +1,4 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
- * All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,35 +23,45 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: project-conf.h,v 1.1 2010/10/21 18:23:44 joxe Exp $
+ * This file is part of the Contiki operating system.
+ *
  */
 
-#ifndef __PROJECT_ROUTER_CONF_H__
-#define __PROJECT_ROUTER_CONF_H__
+#ifndef COAP_OBSERVING_H_
+#define COAP_OBSERVING_H_
 
-/* Enables DMA for the MSP430 to fix the problem of losing bytes with much traffic over SLIP. */
-#ifdef CONF_DEPLOY_BR
-#define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
+#include "coap-06.h"
+#include "coap-06-transactions.h"
+
+#ifndef COAP_MAX_OBSERVERS
+#define COAP_MAX_OBSERVERS      4
+#endif /* COAP_MAX_OBSERVERS */
+
+/* Interval in seconds in which NON notifies are changed to CON notifies to check client. */
+#define COAP_OBSERVING_REFRESH_INTERVAL  60
+
+#if COAP_MAX_OPEN_TRANSACTIONS<COAP_MAX_OBSERVERS
+#warning "COAP_MAX_OPEN_TRANSACTIONS smaller than COAP_MAX_OBSERVERS: cannot handle CON notifications"
 #endif
 
-#ifndef UIP_FALLBACK_INTERFACE
-#define UIP_FALLBACK_INTERFACE   rpl_interface
-#endif
+typedef struct coap_observer {
+  struct coap_observer *next; /* for LIST */
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM        4
-#endif
+  const char *url;
+  uip_ipaddr_t addr;
+  uint16_t port;
+  uint8_t token_len;
+  uint8_t token[COAP_TOKEN_LEN];
+  struct stimer refresh_timer;
+} coap_observer_t;
 
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE     240
-#endif
+list_t coap_get_observers(void);
+coap_observer_t *coap_add_observer(const char *url, uip_ipaddr_t *addr, uint16_t port, const uint8_t *token, size_t token_len);
+void coap_remove_observer(coap_observer_t *o);
+int coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port);
+int coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, size_t token_len);
+void coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, size_t payload_len);
 
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
+void coap_observe_handler(void *request, void *response);
 
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
-
-#endif /* __PROJECT_ROUTER_CONF_H__ */
+#endif /* COAP_OBSERVING_H_ */

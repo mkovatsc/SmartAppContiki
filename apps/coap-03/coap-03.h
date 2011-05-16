@@ -10,15 +10,21 @@
 
 #include <stddef.h> /* for size_t */
 #include "contiki-net.h"
-#include "rest.h"
+#include "rest-engine.h"
 
-#define COAP_DEFAULT_MAX_AGE    60
-#define COAP_RESPONSE_TIMEOUT   1
-#define COAP_MAX_RETRANSMIT     5
+#define COAP_DEFAULT_PORT                    61616
 
-#define COAP_HEADER_LEN         4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
-#define COAP_ETAG_LEN           4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
-#define COAP_TOKEN_LEN          2 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+#ifndef COAP_SERVER_PORT
+#define COAP_SERVER_PORT                     COAP_DEFAULT_PORT
+#endif
+
+#define COAP_DEFAULT_MAX_AGE                 60
+#define COAP_RESPONSE_TIMEOUT                1
+#define COAP_MAX_RETRANSMIT                  5
+
+#define COAP_HEADER_LEN                      4 /* | oc:0xF0 type:0x0C version:0x03 | code | tid:0x00FF | tid:0xFF00 | */
+#define COAP_ETAG_LEN                        4 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
+#define COAP_TOKEN_LEN                       2 /* The maximum number of bytes for the ETag, which is 4 for coap-03 */
 
 #define COAP_HEADER_VERSION_MASK             0xC0
 #define COAP_HEADER_VERSION_POSITION         6
@@ -36,11 +42,17 @@
 /*                            Hdr CoT Age Tag Obs Tok Blo strings */
 #define COAP_MAX_HEADER_SIZE  (4 + 2 + 5 + 5 + 5 + 5 + 4 + 0)
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
-
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
 #if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)
 #error "UIP_CONF_BUFFER_SIZE too small for REST_MAX_CHUNK_SIZE"
 #endif
+
+/*
+ * Maximum number of failed request attempts before action
+ */
+#ifndef COAP_MAX_ATTEMPTS
+#define COAP_MAX_ATTEMPTS             4
+#endif /* COAP_MAX_ATTEMPTS */
 
 #define SET_OPTION(packet, opt) ((packet)->options |= 1<<opt)
 #define IS_OPTION(packet, opt) ((packet)->options & 1<<opt)
@@ -139,7 +151,7 @@ typedef union {
 } coap_header_option_t;
 
 typedef struct {
-  uint8_t *header; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
+  uint8_t *buffer; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
 
   uint8_t version;
   coap_message_type_t type;
@@ -192,19 +204,18 @@ void coap_init_connection(uint16_t port);
 uint16_t coap_get_tid(void);
 void coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length);
 
-void coap_init_message(void *packet, uint8_t *buffer, coap_message_type_t type, uint8_t code, uint16_t tid);
-int coap_serialize_message(void *packet);
+void coap_init_message(void *packet, coap_message_type_t type, uint8_t code, uint16_t tid);
+int coap_serialize_message(void *packet, uint8_t *buffer);
 error_t coap_parse_message(void *request, uint8_t *data, uint16_t data_len);
 
 coap_method_t coap_get_method(void *packet);
-void coap_set_method(void *packet, coap_method_t method);
-void coap_set_status(void *packet, coap_status_t code);
+void coap_set_status(void *packet, unsigned int code);
 
 int coap_get_query_variable(void *packet, const char *name, const char **output);
 int coap_get_post_variable(void *packet, const char *name, const char **output);
 
-coap_content_type_t coap_get_header_content_type(void *packet);
-int coap_set_header_content_type(void *packet, coap_content_type_t content_type);
+unsigned int coap_get_header_content_type(void *packet);
+int coap_set_header_content_type(void *packet, unsigned int content_type);
 
 int coap_get_header_max_age(void *packet, uint32_t *age);
 int coap_set_header_max_age(void *packet, uint32_t age);

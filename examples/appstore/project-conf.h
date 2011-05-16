@@ -26,27 +26,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: project-conf.h,v 1.1 2010/10/21 18:23:44 joxe Exp $
+ *
  */
 
-#ifndef __PROJECT_ROUTER_CONF_H__
-#define __PROJECT_ROUTER_CONF_H__
+#ifndef __PROJECT_RPL_WEB_CONF_H__
+#define __PROJECT_RPL_WEB_CONF_H__
 
-/* Enables DMA for the MSP430 to fix the problem of losing bytes with much traffic over SLIP. */
-#ifdef CONF_DEPLOY_BR
-#define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
-#endif
-
-#ifndef UIP_FALLBACK_INTERFACE
-#define UIP_FALLBACK_INTERFACE   rpl_interface
-#endif
+#define IN_COOJA                1
+#define SICSLOWPAN_CONF_FRAG	1
 
 #ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM        4
+#define QUEUEBUF_CONF_NUM          6
+#endif
+
+#ifndef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE    128
 #endif
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE     240
+#define UIP_CONF_BUFFER_SIZE    220
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
@@ -57,4 +55,4 @@
 #define WEBSERVER_CONF_CFS_CONNS 2
 #endif
 
-#endif /* __PROJECT_ROUTER_CONF_H__ */
+#endif /* __PROJECT_RPL_WEB_CONF_H__ */

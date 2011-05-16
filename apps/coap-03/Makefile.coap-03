@@ -1,1 +1,1 @@
-coap-03_src = coap-03-rest-server.c coap-03.c coap-03-transactions.c coap-03-observing.c
+coap-03_src = coap-03-rest-engine.c coap-03.c coap-03-transactions.c coap-03-observing.c

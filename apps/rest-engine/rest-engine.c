@@ -2,7 +2,7 @@
 #include <string.h> /*for string operations in match_addresses*/
 #include <stdio.h> /*for sprintf in rest_set_header_**/
 
-#include "rest.h"
+#include "rest-engine.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -113,7 +113,8 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 int
 rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
-  int found = 0;
+  uint8_t found = 0;
+  uint8_t allowed = 0;
 
   PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
@@ -135,6 +136,8 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
 
       if (resource->methods_to_handle & method)
       {
+        allowed = 1;
+
         /*call pre handler if it exists*/
         if (!resource->pre_handler || resource->pre_handler(request, response))
         {
@@ -148,17 +151,17 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
           }
         }
       } else {
-        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED_405);
+        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
       }
       break;
     }
   }
 
   if (!found) {
-    REST.set_response_status(response, REST.status.NOT_FOUND_404);
+    REST.set_response_status(response, REST.status.NOT_FOUND);
   }
 
-  return found;
+  return found & allowed;
 }
 /*-----------------------------------------------------------------------------------*/
 

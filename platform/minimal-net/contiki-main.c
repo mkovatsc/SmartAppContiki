@@ -97,6 +97,7 @@ sprint_ip6(uip_ip6addr_t addr)
 int
 main(void)
 {
+  random_init(time(NULL));
 
   process_init();
 

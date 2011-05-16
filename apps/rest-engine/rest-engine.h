@@ -1,9 +1,12 @@
-#ifndef REST_H_
-#define REST_H_
+#ifndef REST_ENGINE_H_
+#define REST_ENGINE_H_
 
 /*includes*/
+#include <stdio.h>
 #include "contiki.h"
 #include "contiki-lib.h"
+
+#include "static-routing.h"
 
 /*
  * The maximum buffer size that is provided for resource responses and must be respected due to the limited IP buffer.
@@ -32,21 +35,27 @@ typedef int (* service_callback_t)(void *request, void *response, uint8_t *buffe
  */
 struct rest_implementation_status
 {
-  const unsigned int CONTINUE_100;
-  const unsigned int OK_200;
-  const unsigned int CREATED_201;
-  const unsigned int NOT_MODIFIED_304;
-  const unsigned int BAD_REQUEST_400;
-  const unsigned int NOT_FOUND_404;
-  const unsigned int METHOD_NOT_ALLOWED_405;
-  const unsigned int UNSUPPORTED_MADIA_TYPE_415;
-  const unsigned int INTERNAL_SERVER_ERROR_500;
-  const unsigned int BAD_GATEWAY_502;
-  const unsigned int SERVICE_UNAVAILABLE_503;
-  const unsigned int GATEWAY_TIMEOUT_504;
-  const unsigned int TOKEN_OPTION_REQUIRED;
-  const unsigned int HOST_REQUIRED;
-  const unsigned int CRITICAL_OPTION_NOT_SUPPORTED;
+  const unsigned int OK;                        /* CONTENT_2_05,                  OK_200 */
+  const unsigned int CREATED;                   /* CREATED_2_01,                  CREATED_201 */
+  const unsigned int CHANGED;                   /* CHANGED_2_04,                  NO_CONTENT_204 */
+  const unsigned int DELETED;                   /* DELETED_2_02,                  NO_CONTENT_204 */
+  const unsigned int NOT_MODIFIED;              /* VALID_2_03,                    NOT_MODIFIED_304 */
+
+  const unsigned int BAD_REQUEST;               /* BAD_REQUEST_4_00,              BAD_REQUEST_400 */
+  const unsigned int UNAUTHORIZED;              /* UNAUTHORIZED_4_01,             UNAUTHORIZED_401 */
+  const unsigned int BAD_OPTION;                /* BAD_OPTION_4_02,               BAD_REQUEST_400 */
+  const unsigned int FORBIDDEN;                 /* FORBIDDEN_4_03,                FORBIDDEN_403 */
+  const unsigned int NOT_FOUND;                 /* NOT_FOUND_4_04,                NOT_FOUND_404 */
+  const unsigned int METHOD_NOT_ALLOWED;        /* METHOD_NOT_ALLOWED_4_05,       METHOD_NOT_ALLOWED_405 */
+  const unsigned int REQUEST_ENTITY_TOO_LARGE;  /* REQUEST_ENTITY_TOO_LARGE_4_13, REQUEST_ENTITY_TOO_LARGE_413 */
+  const unsigned int UNSUPPORTED_MADIA_TYPE;    /* UNSUPPORTED_MADIA_TYPE_4_15,   UNSUPPORTED_MADIA_TYPE_415 */
+
+  const unsigned int INTERNAL_SERVER_ERROR;     /* INTERNAL_SERVER_ERROR_5_00,    INTERNAL_SERVER_ERROR_500 */
+  const unsigned int NOT_IMPLEMENTED;           /* NOT_IMPLEMENTED_5_01,          NOT_IMPLEMENTED_501 */
+  const unsigned int BAD_GATEWAY;               /* BAD_GATEWAY_5_02,              BAD_GATEWAY_502 */
+  const unsigned int SERVICE_UNAVAILABLE;       /* SERVICE_UNAVAILABLE_5_03,      SERVICE_UNAVAILABLE_503 */
+  const unsigned int GATEWAY_TIMEOUT;           /* GATEWAY_TIMEOUT_5_04,          GATEWAY_TIMEOUT_504 */
+  const unsigned int PROXYING_NOT_SUPPORTED;    /* PROXYING_NOT_SUPPORTED_5_05,   INTERNAL_SERVER_ERROR_500 */
 };
 struct rest_implementation_type
 {
@@ -68,10 +77,10 @@ struct rest_implementation_type
   unsigned int APPLICATION_ATOM_XML;
   unsigned int APPLICATION_XMPP_XML;
   unsigned int APPLICATION_EXI;
-  unsigned int APPLICATION_X_BXML;
   unsigned int APPLICATION_FASTINFOSET;
   unsigned int APPLICATION_SOAP_FASTINFOSET;
   unsigned int APPLICATION_JSON;
+  unsigned int APPLICATION_X_OBIX_BINARY;
 };
 
 struct rest_implementation {
@@ -92,7 +101,7 @@ struct rest_implementation {
   rest_method_t (* get_method_type)(void *request);
 
   /** Set the status code of a response. */
-  void (* set_response_status)(void *response, unsigned int code);
+  int (* set_response_status)(void *response, unsigned int code);
 
   /** Get the content-type of a request. */
   unsigned int (* get_header_content_type)(void *request);
@@ -105,6 +114,9 @@ struct rest_implementation {
 
   /** Set the Max-Age option of a response. */
   int (* set_header_max_age)(void *response, uint32_t age);
+
+  /** Get the ETag option of a request (If-None-Match for HTTP). */
+  int (* get_header_etag)(void *request, const uint8_t **etag);
 
   /** Set the ETag option of a response. */
   int (* set_header_etag)(void *response, uint8_t *etag, size_t length);
@@ -157,6 +169,8 @@ typedef int (*restful_pre_handler) (void* request, void* response);
 typedef void (*restful_post_handler) (void* request, void* response);
 
 typedef int (*restful_periodic_handler) (struct resource_s* resource);
+
+typedef void (*restful_response_handler) (void *data, void* response);
 
 /*
  * Data structure representing a resource in REST.
@@ -259,4 +273,4 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
 
-#endif /*REST_H_*/
+#endif /*REST_ENGINE_H_*/

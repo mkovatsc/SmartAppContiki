@@ -1,6 +1,12 @@
-all: rest-server-example coap-client-example
+all: appstore temp.ce light.ce humidity.ce
+
+ifndef TARGET
+TARGET=sky
+endif
 
 CONTIKI=../..
+
+PROJECT_SOURCEFILES += symbols-subset.c 
 
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
@@ -43,6 +49,10 @@ endif
 
 APPS += rest-engine
 
+CUSTOM_RULE_C_TO_CO = 1
+
+%.co: %.c
+	$(CC) $(CFLAGS) $(XCFLAGS) -DAUTOSTART_ENABLE -c $< -o $@
 
 include $(CONTIKI)/Makefile.include
 
@@ -54,3 +64,17 @@ connect-router:	$(CONTIKI)/tools/tunslip6
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
+
+appstore-server: java_tools/COAPAppstoreServer/src/COAPAppstoreServer.java java_tools/COAP/src/org/sics/coap/COAPPacket.java
+	javac -classpath java_tools/bin -d java_tools/bin java_tools/COAP/src/org/sics/coap/*.java
+	javac -classpath java_tools/bin -d java_tools/bin java_tools/COAPAppstoreServer/src/*.java
+
+run-appstore-server: appstore-server
+	java -cp java_tools/bin COAPAppstoreServer $(WITH_COAP) market 2222 1
+
+%.ce: %.c
+	$(CC) $(CFLAGS) -DAUTOSTART_ENABLE -c $^ -o $@
+	$(STRIP) --strip-unneeded -g -x $@
+
+run-appstore-client: $(APP).ce
+	ping6 $(DEST) -c 1 -w 120 && java -cp java_tools/bin COAPClient $(DEST) get loader $(APP).ce && java -cp java_tools/bin COAPServer notify 3333 0

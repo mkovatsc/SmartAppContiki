@@ -1,7 +1,4 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
- * All rights reserved.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -26,35 +23,49 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: project-conf.h,v 1.1 2010/10/21 18:23:44 joxe Exp $
+ * This file is part of the Contiki operating system.
+ *
  */
 
-#ifndef __PROJECT_ROUTER_CONF_H__
-#define __PROJECT_ROUTER_CONF_H__
+#ifndef COAP_TRANSACTIONS_H_
+#define COAP_TRANSACTIONS_H_
 
-/* Enables DMA for the MSP430 to fix the problem of losing bytes with much traffic over SLIP. */
-#ifdef CONF_DEPLOY_BR
-#define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
-#endif
+#include "coap-06.h"
 
-#ifndef UIP_FALLBACK_INTERFACE
-#define UIP_FALLBACK_INTERFACE   rpl_interface
-#endif
+/*
+ * The number of concurrent messages that can be stored for retransmission in the transaction layer.
+ */
+#ifndef COAP_MAX_OPEN_TRANSACTIONS
+#define COAP_MAX_OPEN_TRANSACTIONS  4
+#endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM        4
-#endif
+#include "coap-06.h"
 
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE     240
-#endif
+/* container for transactions with message buffer and retransmission info */
+typedef struct coap_transaction {
+  struct coap_transaction *next; /* for LIST */
 
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
+  uint16_t tid;
+  struct etimer retrans_timer;
+  uint8_t retrans_counter;
 
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
+  uip_ipaddr_t addr;
+  uint16_t port;
 
-#endif /* __PROJECT_ROUTER_CONF_H__ */
+  restful_response_handler callback;
+  void *callback_data;
+
+  uint16_t packet_len;
+  uint8_t packet[COAP_MAX_PACKET_SIZE+1]; /* +1 for the terminating '\0' to simply and savely use snprintf(buf, len+1, "", ...) in the resource handler. */
+} coap_transaction_t;
+
+void coap_register_as_transaction_handler();
+
+coap_transaction_t *coap_new_transaction(uint16_t tid, uip_ipaddr_t *addr, uint16_t port);
+void coap_send_transaction(coap_transaction_t *t);
+void coap_clear_transaction(coap_transaction_t *t);
+coap_transaction_t *coap_get_transaction_by_tid(uint16_t tid);
+
+void coap_check_transactions();
+
+#endif /* COAP_TRANSACTIONS_H_ */

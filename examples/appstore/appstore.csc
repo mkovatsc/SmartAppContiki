@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
-  <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/mrm</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/mspsim</project>
-  <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/avrora</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/serial_socket</project>
-  <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/collect-view</project>
+  <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/mrm</project>
   <simulation>
-    <title>REST with RPL router</title>
-    <delaytime>-2147483648</delaytime>
+    <title>Appstore</title>
+    <delaytime>0</delaytime>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -47,9 +45,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>skyweb</identifier>
       <description>Rest</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/rest-example/rest-server-example.c</source>
-      <commands EXPORT="discard">make rest-server-example.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/rest-example/rest-server-example.sky</firmware>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/appstore/appstore.c</source>
+      <commands EXPORT="discard">make appstore.sky TARGET=sky</commands>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/appstore/appstore.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
@@ -84,8 +82,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>35.100895239785295</x>
-        <y>39.70574552287428</y>
+        <x>62.239287566073514</x>
+        <y>34.43810269527116</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -98,7 +96,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>259</width>
-    <z>1</z>
+    <z>0</z>
     <height>179</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -110,26 +108,25 @@
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.AttributeVisualizerSkin</skin>
-      <skin>se.sics.cooja.plugins.skins.LEDVisualizerSkin</skin>
-      <skin>se.sics.cooja.plugins.skins.AddressVisualizerSkin</skin>
-      <viewport>7.9849281638410705 0.0 0.0 7.9849281638410705 -133.27812697619663 -225.04752569190535</viewport>
+      <viewport>4.932070048977571 0.0 0.0 4.932070048977571 -112.81444094632381 -81.51263451161498</viewport>
     </plugin_config>
-    <width>300</width>
-    <z>0</z>
-    <height>175</height>
-    <location_x>371</location_x>
-    <location_y>2</location_y>
+    <width>253</width>
+    <z>2</z>
+    <height>238</height>
+    <location_x>3</location_x>
+    <location_y>252</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
       <filter />
+      <coloring />
     </plugin_config>
-    <width>762</width>
-    <z>3</z>
-    <height>326</height>
-    <location_x>12</location_x>
-    <location_y>294</location_y>
+    <width>944</width>
+    <z>1</z>
+    <height>682</height>
+    <location_x>259</location_x>
+    <location_y>1</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.RadioLogger
@@ -137,21 +134,20 @@
       <split>150</split>
       <analyzers name="6lowpan" />
     </plugin_config>
-    <width>451</width>
-    <z>-1</z>
-    <height>305</height>
-    <location_x>73</location_x>
-    <location_y>140</location_y>
-    <minimized>true</minimized>
+    <width>711</width>
+    <z>5</z>
+    <height>684</height>
+    <location_x>1205</location_x>
+    <location_y>-1</location_y>
   </plugin>
   <plugin>
     SerialSocketServer
     <mote_arg>0</mote_arg>
     <width>422</width>
-    <z>5</z>
+    <z>4</z>
     <height>74</height>
-    <location_x>1234</location_x>
-    <location_y>93</location_y>
+    <location_x>4</location_x>
+    <location_y>177</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.TimeLine
@@ -160,29 +156,14 @@
       <mote>1</mote>
       <showRadioRXTX />
       <showRadioHW />
-      <showLEDs />
-      <showWatchpoints />
       <split>125</split>
       <zoomfactor>25.49079397896416</zoomfactor>
     </plugin_config>
-    <width>1624</width>
-    <z>4</z>
-    <height>252</height>
-    <location_x>166</location_x>
-    <location_y>699</location_y>
-  </plugin>
-  <plugin>
-    se.sics.cooja.plugins.MoteInterfaceViewer
-    <mote_arg>1</mote_arg>
-    <plugin_config>
-      <interface>Serial port</interface>
-      <scrollpos>0,0</scrollpos>
-    </plugin_config>
-    <width>662</width>
-    <z>2</z>
-    <height>362</height>
-    <location_x>7</location_x>
-    <location_y>221</location_y>
+    <width>1912</width>
+    <z>3</z>
+    <height>149</height>
+    <location_x>-2</location_x>
+    <location_y>947</location_y>
   </plugin>
 </simconf>
 
