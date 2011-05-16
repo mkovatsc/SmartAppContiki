@@ -32,6 +32,10 @@
 
 #include "coap-06.h"
 
-void coap_separate_handler(void *request, void *response);
+#ifndef COAP_SEPARATE_THRESHOLD
+#define COAP_SEPARATE_THRESHOLD         42
+#endif
+
+void coap_separate_handler(resource_t *resource, void *request, void *response);
 
 #endif /* COAP_SEPARATE_H_ */

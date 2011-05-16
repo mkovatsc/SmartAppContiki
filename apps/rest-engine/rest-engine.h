@@ -32,8 +32,8 @@ struct periodic_resource_s;
 
 /* Signatures of handler functions. */
 typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-typedef int (*restful_pre_handler) (void* request, void* response);
-typedef void (*restful_post_handler) (void* request, void* response);
+typedef int (*restful_pre_handler) (struct resource_s *resource, void* request, void* response);
+typedef void (*restful_post_handler) (struct resource_s *resource, void* request, void* response);
 typedef int (*restful_periodic_handler) (struct resource_s* resource);
 typedef void (*restful_response_handler) (void *data, void* response);
 
@@ -188,6 +188,7 @@ struct resource_s {
   restful_pre_handler pre_handler; /* to be called before handler, may perform initializations */
   restful_post_handler post_handler; /* to be called after handler, may perform finalizations (cleanup, etc) */
   void* user_data; /* pointer to user specific data */
+  unsigned int benchmark; /* to benchmark resource handler, used for separate response */
 };
 typedef struct resource_s resource_t;
 

@@ -155,7 +155,7 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
         allowed = 1;
 
         /*call pre handler if it exists*/
-        if (!resource->pre_handler || resource->pre_handler(request, response))
+        if (!resource->pre_handler || resource->pre_handler(resource, request, response))
         {
           /* call handler function*/
           resource->handler(request, response, buffer, buffer_size, offset);
@@ -163,7 +163,7 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
           /*call post handler if it exists*/
           if (resource->post_handler)
           {
-            resource->post_handler(request, response);
+            resource->post_handler(resource, request, response);
           }
         }
       } else {

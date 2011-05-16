@@ -34,7 +34,6 @@
 
 #define DEBUG 0
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
 #define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
@@ -123,7 +122,7 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
   coap_observer_t* obs = NULL;
   for (obs = (coap_observer_t*)list_head(observers_list); obs; obs = obs->next)
   {
-    if (obs->url==url) /* using RESOURCE url string as handle */
+    if (obs->url==url) /* using RESOURCE url pointer as handle */
     {
       coap_transaction_t *transaction = NULL;
 
@@ -159,7 +158,7 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_observe_handler(void *request, void *response)
+coap_observe_handler(resource_t *resource, void *request, void *response)
 {
   static char content[26];
 
@@ -167,16 +166,13 @@ coap_observe_handler(void *request, void *response)
   {
     if (IS_OPTION((coap_packet_t *)request, COAP_OPTION_OBSERVE))
     {
-      const char *url;
-      REST.get_url(request, &url); /* request url was set to RESOURCE url string as handle. */
-
       if (!IS_OPTION((coap_packet_t *)request, COAP_OPTION_TOKEN))
       {
         /* Set default token. */
         coap_set_header_token(request, (uint8_t *)"", 1);
       }
 
-      if (coap_add_observer(url, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
+      if (coap_add_observer(resource->url, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, ((coap_packet_t *)request)->token, ((coap_packet_t *)request)->token_len))
       {
         coap_set_header_observe(response, 0);
         coap_set_payload(response, (uint8_t *)content, snprintf(content, sizeof(content), "Added as observer %u/%u", list_length(observers_list), COAP_MAX_OBSERVERS));

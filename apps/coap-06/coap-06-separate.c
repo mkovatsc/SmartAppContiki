@@ -34,7 +34,6 @@
 
 #define DEBUG 1
 #if DEBUG
-#include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
 #define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
@@ -45,37 +44,19 @@
 #endif
 
 /*-----------------------------------------------------------------------------------*/
-void coap_separate_handler(void *request, void *response)
+void coap_separate_handler(resource_t *resource, void *request, void *response)
 {
-  PRINTF("COAP SEPARATE HANDLER \n");
-  PRINTF("  Token %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", ((coap_packet_t *)request)->token_len,
-    ((coap_packet_t *)request)->token[0],
-    ((coap_packet_t *)request)->token[1],
-    ((coap_packet_t *)request)->token[2],
-    ((coap_packet_t *)request)->token[3],
-    ((coap_packet_t *)request)->token[4],
-    ((coap_packet_t *)request)->token[5],
-    ((coap_packet_t *)request)->token[6],
-    ((coap_packet_t *)request)->token[7]
-  ); // FIXME always prints 8 bytes...
-  PRINTF("  Token %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", ((coap_packet_t *)response)->token_len,
-    ((coap_packet_t *)response)->token[0],
-    ((coap_packet_t *)response)->token[1],
-    ((coap_packet_t *)response)->token[2],
-    ((coap_packet_t *)response)->token[3],
-    ((coap_packet_t *)response)->token[4],
-    ((coap_packet_t *)response)->token[5],
-    ((coap_packet_t *)response)->token[6],
-    ((coap_packet_t *)response)->token[7]
-  ); // FIXME always prints 8 bytes...
-  /* send separate ACK. */
-  coap_packet_t ack[1];
-  coap_init_message(ack, COAP_TYPE_ACK, 0, ((coap_packet_t *)request)->tid);
-  /* Should only overwrite Header which is already parsed to request. */
-  coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, (uip_appdata + uip_ext_len), coap_serialize_message(ack, (uip_appdata + uip_ext_len)));
+  if (resource->benchmark > COAP_SEPARATE_THRESHOLD)
+  {
+    PRINTF("Separate response for /%s \n", resource->url);
+    /* send separate ACK. */
+    coap_packet_t ack[1];
+    coap_init_message(ack, COAP_TYPE_ACK, 0, ((coap_packet_t *)request)->tid);
+    /* Should only overwrite Header which is already parsed to request. */
+    coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, (uip_appdata + uip_ext_len), coap_serialize_message(ack, (uip_appdata + uip_ext_len)));
 
-  /* Change response to separate response. */
-  ((coap_packet_t *)response)->type = COAP_TYPE_NON;
-  ((coap_packet_t *)response)->tid = coap_get_tid();
-
+    /* Change response to separate response. */
+    ((coap_packet_t *)response)->type = COAP_TYPE_NON;
+    ((coap_packet_t *)response)->tid = coap_get_tid();
+  }
 }
