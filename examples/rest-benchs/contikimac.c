@@ -1113,6 +1113,7 @@ qsend_packet(mac_callback_t sent, void *ptr)
 
   if(ret != MAC_TX_DEFERRED) {
     //    printf("contikimac qsend_packet %p\n", ptr);
+	  printf(">\n");
     mac_call_sent_callback(sent, ptr, ret, 1);
   }
 }
@@ -1125,6 +1126,7 @@ input_packet(void)
 #if !WITH_BURST
     off();
 #endif
+    printf("< %u\n", packetbuf_totlen());
 
 #if WITH_CONTIKIMAC_HEADER
     struct hdr *chdr;
@@ -1233,6 +1235,7 @@ input_packet(void)
 
       PRINTFB("input %d\n", recv_burst_state);
 
+      printf("<<<<\n");
       NETSTACK_MAC.input();
 
 //      if(get_queuebuf_available() <= 2) { /* needed for enqueue / reassembly*/

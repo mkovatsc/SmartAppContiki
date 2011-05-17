@@ -34,12 +34,12 @@
 
 #include "cooja-debug.h"
 
-#define IN_COOJA 1
+#define IN_COOJA 0
 #define WITH_RPL 0
 
 #ifndef NETSTACK_CONF_RDC
-//#define NETSTACK_CONF_RDC             nullrdc_driver
-#define NETSTACK_CONF_RDC             contikimac_driver
+#define NETSTACK_CONF_RDC             nullrdc_driver
+//#define NETSTACK_CONF_RDC             contikimac_driver
 #endif
 
 #define COAP_SERVER_PORT 61616
@@ -55,10 +55,6 @@
 #endif
 
 #define SICSLOWPAN_CONF_FRAG	1
-
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
-#endif
 
 #ifndef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE    512
@@ -84,15 +80,20 @@
 #define UIP_CONF_DS6_MADDR_NBU   0
 #define UIP_CONF_DS6_AADDR_NBU   0
 
+// nullrdc config
+#define NULLRDC_CONF_802154_AUTOACK		1
+
+// contikimac config
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
 #define WITH_BURST						1
 #define WITH_LETHARGY    				1
 #define CCA_BEFORE_BURST                0
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
-
 #define BURST_DURATION    RTIMER_ARCH_SECOND
-#define CSMA_MAX_BACKOFF            8
-#define MAC_QUEUE_SIZE              12
-#define QUEUEBUF_CONF_NUM			MAC_QUEUE_SIZE
-#define MAX_NEIGHBORS               4
+
+// csma config
+#define CSMA_MAX_BACKOFF            8 // max backoff in rdc periods
+#define MAC_QUEUE_SIZE				10 // #qcsma
+#define QUEUEBUF_CONF_NUM			MAC_QUEUE_SIZE // #qbuf
+#define MAX_NEIGHBORS               4 // csma neighbors
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

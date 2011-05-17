@@ -233,12 +233,12 @@ def main():
 
     niter = 10
     hopsList = [1, 2, 3, 4]   
-    sizeList = [0, 77, 78]
     rdcList = ["contikimac", "nullrdc"]
     hopsList2 = [1, 4]
     
+    sizeList = [0, 77, 78, 512]
     sizeList += range(169, 553, 96)
-    sizeList += range(169-1, 553-1+96, 96)
+    sizeList += range(169-1, 553-1, 96)
     sizeList.sort()
 
     dstDir = "benchs"
