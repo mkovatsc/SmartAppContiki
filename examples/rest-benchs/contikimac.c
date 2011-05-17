@@ -76,7 +76,7 @@
 #define WITH_STREAMING               0
 #endif
 #ifndef WITH_CONTIKIMAC_HEADER
-#define WITH_CONTIKIMAC_HEADER       0
+#define WITH_CONTIKIMAC_HEADER       1
 #endif
 #ifndef WITH_FAST_SLEEP
 #define WITH_FAST_SLEEP              1
@@ -975,6 +975,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr)
   /* Make sure that the packet is longer or equal to the shortest
      packet length. */
   transmit_len = packetbuf_totlen();
+
   if(transmit_len < SHORTEST_PACKET_SIZE) {
 #if 0
     /* Pad with zeroes */

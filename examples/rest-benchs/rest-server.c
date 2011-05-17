@@ -119,11 +119,11 @@ PROCESS_THREAD(rest_server_example, ev, data)
 //  powertrace_start(CLOCK_SECOND * 4);
 //  powertrace_sniff(POWERTRACE_ON);
 
-//  uart1_set_input(serial_line_input_byte);
-//  serial_line_init();
-//  serial_shell_init();
+  uart1_set_input(serial_line_input_byte);
+  serial_line_init();
+  serial_shell_init();
 //  shell_sky_init();
-//  shell_powertrace_init();
+  shell_powertrace_init();
 
   PROCESS_WAIT_UNTIL(0);
 
