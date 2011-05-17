@@ -84,7 +84,8 @@ u8_t p;
 #define PRINTSICSLOWPANBUF() PRINTF("SICSLOWPAN buffer: "); for(p = 0; p < sicslowpan_len; p++){PRINTF("%.2X", sicslowpan_buf[p]);}PRINTF("\n")
 #else
 #define PRINTF(...)
-#define PRINTFI(...)
+//#define PRINTFI(...)
+#define PRINTFI(...) printf(__VA_ARGS__)
 #define PRINTFO(...)
 #define PRINT6ADDR(addr)
 #define PRINTLLADDR(lladdr)
@@ -1634,6 +1635,7 @@ input(void)
    * If we have a full IP packet in sicslowpan_buf, deliver it to
    * the IP stack
    */
+  printf("---- %u %u\n", processed_ip_len, sicslowpan_len);
   if(processed_ip_len == 0 || (processed_ip_len == sicslowpan_len)) {
     PRINTFI("sicslowpan input: IP packet ready (length %d)\n",
            sicslowpan_len);
@@ -1658,7 +1660,6 @@ input(void)
 #if SICSLOWPAN_CONF_NEIGHBOR_INFO
     neighbor_info_packet_received();
 #endif /* SICSLOWPAN_CONF_NEIGHBOR_INFO */
-
     tcpip_input();
 #if SICSLOWPAN_CONF_FRAG
   }
