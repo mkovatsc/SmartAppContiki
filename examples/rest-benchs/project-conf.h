@@ -34,11 +34,7 @@
 
 #include "cooja-debug.h"
 
-<<<<<<< HEAD
-#define IN_COOJA 1
-=======
 #define IN_COOJA 0
->>>>>>> burst
 #define WITH_RPL 0
 
 #ifndef NETSTACK_CONF_RDC
@@ -60,13 +56,6 @@
 
 #define SICSLOWPAN_CONF_FRAG	1
 
-<<<<<<< HEAD
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM       6
-#endif
-
-=======
->>>>>>> burst
 #ifndef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE     512
 #endif
