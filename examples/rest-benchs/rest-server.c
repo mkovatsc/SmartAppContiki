@@ -45,7 +45,7 @@
  * Resources are defined by the RESOURCE macro.
  * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
  */
-RESOURCE(helloworld, METHOD_GET, "hello", "title=\"Hello world (set length with ?len query)\";rt=\"Text\"");
+RESOURCE(helloworld, METHOD_GET | METHOD_POST, "hello", "title=\"Hello world (set length with ?len query)\";rt=\"Text\"");
 
 /*
  * A handler function named [resource name]_handler must be implemented for each RESOURCE.
