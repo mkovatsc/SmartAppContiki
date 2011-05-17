@@ -91,7 +91,8 @@
 
 #define BURST_DURATION    RTIMER_ARCH_SECOND
 #define CSMA_MAX_BACKOFF            8
-#define MAC_QUEUE_SIZE              8
+#define MAC_QUEUE_SIZE              12
+#define QUEUEBUF_CONF_NUM			MAC_QUEUE_SIZE
 #define MAX_NEIGHBORS               4
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
