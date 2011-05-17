@@ -109,7 +109,7 @@ def onerun(hops, size, rdc):
     if compilationNeeded:
         killBench()
         print "-- Compiling"
-        compileCmd = "make RDC=%s" %(rdc)
+        compileCmd = "make RDC=%s" %(rdc+"_driver")
         runFg("make clean")
         if runFg(compileCmd)["status"] != 0:
             print "Compilation failed: %s" %(compileCmd)
@@ -249,12 +249,12 @@ def main():
     rdc = "contikimac"
     for hops in hopsList2:
         for size in sizeList:
-            dobench(hops, size, rdc +"_driver", niter, dstDir)
+            dobench(hops, size, rdc, niter, dstDir)
     
     size = 64
     for rdc in rdcList:    
         compilationNeeded = True
         for hops in hopsList:
-            dobench(hops, size, rdc +"_driver", niter, dstDir)
+            dobench(hops, size, rdc, niter, dstDir)
         
 main()
