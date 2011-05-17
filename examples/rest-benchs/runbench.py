@@ -235,10 +235,16 @@ def main():
     hopsList = [1, 2, 3, 4]   
     rdcList = ["contikimac", "nullrdc"]
     hopsList2 = [1, 4]
-    
-    sizeList = [0, 77, 78, 512]
-    sizeList += range(169, 553, 96)
-    sizeList += range(169-1, 553-1, 96)
+
+
+#    sizeList = [0, 77, 78, 512]
+#    sizeList += range(169, 553, 96)
+#    sizeList += range(169-1, 553-1, 96)
+#    sizeList.sort()
+# With ContikiMAC Header
+    sizeList = [0, 74, 75, 512]
+    sizeList += range(166, 550, 48) # 262 # 358 # 454 
+    sizeList += range(166-1, 550-1, 96) #261 # 357 # 453
     sizeList.sort()
 
     dstDir = "benchs"
