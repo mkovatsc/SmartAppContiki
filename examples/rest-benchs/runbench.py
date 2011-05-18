@@ -143,7 +143,8 @@ def onerun(hops, size, rdc):
     runFg("rm dump*.log")
     for mote in range(hops):
         ret = runBg2("../../tools/sky/serialdump-linux -b115200 %s" %(getTty(mote+2)), "dump%d.log"%(mote+2))
-        time.sleep(1)
+    time.sleep(1)        
+    for mote in range(hops):
         runFg2("echo 'powertrace on'", getTty(mote+2))
 
     ret = runFg("java -cp java_tools/bin COAPClient 6 sky%d 61616 get hello %d" %(hops+1, size))
@@ -193,6 +194,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     
     print "Starting benchmarks: hops: %d, size: %d, rdc %s" %(hops, size, rdc)
     
+    localCancelCount = 0
     while nres < niter:
         print "Iteration #%d, results: %d (new: %d, aborted: %d)" %(nres+1, overallResCount, resCount, cancelCount)
         ret = onerun(hops, size, rdc)
@@ -214,10 +216,11 @@ def dobench(hops, size, rdc, niter, dstDir):
             overallResCount += 1
             #killBench()
         else:
-            print "Cancelled (%d)" %cancelCount
+            print "Cancelled (%d, %d)" %(localCancelCount, cancelCount)
             cancelCount += 1
-            compilationNeeded = True
-            killBench()
+            localCancelCount += 1
+            if localCancelCount > 1:
+                compilationNeeded = True
 
     result_file.close()
     print ""
@@ -237,21 +240,21 @@ def main():
     hopsList2 = [1, 4]
 
 
-#    sizeList = [0, 77, 78, 512]
-#    sizeList += range(169, 553, 96)
-#    sizeList += range(169-1, 553-1, 96)
-#    sizeList.sort()
-# With ContikiMAC Header
-    sizeList = [0, 74, 75, 512]
-    sizeList += range(166, 550, 48) # 262 # 358 # 454 
-    sizeList += range(166-1, 550-1, 96) #261 # 357 # 453
+    sizeList = [0, 77, 78, 512]
+    sizeList += range(169, 553, 96)
+    sizeList += range(169-1, 553-1, 96)
     sizeList.sort()
+# With ContikiMAC Header
+#    sizeList = [0, 74, 75, 512]
+#    sizeList += range(166, 550, 48) # 262 # 358 # 454 
+#    sizeList += range(166-1, 550-1, 96) #261 # 357 # 453
+#    sizeList.sort()
 
     dstDir = "benchs"
     if not os.path.exists(dstDir):
         os.makedirs(dstDir)
     
-    compilationNeeded = True    
+    compilationNeeded = True
     rdc = "contikimac"
     for hops in hopsList2:
         for size in sizeList:

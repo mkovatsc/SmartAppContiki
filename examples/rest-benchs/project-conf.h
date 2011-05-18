@@ -95,5 +95,6 @@
 #define MAC_QUEUE_SIZE				10 // #qcsma
 #define QUEUEBUF_CONF_NUM			MAC_QUEUE_SIZE // #qbuf
 #define MAX_NEIGHBORS               4 // csma neighbors
+#define NFAST_CSMA_TX				8
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

@@ -5,7 +5,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/mrm</project>
   <simulation>
     <title>REST with RPL router</title>
-    <delaytime>0</delaytime>
+    <delaytime>-2147483648</delaytime>
     <randomseed>123456</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -82,8 +82,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>35.100895239785295</x>
-        <y>39.70574552287428</y>
+        <x>55.86535148808891</x>
+        <y>71.65108820561478</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -96,8 +96,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>41.62394627459157</x>
-        <y>28.851868541068313</y>
+        <x>76.3724301286719</x>
+        <y>30.54550151535099</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -110,8 +110,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>44.887197504174935</x>
-        <y>37.45498541906083</y>
+        <x>48.314357936717656</x>
+        <y>-3.5791808802690284</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -124,8 +124,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>51.41369996334167</x>
-        <y>30.631823757204696</y>
+        <x>3.573107684682523</x>
+        <y>14.620649730728314</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -138,7 +138,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>259</width>
-    <z>4</z>
+    <z>3</z>
     <height>179</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -167,7 +167,7 @@
       <coloring />
     </plugin_config>
     <width>901</width>
-    <z>2</z>
+    <z>1</z>
     <height>911</height>
     <location_x>257</location_x>
     <location_y>0</location_y>
@@ -179,7 +179,7 @@
       <analyzers name="6lowpan" />
     </plugin_config>
     <width>753</width>
-    <z>1</z>
+    <z>4</z>
     <height>911</height>
     <location_x>1155</location_x>
     <location_y>1</location_y>
@@ -204,10 +204,10 @@
       <showRadioRXTX />
       <showRadioHW />
       <split>125</split>
-      <zoomfactor>2237.0771856165607</zoomfactor>
+      <zoomfactor>5079.283386489856</zoomfactor>
     </plugin_config>
     <width>1910</width>
-    <z>0</z>
+    <z>2</z>
     <height>189</height>
     <location_x>0</location_x>
     <location_y>910</location_y>
@@ -217,10 +217,11 @@
     <plugin_config>
       <skin>se.sics.cooja.plugins.skins.IDVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>9.400011780250322 0.0 0.0 9.400011780250322 -253.72538532166712 -226.4607041682759</viewport>
+      <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
+      <viewport>1.3186935918787 0.0 0.0 1.3186935918787 67.28816579311662 72.71984289098553</viewport>
     </plugin_config>
     <width>300</width>
-    <z>3</z>
+    <z>0</z>
     <height>300</height>
     <location_x>0</location_x>
     <location_y>258</location_y>

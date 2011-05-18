@@ -13,7 +13,7 @@ UIP_CONF_IPV6=1
 WITH_COAP=6
 
 # radio configuration
-CFLAGS += -DRF_CHANNEL=21
+CFLAGS += -DRF_CHANNEL=25
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables
