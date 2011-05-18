@@ -306,22 +306,21 @@ packet_sent(void *ptr, int status, int num_transmissions)
 
     /* The retransmission time must be proportional to the channel
        check interval of the underlying radio duty cycling layer. */
-    time = default_timebase();
-
-    /* The retransmission time uses a linear backoff so that the
-       interval between the transmissions increase with each
-       retransmit. */
-    backoff_transmissions = n->backofftx > 1 ? n->backofftx / 2: 1;
-//    backoff_transmissions = 2;
-
-    /* Clamp the number of backoffs so that we don't get a too long
-       timeout here, since that will delay all packets in the
-       queue. */
-    if(backoff_transmissions > CSMA_MAX_BACKOFF) {
-      backoff_transmissions = CSMA_MAX_BACKOFF;
+    if(n->backofftx > NFAST_CSMA_TX) {
+    	/* The retransmission time must be proportional to the channel
+    	       check interval of the underlying radio duty cycling layer. */
+    	time = default_timebase();
+    	backoff_transmissions = n->backofftx + 1 - NFAST_CSMA_TX;
+        /* Clamp the number of backoffs so that we don't get a too long
+           timeout here, since that will delay all packets in the
+           queue. */
+        if(backoff_transmissions > 3) {
+          backoff_transmissions = 3;
+        }
+        time = time + (random_rand() % (backoff_transmissions * time));
+    } else {
+    	time = 0;
     }
-
-    time = /*time +*/ (random_rand() % (backoff_transmissions * time));
 
     if(n->transmissions < n->max_transmissions) {
       PRINTF("csma: retransmitting with time %lu %p\n", time, q);
