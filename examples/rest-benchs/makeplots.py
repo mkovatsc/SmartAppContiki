@@ -97,7 +97,7 @@ def main():
 	
 	payloads = []
 
-	dstDir = "benchs"
+	dataDir = "benchs"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):
@@ -117,7 +117,7 @@ def main():
 	if not os.path.exists(plotsDir):
 		os.makedirs(plotsDir)
 	
-	file = open(os.path.join(plotsDir, 'hops1_rdccontikimac.txt'), 'w')
+	file = open(os.path.join(plotsDir, 'hops4_rdccontikimac.txt'), 'w')
 	
 	# Header
 	file.write('payload	latency	energy2	energy3	energy4	energy5\r\n');
@@ -125,10 +125,10 @@ def main():
 	for p in sorted(payloads):
 		print "payload: %u" % p
 		
-		file.write("%u	%f	" % (p, overallResults[(1, p, 'contikimac')]['latency']['mean']))
+		file.write("%u	%f	" % (p, overallResults[(4, p, 'contikimac')]['latency']['mean']))
 		
-		for i in range(0, len(overallResults[(1, p, 'contikimac')]['nodes']), 1):
-			file.write("%f	" % (overallResults[(1, p, 'contikimac')]['nodes'][i]['mean']))
+		for i in range(0, len(overallResults[(4, p, 'contikimac')]['nodes']), 1):
+			file.write("%f	" % (overallResults[(4, p, 'contikimac')]['nodes'][i]['mean']))
 		
 		file.write("\r\n");
 	

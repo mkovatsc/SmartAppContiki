@@ -10,11 +10,16 @@ from datetime import datetime
 from datetime import timedelta
 from math import sqrt
 
+debugMode = False
+
 resCount = 0
 cancelCount = 0
 overallResCount = 0
 benchLaunched = False
+
 compilationNeeded = True
+resetNeeded = False
+
 contikiPath = "../.."
 
 def meanstdv(x):    
@@ -35,17 +40,20 @@ def meanstdv(x):
     return {"mean": mean, "stdev": stdev}
 
 def do_exit(sig, stack):
+    print "Killing processes"
     killBench()
     raise SystemExit('Exiting')
 
 def killBench():
     global benchLaunched
     runFg("killall -q make")
+    runFg("killall tunslip6")
     runFg("killall serialdump-linux")
     benchLaunched = False
 
 def runFg(command):
-#    print "> " + command
+    if debugMode:
+        print "> " + command
     cmd = command.split(" ")
     if os.path.exists(".log"):
         os.remove(".log")
@@ -62,22 +70,29 @@ def runFg(command):
     return {"status": status[1], "log": lines}
 
 def runFg2(cmd, out):
-#    print "> %s > %s" %(cmd, out)
+    if debugMode:
+        print "> %s > %s" %(cmd, out)
     return os.system("%s 1> %s 2>> /dev/null" %(cmd, out))
 
 def runBg(cmd):
-#    print "> %s &" %(cmd)
+    if debugMode:
+        print "> %s &" %(cmd)
     return os.system("%s 1>> /dev/null 2>> /dev/null &" %(cmd))
 
 def runBg2(cmd, out):
-#    print "> %s > %s &" %(cmd, out)
+    if debugMode:
+        print "> %s > %s &" %(cmd, out)
     return os.system("%s 1> %s 2>> /dev/null &" %(cmd, out))
 
 def getTty(mote):
     try:
-        return runFg("make sky-motelist")["log"][mote+3].split()[1]
+        tty = runFg("../../tools/sky/motelist-linux")["log"][mote+1].split()[1]
     except:
-        return None
+        tty = None
+        
+    if debugMode:
+        print "Getting mote %u: %s" % (mote, tty)
+    return tty
         
 def getLatency(log):
     lastline = log[len(log)-1]
@@ -104,11 +119,13 @@ def getPower(hops):
 
 def onerun(hops, size, rdc):
     global compilationNeeded
+    global resetNeeded
     global benchLaunched
+    
     print "Preparing bench"
     if compilationNeeded:
-        killBench()
         print "-- Compiling"
+        killBench()
         compileCmd = "make RDC=%s" %(rdc+"_driver")
         runFg("make clean")
         if runFg(compileCmd)["status"] != 0:
@@ -125,7 +142,16 @@ def onerun(hops, size, rdc):
             print "Programmation failed: %s" %(compileCmd2)
             return
         compilationNeeded = False
+        resetNeeded = False
 
+    if resetNeeded:
+        print "-- Resetting"
+        killBench()
+        for mote in range(hops):
+            runFg("../../tools/sky/msp430-bsl-linux --telosb -c /dev/ttyUSB0 -r")
+        resetNeeded = False
+        benchLaunched = False
+        
     if not benchLaunched:
         print "Preparing network"
         runBg("make connect-router")
@@ -134,7 +160,7 @@ def onerun(hops, size, rdc):
         if ret["status"] != 0:
             print "Ping failed"
             return
-        time.sleep(5)
+        time.sleep(3)
         benchLaunched = True
     
     print "Starting execution"
@@ -143,6 +169,7 @@ def onerun(hops, size, rdc):
     runFg("rm dump*.log")
     for mote in range(hops):
         ret = runBg2("../../tools/sky/serialdump-linux -b115200 %s" %(getTty(mote+2)), "dump%d.log"%(mote+2))
+        
     time.sleep(1)        
     for mote in range(hops):
         runFg2("echo 'powertrace on'", getTty(mote+2))
@@ -176,6 +203,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     global overallResCount
     global cancelCount
     global compilationNeeded
+    global resetNeeded
 
     dstFile = os.path.join(dstDir, "hops%d_payload%d_rdc%s.txt" %(hops, size, rdc))
 
@@ -194,9 +222,9 @@ def dobench(hops, size, rdc, niter, dstDir):
     
     print "Starting benchmarks: hops: %d, size: %d, rdc %s" %(hops, size, rdc)
     
-    localCancelCount = 0
     while nres < niter:
-        print "Iteration #%d, results: %d (new: %d, aborted: %d)" %(nres+1, overallResCount, resCount, cancelCount)
+        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount)
+        localCancelCount = 0
         ret = onerun(hops, size, rdc)
         if ret != None:
             print "Result:",
@@ -219,14 +247,15 @@ def dobench(hops, size, rdc, niter, dstDir):
             print "Cancelled (%d, %d)" %(localCancelCount, cancelCount)
             cancelCount += 1
             localCancelCount += 1
-            if localCancelCount > 1:
-                compilationNeeded = True
+            if localCancelCount > 2:
+                resetNeeded = True
 
     result_file.close()
     print ""
 
 def main():
     global compilationNeeded
+    global resetNeeded
 
     # init
     signal.signal(signal.SIGINT, do_exit)
@@ -234,36 +263,37 @@ def main():
     # bench
     killBench()
 
-    niter = 10
-    hopsList = [1, 2, 3, 4]   
+    niter = 50
+    
+    hopsList1 = [1, 4]
+    
     rdcList = ["contikimac", "nullrdc"]
-    hopsList2 = [1, 4]
-
+    hopsList2 = [1, 2, 3, 4]   
 
     sizeList = [0, 77, 78, 512]
     sizeList += range(169, 553, 96)
     sizeList += range(169-1, 553-1, 96)
     sizeList.sort()
-# With ContikiMAC Header
-#    sizeList = [0, 74, 75, 512]
-#    sizeList += range(166, 550, 48) # 262 # 358 # 454 
-#    sizeList += range(166-1, 550-1, 96) #261 # 357 # 453
-#    sizeList.sort()
 
     dstDir = "benchs"
     if not os.path.exists(dstDir):
+        compilationNeeded = True
         os.makedirs(dstDir)
+    else:
+        print "WARNING: Assert that the motes are already programmed!"
+        compilationNeeded = False
     
-    compilationNeeded = True
+    print "\n\nEXPERIMENT 1\n============\n"
     rdc = "contikimac"
-    for hops in hopsList2:
+    for hops in hopsList1:
         for size in sizeList:
             dobench(hops, size, rdc, niter, dstDir)
     
+    print "\n\nEXPERIMENT 2\n============\n"
     size = 64
     for rdc in rdcList:    
         compilationNeeded = True
-        for hops in hopsList:
+        for hops in hopsList2:
             dobench(hops, size, rdc, niter, dstDir)
         
 main()
