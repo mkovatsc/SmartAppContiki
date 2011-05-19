@@ -147,20 +147,25 @@ def onerun(hops, size, rdc):
     if resetNeeded:
         print "-- Resetting"
         killBench()
+        
         for mote in range(hops):
-            runFg("../../tools/sky/msp430-bsl-linux --telosb -c /dev/ttyUSB0 -r")
+            runFg("../../tools/sky/msp430-bsl-linux --telosb -c /dev/ttyUSB%u -r" % mote)
+        
         resetNeeded = False
         benchLaunched = False
         
     if not benchLaunched:
         print "Preparing network"
+        killBench()
         runBg("make connect-router")
-        time.sleep(3)
-        ret = runFg("ping6 sky5 -c1 -w30")
-        if ret["status"] != 0:
-            print "Ping failed"
-            return
-        time.sleep(3)
+        time.sleep(5)
+        for mote in range(4):
+            print "-- Pinging sky%u" % (mote+2)
+            ret = runFg("ping6 sky%u -c1 -w30" % (mote+2))
+            if ret["status"] != 0:
+                print "Ping failed"
+                return
+        time.sleep(5)
         benchLaunched = True
     
     print "Starting execution"
@@ -222,9 +227,10 @@ def dobench(hops, size, rdc, niter, dstDir):
     
     print "Starting benchmarks: hops: %d, size: %d, rdc %s" %(hops, size, rdc)
     
+    localCancelCount = 0
+    
     while nres < niter:
         print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount)
-        localCancelCount = 0
         ret = onerun(hops, size, rdc)
         if ret != None:
             print "Result:",
@@ -242,6 +248,9 @@ def dobench(hops, size, rdc, niter, dstDir):
             nres += 1
             resCount += 1
             overallResCount += 1
+            
+            # reset consecutive cancel count
+            localCancelCount = 0
             #killBench()
         else:
             print "Cancelled (%d, %d)" %(localCancelCount, cancelCount)
@@ -262,17 +271,20 @@ def main():
 
     # bench
     killBench()
-
-    niter = 50
     
-    hopsList1 = [1, 4]
+    hopsList1 = [1, 2, 4]
     
     rdcList = ["contikimac", "nullrdc"]
     hopsList2 = [1, 2, 3, 4]   
 
+    # frame bounds
     sizeList = [0, 77, 78, 512]
     sizeList += range(169, 553, 96)
     sizeList += range(169-1, 553-1, 96)
+    
+    # linear walkthrough
+    sizeList += range(2, 512, 2)
+    
     sizeList.sort()
 
     dstDir = "benchs"
@@ -280,20 +292,27 @@ def main():
         compilationNeeded = True
         os.makedirs(dstDir)
     else:
-        print "WARNING: Assert that the motes are already programmed!"
+        print "\n\n=======\nWARNING Assert that the motes are already programmed!\n======="
         compilationNeeded = False
     
     print "\n\nEXPERIMENT 1\n============\n"
     rdc = "contikimac"
-    for hops in hopsList1:
-        for size in sizeList:
-            dobench(hops, size, rdc, niter, dstDir)
+    compilationNeeded = True
+    
+    # distributing iterations against bursty errors
+    for niter in range(10):
+        for hops in hopsList1:
+            for size in sizeList:
+                dobench(hops, size, rdc, niter+1, dstDir)
+    
     
     print "\n\nEXPERIMENT 2\n============\n"
+    
     size = 64
     for rdc in rdcList:    
         compilationNeeded = True
-        for hops in hopsList2:
-            dobench(hops, size, rdc, niter, dstDir)
+        for niter in range(50):
+            for hops in hopsList2:
+                dobench(hops, size, rdc, niter+1, dstDir)
         
 main()

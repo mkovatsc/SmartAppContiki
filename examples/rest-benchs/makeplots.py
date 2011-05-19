@@ -109,31 +109,52 @@ def main():
 				rdc = getvalStr(splitted[2], "rdc")
 				results = getResults(os.path.join(dataDir, file))
 				if results != None:
-					payloads.append(payload)
+					if not payload in payloads:
+						payloads.append(payload)
 					key = (hops, payload, rdc)
 					overallResults[key] = results
 	
 	#create plot files
 	if not os.path.exists(plotsDir):
 		os.makedirs(plotsDir)
-	
-	file = open(os.path.join(plotsDir, 'hops4_rdccontikimac.txt'), 'w')
-	
-	# Header
-	file.write('payload	latency	energy2	energy3	energy4	energy5\r\n');
-	
-	for p in sorted(payloads):
-		print "payload: %u" % p
 		
-		file.write("%u	%f	" % (p, overallResults[(4, p, 'contikimac')]['latency']['mean']))
-		
-		for i in range(0, len(overallResults[(4, p, 'contikimac')]['nodes']), 1):
-			file.write("%f	" % (overallResults[(4, p, 'contikimac')]['nodes'][i]['mean']))
-		
-		file.write("\r\n");
+	for hops in [1, 2, 4]:
 	
-	file.close()
+		file = open(os.path.join(plotsDir, 'payload_compare_hops%u.txt' % hops), 'w')
+		
+		# Header
+		file.write('payload	latency	energy2	energy3	energy4	energy5\r\n')
+		
+		for p in sorted(payloads):
+			if p == 64:
+				continue
+			
+			print "%u hops, payload %u" % (hops, p)
+			
+			file.write("%u	%f" % (p, overallResults[(hops, p, 'contikimac')]['latency']['mean']))
+			
+			for i in range(0, len(overallResults[(hops, p, 'contikimac')]['nodes']), 1):
+				file.write("	%f" % (overallResults[(hops, p, 'contikimac')]['nodes'][i]['mean']))
+			
+			file.write("\r\n");
+		
+		file.close()
 	
+	for hops in [1, 2, 3, 4]:
+		file = open(os.path.join(plotsDir, 'rdc_compare_hops%u.txt' % hops), 'w')
+		
+		# Header
+		file.write('rdc	latency	energy2	energy3	energy4	energy5\r\n')
+		
+		for rdc in ['nullrdc', 'contikimac']:
+			file.write("%s	%f" % (rdc, overallResults[(hops, 64, rdc)]['latency']['mean']))
+			
+			for i in range(0, len(overallResults[(hops, 64, rdc)]['nodes']), 1):
+				file.write("	%f" % (overallResults[(hops, 64, rdc)]['nodes'][i]['mean']))
+	
+			file.write("\r\n");
+			
+		file.close()
 	return
 						
 main()
