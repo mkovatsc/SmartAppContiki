@@ -52,6 +52,10 @@
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
 
+#define MAX(a,b) ((a)<(b)?(b):(a))
+
+#define DEBUG 0
+
 /*#include "UsefulMicropendousDefines.h"
 // set up external SRAM prior to anything else to make sure malloc() has access to it
 void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
@@ -75,9 +79,16 @@ PROCESS(honeywell_process, "Honeywell comm");
 
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
+#if DEBUG
 static char debug_buffer[128];
+#endif
+static int poll_time = 10;
 
 enum mode {manual=0, timers=1, valve=2};
+enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode, get_timer};
+
+static enum request_type request_state = idle;
+
 
 typedef struct {
 	uint8_t mode;
@@ -161,12 +172,6 @@ static void parseD(char * data){
 	}
 }
 
-static int poll_time = 10;
-
-enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode, get_timer};
-
-static enum request_type request_state = idle;
-
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(honeywell_process, ev, data)
@@ -208,10 +213,12 @@ PROCESS_THREAD(honeywell_process, ev, data)
 							parseD(buf);
 							request_state = idle;
 							break;
+#if DEBUG
 						case debug:
 							memcpy(debug_buffer, buf, strlen(buf));
 							request_state = idle;
 							break;
+#endif
 						case auto_temperatures:
 							if(strncmp_P(buf, PSTR("G[0"), 3) == 0){
 								int index = atoi(&buf[3]);
@@ -646,6 +653,7 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 	handle_temperature(PSTR("supercomfort"), poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
 }
 
+#if DEBUG
 RESOURCE(debug, METHOD_GET | METHOD_POST, "debug", "debug");
 void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	if (REST.get_method_type(request)==METHOD_POST){
@@ -658,6 +666,7 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)debug_buffer, strlen(debug_buffer));
 }
+#endif
 
 
 RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode", "auto/timermode");
@@ -831,10 +840,6 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 }
 
 RESOURCE(weektimer, METHOD_GET | METHOD_POST, "auto/weektimer", "auto/weektimer");
-void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, request, response, buffer, preferred_size, offset);
-}
-
 RESOURCE(day1timer, METHOD_GET | METHOD_POST, "auto/day1timer", "auto/day1timer");
 RESOURCE(day2timer, METHOD_GET | METHOD_POST, "auto/day2timer", "auto/day2timer");
 RESOURCE(day3timer, METHOD_GET | METHOD_POST, "auto/day3timer", "auto/day3timer");
@@ -843,6 +848,9 @@ RESOURCE(day5timer, METHOD_GET | METHOD_POST, "auto/day5timer", "auto/day5timer"
 RESOURCE(day6timer, METHOD_GET | METHOD_POST, "auto/day6timer", "auto/day6timer");
 RESOURCE(day7timer, METHOD_GET | METHOD_POST, "auto/day7timer", "auto/day7timer");
 
+void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	handleTimer(0, request, response, buffer, preferred_size, offset);
+}
 void day1timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handleTimer(1, request, response, buffer, preferred_size, offset);
 }
@@ -1050,8 +1058,9 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	rest_init_framework();
 
-	
+#if DEBUG
 	rest_activate_resource(&resource_debug);
+#endif
 
 	rest_activate_resource(&resource_date);
 	rest_activate_resource(&resource_time);
