@@ -599,7 +599,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
 
-static void handle_temperature(char * identifier, int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+static void handle_temperature(int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		snprintf_P(temp, 128, PSTR("%d.%02d"), temperature/100, temperature%100);
@@ -625,7 +625,7 @@ static void handle_temperature(char * identifier, int temperature, int index, vo
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the %S temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"), identifier);
+			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"));
 		}
 	}
 
@@ -639,16 +639,16 @@ RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort", "auto/comfort");
 RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort", "auto/supercomfort");
 
 void frost_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(PSTR("frost"), poll_data.frost_temperature, 1, request, response, buffer, preferred_size, offset);
+	handle_temperature(poll_data.frost_temperature, 1, request, response, buffer, preferred_size, offset);
 }
 void energy_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(PSTR("energy"), poll_data.energy_temperature, 2, request, response, buffer, preferred_size, offset);
+	handle_temperature(poll_data.energy_temperature, 2, request, response, buffer, preferred_size, offset);
 }
 void comfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(PSTR("comfort"), poll_data.comfort_temperature, 3, request, response, buffer, preferred_size, offset);
+	handle_temperature(poll_data.comfort_temperature, 3, request, response, buffer, preferred_size, offset);
 }
 void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(PSTR("supercomfort"), poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
+	handle_temperature(poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
 }
 
 #if DEBUG
@@ -744,7 +744,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [0;8] eg.: /auto/%s?3 to interact with slot 3\nFor overview give 0"), timerString);
+		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [0;8] eg.: /auto/%s?3 to interact with slot 3\nFor overview set 0"), timerString);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strpos);
 		return;
