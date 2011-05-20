@@ -634,21 +634,19 @@ static void handle_temperature(char * identifier, int temperature, int index, vo
 }
 
 RESOURCE(frost, METHOD_GET | METHOD_POST, "auto/frost", "auto/frost");
+RESOURCE(energy, METHOD_GET | METHOD_POST, "auto/energy", "auto/energy");
+RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort", "auto/comfort");
+RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort", "auto/supercomfort");
+
 void frost_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handle_temperature(PSTR("frost"), poll_data.frost_temperature, 1, request, response, buffer, preferred_size, offset);
 }
-
-RESOURCE(energy, METHOD_GET | METHOD_POST, "auto/energy", "auto/energy");
 void energy_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handle_temperature(PSTR("energy"), poll_data.energy_temperature, 2, request, response, buffer, preferred_size, offset);
 }
-
-RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort", "auto/comfort");
 void comfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handle_temperature(PSTR("comfort"), poll_data.comfort_temperature, 3, request, response, buffer, preferred_size, offset);
 }
-
-RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort", "auto/supercomfort");
 void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handle_temperature(PSTR("supercomfort"), poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
 }
@@ -738,7 +736,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			c[1]='\0';
 			slot = atoi(c);
 			if(slot <= 8 && slot >= 1){
-				//slot is in interval [0;5] on honeywell but [1;6] on ravenmote
+				//slot is in interval [0;7] on honeywell but [1;8] on ravenmote
 				slot--;
 				success = 1;
 			}
@@ -746,7 +744,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		snprintf_P(temp, 128, PSTR("Add a get parameter that specifies the slot in [1;8] eg.: /auto/%s?3 to interact with slot 3"), timerString);
+		snprintf_P(temp, 128, PSTR("Add a get parameter that specifies the slot in [0;8] eg.: /auto/%s?3 to interact with slot 3\nFor overview give 0"), timerString);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 		return;
@@ -874,183 +872,6 @@ void day7timer_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 }
 
 
-/*RESOURCE(day1timer1, METHOD_GET | METHOD_POST, "auto/daytimer1/slot1", "auto/daytimer1/slot1");
-RESOURCE(day1timer2, METHOD_GET | METHOD_POST, "auto/daytimer1/slot2", "auto/daytimer1/slot2");
-RESOURCE(day1timer3, METHOD_GET | METHOD_POST, "auto/daytimer1/slot3", "auto/daytimer1/slot3");
-RESOURCE(day1timer4, METHOD_GET | METHOD_POST, "auto/daytimer1/slot4", "auto/daytimer1/slot4");
-RESOURCE(day1timer5, METHOD_GET | METHOD_POST, "auto/daytimer1/slot5", "auto/daytimer1/slot5");
-RESOURCE(day1timer6, METHOD_GET | METHOD_POST, "auto/daytimer1/slot6", "auto/daytimer1/slot6");
-void day1timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 0, request, response, buffer, preferred_size, offset);
-}
-void day1timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 1, request, response, buffer, preferred_size, offset);
-}
-void day1timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 2, request, response, buffer, preferred_size, offset);
-}
-void day1timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 3, request, response, buffer, preferred_size, offset);
-}
-void day1timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 4, request, response, buffer, preferred_size, offset);
-}
-void day1timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, 5, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day2timer1, METHOD_GET | METHOD_POST, "auto/daytimer2/slot1", "auto/daytimer2/slot1");
-RESOURCE(day2timer2, METHOD_GET | METHOD_POST, "auto/daytimer2/slot2", "auto/daytimer2/slot2");
-RESOURCE(day2timer3, METHOD_GET | METHOD_POST, "auto/daytimer2/slot3", "auto/daytimer2/slot3");
-RESOURCE(day2timer4, METHOD_GET | METHOD_POST, "auto/daytimer2/slot4", "auto/daytimer2/slot4");
-RESOURCE(day2timer5, METHOD_GET | METHOD_POST, "auto/daytimer2/slot5", "auto/daytimer2/slot5");
-RESOURCE(day2timer6, METHOD_GET | METHOD_POST, "auto/daytimer2/slot6", "auto/daytimer2/slot6");
-void day2timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 0, request, response, buffer, preferred_size, offset);
-}
-void day2timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 1, request, response, buffer, preferred_size, offset);
-}
-void day2timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 2, request, response, buffer, preferred_size, offset);
-}
-void day2timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 3, request, response, buffer, preferred_size, offset);
-}
-void day2timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 4, request, response, buffer, preferred_size, offset);
-}
-void day2timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, 5, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day3timer1, METHOD_GET | METHOD_POST, "auto/daytimer3/slot1", "auto/daytimer3/slot1");
-RESOURCE(day3timer2, METHOD_GET | METHOD_POST, "auto/daytimer3/slot2", "auto/daytimer3/slot2");
-RESOURCE(day3timer3, METHOD_GET | METHOD_POST, "auto/daytimer3/slot3", "auto/daytimer3/slot3");
-RESOURCE(day3timer4, METHOD_GET | METHOD_POST, "auto/daytimer3/slot4", "auto/daytimer3/slot4");
-RESOURCE(day3timer5, METHOD_GET | METHOD_POST, "auto/daytimer3/slot5", "auto/daytimer3/slot5");
-RESOURCE(day3timer6, METHOD_GET | METHOD_POST, "auto/daytimer3/slot6", "auto/daytimer3/slot6");
-void day3timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 0, request, response, buffer, preferred_size, offset);
-}
-void day3timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 1, request, response, buffer, preferred_size, offset);
-}
-void day3timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 2, request, response, buffer, preferred_size, offset);
-}
-void day3timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 3, request, response, buffer, preferred_size, offset);
-}
-void day3timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 4, request, response, buffer, preferred_size, offset);
-}
-void day3timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, 5, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day4timer1, METHOD_GET | METHOD_POST, "auto/daytimer4/slot1", "auto/daytimer4/slot1");
-RESOURCE(day4timer2, METHOD_GET | METHOD_POST, "auto/daytimer4/slot2", "auto/daytimer4/slot2");
-RESOURCE(day4timer3, METHOD_GET | METHOD_POST, "auto/daytimer4/slot3", "auto/daytimer4/slot3");
-RESOURCE(day4timer4, METHOD_GET | METHOD_POST, "auto/daytimer4/slot4", "auto/daytimer4/slot4");
-RESOURCE(day4timer5, METHOD_GET | METHOD_POST, "auto/daytimer4/slot5", "auto/daytimer4/slot5");
-RESOURCE(day4timer6, METHOD_GET | METHOD_POST, "auto/daytimer4/slot6", "auto/daytimer4/slot6");
-void day4timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 0, request, response, buffer, preferred_size, offset);
-}
-void day4timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 1, request, response, buffer, preferred_size, offset);
-}
-void day4timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 2, request, response, buffer, preferred_size, offset);
-}
-void day4timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 3, request, response, buffer, preferred_size, offset);
-}
-void day4timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 4, request, response, buffer, preferred_size, offset);
-}
-void day4timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, 5, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day5timer1, METHOD_GET | METHOD_POST, "auto/daytimer5/slot1", "auto/daytimer5/slot1");
-RESOURCE(day5timer2, METHOD_GET | METHOD_POST, "auto/daytimer5/slot2", "auto/daytimer5/slot2");
-RESOURCE(day5timer3, METHOD_GET | METHOD_POST, "auto/daytimer5/slot3", "auto/daytimer5/slot3");
-RESOURCE(day5timer4, METHOD_GET | METHOD_POST, "auto/daytimer5/slot4", "auto/daytimer5/slot4");
-RESOURCE(day5timer5, METHOD_GET | METHOD_POST, "auto/daytimer5/slot5", "auto/daytimer5/slot5");
-RESOURCE(day5timer6, METHOD_GET | METHOD_POST, "auto/daytimer5/slot6", "auto/daytimer5/slot6");
-void day5timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 0, request, response, buffer, preferred_size, offset);
-}
-void day5timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 1, request, response, buffer, preferred_size, offset);
-}
-void day5timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 2, request, response, buffer, preferred_size, offset);
-}
-void day5timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 3, request, response, buffer, preferred_size, offset);
-}
-void day5timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 4, request, response, buffer, preferred_size, offset);
-}
-void day5timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, 5, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day6timer1, METHOD_GET | METHOD_POST, "auto/daytimer6/slot1", "auto/daytimer6/slot1");
-RESOURCE(day6timer2, METHOD_GET | METHOD_POST, "auto/daytimer6/slot2", "auto/daytimer6/slot2");
-RESOURCE(day6timer3, METHOD_GET | METHOD_POST, "auto/daytimer6/slot3", "auto/daytimer6/slot3");
-RESOURCE(day6timer4, METHOD_GET | METHOD_POST, "auto/daytimer6/slot4", "auto/daytimer6/slot4");
-RESOURCE(day6timer5, METHOD_GET | METHOD_POST, "auto/daytimer6/slot5", "auto/daytimer6/slot5");
-RESOURCE(day6timer6, METHOD_GET | METHOD_POST, "auto/daytimer6/slot6", "auto/daytimer6/slot6");
-void day6timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 0, request, response, buffer, preferred_size, offset);
-}
-void day6timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 1, request, response, buffer, preferred_size, offset);
-}
-void day6timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 0, request, response, buffer, preferred_size, offset);
-}
-void day6timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 0, request, response, buffer, preferred_size, offset);
-}
-void day6timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 0, request, response, buffer, preferred_size, offset);
-}
-void day6timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, 0, request, response, buffer, preferred_size, offset);
-}
-
-RESOURCE(day7timer1, METHOD_GET | METHOD_POST, "auto/daytimer7/slot1", "auto/daytimer7/slot1");
-RESOURCE(day7timer2, METHOD_GET | METHOD_POST, "auto/daytimer7/slot2", "auto/daytimer7/slot2");
-RESOURCE(day7timer3, METHOD_GET | METHOD_POST, "auto/daytimer7/slot3", "auto/daytimer7/slot3");
-RESOURCE(day7timer4, METHOD_GET | METHOD_POST, "auto/daytimer7/slot4", "auto/daytimer7/slot4");
-RESOURCE(day7timer5, METHOD_GET | METHOD_POST, "auto/daytimer7/slot5", "auto/daytimer7/slot5");
-RESOURCE(day7timer6, METHOD_GET | METHOD_POST, "auto/daytimer7/slot6", "auto/daytimer7/slot6");
-void day7timer1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
-void day7timer2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
-void day7timer3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
-void day7timer4_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
-void day7timer5_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}
-void day7timer6_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, 0, request, response, buffer, preferred_size, offset);
-}*/
-
-
-
 PROCESS(coap_process, "coap");
 PROCESS_THREAD(coap_process, ev, data)
 {
@@ -1084,55 +905,6 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_day5timer);
 	rest_activate_resource(&resource_day6timer);
 	rest_activate_resource(&resource_day7timer);
-
-	/*rest_activate_resource(&resource_day1timer1);
-	rest_activate_resource(&resource_day1timer2);
-	rest_activate_resource(&resource_day1timer3);
-	rest_activate_resource(&resource_day1timer4);
-	rest_activate_resource(&resource_day1timer5);
-	rest_activate_resource(&resource_day1timer6);
-	
-	rest_activate_resource(&resource_day2timer1);
-	rest_activate_resource(&resource_day2timer2);
-	rest_activate_resource(&resource_day2timer3);
-	rest_activate_resource(&resource_day2timer4);
-	rest_activate_resource(&resource_day2timer5);
-	rest_activate_resource(&resource_day2timer6);
-
-	rest_activate_resource(&resource_day3timer1);
-	rest_activate_resource(&resource_day3timer2);
-	rest_activate_resource(&resource_day3timer3);
-	rest_activate_resource(&resource_day3timer4);
-	rest_activate_resource(&resource_day3timer5);
-	rest_activate_resource(&resource_day3timer6);
-
-	rest_activate_resource(&resource_day4timer1);
-	rest_activate_resource(&resource_day4timer2);
-	rest_activate_resource(&resource_day4timer3);
-	rest_activate_resource(&resource_day4timer4);
-	rest_activate_resource(&resource_day4timer5);
-	rest_activate_resource(&resource_day4timer6);
-
-	rest_activate_resource(&resource_day5timer1);
-	rest_activate_resource(&resource_day5timer2);
-	rest_activate_resource(&resource_day5timer3);
-	rest_activate_resource(&resource_day5timer4);
-	rest_activate_resource(&resource_day5timer5);
-	rest_activate_resource(&resource_day5timer6);
-
-	rest_activate_resource(&resource_day6timer1);
-	rest_activate_resource(&resource_day6timer2);
-	rest_activate_resource(&resource_day6timer3);
-	rest_activate_resource(&resource_day6timer4);
-	rest_activate_resource(&resource_day6timer5);
-	rest_activate_resource(&resource_day6timer6);
-
-	rest_activate_resource(&resource_day7timer1);
-	rest_activate_resource(&resource_day7timer2);
-	rest_activate_resource(&resource_day7timer3);
-	rest_activate_resource(&resource_day7timer4);
-	rest_activate_resource(&resource_day7timer5);
-	rest_activate_resource(&resource_day7timer6);*/
 
 	PROCESS_END();
 }

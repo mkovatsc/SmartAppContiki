@@ -5,7 +5,7 @@ CONTIKI = ../..
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
-WITH_COAP=3
+WITH_COAP=6
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
