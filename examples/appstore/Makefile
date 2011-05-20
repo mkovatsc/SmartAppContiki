@@ -6,7 +6,7 @@ endif
 
 CONTIKI=../..
 
-PROJECT_SOURCEFILES += symbols-subset.c 
+PROJECT_SOURCEFILES += symbols-subset.c static-routing.c
 
 # variable for root Makefile.include
 UIP_CONF_IPV6=1

@@ -4,6 +4,10 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
+#include "static-routing.h"
+#endif
+
 #include "rest-engine.h"
 
 #if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
@@ -460,6 +464,12 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
 #endif
 
+/* if static routes are used rather than RPL */
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
+  set_global_address();
+  configure_routing();
+#endif
+
   /* Initialize the REST framework. */
   rest_init_framework();
 
@@ -474,7 +484,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   SENSORS_ACTIVATE(button_sensor);
   SENSORS_ACTIVATE(battery_sensor);
 
-  rest_activate_resource(&resource_event);
+  rest_activate_event_resource(&resource_event);
   rest_activate_resource(&resource_led);
   rest_activate_resource(&resource_light);
   rest_activate_resource(&resource_battery);

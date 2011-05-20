@@ -36,10 +36,7 @@
 #include "coap-06-rest-engine.h"
 #include "coap-06-transactions.h"
 #include "coap-06-observing.h"
-
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-#include "static-routing.h"
-#endif
+#include "coap-06-separate.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -61,9 +58,6 @@
 #define PRINTLLADDR(addr)
 #define PRINTBITS(buf,len)
 #endif
-
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
 PROCESS(coap_server, "Coap Server");
 
@@ -252,7 +246,7 @@ handle_incoming_data(void)
       {
         coap_error_code = INTERNAL_SERVER_ERROR_5_00;
       }
-      /* reuse input buffer */
+      /* Reuse input buffer for error message. */
       coap_init_message(message, COAP_TYPE_ACK, coap_error_code, message->tid);
       coap_set_payload(message, (uint8_t *) coap_error_message, strlen(coap_error_message));
       coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, data, coap_serialize_message(message, data));
@@ -372,13 +366,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("Starting CoAP server...\n");
-
-/* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-  set_global_address();
-  configure_routing();
-#endif
+  PRINTF("Starting CoAP-06 server...\n");
 
   rest_activate_resource(&resource_well_known_core);
 
@@ -505,7 +493,10 @@ const struct rest_implementation coap_rest_implementation = {
   coap_get_post_variable,
 
   coap_notify_observers,
-  coap_observe_handler,
+  (restful_post_handler) coap_observe_handler,
+
+  (restful_pre_handler) coap_separate_handler,
+  NULL,
 
   {
     CONTENT_2_05,

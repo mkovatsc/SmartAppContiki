@@ -6,10 +6,6 @@
 
 #include "coap-03-rest-engine.h"
 
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-#include "static-routing.h"
-#endif
-
 #define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -30,9 +26,6 @@
 #define PRINTLLADDR(addr)
 #define PRINTBITS(buf,len)
 #endif
-
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
 
 PROCESS(coap_server, "Coap Server");
 
@@ -344,13 +337,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 PROCESS_THREAD(coap_server, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("Starting CoAP server...\n");
-
-/* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-  set_global_address();
-  configure_routing();
-#endif
+  PRINTF("Starting CoAP-03 server...\n");
 
   rest_activate_resource(&resource_well_known_core);
 
@@ -479,6 +466,9 @@ const struct rest_implementation coap_rest_implementation = {
 
     coap_notify_observers,
     coap_observe_handler,
+
+    NULL,
+    NULL,
 
     {
       OK_200,

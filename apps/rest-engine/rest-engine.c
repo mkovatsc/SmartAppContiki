@@ -65,8 +65,17 @@ rest_init_framework(void)
 void
 rest_activate_resource(resource_t* resource)
 {
-  /*add it to the restful web service link list*/
   PRINTF("Activating: %s", resource->url);
+
+  if (!resource->pre_handler)
+  {
+    rest_set_pre_handler(resource, REST.default_pre_handler);
+  }
+  if (!resource->post_handler)
+  {
+    rest_set_post_handler(resource, REST.default_post_handler);
+  }
+
   list_add(restful_services, resource);
 }
 
@@ -77,6 +86,13 @@ rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
   rest_activate_resource(periodic_resource->resource);
 
   rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
+}
+
+void
+rest_activate_event_resource(resource_t* resource)
+{
+  rest_activate_resource(resource);
+  rest_set_post_handler(resource, REST.subscription_handler);
 }
 
 list_t
@@ -139,7 +155,7 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
         allowed = 1;
 
         /*call pre handler if it exists*/
-        if (!resource->pre_handler || resource->pre_handler(request, response))
+        if (!resource->pre_handler || resource->pre_handler(resource, request, response))
         {
           /* call handler function*/
           resource->handler(request, response, buffer, buffer_size, offset);
@@ -147,7 +163,7 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
           /*call post handler if it exists*/
           if (resource->post_handler)
           {
-            resource->post_handler(request, response);
+            resource->post_handler(resource, request, response);
           }
         }
       } else {

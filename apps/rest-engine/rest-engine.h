@@ -6,8 +6,6 @@
 #include "contiki.h"
 #include "contiki-lib.h"
 
-#include "static-routing.h"
-
 /*
  * The maximum buffer size that is provided for resource responses and must be respected due to the limited IP buffer.
  * Larger data must be handled by the resource and will be sent chunk-wise through a TCP stream or CoAP blocks.
@@ -28,6 +26,18 @@ typedef enum {
   METHOD_DELETE = (1 << 3)
 } rest_method_t;
 
+
+struct resource_s;
+struct periodic_resource_s;
+
+/* Signatures of handler functions. */
+typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+typedef int (*restful_pre_handler) (struct resource_s *resource, void* request, void* response);
+typedef void (*restful_post_handler) (struct resource_s *resource, void* request, void* response);
+typedef int (*restful_periodic_handler) (struct resource_s* resource);
+typedef void (*restful_response_handler) (void *data, void* response);
+
+/* Signature of the rest-engine service function. */
 typedef int (* service_callback_t)(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
 
 /**
@@ -146,7 +156,13 @@ struct rest_implementation {
   void (* notify_subscribers)(const char *url, int implementation_secific_mode, uint32_t counter, uint8_t *payload, size_t payload_len);
 
   /** The handler for resource subscriptions. */
-  void (* subscription_handler)(void *request, void *response);
+  restful_post_handler subscription_handler;
+
+  /** A default pre-handler that is assigned with the RESOURCE macro. */
+  restful_pre_handler default_pre_handler;
+
+  /** A default post-handler that is assigned with the RESOURCE macro. */
+  restful_post_handler default_post_handler;
 
   /* REST status codes. */
   const struct rest_implementation_status status;
@@ -160,18 +176,6 @@ struct rest_implementation {
  */
 extern const struct rest_implementation REST;
 
-struct resource_s;
-struct periodic_resource_s;
-
-/*Signature of handler functions*/
-typedef void (*restful_handler) (void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-typedef int (*restful_pre_handler) (void* request, void* response);
-typedef void (*restful_post_handler) (void* request, void* response);
-
-typedef int (*restful_periodic_handler) (struct resource_s* resource);
-
-typedef void (*restful_response_handler) (void *data, void* response);
-
 /*
  * Data structure representing a resource in REST.
  */
@@ -184,6 +188,7 @@ struct resource_s {
   restful_pre_handler pre_handler; /* to be called before handler, may perform initializations */
   restful_post_handler post_handler; /* to be called after handler, may perform finalizations (cleanup, etc) */
   void* user_data; /* pointer to user specific data */
+  unsigned int benchmark; /* to benchmark resource handler, used for separate response */
 };
 typedef struct resource_s resource_t;
 
@@ -235,8 +240,9 @@ void rest_init_framework(void);
  * Resources wanted to be accessible should be activated with the following code.
  */
 void rest_activate_resource(resource_t* resource);
-
 void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
+void rest_activate_event_resource(resource_t* resource);
+
 
 /*
  * To be called by HTTP/COAP server as a callback function when a new service request appears.
