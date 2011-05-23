@@ -24,7 +24,7 @@ LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 
 
 #extmem
-LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
+#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
 
 # linker optimizations
 CFLAGS += -ffunction-sections
