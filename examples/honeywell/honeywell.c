@@ -77,7 +77,6 @@ PROCESS(honeywell_process, "Honeywell comm");
 PROCESS(coap_process, "coap");
 
 /*---------------------------------------------------------------------------*/
-
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 #if DEBUG
@@ -116,14 +115,11 @@ static struct {
 	uint16_t comfort_temperature;
 	uint16_t supercomfort_temperature;
 
-	
 	hw_timer_slot_t timers[8][8];
-	
 
 	/* 0 : justOne
 	*  1 : weekdays */
 	bool automode;
-
 
 	clock_time_t last_poll;
 } poll_data;
@@ -138,7 +134,6 @@ static int uart_get_char(unsigned char c)
 	}
 	return 1;
 }
-
 
 static void parseD(char * data){
 	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
@@ -177,8 +172,6 @@ static void parseD(char * data){
 	}
 }
 
-
-/*---------------------------------------------------------------------------*/
 PROCESS_THREAD(honeywell_process, ev, data)
 {
 	PROCESS_BEGIN();
@@ -291,12 +284,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	}
 	PROCESS_END();
 }
+
 /*---------------------------------------------------------------------------*/
-
-
-/* For each resource defined, there corresponds an handler method which should be defined too.
- * Name of the handler method should be [resource name]_handler
- * */
 EVENT_RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -322,9 +311,6 @@ int temperature_event_handler(resource_t *r) {
 	return 1;
 }
 
-
-
-
 RESOURCE(battery, METHOD_GET, "battery", "battery");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -337,8 +323,6 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
-
-
 
 RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "mode");
 void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -398,7 +382,6 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
-
 
 RESOURCE(target, METHOD_GET | METHOD_POST, "target", "target");
 void target_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -686,7 +669,6 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 }
 #endif
 
-
 RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode", "auto/timermode");
 void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[128];
@@ -738,7 +720,7 @@ static char * getModeString(int mode){
 	}
 	return string;
 }
-#define CHUNKS_TOTAL 1030
+
 static void handleTimer(int day, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	int strpos = 0;
 	const char * query = NULL;
@@ -999,10 +981,6 @@ PROCESS_THREAD(coap_process, ev, data)
 	PROCESS_END();
 }
 
-
-
-
 /*---------------------------------------------------------------------------*/
 AUTOSTART_PROCESSES(&honeywell_process, &coap_process);
 /*---------------------------------------------------------------------------*/
-
