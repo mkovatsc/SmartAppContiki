@@ -74,6 +74,7 @@ void EnableExternalSRAM(void)
 
 /*---------------------------------------------------------------------------*/
 PROCESS(honeywell_process, "Honeywell comm");
+PROCESS(coap_process, "coap");
 
 /*---------------------------------------------------------------------------*/
 
@@ -143,7 +144,11 @@ static void parseD(char * data){
 	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
 	if(data[0]=='D'){
 		poll_data.valve = atoi(&data[29]);
-		poll_data.is_temperature = atoi(&data[35]);
+		uint16_t is_temperature = atoi(&data[35]);
+		if(poll_data.is_temperature != is_temperature){
+			process_post(&coap_process, PROCESS_EVENT_MSG, NULL);
+		}
+		poll_data.is_temperature = is_temperature;
 		poll_data.target_temperature = atoi(&data[43]);
 		poll_data.battery = atoi(&data[51]);
 
@@ -188,7 +193,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
-	//etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
 	printf_P(PSTR("G01\n"));
 	request_state = auto_temperatures;
@@ -292,7 +297,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 /* For each resource defined, there corresponds an handler method which should be defined too.
  * Name of the handler method should be [resource name]_handler
  * */
-RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
+EVENT_RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	char temp[128];
@@ -304,6 +309,21 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
 }
+
+int temperature_event_handler(resource_t *r) {
+	static uint32_t event_i = 0;
+	char content[6];
+	
+	int size = snprintf_P(content, 6, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
+
+	++event_i;
+	
+	REST.notify_subscribers(r->url, 0, event_i, (uint8_t*)content, size);
+	return 1;
+}
+
+
+
 
 RESOURCE(battery, METHOD_GET, "battery", "battery");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -936,7 +956,6 @@ void day7timer_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 }
 
 
-PROCESS(coap_process, "coap");
 PROCESS_THREAD(coap_process, ev, data)
 {
 	PROCESS_BEGIN();
@@ -949,7 +968,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	rest_activate_resource(&resource_date);
 	rest_activate_resource(&resource_time);
-	rest_activate_resource(&resource_temperature);
+	rest_activate_event_resource(&resource_temperature);
 	rest_activate_resource(&resource_battery);
 	rest_activate_resource(&resource_target);
 	rest_activate_resource(&resource_mode);
@@ -969,6 +988,13 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_day5timer);
 	rest_activate_resource(&resource_day6timer);
 	rest_activate_resource(&resource_day7timer);
+
+	while(1){
+		PROCESS_WAIT_EVENT();
+		if(ev == PROCESS_EVENT_MSG){
+			temperature_event_handler(&resource_temperature);
+		}
+	}
 
 	PROCESS_END();
 }
