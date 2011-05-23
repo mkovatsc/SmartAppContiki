@@ -6,6 +6,7 @@ import time
 import signal
 import subprocess
 import datetime
+import re
 from datetime import datetime
 from datetime import timedelta
 from math import sqrt
@@ -14,6 +15,7 @@ debugMode = False
 
 resCount = 0
 cancelCount = 0
+failCount = 0
 overallResCount = 0
 benchLaunched = False
 
@@ -95,7 +97,8 @@ def getTty(mote):
     return tty
         
 def getLatency(log):
-    lastline = log[len(log)-1]
+    lastline = log[len(log)-2]
+    print lastline
     try:
         return int(lastline.split(":")[1])
     except:
@@ -121,6 +124,7 @@ def onerun(hops, size, rdc):
     global compilationNeeded
     global resetNeeded
     global benchLaunched
+    global failCount
     
     print "Preparing bench"
     if compilationNeeded:
@@ -161,7 +165,7 @@ def onerun(hops, size, rdc):
         time.sleep(5)
         for mote in range(4):
             print "-- Pinging sky%u" % (mote+2)
-            ret = runFg("ping6 sky%u -c1 -w30" % (mote+2))
+            ret = runFg("ping6 -c1 -i5 -w30 -s64 sky%u" % (mote+2))
             if ret["status"] != 0:
                 print "Ping failed"
                 return
@@ -179,11 +183,16 @@ def onerun(hops, size, rdc):
     for mote in range(hops):
         runFg2("echo 'powertrace on'", getTty(mote+2))
 
-    ret = runFg("java -cp java_tools/bin COAPClient 6 sky%d 61616 get hello %d" %(hops+1, size))
+    #ret = runFg("java -cp java_tools/bin COAPClient 6 sky%d 61616 get hello %d" %(hops+1, size))
+    ret = runFg("java -jar java_tools/bin/SampleClient.jar POST coap://sky%d:61616/hello %d" %(hops+1, size))
     if ret["status"] != 0:
-            print "Bench failed"
-            print ret["log"]
-            return
+        print "Bench failed"
+        print ret["log"]
+        return
+    if re.search("Request timed out", ret["log"][len(ret["log"])-2]):
+        print "No reply"
+        failCount += 1
+        return
         
     for mote in range(hops):
         runFg2("echo 'powertrace off'", getTty(mote+2))
@@ -207,6 +216,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     global resCount
     global overallResCount
     global cancelCount
+    global failCount
     global compilationNeeded
     global resetNeeded
 
@@ -230,7 +240,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     localCancelCount = 0
     
     while nres < niter:
-        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount)
+        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d, fails: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount, failCount)
         ret = onerun(hops, size, rdc)
         if ret != None:
             print "Result:",
@@ -256,7 +266,9 @@ def dobench(hops, size, rdc, niter, dstDir):
             print "Cancelled (%d, %d)" %(localCancelCount, cancelCount)
             cancelCount += 1
             localCancelCount += 1
-            if localCancelCount > 2:
+            if localCancelCount > 4:
+                compilationNeeded = True
+            elif localCancelCount > 2:
                 resetNeeded = True
 
     result_file.close()
@@ -278,12 +290,12 @@ def main():
     hopsList2 = [1, 2, 3, 4]   
 
     # frame bounds
-    sizeList = [0, 77, 78, 512]
+    sizeList = [78, 79, 512]
+    sizeList += range(170, 554, 96)
     sizeList += range(169, 553, 96)
-    sizeList += range(169-1, 553-1, 96)
     
     # linear walkthrough
-    sizeList += range(2, 512, 2)
+    sizeList += range(0, 512, 4)
     
     sizeList.sort()
 
@@ -300,9 +312,9 @@ def main():
     compilationNeeded = True
     
     # distributing iterations against bursty errors
-    for niter in range(10):
-        for hops in hopsList1:
-            for size in sizeList:
+    for niter in range(50):
+        for size in sizeList:
+            for hops in hopsList1:
                 dobench(hops, size, rdc, niter+1, dstDir)
     
     

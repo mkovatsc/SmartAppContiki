@@ -57,8 +57,7 @@ void
 helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   const uint8_t *payload;
-  int length = 12; /* ------->| */
-  char *message = "Hello World!";
+  int length = 0;
 
   length = REST.get_request_payload(request, &payload);
   payload[length] = '\0';
@@ -66,11 +65,9 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 
   if (length<0) length = 0;
   if (length>REST_MAX_CHUNK_SIZE) length = REST_MAX_CHUNK_SIZE;
-//  memcpy(buffer, message, length);
-  memset(buffer, 2, length);
 
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
-  REST.set_header_etag(response, (uint8_t *) &length, 1);
+  memset(buffer, '-', length);
+
   REST.set_response_payload(response, buffer, length);
 }
 

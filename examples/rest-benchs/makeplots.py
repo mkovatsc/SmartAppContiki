@@ -12,6 +12,9 @@ fwritePower = 0.001 * 20 * voltage
 cpuPower = 0.001 * 1.8 * voltage
 lpmPower = 0.001 * .0545 * voltage
 
+wins = 0
+fails = 0
+
 def meanstdv(x):	
 	n, mean, stdev = len(x), 0, 0
 	for a in x:
@@ -39,6 +42,8 @@ def getPower(cpu, lpm, transmit, listen, fread, fwrite):
 	return getEnergy(cpu, lpm, transmit, listen, fread, fwrite)/ float(time)
 
 def getResults(fileName):
+	global fails, wins
+
 	file = open(fileName, 'r')
 	lines = file.readlines()
 	
@@ -52,6 +57,13 @@ def getResults(fileName):
 	for line in lines:
 		results = line.split()
 		
+		if float(results[0]) > 15000.0:
+			print "ERROR latency: %f" % float(results[0])
+			fails += 1
+			continue
+		else:
+			wins += 1
+		
 		# latency of run
 		latencyList.append( float(results[0]) )
 		
@@ -63,7 +75,7 @@ def getResults(fileName):
 			if id >= len(results):
 				break
 			
-			print "  %s (%i)" % (results[id], i)
+			#print "  %s (%i)" % (results[id], i)
 			
 			if i >= len(nodeEnergyList):
 				nodeEnergyList.append([])
@@ -72,7 +84,7 @@ def getResults(fileName):
 			
 			i += 1
 	
-	print "  nodes/hops: %u" % (len(nodeEnergyList))
+	#print "  nodes/hops: %u" % (len(nodeEnergyList))
 	
 	# Calculate mean energy per node over runs
 	nodeList = []
@@ -92,16 +104,16 @@ def getvalStr(str, token):
 	return str[idx:]
 
 def main():
-	plotsDir = "plots"
 	overallResults = {}
 	
 	payloads = []
 
 	dataDir = "benchs"
+	plotsDir = "plots"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):
-			print file
+			#print file
 			splitted = file.split("_")
 			if len(splitted) == 3:
 				hops = getval(splitted[0], "hops")
@@ -129,7 +141,7 @@ def main():
 			if p == 64:
 				continue
 			
-			print "%u hops, payload %u" % (hops, p)
+			#print "%u hops, payload %u" % (hops, p)
 			
 			file.write("%u	%f" % (p, overallResults[(hops, p, 'contikimac')]['latency']['mean']))
 			
@@ -139,6 +151,11 @@ def main():
 			file.write("\r\n");
 		
 		file.close()
+	
+	print "Wins: %u" % wins
+	print "Fails: %u" % fails
+	print "Total: %u (%f)" % ((wins+fails), float(wins)/float(wins+fails))
+	print "\n\nEXPERIMENT 2\n============\n"
 	
 	for hops in [1, 2, 3, 4]:
 		file = open(os.path.join(plotsDir, 'rdc_compare_hops%u.txt' % hops), 'w')
