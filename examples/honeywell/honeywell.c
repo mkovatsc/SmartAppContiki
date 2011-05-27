@@ -289,14 +289,13 @@ PROCESS_THREAD(honeywell_process, ev, data)
 EVENT_RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	char temp[128];
-	snprintf_P(temp, 128, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
+	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 
 	request_state = poll;
 	printf_P(PSTR("D\n"));
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 int temperature_event_handler(resource_t *r) {
@@ -314,35 +313,33 @@ int temperature_event_handler(resource_t *r) {
 RESOURCE(battery, METHOD_GET, "battery", "battery");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	char temp[128];
-	snprintf_P(temp, 128, PSTR("%d"), poll_data.battery);
+	snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
 
 	request_state = poll;
 	printf_P(PSTR("D\n"));
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "mode");
 void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 		switch(poll_data.mode){
 			case manual:
-				strcpy_P(temp, PSTR("manual"));
+				strncpy_P((char*)buffer, PSTR("manual"), preferred_size);
 				break;
 			case timers:
-				strcpy_P(temp, PSTR("auto"));
+				strncpy_P((char*)buffer, PSTR("auto"), preferred_size);
 				break;
 			case valve:
-				strcpy_P(temp, PSTR("valve"));
+				strncpy_P((char*)buffer, PSTR("valve"), preferred_size);
 				break;
 			default:
-				strcpy_P(temp, PSTR("undefined"));
+				strncpy_P((char*)buffer, PSTR("undefined"), preferred_size);
 		}
 	}
 	else{
@@ -357,17 +354,17 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(strncmp_P(string,PSTR("manual"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M00\n"));
-				strcpy_P(temp, PSTR("New mode is: manual"));
+				strncpy_P((char*)buffer, PSTR("New mode is: manual"), preferred_size);
 			}
 			else if(strncmp_P(string,PSTR("auto"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M01\n"));
-				strcpy_P(temp, PSTR("New mode is: auto"));
+				strncpy_P((char*)buffer, PSTR("New mode is: auto"), preferred_size);
 			}
 			else if(strncmp_P(string,PSTR("valve"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M02\n"));
-				strcpy_P(temp, PSTR("New mode is: valve"));
+				strncpy_P((char*)buffer, PSTR("New mode is: valve"), preferred_size);
 			}
 			else{
 				success = false;
@@ -376,19 +373,18 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strcpy_P(temp, PSTR("Payload format: mode={auto, manual, valve}"));
+			strcpy_P((char*)buffer, PSTR("Payload format: mode={auto, manual, valve}"));
 		}
 	}
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(target, METHOD_GET | METHOD_POST, "target", "target");
 void target_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P(temp, 128, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -406,25 +402,24 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 				uint16_t value = atoi(string);
 				request_state = poll;
 				printf_P(PSTR("A%02x\n"),value/5);
-				snprintf_P(temp, 128, PSTR("Successfully set value"));
+				strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(poll, METHOD_GET | METHOD_POST, "poll", "poll");
 void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P(temp, 128, PSTR("%d"), poll_time);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_time);
 	}
 	else{
 		const char * string = NULL;
@@ -439,9 +434,9 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			else{
 				// the poll intervall has to be bigger than 0
 				int poll_intervall = atoi(string);
-				if(temp > 0){
+				if(poll_intervall > 0){
 					poll_time = poll_intervall;
-					snprintf_P(temp, 128, PSTR("Successfully set poll intervall"));
+					strncpy_P((char*)buffer, PSTR("Successfully set poll intervall"), preferred_size);
 				}
 				else{
 					success = 0;
@@ -450,20 +445,19 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(valve, METHOD_GET | METHOD_POST, "valve", "valve");
 void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P(temp, 128, PSTR("%d"), poll_data.valve);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.valve);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -481,25 +475,24 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 				int new_valve=atoi(string);
 				request_state = poll;
 				printf_P(PSTR("E%02x\n"),new_valve);
-				snprintf_P(temp, 128, PSTR("Successfully set valve position"));
+				strncpy_P((char*)buffer, PSTR("Successfully set valve position"), preferred_size);
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(date, METHOD_GET | METHOD_POST, "date", "date");
 void date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P(temp, 128, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -534,7 +527,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				request_state = poll;
 				printf_P(PSTR("Y%02x%02x%02x\n"),year,month,day);
-				snprintf_P(temp, 128, PSTR("Successfully set date"));
+				strncpy_P((char*)buffer, PSTR("Successfully set date"), preferred_size);
 			}
 		}
 		else{
@@ -542,25 +535,24 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=dd.mm.yy"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=dd.mm.yy"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 
 RESOURCE(time, METHOD_GET | METHOD_POST, "time", "time");
 void time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
 		clock_time_t now = clock_time();
 		int second = poll_data.second + (now - poll_data.last_poll) / CLOCK_SECOND;
 		int minute = poll_data.minute + (second / 60);
 		int hour = poll_data.hour + (minute / 60);
-		snprintf_P(temp, 128, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
+		snprintf_P((char*)buffer, preferred_size, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
 		request_state = poll;
 		printf_P(PSTR("D\n"));
 	}
@@ -586,7 +578,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				request_state = poll;
 				printf_P(PSTR("H%02x%02x%02x\n"),hour,minute,second);
-				snprintf_P(temp, 128, PSTR("Successfully set time"));
+				strncpy_P((char*)buffer, PSTR("Successfully set time"), preferred_size);
 			}
 		}
 		else{
@@ -594,18 +586,17 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=hh:mm[:ss]"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=hh:mm[:ss]"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 static void handle_temperature(int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P(temp, 128, PSTR("%d.%02d"), temperature/100, temperature%100);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), temperature/100, temperature%100);
 		request_state = auto_temperatures;
 		printf_P(PSTR("G01\n"));
 	}
@@ -623,17 +614,17 @@ static void handle_temperature(int temperature, int index, void * request, void*
 				uint16_t value = atoi(string);
 				printf_P(PSTR("S0%d%02x\n"),index, value/5);
 				request_state = set_auto_temperatures;
-				snprintf_P(temp, 128, PSTR("Successfully set value"));
+				strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"), preferred_size);
 		}
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 RESOURCE(frost, METHOD_GET | METHOD_POST, "auto/frost", "auto/frost");
@@ -671,7 +662,6 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 
 RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode", "auto/timermode");
 void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	char temp[128];
 	if (REST.get_method_type(request)==METHOD_POST){
 		const char * string = NULL;
 		int success = 1;
@@ -683,12 +673,12 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 			if(strncmp_P(string, PSTR("weekdays"), MAX(len,8))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2201\n"));
-				snprintf_P(temp, 128, PSTR("Timermode set to weekdays"));
+				strncpy_P((char*)buffer, PSTR("Timermode set to weekdays"), preferred_size);
 			}
 			else if(strncmp_P(string, PSTR("justOne"), MAX(len,7))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2200\n"));
-				snprintf_P(temp, 128, PSTR("Timermode set to justOne"));
+				strncpy_P((char*)buffer, PSTR("Timermode set to justOne"), preferred_size);
 			}
 			else{
 				success = 0;
@@ -696,17 +686,17 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			snprintf_P(temp, 128, PSTR("Payload format: value={justOne, weekdays}"));
+			strncpy_P((char*)buffer, PSTR("Payload format: value={justOne, weekdays}"), preferred_size);
 		}
 	}
 	else{
-		snprintf_P(temp, 128, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"));
+		strncpy_P((char*)buffer, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"), preferred_size);
 		request_state=auto_mode;
 		printf_P(PSTR("S22\n"));
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)temp, strlen(temp));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 static char * getModeString(int mode){
