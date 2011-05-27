@@ -186,10 +186,9 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
-	etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	//etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
-	printf_P(PSTR("G01\n"));
-	request_state = auto_temperatures;
+	request_state = idle;
 
 	while (1) {
 		PROCESS_WAIT_EVENT();
@@ -256,6 +255,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 							request_state = auto_temperatures;
 							break;
 						case get_timer:
+							//R[ds]=mttt
+							//W[ds]=mttt
 							if(buf[0]=='R' || buf[0]=='W'){
 								uint8_t index = atoi(&buf[2]);
 								uint8_t day = index / 10;
@@ -264,8 +265,17 @@ PROCESS_THREAD(honeywell_process, ev, data)
 								poll_data.timers[day][slot].mode = atoi(&temp);
 								
 								sscanf_P(&buf[7], PSTR("%x"), &poll_data.timers[day][slot].time);
+								if(slot<7){
+									slot++;
+									printf_P(PSTR("R%d%d\n"), day, slot);
+								}
+								else{
+									request_state = idle;
+								}
 							}
-							request_state = idle;
+							else{
+								request_state = idle;
+							}
 							break;
 						default:
 							break;
@@ -749,6 +759,9 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			REST.set_response_payload(response, buffer, strpos);
 		}
 		else{
+			//request_state = get_timer;
+			//printf_P(PSTR("R%d0\n"),day);
+
 			size_t strpos = 0;
 			size_t bufpos = 0;
 			int i;
