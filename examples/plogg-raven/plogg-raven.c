@@ -34,7 +34,7 @@ void EnableExternalSRAM(void)
 
 #ifndef MAX 
 #define MAX(a,b) ((a)<(b)?(b):(a))
-#endif /* MIN */
+#endif /* MAX */
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b)? (a) : (b))
@@ -119,7 +119,7 @@ static struct {
 	uint16_t voltage_max_time_h;
 	uint16_t voltage_max_time_m;
 	uint16_t voltage_max_time_s;
-	
+
 	long watts_max_value;
  	uint16_t watts_max_date_y;
  	char watts_max_date_m[4];
@@ -133,13 +133,13 @@ static struct {
 	long voltage;
 	long phase_angle;
 
-	long watts_total;
-	unsigned long watts_con;
-	unsigned long watts_gen;
+	long active_total;
+	unsigned long active_con;
+	unsigned long active_gen;
 
-	long power_total;
-	unsigned long power_gen;
-	unsigned long power_con;
+	long reactive_total;
+	unsigned long reactive_gen;
+	unsigned long reactive_co;
 
 	uint16_t tariff_zone;
 	uint16_t tariff0_start;
@@ -221,8 +221,6 @@ static unsigned long get_unsigned_pseudo_float_3(char* string){
 
 static void parse_Poll(){
 
-	//printf("%s\r\n",poll_return);
-
 	if( strncmp_P(poll_return,PSTR("Time entry"),10) == 0) {
 		uint16_t old_h = poll_data.time_h;
 		sscanf_P(poll_return+27,PSTR("%u %3s %u %u:%u:%u"),&poll_data.date_y,&poll_data.date_m,&poll_data.date_d,&poll_data.time_h,&poll_data.time_m,&poll_data.time_s);
@@ -231,21 +229,16 @@ static void parse_Poll(){
 			uint16_t future = (poll_data.time_h+12) % 24;
 			printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %02u00-%02u01\r\n"),future,future);
 		}
-		//printf("%u %s %02u\r\n",poll_data.date_y, poll_data.date_m, poll_data.date_d);
-		//printf("%02u:%02u:%02u\r\n",poll_data.time_h,poll_data.time_m,poll_data.time_s);
 	}
 	else if (strncmp_P(poll_return,PSTR("Watts (-Gen +Con)"),17) == 0) {
-		poll_data.watts_total = get_signed_pseudo_float_3(poll_return+27);
-	//	printf("Total Watts: %ld.%03ld\r\n",poll_data.watts_total/1000, (poll_data.watts_total <0 ) ? ((poll_data.watts_total % 1000)*-1) : (poll_data.watts_total %1000) );
+		poll_data.active_total = get_signed_pseudo_float_3(poll_return+27);
 	}
 	
 	else if (strncmp_P(poll_return,PSTR("Cumulative Watts (Gen)"),22) == 0) {
-		poll_data.watts_gen = get_unsigned_pseudo_float_3(poll_return+27);
-	//	printf("Cumulative Watts (gen): %lu.%03lu\r\n",poll_data.watts_gen/1000, poll_data.watts_gen % 1000 );
+		poll_data.active_gen = get_unsigned_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Cumulative Watts (Con)"),22) == 0) {
-		poll_data.watts_con = get_unsigned_pseudo_float_3(poll_return+27);
-	//	printf("Cumulative Watts (con): %lu.%03lu\r\n",poll_data.watts_con/1000, poll_data.watts_con % 1000 );
+		poll_data.active_con = get_unsigned_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Frequency"),9) == 0){
 		poll_data.frequency = get_signed_pseudo_float_3(poll_return+27);
@@ -258,31 +251,27 @@ static void parse_Poll(){
 		poll_data.current = get_signed_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Reactive Power (-G/+C)"),22) == 0){
-		poll_data.power_total = get_signed_pseudo_float_3(poll_return+27);
+		poll_data.reactive_total = get_signed_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Acc Reactive Pwr (Gen)"),22) == 0){
-		poll_data.power_gen = get_unsigned_pseudo_float_3(poll_return+27);
+		poll_data.reactive_gen = get_unsigned_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Acc Reactive Pwr (Con)"),22) == 0){
-		poll_data.power_con = get_unsigned_pseudo_float_3(poll_return+27);
+		poll_data.reactive_co = get_unsigned_pseudo_float_3(poll_return+27);
 	}
 	else if (strncmp_P(poll_return,PSTR("Phase Angle (V/I)"),17) == 0){
 		poll_data.phase_angle = get_signed_pseudo_float_3(poll_return+27);
-		//printf("Phase: %ld.%03ld\r\n",poll_data.phase_angle/1000, (poll_data.phase_angle <0 ) ? ((poll_data.phase_angle % 1000)*-1) : (poll_data.phase_angle %1000) );
 	}
 	else if (strncmp_P(poll_return,PSTR("Plogg on time"),13) == 0){
 		sscanf_P(poll_return+27,PSTR("%u %*s %u:%u:%u"),&poll_data.plogg_time_d,&poll_data.plogg_time_h,&poll_data.plogg_time_m,&poll_data.plogg_time_s);
-		//printf("%u days %02u:%02u:%02u\r\n",poll_data.plogg_time_d,poll_data.plogg_time_h,poll_data.plogg_time_m,poll_data.plogg_time_s);
 	}
 	else if (strncmp_P(poll_return,PSTR("Equipment on time"),17) == 0){
 		sscanf_P(poll_return+27,PSTR("%u %*s %u:%u:%u"),&poll_data.equipment_time_d,&poll_data.equipment_time_h,&poll_data.equipment_time_m,&poll_data.equipment_time_s);
-		//printf("%u days %02u:%02u:%02u\r\n",poll_data.equipment_time_d,poll_data.equipment_time_h,poll_data.equipment_time_m,poll_data.equipment_time_s);
 	}
 	else if (strncmp_P(poll_return,PSTR("Highest RMS voltage"),19) == 0){
 		poll_data.voltage_max_value = get_signed_pseudo_float_3(poll_return+24);
 		sscanf_P(poll_return+24,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.voltage_max_date_y,&poll_data.voltage_max_date_m,&poll_data.voltage_max_date_d,&poll_data.voltage_max_time_h,&poll_data.voltage_max_time_m,&poll_data.voltage_max_time_s);
 		poll_data.voltage_max_date_m[3]='\0';
-	//	printf("Max Voltage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.voltage_max_value/1000, (poll_data.voltage_max_value <0 ) ? ((poll_data.voltage_max_value % 1000)*-1) : (poll_data.voltage_max_value %1000), poll_data.voltage_max_date_y, poll_data.voltage_max_date_m, poll_data.voltage_max_date_d,poll_data.voltage_max_time_h, poll_data.voltage_max_time_m, poll_data.voltage_max_time_s);
 
 	}
 	else if (strncmp_P(poll_return,PSTR("Highest RMS current"),19) == 0){
@@ -290,15 +279,11 @@ static void parse_Poll(){
 
 		sscanf_P(poll_return+24,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.current_max_date_y,&poll_data.current_max_date_m,&poll_data.current_max_date_d,&poll_data.current_max_time_h,&poll_data.current_max_time_m,&poll_data.current_max_time_s);
 		poll_data.current_max_date_m[3]='\0';
-//		printf("Max Current: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
-
 	}
 	else if (strncmp_P(poll_return,PSTR("Highest wattage"),15) == 0){
 		poll_data.watts_max_value = get_signed_pseudo_float_3(poll_return+20);
 		sscanf_P(poll_return+20,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.watts_max_date_y,&poll_data.watts_max_date_m,&poll_data.watts_max_date_d,&poll_data.watts_max_time_h,&poll_data.watts_max_time_m,&poll_data.watts_max_time_s);
 		poll_data.watts_max_date_m[3]='\0';
-//		printf("Max Wattage: %ld.%03ld at %u %s %02u %02u:%02u:%02u\r\n",poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
-
 	}
 	else if (strncmp_P(poll_return,PSTR("Tarrif 0 Cost"),13) == 0){ //Tarrif is not a typo. Plogg returns Tarrif in this case
 		sscanf_P(poll_return+16,PSTR("%u"),&poll_data.tariff0_rate);
@@ -317,8 +302,6 @@ static void parse_Poll(){
 		poll_data.tariff0_consumed = get_unsigned_pseudo_float_3(poll_return+12);
 		char* cost = strstr_P(poll_return,PSTR("Cost"));
 		poll_data.tariff0_cost = get_unsigned_pseudo_float_3(cost+5);
-	//	printf("Tariff 0: %lu.%03lukWh Cost: %lu.%02lu\r\n",poll_data.tariff0_consumed/1000, poll_data.tariff0_consumed % 1000,poll_data.tariff0_cost/1000, (poll_data.tariff0_cost % 1000) / 10 );
-
 	}
 	else if (strncmp_P(poll_return,PSTR("Tariff1 :"),9)==0){
 		poll_data.tariff1_consumed = get_unsigned_pseudo_float_3(poll_return+12);
@@ -326,7 +309,6 @@ static void parse_Poll(){
 		poll_data.tariff1_cost = get_unsigned_pseudo_float_3(cost+5);
 	}
 }
-
 
 
 
@@ -436,10 +418,13 @@ PROCESS_THREAD(plogg_process, ev, data)
     PROCESS_WAIT_EVENT();
     if(ev == PROCESS_EVENT_TIMER) {
       //etimer_reset(&etimer);
+			//send the nessecary commands to switch modes with delay (simple method)
 			switch (mode_switch_number){
+
+				//manual mode
 				case 1:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
-					mode_switch_number=0;
+					mode_switch_number++;
 					etimer_set(&etimer, CLOCK_SECOND * 5);
 					break;
 
@@ -463,9 +448,12 @@ PROCESS_THREAD(plogg_process, ev, data)
 					break;
 				case 5:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 3 0000-0000\r\n"));
-					mode_switch_number++;
+					mode_switch_number=0;
 					etimer_set(&etimer, CLOCK_SECOND * 1);
 					break;
+
+
+				//Auto Mode
 				case 128:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time0),eeprom_read_word(&ee_end_time0));
 					mode_switch_number++;
@@ -494,7 +482,8 @@ PROCESS_THREAD(plogg_process, ev, data)
 
 				default:
 					etimer_set(&etimer, CLOCK_SECOND * 5);
-					/*switch (poll_number){
+					/* Polling deativated
+					switch (poll_number){
 	    		 	case 0:
 							printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 							break;
@@ -567,16 +556,16 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	else{
 		if (strncmp_P(string, PSTR("cost"),MAX(len,4))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SC 1\r\n"));
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Costs reset\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 		else if(strncmp_P(string, PSTR("max"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SM 1\r\n"));
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Max values reset\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successsful\n"));
 		}
 
 		else if(strncmp_P(string, PSTR("acc"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SR\r\n"));
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Accumulated values reset\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 		else{
 			success=false;
@@ -625,35 +614,6 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
-/*
-RESOURCE(max_current, METHOD_GET, "max/current", "Max Current");
-
-void
-max_current_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldA at %u %s %02u %02u:%02u:%02u\n"),poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(max_wattage, METHOD_GET, "max/wattage", "Max Wattage");
-
-void
-max_wattage_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldW at %u %s %02u %02u:%02u:%02u\n"),poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
-  	
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-*/
 /***************************** Date & Time ***********************************/
 RESOURCE(time, METHOD_GET | METHOD_POST, "time", "Time");
 
@@ -782,15 +742,15 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  
 	}
 	else if (strncmp_P(query, PSTR("active"),MAX(len,6))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld W\n"),poll_data.watts_total/1000, (poll_data.watts_total <0 ) ? ((poll_data.watts_total % 1000)*-1) : (poll_data.watts_total %1000));
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld W\n"),poll_data.active_total/1000, (poll_data.active_total <0 ) ? ((poll_data.active_total % 1000)*-1) : (poll_data.active_total %1000));
 
 	}
 	else if (strncmp_P(query, PSTR("active_generated"),MAX(len,16))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.watts_gen/1000, poll_data.watts_gen %1000);
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.active_gen/1000, poll_data.active_gen %1000);
 
 	}
 	else if (strncmp_P(query, PSTR("active_consumed"),MAX(len,15))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.watts_con/1000, poll_data.watts_con %1000);
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.active_con/1000, poll_data.active_con %1000);
 
 	}
 	else if (strncmp_P(query, PSTR("phase"),MAX(len,5))==0){
@@ -806,15 +766,15 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	
 	}
 	else if (strncmp_P(query, PSTR("reactive"),MAX(len,8))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld VAR\n"),poll_data.power_total/1000, (poll_data.power_total <0 ) ? ((poll_data.power_total % 1000)*-1) : (poll_data.power_total %1000));
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld VAR\n"),poll_data.reactive_total/1000, (poll_data.reactive_total <0 ) ? ((poll_data.reactive_total % 1000)*-1) : (poll_data.reactive_total %1000));
 		
 	}
 	else if (strncmp_P(query, PSTR("reactive_generated"),MAX(len,18))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.power_gen/1000, poll_data.power_gen %1000);
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.reactive_gen/1000, poll_data.reactive_gen %1000);
 
 	}
 	else if (strncmp_P(query, PSTR("reactive_consumed"),MAX(len,17))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.power_con/1000, poll_data.power_con %1000);
+		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.reactive_co/1000, poll_data.reactive_co %1000);
 
 	}
 	else{
@@ -836,182 +796,6 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 }
 
 
-
-/*
-RESOURCE(state_watts, METHOD_GET, "state/watts", "Watts");
-
-void
-state_watts_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld W\n"),poll_data.watts_total/1000, (poll_data.watts_total <0 ) ? ((poll_data.watts_total % 1000)*-1) : (poll_data.watts_total %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_watts_gen, METHOD_GET, "state/watts_gen", "Accumulated Watts (Gen)");
-
-void
-state_watts_gen_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.watts_gen/1000, poll_data.watts_gen %1000);
-  	
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_watts_con, METHOD_GET, "state/watts_con", "Accumulated Watts (Con)");
-
-void
-state_watts_con_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kWh\n"),poll_data.watts_con/1000, poll_data.watts_con %1000);
-  	
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_reactive_power, METHOD_GET, "state/reactive", "Total Reactive Power");
-
-void
-state_reactive_power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld VAR\n"),poll_data.power_total/1000, (poll_data.power_total <0 ) ? ((poll_data.power_total % 1000)*-1) : (poll_data.power_total %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(state_reactive_power_gen, METHOD_GET, "state/reactive_gen", "Accumulated Reactive Power (Gen)");
-
-void
-state_reactive_power_gen_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.power_gen/1000, poll_data.power_gen %1000);
-  	
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_reactive_power_con, METHOD_GET, "state/reactive_con", "Accumulated Reactive Power (Con)");
-
-void
-state_reactive_power_con_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%lu.%03lu kVARh\n"),poll_data.power_con/1000, poll_data.power_con %1000);
-  	
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_phase, METHOD_GET, "state/phase", "Phase Angle");
-
-void
-state_phase_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld Degrees\n"),poll_data.phase_angle/1000, (poll_data.phase_angle <0 ) ? ((poll_data.phase_angle % 1000)*-1) : (poll_data.phase_angle %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(state_frequency, METHOD_GET, "state/frequency", "Frequency");
-
-void
-state_frequency_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld Hz\n"),poll_data.frequency/1000, (poll_data.frequency <0 ) ? ((poll_data.frequency% 1000)*-1) : (poll_data.frequency %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(state_voltage, METHOD_GET, "state/voltage", "Voltage");
-
-void
-state_voltage_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld V\n"),poll_data.voltage/1000, (poll_data.voltage <0 ) ? ((poll_data.voltage % 1000)*-1) : (poll_data.voltage %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(state_current, METHOD_GET, "state/current", "Current");
-
-void
-state_current_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld A\n"),poll_data.current/1000, (poll_data.current <0 ) ? ((poll_data.current % 1000)*-1) : (poll_data.current %1000));
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-RESOURCE(state_plogg_ontime, METHOD_GET, "state/plogg_time", "Plogg on time");
-
-void
-state_plogg_ontime_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%u days %u:%02u:%02u \n"),poll_data.plogg_time_d, poll_data.plogg_time_h, poll_data.plogg_time_m, poll_data.plogg_time_s);
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-
-
-RESOURCE(state_equipment_ontime, METHOD_GET, "state/equipment_time", "Equipment on time");
-
-void
-state_equipment_ontime_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%u days %u:%02u:%02u \n"),poll_data.equipment_time_d, poll_data.equipment_time_h, poll_data.equipment_time_m, poll_data.equipment_time_s);
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *)temp , index);
-}
-*/
 /***************************** Tariff Timer ************************************/
 
 RESOURCE(tariff_timer,METHOD_GET | METHOD_POST, "tariff/timer", "Tariff Timer");
@@ -1087,7 +871,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	const char* string=NULL;
 	bool success= false;
 	uint16_t rate=0;
-	uint8_t tariff=0;
+	int tariff=0;
 	uint8_t len;
 	const char * query = NULL;
 
@@ -1097,7 +881,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			c[0]=query[0];
 			c[1]='\0';
 			tariff = atoi(c);
-			if(tariff <= 2 && tariff >= 1){
+			if(tariff <= 2 && tariff >= 0){
 				//humans start counting from 1 not 0
 				tariff--;
 				success = true;
@@ -1106,10 +890,31 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the tariff in [1;2] eg.: /tariff/rate?1 to interact with tariff 1\n"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the tariff in [0;2] eg.: /tariff/rate?1 to interact with tariff 1\nO is an overview"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 	 	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
+		return;
+	}
+	if (tariff==-1){
+	 	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
+		if (REST.get_method_type(request)==METHOD_POST){
+			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
+			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with POST"));
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, index);
+		}
+		else{
+			int i;
+			for (i=0; i<2; i++){
+				switch (i){
+					case 0: rate=poll_data.tariff0_rate; break;
+					case 1: rate=poll_data.tariff1_rate; break;
+				}
+				index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("Tariff %d: %u pence/kWh\n"),(i+1),rate);
+			}
+			REST.set_response_payload(response, (uint8_t *)temp , index);
+		}	
 		return;
 	}
 
@@ -1141,7 +946,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 				case 1: poll_data.tariff1_rate=rate; break;
 			}
 			printf_P(PSTR("UCAST:0021ED000004699D=SS %u %u\r\n"),tariff,rate);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff,rate);
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff+1,rate);
 		}
 		else{
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: value=ppp\n"));
@@ -1282,7 +1087,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the timer in [1;4] eg.: /timer?2 to interact with timer 2\nOr 0 eg.: timer?0 for a overview"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the timer in [1;4] eg.: /timer?2 to interact with timer 2\nOr 0 eg.: timer?0 for an overview"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
@@ -1290,7 +1095,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	if(timer==-1){
 		if (REST.get_method_type(request)==METHOD_POST){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("POST not allowed in overview"));
+			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with POST"));
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, index);
 		}
@@ -1318,8 +1123,8 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 				index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("Timer %d: %02u:%02u-%02u:%02u\n"),i+1,start_time/100,start_time % 100,end_time/100,end_time % 100);
 			}
 			REST.set_response_payload(response, (uint8_t *)temp , index);
-			return;
 		}	
+		return;
 	}
 	if (REST.get_method_type(request) == METHOD_GET){
 		switch (timer){
@@ -1398,7 +1203,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 					break;	
 			}
 			printf_P(PSTR("UCAST:0021ED000004699D=SO %u %04u-%04u\r\n"),timer,start_time,end_time);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Timer %u: %02u:%02u-%02u:%02u\n"),timer,start_time/100,start_time%100,end_time/100,end_time%100);
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Timer %u: %02u:%02u-%02u:%02u\n"),timer+1,start_time/100,start_time%100,end_time/100,end_time%100);
 		}
 		else{
 			index+=snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
@@ -1541,19 +1346,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_reset);
   
 	rest_activate_resource(&resource_state);
-/*	rest_activate_resource(&resource_state_watts);
-  rest_activate_resource(&resource_state_watts_gen);
-  rest_activate_resource(&resource_state_watts_con);
-  rest_activate_resource(&resource_state_reactive_power);
-  rest_activate_resource(&resource_state_reactive_power_gen);
-  rest_activate_resource(&resource_state_reactive_power_con);
-  rest_activate_resource(&resource_state_phase);
-  rest_activate_resource(&resource_state_frequency);
-  rest_activate_resource(&resource_state_voltage);
-  rest_activate_resource(&resource_state_current);
-	rest_activate_resource(&resource_state_plogg_ontime);
-	rest_activate_resource(&resource_state_equipment_ontime);
-*/	
+
 	rest_activate_resource(&resource_tariff_timer);
 	rest_activate_resource(&resource_tariff_rate);
 	rest_activate_resource(&resource_tariff_cost);
