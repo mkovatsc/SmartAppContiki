@@ -265,17 +265,15 @@ PROCESS_THREAD(honeywell_process, ev, data)
 								poll_data.timers[day][slot].mode = atoi(&temp);
 								
 								sscanf_P(&buf[7], PSTR("%x"), &poll_data.timers[day][slot].time);
-								if(slot<7){
+								/*if(slot<7){
 									slot++;
 									printf_P(PSTR("R%d%d\n"), day, slot);
 								}
 								else{
 									request_state = idle;
-								}
+								}*/
 							}
-							else{
-								request_state = idle;
-							}
+							request_state = idle;
 							break;
 						default:
 							break;
@@ -737,7 +735,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			c[0]=query[0];
 			c[1]='\0';
 			slot = atoi(c);
-			if(slot <= 8 && slot >= 0){
+			if(slot <= 8 && slot >= 1){
 				//slot is in interval [0;7] on honeywell but [1;8] on ravenmote
 				slot--;
 				success = 1;
@@ -746,12 +744,13 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [0;8] eg.: /auto/%s?3 to interact with slot 3\nFor overview set 0"), timerString);
+		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [1;8] eg.: /auto/%s?3 to interact with slot 3"), timerString);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strpos);
 		return;
 	}
-	if(slot==-1){
+	//overview code
+	/*if(slot==-1){
 		if (REST.get_method_type(request)==METHOD_POST){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
 			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("POST not allowed in overview"));
@@ -776,15 +775,15 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 
 				if (strpos <= *offset)
 				{
-					/* Discard output before current block */
+					// Discard output before current block
 					bufpos = 0;
 				}
-				else /* (strpos > *offset) */
+				else // (strpos > *offset)
 				{
-					/* output partly in block */
+					// output partly in block
 					size_t len = MIN(strpos - *offset, preferred_size);
 
-					/* Block might start in the middle of the output; align with buffer start. */
+					// Block might start in the middle of the output; align with buffer start.
 					if (bufpos == 0)
 					{
 						memmove(buffer, buffer+strlen((char *)buffer)-strpos+*offset, len);
@@ -817,7 +816,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			}
 		}
 		return;
-	}
+	}*/
 	if (REST.get_method_type(request)==METHOD_POST){
 		const char * disable = NULL;
 		len = REST.get_post_variable(request, "disable", &disable);
