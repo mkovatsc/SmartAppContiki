@@ -530,6 +530,7 @@ void COM_commad_parse (void) {
 			if (CTL_mode_auto==manual)
             	CTL_set_temp(com_hex[0]);
             COM_print_debug(1);
+			c='\0';
             break;
         case 'L':
             if (COM_hex_parse(1*2)!='\0') { break; }
@@ -548,6 +549,7 @@ void COM_commad_parse (void) {
 			}
 			PID_force_update = 0;
 			COM_print_debug(1);
+			c='\0';
 			break;
 #endif
 		//case '\n':
