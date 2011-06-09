@@ -225,22 +225,23 @@ PROCESS_THREAD(honeywell_process, ev, data)
 								switch(index){
 									case 1:
 										poll_data.frost_temperature = temp;
-										printf_P(PSTR("G02\n"));
+										//printf_P(PSTR("G02\n"));
 										break;
 									case 2:
 										poll_data.energy_temperature = temp;
-										printf_P(PSTR("G03\n"));
+										//printf_P(PSTR("G03\n"));
 										break;
 									case 3:
 										poll_data.comfort_temperature = temp;
-										printf_P(PSTR("G04\n"));
+										//printf_P(PSTR("G04\n"));
 										break;
 									case 4:
 										poll_data.supercomfort_temperature = temp;
-										request_state = idle;
+										//request_state = idle;
 										break;
 								}
 							}
+							request_state = idle;
 							break;
 						case auto_mode:
 							if(strncmp_P(buf, PSTR("S[22]"), 5) == 0){
@@ -606,7 +607,7 @@ static void handle_temperature(int temperature, int index, void * request, void*
 	if (REST.get_method_type(request)==METHOD_GET){
 		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), temperature/100, temperature%100);
 		request_state = auto_temperatures;
-		printf_P(PSTR("G01\n"));
+		printf_P(PSTR("G0%d\n"), index);
 	}
 	else{
 		const char * string = NULL;
