@@ -280,6 +280,17 @@ static void parse_Poll(){
 		sscanf_P(poll_return+20,PSTR("%*s %*c %*s %u %3s %u %u:%u:%u"),&poll_data.watts_max_date_y,&poll_data.watts_max_date_m,&poll_data.watts_max_date_d,&poll_data.watts_max_time_h,&poll_data.watts_max_time_m,&poll_data.watts_max_time_s);
 		poll_data.watts_max_date_m[3]='\0';
 	}
+	else if (strncmp_P(poll_return,PSTR("No highest voltage was recorded"),31) == 0){
+		poll_data.voltage_max_value=0;
+	}
+	else if (strncmp_P(poll_return,PSTR("No highest current was recorded"),31) == 0){
+		poll_data.current_max_value=0;
+	}
+	else if (strncmp_P(poll_return,PSTR("No highest wattage was recorded"),31) == 0){
+		poll_data.watts_max_value=0;
+	}
+
+
 	else if (strncmp_P(poll_return,PSTR("Tarrif 0 Cost"),13) == 0){ //Tarrif is not a typo. Plogg returns Tarrif in this case
 		sscanf_P(poll_return+16,PSTR("%u"),&poll_data.tariff0_rate);
 	}
@@ -303,6 +314,7 @@ static void parse_Poll(){
 		char* cost = strstr_P(poll_return,PSTR("Cost"));
 		poll_data.tariff1_cost = get_unsigned_pseudo_float_3(cost+5);
 	}
+	
 }
 
 
@@ -371,6 +383,7 @@ static void ATInterpreterProcessCommand(char* command)
 			}
 		}
 
+		// Copy Response to new buffer
 		uint8_t length = strlen(poll_return);
 		strcpy(poll_return+length,payload);
 		while (strstr(poll_return,"~~") != NULL){
@@ -380,6 +393,7 @@ static void ATInterpreterProcessCommand(char* command)
 			uint8_t rest_length = strlen(start+2);
 			memmove(poll_return,start+2,rest_length+1);
 		}
+
 		printf_P(PSTR("+UCAST:00\r\n%s\r\n"), AT_RESPONSE_OK);
 
 		// HOST is waiting for "ACK:00" or NACK
@@ -554,7 +568,7 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		}
 		else if(strncmp_P(string, PSTR("max"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SM 1\r\n"));
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successsful\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 
 		else if(strncmp_P(string, PSTR("acc"),MAX(len,3))==0){
@@ -588,14 +602,29 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	int len = REST.get_query(request, &query);
 
 	if (strncmp_P(query, PSTR("voltage"),MAX(len,7))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldV at %u %s %02u %02u:%02u:%02u\n"),poll_data.voltage_max_value/1000, (poll_data.voltage_max_value <0 ) ? ((poll_data.voltage_max_value % 1000)*-1) : (poll_data.voltage_max_value %1000), poll_data.voltage_max_date_y, poll_data.voltage_max_date_m, poll_data.voltage_max_date_d,poll_data.voltage_max_time_h, poll_data.voltage_max_time_m, poll_data.voltage_max_time_s);
+		if (poll_data.voltage_max_value != 0){
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldV at %u %s %02u %02u:%02u:%02u\n"),poll_data.voltage_max_value/1000, (poll_data.voltage_max_value <0 ) ? ((poll_data.voltage_max_value % 1000)*-1) : (poll_data.voltage_max_value %1000), poll_data.voltage_max_date_y, poll_data.voltage_max_date_m, poll_data.voltage_max_date_d,poll_data.voltage_max_time_h, poll_data.voltage_max_time_m, poll_data.voltage_max_time_s);
 		}
+		else{
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest voltage was recorded\n"));
+		}
+	}
 	else if(strncmp_P(query, PSTR("current"),MAX(len,7))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldA at %u %s %02u %02u:%02u:%02u\n"),poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
-
+		if (poll_data.current_max_value !=0){
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldA at %u %s %02u %02u:%02u:%02u\n"),poll_data.current_max_value/1000, (poll_data.current_max_value <0 ) ? ((poll_data.current_max_value % 1000)*-1) : (poll_data.current_max_value %1000), poll_data.current_max_date_y, poll_data.current_max_date_m, poll_data.current_max_date_d,poll_data.current_max_time_h, poll_data.current_max_time_m, poll_data.current_max_time_s);
+		}
+		else{
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest current was recorded\n"));
+		}
 	}
 	else if(strncmp_P(query, PSTR("wattage"),MAX(len,7))==0){
-		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldW at %u %s %02u %02u:%02u:%02u\n"),poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
+		if (poll_data.watts_max_value !=0){
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldW at %u %s %02u %02u:%02u:%02u\n"),poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
+		}
+		else{
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest wattage was recorded\n"));
+		}
+		
 	}
 	else{
 		success = false;
@@ -842,7 +871,7 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			uint16_t tariff_start=start_hour*100+start_min;
 			uint16_t tariff_end=end_hour*100+end_min;
 			printf_P(PSTR("UCAST:0021ED000004699D=ST %04u-%04u\r\n"),tariff_start,tariff_end);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Cost 0 Tariff:%02u:%02u-%02u:%02u\n"),tariff_start/100,tariff_start % 100,tariff_end/100,tariff_end % 100);
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff 0 active Time: %02u:%02u-%02u:%02u\n"),tariff_start/100,tariff_start % 100,tariff_end/100,tariff_end % 100);
 		}
 		else{
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
@@ -1054,7 +1083,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	uint8_t len;
 	const char * query = NULL;
 
-	if (!poll_data.mode == AUTO){
+	if (!(poll_data.mode == AUTO)){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Change to auto mode first\n"));
 	 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -1238,7 +1267,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		}
 		else{
 			if(strncmp_P(string,PSTR("manual"),MAX(len,6))==0){
-				//set all timers to 0000-0000 except one and disable timers
+				//set all timers to 0000-0000
 				// Needs to be done by interrupts, can't send all commands at once
 				mode_switch_number=0;
 				poll_data.mode = MANUAL;
@@ -1276,7 +1305,7 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 	
-	if(!poll_data.mode == MANUAL){
+	if(!(poll_data.mode == MANUAL)){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Change to manual mode first\n"));
 	 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
