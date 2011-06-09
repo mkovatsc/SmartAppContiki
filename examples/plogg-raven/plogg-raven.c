@@ -68,8 +68,8 @@ PROCESS(plogg_process, "Plogg comm");
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 static char state = 0;
-static uint8_t poll_number = 0;
-static uint8_t mode_switch_number = 0;
+static uint8_t poll_number = 6;
+static uint8_t mode_switch_number = 255;
 static char poll_return[128];
 
 enum mode{MANUAL=0, AUTO=1};
@@ -84,9 +84,6 @@ uint16_t ee_start_time3 EEMEM=0;
 uint16_t ee_end_time3 EEMEM=0;
 
 static struct {
-
-	uint8_t mode;
-	bool powered;
 
  	uint16_t date_y;
  	char date_m[4];
@@ -151,6 +148,9 @@ static struct {
 	unsigned long tariff0_cost;
 	unsigned long tariff1_consumed;
 	unsigned long tariff1_cost;
+	
+	uint16_t mode;
+	bool powered;
 
 } poll_data;
 
@@ -222,13 +222,8 @@ static unsigned long get_unsigned_pseudo_float_3(char* string){
 static void parse_Poll(){
 
 	if( strncmp_P(poll_return,PSTR("Time entry"),10) == 0) {
-		uint16_t old_h = poll_data.time_h;
 		sscanf_P(poll_return+27,PSTR("%u %3s %u %u:%u:%u"),&poll_data.date_y,&poll_data.date_m,&poll_data.date_d,&poll_data.time_h,&poll_data.time_m,&poll_data.time_s);
 		poll_data.date_m[3]='\0';
-		if ((poll_data.mode == MANUAL) && (old_h!=poll_data.time_h)){
-			uint16_t future = (poll_data.time_h+12) % 24;
-			printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %02u00-%02u01\r\n"),future,future);
-		}
 	}
 	else if (strncmp_P(poll_return,PSTR("Watts (-Gen +Con)"),17) == 0) {
 		poll_data.active_total = get_signed_pseudo_float_3(poll_return+27);
@@ -422,34 +417,31 @@ PROCESS_THREAD(plogg_process, ev, data)
 			switch (mode_switch_number){
 
 				//manual mode
-				case 1:
+				case 0:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
-					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 5);
-					break;
-
-				case 2:
-					{
-					uint16_t future = (poll_data.time_h+12) % 24;
-					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %02u00-%02u01\r\n"),future,future);
 					mode_switch_number++;
 					etimer_set(&etimer, CLOCK_SECOND * 1);
 					break;
-				}
-				case 3:
+
+				case 1:
+					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 0000-0000\r\n"));
+					mode_switch_number++;
+					etimer_set(&etimer, CLOCK_SECOND * 1);
+					break;
+				case 2:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 1 0000-0000\r\n"));
 					mode_switch_number++;
 					etimer_set(&etimer, CLOCK_SECOND * 1);
 					break;
-				case 4:
+				case 3:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 2 0000-0000\r\n"));
 					mode_switch_number++;
 					etimer_set(&etimer, CLOCK_SECOND * 1);
 					break;
-				case 5:
+				case 4:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 3 0000-0000\r\n"));
-					mode_switch_number=0;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					mode_switch_number++;
+					etimer_set(&etimer, CLOCK_SECOND * 2);
 					break;
 
 
@@ -476,34 +468,36 @@ PROCESS_THREAD(plogg_process, ev, data)
 					break;
 				case 132:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 1\r\n"));
-					mode_switch_number=0;
-					etimer_set(&etimer, CLOCK_SECOND * 5);
+					mode_switch_number++;
+					etimer_set(&etimer, CLOCK_SECOND * 2);
 					break;	
 
 				default:
-					etimer_set(&etimer, CLOCK_SECOND * 5);
-					/* Polling deativated
+					etimer_set(&etimer, CLOCK_SECOND * 2);
 					switch (poll_number){
-	    		 	case 0:
-							printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
-							break;
-						case 1:
-			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
-							break;
-						case 2:
-	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
-							break;
-						case 3:
+	    		 	case 15:
+	    		 	case 45:
 	      			printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 							break;
-						case 4:
+						case 5:
+						case 35:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 							break;
-					}
-					poll_number = (poll_number+1) % 5;
-					*/
-			}
+						case 25:
+	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
+							break;
+						case 55:
+			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
+							break;
+						default:
+							if (!(poll_number%10)){
+								printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+							}
 
+					}
+					poll_number = (poll_number+1) % 60;
+					
+			}
     } else if (ev == PROCESS_EVENT_MSG) {
       buf_pos = 0;
       while ((rx=ringbuf_get(&uart_buf))!=-1) {
@@ -845,10 +839,10 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			success = false;
 		}
 	 	if (success){
-			poll_data.tariff0_start=start_hour*100+start_min;
-			poll_data.tariff0_end=end_hour*100+end_min;
-			printf_P(PSTR("UCAST:0021ED000004699D=ST %04u-%04u\r\n"),poll_data.tariff0_start,poll_data.tariff0_end);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Cost 0 Tariff:%02u:%02u-%02u:%02u\n"),poll_data.tariff0_start/100,poll_data.tariff0_start % 100,poll_data.tariff0_end/100,poll_data.tariff0_end % 100);
+			uint16_t tariff_start=start_hour*100+start_min;
+			uint16_t tariff_end=end_hour*100+end_min;
+			printf_P(PSTR("UCAST:0021ED000004699D=ST %04u-%04u\r\n"),tariff_start,tariff_end);
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Cost 0 Tariff:%02u:%02u-%02u:%02u\n"),tariff_start/100,tariff_start % 100,tariff_end/100,tariff_end % 100);
 		}
 		else{
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
@@ -941,10 +935,6 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			}
 		}
 	 	if (success){
-			switch (tariff){
-				case 0: poll_data.tariff0_rate=rate; break;
-				case 1: poll_data.tariff1_rate=rate; break;
-			}
 			printf_P(PSTR("UCAST:0021ED000004699D=SS %u %u\r\n"),tariff,rate);
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff+1,rate);
 		}
@@ -1250,7 +1240,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			if(strncmp_P(string,PSTR("manual"),MAX(len,6))==0){
 				//set all timers to 0000-0000 except one and disable timers
 				// Needs to be done by interrupts, can't send all commands at once
-				mode_switch_number=1;
+				mode_switch_number=0;
 				poll_data.mode = MANUAL;
 				index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("New mode is: manual\n"));
 				poll_data.powered = true;
@@ -1359,6 +1349,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	memset(&poll_data, 0, sizeof(poll_data));	
 	poll_data.powered=true;
+	poll_data.mode=255;
 
   PROCESS_END();
 }
