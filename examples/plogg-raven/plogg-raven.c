@@ -1039,7 +1039,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/cost?1 to get the tariff 1's costs.\n0 gets the total costs"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/cost?1 to get the tariff 1's costs.\nOr 0 to get the total costs, eg.: /tariff/cost?0\n"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
@@ -1085,7 +1085,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/consumed?1 to get the tariff 1's consumation.\n0 gets the total consumation"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/consumed?1 to get the tariff 1's consumation.\nOr 0 to get the total consumation, eg.: /tariff/consumed?0\n"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
@@ -1140,7 +1140,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the timer in [1;4] eg.: /timer?2 to interact with timer 2\nOr 0 eg.: timer?0 for an overview"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;4] that specifies the timer, eg.: /timer?2 to interact with timer 2\nOr 0 eg.: timer?0 for an overview\n"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
