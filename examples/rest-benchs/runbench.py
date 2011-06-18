@@ -19,6 +19,8 @@ failCount = 0
 overallResCount = 0
 benchLaunched = False
 
+negCount = 0
+
 compilationNeeded = True
 resetNeeded = False
 
@@ -97,8 +99,19 @@ def getTty(mote):
     return tty
         
 def getLatency(log):
+    global negCount
     lastline = log[len(log)-2]
     print lastline
+    if re.search("-", lastline):
+        negCount += 1
+        if os.path.exists("neg.txt"):
+            neg_file = open("neg.txt", 'r+')
+        else:
+            neg_file = open("neg.txt", 'w')
+        neg_file.write("%s\n" % log)
+        neg_file.close()
+        return None
+    
     try:
         return int(lastline.split(":")[1])
     except:
@@ -185,6 +198,12 @@ def onerun(hops, size, rdc):
 
     #ret = runFg("java -cp java_tools/bin COAPClient 6 sky%d 61616 get hello %d" %(hops+1, size))
     ret = runFg("java -jar java_tools/bin/SampleClient.jar POST coap://sky%d:61616/hello %d" %(hops+1, size))
+        
+    for mote in range(hops):
+        runFg2("echo 'powertrace off'", getTty(mote+2))
+    time.sleep(1)
+    runFg("killall serialdump-linux")
+
     if ret["status"] != 0:
         print "Bench failed"
         print ret["log"]
@@ -193,11 +212,6 @@ def onerun(hops, size, rdc):
         print "No reply"
         failCount += 1
         return
-        
-    for mote in range(hops):
-        runFg2("echo 'powertrace off'", getTty(mote+2))
-    time.sleep(1)
-    runFg("killall serialdump-linux")
                 
     latency = getLatency(ret["log"])
     if latency == None:
@@ -205,7 +219,6 @@ def onerun(hops, size, rdc):
         return None
     
     power = getPower(hops)
-    
     if power == None:
         print "Failed to get compower information!"
         return None
@@ -219,6 +232,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     global failCount
     global compilationNeeded
     global resetNeeded
+    global negCount
 
     dstFile = os.path.join(dstDir, "hops%d_payload%d_rdc%s.txt" %(hops, size, rdc))
 
@@ -240,7 +254,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     localCancelCount = 0
     
     while nres < niter:
-        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d, fails: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount, failCount)
+        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d, fails: %d, negs: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount, failCount, negCount)
         ret = onerun(hops, size, rdc)
         if ret != None:
             print "Result:",
@@ -290,9 +304,16 @@ def main():
     hopsList2 = [1, 2, 3, 4]   
 
     # frame bounds
-    sizeList = [78, 79, 512]
+    #           4hop   1/2hop
+    sizeList = [69,70, 78,79, 512]
+    
+    # 1/2hop
     sizeList += range(170, 554, 96)
     sizeList += range(169, 553, 96)
+    
+    # 4hop
+    sizeList += range(162, 554, 96)
+    sizeList += range(161, 553, 96)
     
     # linear walkthrough
     sizeList += range(0, 512, 4)
@@ -309,7 +330,7 @@ def main():
     
     print "\n\nEXPERIMENT 1\n============\n"
     rdc = "contikimac"
-    compilationNeeded = True
+    #compilationNeeded = True
     
     # distributing iterations against bursty errors
     for niter in range(50):

@@ -44,6 +44,7 @@
 
 #define COAP_SERVER_PORT 61616
 #define COAP_MAX_OPEN_TRANSACTIONS 1
+#define COAP_MAX_OBSERVERS         1
 
 #define UART1_CONF_RX_WITH_DMA !IN_COOJA
 
@@ -85,7 +86,7 @@
 
 // contikimac config
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
-#define WITH_BURST						1
+#define WITH_BURST					1
 #define WITH_LETHARGY    				1
 #define CCA_BEFORE_BURST                0
 #define BURST_DURATION    RTIMER_ARCH_SECOND
