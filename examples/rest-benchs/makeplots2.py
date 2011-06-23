@@ -34,7 +34,7 @@ def getDutycycle(cpu, lpm, transmit, listen):
 	return 100 * (transmit + listen) / (cpu + lpm)
 
 def getEnergy(cpu, lpm, transmit, listen, fread, fwrite):
-	energy = (transmit * txPower + listen * rxPower + cpu * cpuPower + lpm * lpmPower + fread * freadPower + fwrite * fwritePower) / float(4096*8)
+	energy = transmit * txPower + listen * rxPower + cpu * cpuPower + lpm * lpmPower + fread * freadPower + fwrite * fwritePower
 	return energy
 	
 def getPower(cpu, lpm, transmit, listen, fread, fwrite):
@@ -50,7 +50,7 @@ def getResults(fileName):
 	if len(lines) == 0:
 		return None
 		
-	latencyList = []
+	latencyList = float(1000000)
 	nodeEnergyList = []
 	
 	# one run per line
@@ -65,7 +65,8 @@ def getResults(fileName):
 			wins += 1
 		
 		# latency of run
-		latencyList.append( float(results[0]) )
+		if float(results[0]) < latencyList:
+			latencyList = float(results[0])
 		
 		i = 0
 		# Line format
@@ -78,9 +79,11 @@ def getResults(fileName):
 			#print "  %s (%i)" % (results[id], i)
 			
 			if i >= len(nodeEnergyList):
-				nodeEnergyList.append([])
+				nodeEnergyList.append(float(1000000))
 			
-			nodeEnergyList[i].append( getEnergy(float(results[id+1]), float(results[id+2]), float(results[id+3]), float(results[id+4]), 0, 0) )
+			tmpEnergy = getEnergy(float(results[id+1]), float(results[id+2]), float(results[id+3]), float(results[id+4]), 0, 0)
+			if tmpEnergy < nodeEnergyList[i]:
+				nodeEnergyList[i] = tmpEnergy
 			
 			i += 1
 	
@@ -89,9 +92,9 @@ def getResults(fileName):
 	# Calculate mean energy per node over runs
 	nodeList = []
 	for i in range(0, len(nodeEnergyList), 1):
-		nodeList.append(meanstdv(nodeEnergyList[i]))
+		nodeList.append(nodeEnergyList[i])
 	
-	return {"latency": meanstdv(latencyList), "nodes": nodeList}
+	return {"latency": latencyList, "nodes": nodeList}
 
 def getval(str, token):
 	str = str.split(".")[0]
@@ -108,8 +111,8 @@ def main():
 	
 	payloads = []
 
-	dataDir = "benchs_11_100"
-	plotsDir = "plots_11_100"
+	dataDir = "benchs_9_100"
+	plotsDir = "plots_9_min"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):
@@ -132,19 +135,21 @@ def main():
 		
 	for hops in [1, 2, 4]:
 	
-		file = open(os.path.join(plotsDir, 'payload_compare_hops%u.txt' % hops), 'w')
+		file = open(os.path.join(plotsDir, 'min_payload_compare_hops%u.txt' % hops), 'w')
 		
 		# Header
 		file.write('payload	latency	energy2	energy3	energy4	energy5\r\n')
 		
 		for p in sorted(payloads):
+			if p == 64:
+				continue
 			
 			#print "%u hops, payload %u" % (hops, p)
 			
-			file.write("%u	%f" % (p, overallResults[(hops, p, 'contikimac')]['latency']['mean']))
+			file.write("%u	%f" % (p, overallResults[(hops, p, 'contikimac')]['latency']))
 			
 			for i in range(0, len(overallResults[(hops, p, 'contikimac')]['nodes']), 1):
-				file.write("	%f" % (overallResults[(hops, p, 'contikimac')]['nodes'][i]['mean']))
+				file.write("	%f" % (overallResults[(hops, p, 'contikimac')]['nodes'][i]))
 			
 			file.write("\r\n");
 		
@@ -156,16 +161,16 @@ def main():
 	print "\n\nEXPERIMENT 2\n============\n"
 	
 	for hops in [1, 2, 3, 4]:
-		file = open(os.path.join(plotsDir, 'rdc_compare_hops%u.txt' % hops), 'w')
+		file = open(os.path.join(plotsDir, 'min_rdc_compare_hops%u.txt' % hops), 'w')
 		
 		# Header
 		file.write('rdc	latency	energy2	energy3	energy4	energy5\r\n')
 		
 		for rdc in ['nullrdc', 'contikimac']:
-			file.write("%s	%f" % (rdc, overallResults[(hops, 64, rdc)]['latency']['mean']))
+			file.write("%s	%f" % (rdc, overallResults[(hops, 64, rdc)]['latency']))
 			
 			for i in range(0, len(overallResults[(hops, 64, rdc)]['nodes']), 1):
-				file.write("	%f" % (overallResults[(hops, 64, rdc)]['nodes'][i]['mean']))
+				file.write("	%f" % (overallResults[(hops, 64, rdc)]['nodes'][i]))
 	
 			file.write("\r\n");
 			

@@ -181,11 +181,19 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
 }
 /*-----------------------------------------------------------------------------------*/
 
+
+
+//FIXME REMOVE AFTER BENCHMARKING
+extern struct process *process_separate_hack;
+
 PROCESS(rest_manager_process, "Rest Process");
 
 PROCESS_THREAD(rest_manager_process, ev, data)
 {
   PROCESS_BEGIN();
+
+  //FIXME REMOVE AFTER BENCHMARKING
+  process_separate_hack = PROCESS_CURRENT();
 
   PROCESS_PAUSE();
 
@@ -208,9 +216,12 @@ PROCESS_THREAD(rest_manager_process, ev, data)
 
           /* Call the periodic_handler function if it exists. */
           if (periodic_resource->periodic_handler) {
-            (periodic_resource->periodic_handler)(periodic_resource->resource);
+            /* only restart if exists and successful ("or willing to restart") */
+            if( (periodic_resource->periodic_handler)(periodic_resource->resource) )
+            {
+              etimer_reset(&periodic_resource->periodic_timer);
+            }
           }
-          etimer_reset(&periodic_resource->periodic_timer);
         }
       }
     }

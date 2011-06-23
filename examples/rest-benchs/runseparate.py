@@ -135,7 +135,7 @@ def getPower(hops):
     except:
         return None
 
-def onerun(hops, size, rdc):
+def onerun(hops, ack, wait, rdc):
     global compilationNeeded
     global resetNeeded
     global benchLaunched
@@ -199,7 +199,7 @@ def onerun(hops, size, rdc):
         runFg2("echo 'powertrace on'", getTty(mote+2))
 
     #ret = runFg("java -cp java_tools/bin COAPClient 6 sky%d 61616 get hello %d" %(hops+1, size))
-    ret = runFg("java -jar java_tools/bin/SampleClient.jar POST coap://sky%d:61616/hello %d" %(hops+1, size))
+    ret = runFg("java -jar java_tools/bin/SampleClient.jar POST coap://sky%d:61616/separate?sep=%d %d" %(hops+1, ack, wait))
         
     for mote in range(hops):
         runFg2("echo 'powertrace off'", getTty(mote+2))
@@ -210,7 +210,7 @@ def onerun(hops, size, rdc):
         print "Bench failed"
         print ret["log"]
         return
-    if re.search("Request timed out", ret["log"][len(ret["log"])-2]):
+    if not re.search("Round Trip Time", ret["log"][len(ret["log"])-2]):
         print "No reply"
         failCount += 1
         return
@@ -227,7 +227,7 @@ def onerun(hops, size, rdc):
     
     return {"latency": latency, "power": power}
 
-def dobench(hops, size, rdc, niter, dstDir):
+def dobench(hops, ack, wait, rdc, niter, dstDir):
     global resCount
     global overallResCount
     global cancelCount
@@ -236,7 +236,7 @@ def dobench(hops, size, rdc, niter, dstDir):
     global resetNeeded
     global negCount
 
-    dstFile = os.path.join(dstDir, "hops%d_payload%d_rdc%s.txt" %(hops, size, rdc))
+    dstFile = os.path.join(dstDir, "hops%d_ack%d_wait%d_rdc%s.txt" %(hops, ack, wait, rdc))
 
     nres = 0;
     if os.path.exists(dstFile):
@@ -251,13 +251,13 @@ def dobench(hops, size, rdc, niter, dstDir):
     else:
         result_file = open(dstFile, 'w')
     
-    print "Starting benchmarks: hops: %d, size: %d, rdc %s" %(hops, size, rdc)
+    print "Starting benchmarks: hops: %d, ack: %d, wait: %d rdc %s" %(hops, ack, wait, rdc)
     
     localCancelCount = 0
     
     while nres < niter:
-        print "\n(%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d, fails: %d, negs: %d)" %(hops, size, rdc, nres+1, overallResCount, resCount, cancelCount, failCount, negCount)
-        ret = onerun(hops, size, rdc)
+        print "\n(%d,%d,%d,%s) Iteration #%d, results: %d (new: %d, aborted: %d, fails: %d, negs: %d)" %(hops, ack, wait, rdc, nres+1, overallResCount, resCount, cancelCount, failCount, negCount)
+        ret = onerun(hops, ack, wait, rdc)
         if ret != None:
             print "Result:",
             print ret
@@ -300,27 +300,11 @@ def main():
     # bench
     killBench()
     
-    hopsList1 = [1, 2, 4]
-    
-    rdcList = ["contikimac", "nullrdc"]
-    hopsList2 = [1, 2, 3, 4]   
+    #hopsList = [1, 2, 4]
+    hopsList = [2, 4]
 
-    # frame bounds
-    #           4hop   1/2hop
-    sizeList = [69,70, 78,79, 512]
-    
-    # 1/2hop
-    sizeList += range(170, 554, 96)
-    sizeList += range(169, 553, 96)
-    
-    # 4hop
-    sizeList += range(162, 546, 96)
-    sizeList += range(161, 545, 96)
-    
-    # linear walkthrough
-    sizeList += range(0, 512, 4)
-    
-    sizeList.sort()
+    #waitList = range(50, 301, 50)
+    waitList = [5, 30, 60, 120, 240]
 
     dstDir = "benchs"
     if not os.path.exists(dstDir):
@@ -332,25 +316,13 @@ def main():
     
     print "\n\nEXPERIMENT 1\n============\n"
     rdc = "contikimac"
-    compilationNeeded = True
+    #compilationNeeded = True
     
     # distributing iterations against bursty errors
     for niter in range(100):
-        for size in sizeList:
-            for hops in hopsList1:
-                if hops==4 and size>240:
-                    print "Skipping long RTT due to client bug"
-                    continue
-                dobench(hops, size, rdc, niter+1, dstDir)
-    
-    
-    print "\n\nEXPERIMENT 2\n============\n"
-    
-    size = 64
-    for rdc in rdcList:    
-        compilationNeeded = True
-        for niter in range(100):
-            for hops in hopsList2:
-                dobench(hops, size, rdc, niter+1, dstDir)
+        for wait in waitList:
+            for hops in hopsList:
+                for ack in range(2):
+                    dobench(hops, ack, wait, rdc, niter+1, dstDir)
         
 main()

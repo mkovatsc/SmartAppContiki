@@ -17,6 +17,10 @@ fails = 0
 
 def meanstdv(x):	
 	n, mean, stdev = len(x), 0, 0
+	
+	if int(n)==0:
+		return
+	
 	for a in x:
 		mean = mean + a
 	mean /= float(n)
@@ -41,13 +45,13 @@ def getPower(cpu, lpm, transmit, listen, fread, fwrite):
 	time = cpu + lpm
 	return getEnergy(cpu, lpm, transmit, listen, fread, fwrite)/ float(time)
 
-def getResults(fileName):
+def getResults(fileName, wait):
 	global fails, wins
 
 	file = open(fileName, 'r')
 	lines = file.readlines()
 	
-	if len(lines) == 0:
+	if len(lines) == 0 or lines[0]=='\n':
 		return None
 		
 	latencyList = []
@@ -57,12 +61,11 @@ def getResults(fileName):
 	for line in lines:
 		results = line.split()
 		
-		if float(results[0]) > 15000.0:
-			print "ERROR latency: %f" % float(results[0])
-			fails += 1
+		if int(results[0]) > wait*100 + 4000:
+			print fileName
+			print "ERROR: RTT %ums out of reasonable bound for %ums" % (int(results[0]), wait*100)
+			raw_input()
 			continue
-		else:
-			wins += 1
 		
 		# latency of run
 		latencyList.append( float(results[0]) )
@@ -106,70 +109,55 @@ def getvalStr(str, token):
 def main():
 	overallResults = {}
 	
-	payloads = []
+	definedWaits = [5, 30, 60, 120, 240]
+	
+	waits = []
 
-	dataDir = "benchs_11_100"
-	plotsDir = "plots_11_100"
+	dataDir = "benchs"
+	plotsDir = "plots_14_sep"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):
 			#print file
 			splitted = file.split("_")
-			if len(splitted) == 3:
+			if len(splitted) == 4:
 				hops = getval(splitted[0], "hops")
-				payload = getval(splitted[1], "payload") 
-				rdc = getvalStr(splitted[2], "rdc")
-				results = getResults(os.path.join(dataDir, file))
-				if results != None:
-					if not payload in payloads:
-						payloads.append(payload)
-					key = (hops, payload, rdc)
-					overallResults[key] = results
+				ack = getval(splitted[1], "ack")
+				wait = getval(splitted[2], "wait") 
+				rdc = getvalStr(splitted[3], "rdc")
+				if wait in definedWaits:
+					results = getResults(os.path.join(dataDir, file), wait)
+					if results != None:
+						if not wait in waits:
+							waits.append(wait)
+						key = (hops, ack, wait, rdc)
+						overallResults[key] = results
+	
+	print waits
 	
 	#create plot files
 	if not os.path.exists(plotsDir):
 		os.makedirs(plotsDir)
 		
-	for hops in [1, 2, 4]:
+	for hops in [2, 4]:
+		for a in [0, 1]:
 	
-		file = open(os.path.join(plotsDir, 'payload_compare_hops%u.txt' % hops), 'w')
-		
-		# Header
-		file.write('payload	latency	energy2	energy3	energy4	energy5\r\n')
-		
-		for p in sorted(payloads):
+			file = open(os.path.join(plotsDir, 'separate_quick_compare_hops%u_ack%u.txt' % (hops, a)), 'w')
 			
-			#print "%u hops, payload %u" % (hops, p)
+			# Header
+			file.write('wait	latency	energy2	energy3	energy4	energy5\r\n')
 			
-			file.write("%u	%f" % (p, overallResults[(hops, p, 'contikimac')]['latency']['mean']))
+			for w in sorted(waits):
+				
+				file.write("%u	%f" % (w, overallResults[(hops, a, w, 'contikimac')]['latency']['mean']))
+				
+				for i in range(0, len(overallResults[(hops, a, w, 'contikimac')]['nodes']), 1):
+					file.write("	%f" % (overallResults[(hops, a, w, 'contikimac')]['nodes'][i]['mean']))
+				
+				file.write("\r\n");
 			
-			for i in range(0, len(overallResults[(hops, p, 'contikimac')]['nodes']), 1):
-				file.write("	%f" % (overallResults[(hops, p, 'contikimac')]['nodes'][i]['mean']))
-			
-			file.write("\r\n");
-		
-		file.close()
+			file.close()
 	
-	print "Wins: %u" % wins
-	print "Fails: %u" % fails
-	print "Total: %u (%f)" % ((wins+fails), float(wins)/float(wins+fails))
-	print "\n\nEXPERIMENT 2\n============\n"
-	
-	for hops in [1, 2, 3, 4]:
-		file = open(os.path.join(plotsDir, 'rdc_compare_hops%u.txt' % hops), 'w')
-		
-		# Header
-		file.write('rdc	latency	energy2	energy3	energy4	energy5\r\n')
-		
-		for rdc in ['nullrdc', 'contikimac']:
-			file.write("%s	%f" % (rdc, overallResults[(hops, 64, rdc)]['latency']['mean']))
-			
-			for i in range(0, len(overallResults[(hops, 64, rdc)]['nodes']), 1):
-				file.write("	%f" % (overallResults[(hops, 64, rdc)]['nodes'][i]['mean']))
-	
-			file.write("\r\n");
-			
-		file.close()
 	return
 						
 main()

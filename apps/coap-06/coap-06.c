@@ -199,7 +199,7 @@ coap_get_variable(const char *buffer, size_t length, const char *name, const cha
   size_t name_len = 0;
 
   /*initialize the output buffer first*/
-  *output = 0;
+  *output = NULL;
 
   name_len = strlen(name);
   end = buffer + length;

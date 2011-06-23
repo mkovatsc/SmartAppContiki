@@ -279,4 +279,5 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
 
+
 #endif /*REST_ENGINE_H_*/

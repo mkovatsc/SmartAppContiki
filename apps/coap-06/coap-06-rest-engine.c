@@ -36,7 +36,6 @@
 #include "coap-06-rest-engine.h"
 #include "coap-06-transactions.h"
 #include "coap-06-observing.h"
-#include "coap-06-separate.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -240,6 +239,13 @@ handle_incoming_data(void)
     else
     {
       PRINTF("ERROR %u: %s\n", coap_error_code, coap_error_message);
+
+      coap_clear_transaction(transaction);
+
+      if (coap_error_code==SKIP_RESPONSE)
+      {
+        return NO_ERROR;
+      }
 
       /* Set to sendable error code. */
       if (coap_error_code >= 192)
@@ -495,7 +501,7 @@ const struct rest_implementation coap_rest_implementation = {
   coap_notify_observers,
   (restful_post_handler) coap_observe_handler,
 
-  (restful_pre_handler) coap_separate_handler,
+  NULL,
   NULL,
 
   {

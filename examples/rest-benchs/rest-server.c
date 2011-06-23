@@ -4,6 +4,10 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
+#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
+#include "static-routing.h"
+#endif
+
 #include "dev/serial-line.h"
 #include "dev/uart1.h"
 #include "serial-shell.h"
@@ -26,6 +30,7 @@
 #include "coap-03.h"
 #elif WITH_COAP == 6
 #include "coap-06.h"
+#include "coap-06-observing.h"
 #else
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
@@ -41,18 +46,9 @@
 #define PRINTLLADDR(addr)
 #endif
 
-/*
- * Resources are defined by the RESOURCE macro.
- * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
- */
+/* Payload bench resource */
 RESOURCE(helloworld, METHOD_GET | METHOD_POST, "hello", "title=\"Hello world (set length with ?len query)\";rt=\"Text\"");
 
-/*
- * A handler function named [resource name]_handler must be implemented for each RESOURCE.
- * A buffer for the response payload is provided through the buffer pointer. Simple resources can ignore
- * preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE limit for the buffer.
- * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
- */
 void
 helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -69,6 +65,126 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
   memset(buffer, '-', length);
 
   REST.set_response_payload(response, buffer, length);
+}
+
+/* Separate bench resource */
+PERIODIC_RESOURCE(separate, METHOD_GET | METHOD_POST, "separate", "title=\"Post processing time\"", 0);
+
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
+
+struct process *process_separate_hack = NULL;
+
+static uip_ipaddr_t sep_addr;
+static uint16_t sep_port = 0;
+static size_t sep_token_len = 0;
+static uint8_t sep_token[8] ={0};
+static uint16_t sep_tid = 0;
+static coap_message_type_t sep_type;
+
+void
+separate_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  const uint8_t *payload;
+  int length = 0;
+  const char *query;
+
+  static uint8_t ack_buffer[32];
+
+  if (sep_port==0)
+  {
+
+    length = REST.get_request_payload(request, &payload);
+    payload[length] = '\0';
+    periodic_resource_separate.period = atoi(payload) * CLOCK_SECOND / 10;
+
+    PRINTF("Separate after %lu\n", periodic_resource_separate.period);
+
+    // start timeout
+    // FIXME Hack, maybe there is a better way, but which is still lighter than posting everything to the process
+    struct process *process_actual = PROCESS_CURRENT();
+    process_current = process_separate_hack;
+    PRINTF("Timer process: %p\n", process_current);
+    etimer_set(&periodic_resource_separate.periodic_timer, periodic_resource_separate.period);
+    process_current = process_actual;
+
+    PRINTF("Handling process for %s: %p\n", resource_separate.url, process_current);
+
+    // save client as temporary observer
+    uip_ipaddr_copy(&sep_addr, &UIP_IP_BUF->srcipaddr);
+    sep_port = UIP_UDP_BUF->srcport;
+    sep_tid = ((coap_packet_t *)request)->tid;
+
+    sep_token_len = ((coap_packet_t *)request)->token_len;
+    memcpy(sep_token, ((coap_packet_t *)request)->token, sep_token_len);
+
+    // abort response by setting coap_error_code
+    coap_error_code = SKIP_RESPONSE;
+
+    PRINTF("Waiting for token %u\n", sep_token_len);
+
+    if (coap_get_query_variable(request, "sep", &query) && query[0]=='1')
+    {
+
+      PRINTF("WITH ACK\n");
+      /* send separate ACK. */
+      coap_packet_t ack[1];
+      coap_init_message(ack, COAP_TYPE_ACK, 0, ((coap_packet_t *)request)->tid);
+      coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, ack_buffer, coap_serialize_message(ack, ack_buffer));
+
+      sep_type = COAP_TYPE_CON;
+    }
+    else
+    {
+      PRINTF("NO ACK\n");
+      sep_type = COAP_TYPE_ACK;
+    }
+
+  }
+  else
+  {
+    PRINTF("Dropping duplicate\n");
+    coap_error_code = SKIP_RESPONSE;
+  }
+}
+
+int
+separate_periodic_handler(resource_t *r)
+{
+  PRINTF("Separate timeout as %u with token %u\n", sep_type, sep_token_len);
+
+  static uint8_t sep_buffer[32];
+
+  // send response
+  coap_packet_t response[1];
+  coap_init_message(response, sep_type, REST.status.OK, sep_type==COAP_TYPE_ACK ? sep_tid : coap_get_tid());
+  if (sep_token_len) coap_set_header_token(response, sep_token, sep_token_len);
+  coap_set_payload(response, (uint8_t *) "Separate", 8);
+
+  if (sep_type==COAP_TYPE_ACK)
+  {
+    coap_send_message(&sep_addr, sep_port, sep_buffer, coap_serialize_message(response, sep_buffer));
+  }
+  else
+  {
+    coap_transaction_t *transaction = NULL;
+    if ( (transaction = coap_new_transaction(response->tid, &sep_addr, sep_port)) )
+    {
+      if ((transaction->packet_len = coap_serialize_message(response, transaction->packet)))
+      {
+        coap_send_transaction(transaction);
+      }
+      else
+      {
+        coap_clear_transaction(transaction);
+      }
+    }
+  }
+
+  sep_port = 0;
+
+  /* do not restart timer by returning 0 */
+  return 0;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -112,6 +228,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
 
   /* Activate the application-specific resources. */
   rest_activate_resource(&resource_helloworld);
+  rest_activate_periodic_resource(&periodic_resource_separate);
 
 //  powertrace_start(CLOCK_SECOND * 4);
 //  powertrace_sniff(POWERTRACE_ON);

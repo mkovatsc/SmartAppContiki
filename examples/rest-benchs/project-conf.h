@@ -86,8 +86,8 @@
 
 // contikimac config
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
-#define WITH_BURST					1
-#define WITH_LETHARGY    				1
+#define WITH_BURST			1
+#define WITH_LETHARGY    		1
 #define CCA_BEFORE_BURST                0
 #define BURST_DURATION    RTIMER_ARCH_SECOND
 

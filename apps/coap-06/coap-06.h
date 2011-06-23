@@ -137,7 +137,9 @@ typedef enum {
   /* CoAP errors */
   UNIMPLEMENTED_CRITICAL_OPTION,
   UNKNOWN_CRITICAL_OPTION,
-  PACKET_SERIALIZATION_ERROR
+  PACKET_SERIALIZATION_ERROR,
+
+  SKIP_RESPONSE = 255
 } coap_status_t;
 
 /* CoAP header options */

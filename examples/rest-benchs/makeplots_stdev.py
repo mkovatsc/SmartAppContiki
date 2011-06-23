@@ -34,7 +34,7 @@ def getDutycycle(cpu, lpm, transmit, listen):
 	return 100 * (transmit + listen) / (cpu + lpm)
 
 def getEnergy(cpu, lpm, transmit, listen, fread, fwrite):
-	energy = (transmit * txPower + listen * rxPower + cpu * cpuPower + lpm * lpmPower + fread * freadPower + fwrite * fwritePower) / float(4096*8)
+	energy = transmit * txPower + listen * rxPower + cpu * cpuPower + lpm * lpmPower + fread * freadPower + fwrite * fwritePower
 	return energy
 	
 def getPower(cpu, lpm, transmit, listen, fread, fwrite):
@@ -108,8 +108,8 @@ def main():
 	
 	payloads = []
 
-	dataDir = "benchs_11_100"
-	plotsDir = "plots_11_100"
+	dataDir = "benchs"
+	plotsDir = "plots"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):
@@ -138,6 +138,8 @@ def main():
 		file.write('payload	latency	energy2	energy3	energy4	energy5\r\n')
 		
 		for p in sorted(payloads):
+			if p == 64:
+				continue
 			
 			#print "%u hops, payload %u" % (hops, p)
 			

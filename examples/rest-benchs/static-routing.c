@@ -30,34 +30,34 @@ struct id_to_addrs {
     uint32_t addr;
 };
 
-//const struct id_to_addrs motes_addrs[] = {
-///*
-//  aaaa::212:7400:1160:f62d        sky1
-//  aaaa::212:7400:0da0:d748        sky2
-//  aaaa::212:7400:116e:c325        sky3
-//  aaaa::212:7400:116e:c444        sky4
-//  aaaa::212:7400:115e:b717        sky5
-//*/
-//    {1, 0x1160f62d},
-//    {2, 0x0da0d748},
-//    {3, 0x116ec325},
-//    {4, 0x116ec444},
-//    {5, 0x115eb717},
-//};
 const struct id_to_addrs motes_addrs[] = {
-    {1, 0x10585e65},
-    {2, 0x10582cfb},
-    {3, 0x10584b6c},
-    {4, 0x112b037f},
-    {5, 0x112b0ae9},
-    {6, 0x10584222},
-    {7, 0x10572325},
-    {8, 0x105849d3},
-    {9, 0x105820a7},
-    {10, 0x116ed7f2},
-    {11, 0x115eb567},
-    {12, 0x116ec96d},
+/*
+  aaaa::212:7400:1160:f62d        sky1
+  aaaa::212:7400:0da0:d748        sky2
+  aaaa::212:7400:116e:c325        sky3
+  aaaa::212:7400:116e:c444        sky4
+  aaaa::212:7400:115e:b717        sky5
+*/
+    {1, 0x1160f62d},
+    {2, 0x0da0d748},
+    {3, 0x116ec325},
+    {4, 0x116ec444},
+    {5, 0x115eb717},
 };
+//const struct id_to_addrs motes_addrs[] = {
+//    {1, 0x10585e65},
+//    {2, 0x10582cfb},
+//    {3, 0x10584b6c},
+//    {4, 0x112b037f},
+//    {5, 0x112b0ae9},
+//    {6, 0x10584222},
+//    {7, 0x10572325},
+//    {8, 0x105849d3},
+//    {9, 0x105820a7},
+//    {10, 0x116ed7f2},
+//    {11, 0x115eb567},
+//    {12, 0x116ec96d},
+//};
 
 
 uint32_t get_mote_suffix(int rank) {
@@ -141,12 +141,12 @@ void configure_routing(void) {
   }
 
   if(node_rank == -1) {
-    printf("unable to configure routing, node_id=%d\n", node_id);
+    PRINTF("unable to configure routing, node_id=%d\n", node_id);
     return;
   }
 #endif
 
-  printf("configure_routing, node_id=%d, node_rank %d\n", node_id, node_rank);
+  PRINTF("configure_routing, node_id=%d, node_rank %d\n", node_id, node_rank);
 
   if (node_rank == 1) { /* border router #1 */
     int i;
