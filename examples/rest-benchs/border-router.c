@@ -46,6 +46,8 @@
 #include "dev/button-sensor.h"
 #include "dev/slip.h"
 
+#include "static-routing.h"
+
 /* For internal webserver Makefile must set APPS += webserver and PROJECT_SOURCEFILES += httpd-simple.c */
 #if WEBSERVER
 #include "webserver-nogui.h"
@@ -240,6 +242,7 @@ PROCESS_THREAD(border_router_process, ev, data)
     PRINTF("created a new RPL dag\n");
   }
 #else
+  printf("STATIC ROUTING\n");
   configure_routing();
 #endif
 

@@ -37,12 +37,18 @@ const struct id_to_addrs motes_addrs[] = {
   aaaa::212:7400:116e:c325        sky3
   aaaa::212:7400:116e:c444        sky4
   aaaa::212:7400:115e:b717        sky5
-*/
+
     {1, 0x1160f62d},
     {2, 0x0da0d748},
     {3, 0x116ec325},
     {4, 0x116ec444},
     {5, 0x115eb717},
+*/
+    {1, 0x0fed2753},
+    {2, 0x0fed367e},
+    {3, 0x102424e0},
+    {4, 0x10242555},
+    {5, 0x10d09a1d},
 };
 //const struct id_to_addrs motes_addrs[] = {
 //    {1, 0x10585e65},
@@ -127,7 +133,7 @@ static void add_route(int dest, int next) {
 void configure_routing(void) {
   int i;
 
-  cc2420_set_channel(15);
+  cc2420_set_channel(RF_CHANNEL);
 
 #if IN_COOJA
   node_rank = node_id;
