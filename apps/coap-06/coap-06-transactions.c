@@ -68,6 +68,7 @@ coap_register_as_transaction_handler()
 coap_transaction_t *
 coap_new_transaction(uint16_t tid, uip_ipaddr_t *addr, uint16_t port)
 {
+coap_stack_dump("coap_new_transaction");
   coap_transaction_t *t = memb_alloc(&transactions_memb);
 
   if (t)
@@ -86,6 +87,7 @@ coap_new_transaction(uint16_t tid, uip_ipaddr_t *addr, uint16_t port)
 void
 coap_send_transaction(coap_transaction_t *t)
 {
+coap_stack_dump("coap_send_transaction");
   PRINTF("Sending transaction %u\n", t->tid);
 
   coap_send_message(&t->addr, t->port, t->packet, t->packet_len);
@@ -143,6 +145,7 @@ coap_send_transaction(coap_transaction_t *t)
 void
 coap_clear_transaction(coap_transaction_t *t)
 {
+coap_stack_dump("coap_clear_transaction");
   if (t)
   {
     PRINTF("Freeing transaction %u: %p\n", t->tid, t);
@@ -156,6 +159,7 @@ coap_clear_transaction(coap_transaction_t *t)
 coap_transaction_t *
 coap_get_transaction_by_tid(uint16_t tid)
 {
+coap_stack_dump("coap_get_transaction_by_tid");
   coap_transaction_t *t = NULL;
 
   for (t = (coap_transaction_t*)list_head(transactions_list); t; t = t->next)
@@ -172,6 +176,7 @@ coap_get_transaction_by_tid(uint16_t tid)
 void
 coap_check_transactions()
 {
+coap_stack_dump("coap_check_transactions");
   coap_transaction_t *t = NULL;
 
   for (t = (coap_transaction_t*)list_head(transactions_list); t; t = t->next)

@@ -35,7 +35,7 @@
 #define SICSLOWPAN_CONF_FRAG	1
 
 #ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
+#define QUEUEBUF_CONF_NUM       6
 #endif
 
 #ifndef REST_MAX_CHUNK_SIZE
@@ -53,5 +53,7 @@
 #ifndef WEBSERVER_CONF_CFS_CONNS
 #define WEBSERVER_CONF_CFS_CONNS 2
 #endif
+
+//#define NETSTACK_CONF_RDC       contikimac_driver
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

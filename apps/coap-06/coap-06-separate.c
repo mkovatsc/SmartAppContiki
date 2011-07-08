@@ -46,6 +46,7 @@
 /*-----------------------------------------------------------------------------------*/
 void coap_separate_handler(resource_t *resource, void *request, void *response)
 {
+coap_stack_dump("coap_separate_handlerX");
   if (resource->benchmark > COAP_SEPARATE_THRESHOLD)
   {
     PRINTF("Separate response for /%s \n", resource->url);

@@ -1,4 +1,4 @@
-all: rest-server-example coap-client-example
+all: rest-server-example coap-client-example rest-server-example.co
 
 CONTIKI=../..
 
@@ -11,7 +11,7 @@ UIP_CONF_IPV6=1
 WITH_COAP=6
 
 # radio configuration
-CFLAGS += -DRF_CHANNEL=21
+CFLAGS += -DRF_CHANNEL=15
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables

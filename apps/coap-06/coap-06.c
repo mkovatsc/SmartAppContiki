@@ -35,6 +35,13 @@
 #include "coap-06.h"
 #include "coap-06-transactions.h"
 
+#define asmv(arg) __asm__ __volatile__(arg)
+void coap_stack_dump(char *where)
+{
+  static char* coap_stack_pointer = NULL;
+  asmv("mov r1, %0" : "=r" (coap_stack_pointer));
+  printf("%s: %p\n", where, coap_stack_pointer);
+}
 
 #define DEBUG 0
 #if DEBUG
@@ -63,6 +70,7 @@ static
 uint16_t
 log_2(uint16_t value)
 {
+coap_stack_dump("log_2");
   uint16_t result = 0;
   do {
     value = value >> 1;
@@ -76,6 +84,7 @@ static
 uint32_t
 parse_int_option(uint8_t *bytes, uint16_t length)
 {
+coap_stack_dump("parse_int_option");
   uint32_t var = 0;
   int i = 0;
   while (i<length)
@@ -89,6 +98,7 @@ static
 size_t
 set_option_header(int delta, size_t length, uint8_t *buffer)
 {
+coap_stack_dump("set_option_header");
   if (length<15)
   {
     buffer[0] = (0x0F & length) | (0xF0 & delta<<4);
@@ -106,6 +116,7 @@ static
 size_t
 insert_option_fence_posts(int number, int *current_number, uint8_t *buffer)
 {
+coap_stack_dump("insert_option_fence_posts");
   size_t i = 0;
   while (number-*current_number > 15)
   {
@@ -122,6 +133,7 @@ static
 size_t
 serialize_int_option(int number, int current_number, uint8_t *buffer, uint32_t value)
 {
+coap_stack_dump("serialize_int_option");
   /* Insert fence-posts for large deltas */
   size_t i = insert_option_fence_posts(number, &current_number, buffer);
   size_t start_i = i;
@@ -144,6 +156,7 @@ static
 size_t
 serialize_array_option(int number, int current_number, uint8_t *buffer, uint8_t *array, size_t length, uint8_t *split_path)
 {
+coap_stack_dump("serialize_array_option");
   /* Insert fence-posts for large deltas */
   size_t i = insert_option_fence_posts(number, &current_number, buffer);
 
@@ -193,6 +206,7 @@ static
 int
 coap_get_variable(const char *buffer, size_t length, const char *name, const char **output)
 {
+coap_stack_dump("coap_get_variable");
   const char *start = NULL;
   const char *end = NULL;
   const char *value_end = NULL;
@@ -231,6 +245,7 @@ coap_get_variable(const char *buffer, size_t length, const char *name, const cha
 void
 coap_init_connection(uint16_t port)
 {
+coap_stack_dump("coap_init_connection");
   /* new connection with remote host */
   udp_conn = udp_new(NULL, 0, NULL);
   udp_bind(udp_conn, port);
@@ -251,6 +266,7 @@ coap_get_tid()
 void
 coap_init_message(void *packet, coap_message_type_t type, uint8_t code, uint16_t tid)
 {
+coap_stack_dump("coap_init_message");
   /* Important thing */
   memset(packet, 0, sizeof(coap_packet_t));
 
@@ -262,6 +278,7 @@ coap_init_message(void *packet, coap_message_type_t type, uint8_t code, uint16_t
 size_t
 coap_serialize_message(void *packet, uint8_t *buffer)
 {
+coap_stack_dump("coap_serialize_message");
   /* Initialize */
   ((coap_packet_t *)packet)->buffer = buffer;
   ((coap_packet_t *)packet)->version = 1;
@@ -452,6 +469,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
 void
 coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t length)
 {
+coap_stack_dump("coap_send_message");
   /*configure connection to reply to client*/
   uip_ipaddr_copy(&udp_conn->ripaddr, addr);
   udp_conn->rport = port;
@@ -467,6 +485,7 @@ coap_send_message(uip_ipaddr_t *addr, uint16_t port, uint8_t *data, uint16_t len
 coap_status_t
 coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 {
+coap_stack_dump("coap_parse_message");
   /* Initialize packet */
   memset(packet, 0, sizeof(coap_packet_t));
 
@@ -671,6 +690,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 int
 coap_get_query_variable(void *packet, const char *name, const char **output)
 {
+coap_stack_dump("coap_get_query_variable");
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
     return coap_get_variable(((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, name, output);
   }
@@ -680,6 +700,7 @@ coap_get_query_variable(void *packet, const char *name, const char **output)
 int
 coap_get_post_variable(void *packet, const char *name, const char **output)
 {
+coap_stack_dump("coap_get_post_variable");
   if (((coap_packet_t *)packet)->payload_len) {
     return coap_get_variable((const char *)((coap_packet_t *)packet)->payload, ((coap_packet_t *)packet)->payload_len, name, output);
   }
@@ -691,12 +712,14 @@ coap_get_post_variable(void *packet, const char *name, const char **output)
 unsigned int
 coap_get_header_content_type(void *packet)
 {
+coap_stack_dump("coap_get_header_content_type");
   return ((coap_packet_t *)packet)->content_type;
 }
 
 int
 coap_set_header_content_type(void *packet, unsigned int content_type)
 {
+coap_stack_dump("coap_set_header_content_type");
   ((coap_packet_t *)packet)->content_type = (coap_content_type_t) content_type;
   SET_OPTION((coap_packet_t *)packet, COAP_OPTION_CONTENT_TYPE);
   return 1;

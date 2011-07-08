@@ -3,7 +3,7 @@
 #include <stdio.h> /*for sprintf in rest_set_header_**/
 
 #include "rest-engine.h"
-
+#include "coap-06.h"
 #define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -129,6 +129,7 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 int
 rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
+coap_stack_dump("rest_invoke_restful_service");
   uint8_t found = 0;
   uint8_t allowed = 0;
 
@@ -153,10 +154,13 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
       if (resource->methods_to_handle & method)
       {
         allowed = 1;
+        
+        coap_stack_dump("pre-handler");
 
         /*call pre handler if it exists*/
         if (!resource->pre_handler || resource->pre_handler(resource, request, response))
         {
+        coap_stack_dump("resource-handler");
           /* call handler function*/
           resource->handler(request, response, buffer, buffer_size, offset);
 
@@ -186,7 +190,7 @@ PROCESS(rest_manager_process, "Rest Process");
 PROCESS_THREAD(rest_manager_process, ev, data)
 {
   PROCESS_BEGIN();
-
+coap_stack_dump("rest PROCESS");
   PROCESS_PAUSE();
 
   /* Initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
@@ -199,6 +203,7 @@ PROCESS_THREAD(rest_manager_process, ev, data)
   }
 
   while (1) {
+coap_stack_dump("rest WAIT");
     PROCESS_WAIT_EVENT();
     if (ev == PROCESS_EVENT_TIMER) {
       for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
@@ -208,6 +213,7 @@ PROCESS_THREAD(rest_manager_process, ev, data)
 
           /* Call the periodic_handler function if it exists. */
           if (periodic_resource->periodic_handler) {
+coap_stack_dump("periodic-handler");
             (periodic_resource->periodic_handler)(periodic_resource->resource);
           }
           etimer_reset(&periodic_resource->periodic_timer);

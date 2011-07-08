@@ -4,10 +4,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-#include "static-routing.h"
-#endif
-
+#include "coap-06.h"
 #include "rest-engine.h"
 
 #if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
@@ -18,13 +15,6 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
-#if WITH_COAP == 3
-#include "coap-03.h"
-#elif WITH_COAP == 6
-#include "coap-06.h"
-#else
-#error "CoAP version defined by WITH_COAP not implemented"
-#endif
 
 #define DEBUG 0
 #if DEBUG
@@ -37,228 +27,14 @@
 #define PRINTLLADDR(addr)
 #endif
 
-/*
- * Resources are defined by the RESOURCE macro.
- * Signature: resource name, the RESTful methods it handles, and its URI path (omitting the leading slash).
- */
-RESOURCE(helloworld, METHOD_GET, "hello", "title=\"Hello world (set length with ?len query)\";rt=\"Text\"");
 
-/*
- * A handler function named [resource name]_handler must be implemented for each RESOURCE.
- * A buffer for the response payload is provided through the buffer pointer. Simple resources can ignore
- * preferred_size and offset, but must respect the REST_MAX_CHUNK_SIZE limit for the buffer.
- * If a smaller block size is requested for CoAP, the REST framework automatically splits the data.
- */
-void
-helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  const char *len = NULL;
-  int length = 12; /* ------->| */
-  char *message = "Hello World! ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789?!at 86 now+2+4at 99 now100..105..110..115..120..125..130..135..140..145..150..155..160";
-
-  /* The query string can be retrieved by rest_get_query() or parsed for its key-value pairs. */
-  if (REST.get_query_variable(request, "len", &len)) {
-    length = atoi(len);
-    if (length<0) length = 0;
-    if (length>REST_MAX_CHUNK_SIZE) length = REST_MAX_CHUNK_SIZE;
-    memcpy(buffer, message, length);
-  } else {
-    memcpy(buffer, message, length);
-  }
-
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN); /* text/plain is the default, hence this option could be omitted. */
-  REST.set_header_etag(response, (uint8_t *) &length, 1);
-  REST.set_response_payload(response, buffer, length);
-}
-
-/* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response. */
-RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
-
-void
-mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  /* The ETag and Token is copied to the header. */
-  uint8_t opaque[] = {0x0A, 0xBC, 0xDE};
-
-  /* Strings are not copied and should be static or in program memory (char *str = "string in .text";).
-   * They must be '\0'-terminated as the setters use strlen(). */
-  static char location[] = {'/','f','a','?','k','e', 0};
-
-  /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
-  unsigned int content_type = REST.get_header_content_type(request);
-
-  /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
-  uint32_t max_age = 0;
-  const char *str = "";
-  uint32_t observe = 0;
-  const uint8_t *bytes = NULL;
-  uint32_t block_num = 0;
-  uint8_t block_more = 0;
-  uint16_t block_size = 0;
-  const char *query = "";
-  int len = 0;
-
-  /* Mirror the received header options in the response payload. Unsupported getters (e.g., rest_get_header_observe() with HTTP) will return 0. */
-
-  int strpos = 0;
-  /* snprintf() counts the terminating '\0' to the size parameter.
-   * Add +1 to fill the complete buffer.
-   * The additional byte is taken care of by allocating REST_MAX_CHUNK_SIZE+1 bytes in the REST framework. */
-  strpos += snprintf((char *)buffer, REST_MAX_CHUNK_SIZE+1, "CT %u\n", content_type);
-
-  /* Some getters such as for ETag or Location are omitted, as these options should not appear in a request.
-   * Max-Age might appear in HTTP requests or used for special purposes in CoAP. */
-  if (REST.get_header_max_age(request, &max_age))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "MA %lu\n", max_age);
-  }
-  if ((len = REST.get_header_host(request, &str)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, str);
-  }
-#if WITH_COAP > 1
-  if (coap_get_header_observe(request, &observe))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Ob %lu\n", observe);
-  }
-  if ((len = coap_get_header_token(request, &bytes)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "To 0x");
-    int index = 0;
-    for (index = 0; index<len; ++index) {
-        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
-    }
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
-  }
-  if ((len = coap_get_header_etag(request, &bytes)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "ET 0x");
-    int index = 0;
-    for (index = 0; index<len; ++index) {
-        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
-    }
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
-  }
-#if WITH_COAP == 3
-  if ((len = coap_get_header_location(request, &str)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Lo %.*s\n", len, str);
-  }
-  if (coap_get_header_block(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
-  }
-#elif WITH_COAP == 6
-  if ((len = coap_get_header_location_path(request, &str)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "LP %.*s\n", len, str);
-  }
-  if ((len = coap_get_header_location_query(request, &str)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "LQ %.*s\n", len, str);
-  }
-  if (coap_get_header_block2(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "B2 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
-  }
-  if (coap_get_header_block1(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "B1 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
-  }
-#endif
-
-#endif
-  if ((len = REST.get_query(request, &query)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s\n", len, query);
-  }
-  if ((len = REST.get_request_payload(request, &bytes)))
-  {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%.*s", len, bytes);
-  }
-
-  if (strpos == REST_MAX_CHUNK_SIZE)
-  {
-      buffer[REST_MAX_CHUNK_SIZE-1] = 0xBB;
-  }
-
-  REST.set_response_payload(response, buffer, strpos);
-
-  PRINTF("/mirror options received: %s\n", buffer);
-
-  /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-  REST.set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
-  REST.set_header_etag(response, opaque, 3);
-  REST.set_header_location(response, location); /* Initial slash is omitted by framework */
-#if WITH_COAP > 1
-  coap_set_header_uri_host(response, "tiki");
-  coap_set_header_observe(response, 10);
-  opaque[0] = 0x01;
-  opaque[1] = 0xCC;
-  coap_set_header_token(response, opaque, 2); /* If this function is not called, the Token is copied from the request by default. */
-#if WITH_COAP == 3
-  coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
-#elif WITH_COAP == 6
-  coap_set_header_proxy_uri(response, "ftp://x");
-  coap_set_header_block2(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
-  coap_set_header_block1(response, 23, 0, 16);
-#endif
-#endif
-}
-
-/*
- * For data larger than REST_MAX_CHUNK_SIZE (e.g., stored in flash) resources must be aware of the buffer limitation
- * and split their responses by themselves. To transfer the complete resource through a TCP stream or CoAP's blockwise transfer,
- * the byte offset where to continue is provided to the handler as int32_t pointer.
- * These chunk-wise resources must set the offset value to its new position or -1 of the end is reached.
- * (The offset for CoAP's blockwise transfer can go up to 2'147'481'600 = ~2047 M for block size 2048 (reduced to 1024 in observe-03.)
- */
-RESOURCE(chunks, METHOD_GET, "chunks", "title=\"Blockwise demo\";rt=\"Data\"");
-
-#define CHUNKS_TOTAL    1030
-
-void
-chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  int32_t strpos = 0;
-
-  /* Check the offset for boundaries of the resource data. */
-  if (*offset>=CHUNKS_TOTAL)
-  {
-    REST.set_response_status(response, REST.status.BAD_OPTION);
-    REST.set_response_payload(response, (uint8_t*)"Block out of scope", 18);
-    return;
-  }
-
-  /* Generate data until reaching CHUNKS_TOTAL. */
-  while (strpos<REST_MAX_CHUNK_SIZE) {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "|%ld|", *offset);
-  }
-  /* Truncate if above. */
-  if (*offset+strpos > CHUNKS_TOTAL)
-  {
-    strpos = CHUNKS_TOTAL - *offset;
-  }
-
-  REST.set_response_payload(response, buffer, strpos);
-
-  /* Signal chunk awareness of resource to framework. */
-  *offset += strpos;
-
-  /* Signal end of resource. */
-  if (*offset>=CHUNKS_TOTAL)
-  {
-    *offset = -1;
-  }
-}
 
 /*
  * Example for a periodic resource.
  * It takes an additional period parameter, which defines the interval to call [name]_periodic_handler().
  * A default post_handler takes care of subscriptions by managing a list of subscribers to notify.
  */
-PERIODIC_RESOURCE(polling, METHOD_GET, "poll", "title=\"Periodic demo\";rt=\"Observable\"", 5*CLOCK_SECOND);
+PERIODIC_RESOURCE(polling, METHOD_GET, "poll", "title=\"Periodic\";rt=\"Observable\"", 5*CLOCK_SECOND);
 
 void
 polling_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -276,6 +52,7 @@ polling_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
 int
 polling_periodic_handler(resource_t *r)
 {
+coap_stack_dump("polling_periodic_handler");
   static uint32_t periodic_i = 0;
   static char content[16];
 
@@ -331,6 +108,7 @@ RESOURCE(led, METHOD_POST | METHOD_PUT , "leds", "title=\"Led control (use ?colo
 void
 led_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
+coap_stack_dump("led_handler");
   size_t len = 0;
   const char *color = NULL;
   const char *mode = NULL;
@@ -373,10 +151,11 @@ led_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 }
 
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(light, METHOD_GET, "light", "title=\"Photosynthetic and solar light (supports JSON)\";rt=\"LightSensor\"");
+RESOURCE(light, METHOD_GET, "light", "title=\"Photosynthetic and solar light\";rt=\"LightSensor\"");
 void
 light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
+coap_stack_dump("light_handler");
   static uint8_t etag[] = {0xAB, 0xCD};
 
   uint16_t light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
@@ -428,14 +207,6 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
     REST.set_response_payload(response, (uint8_t *)info, strlen(info));
   }
 }
-
-/* A simple actuator example. Toggles the red led */
-RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "toggle", "title=\"Red LED\";rt=\"Control\"");
-void
-toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  leds_toggle(LEDS_RED);
-}
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
 
@@ -445,7 +216,7 @@ AUTOSTART_PROCESSES(&rest_server_example);
 PROCESS_THREAD(rest_server_example, ev, data)
 {
   PROCESS_BEGIN();
-
+coap_stack_dump("example PROCESS");
   PRINTF("Rest Example\n");
 
 #ifdef RF_CHANNEL
@@ -474,9 +245,6 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_init_framework();
 
   /* Activate the application-specific resources. */
-  rest_activate_resource(&resource_helloworld);
-  rest_activate_resource(&resource_mirror);
-  rest_activate_resource(&resource_chunks);
   rest_activate_periodic_resource(&periodic_resource_polling);
 
 #if defined (CONTIKI_TARGET_SKY)
@@ -488,7 +256,6 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_activate_resource(&resource_led);
   rest_activate_resource(&resource_light);
   rest_activate_resource(&resource_battery);
-  rest_activate_resource(&resource_toggle);
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
   /* Define application-specific events here. */

@@ -30,6 +30,8 @@
 #ifndef COAP_06_H_
 #define COAP_06_H_
 
+void coap_stack_dump(char *where);
+
 #include <stddef.h> /* for size_t */
 #include "contiki-net.h"
 #include "rest-engine.h"
