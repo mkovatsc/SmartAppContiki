@@ -741,7 +741,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	else{
 
 		int len = REST.get_post_variable(request,"value",&string);
-		if (len==8 && &string[2]==':'){
+		if (len==8){
 				day = atoi(&string[0]);
 				month = atoi(&string[3]);
 				year = atoi(&string[6]);
