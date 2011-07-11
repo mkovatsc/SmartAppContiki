@@ -522,6 +522,7 @@ PROCESS_THREAD(plogg_process, ev, data)
 
 				default:
 					etimer_set(&etimer, CLOCK_SECOND * 2);
+					Led2_toggle(); //Green
 					switch (poll_number){
 	    		 	case 15:
 	    		 	case 45:
@@ -693,12 +694,14 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				min = atoi(&string[3]);
 			 	sec=(len==5)?0:atoi(&string[6]);
 
-				if (len==8 && ! (isdigit(string[6]) && isdigit(string[7]))){
+				if (len==8 && !(isdigit(string[6]) && isdigit(string[7]) && string[5]==':') ){
 					success = 0;
 				}
-
-				if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
+				else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 					success = false;
+				}
+				else if ( string[2]!=':' ){
+					success = 0;
 				}
 				else if (!( 0<= hour && hour<=23 && 0<=min && min <=59 && 0<=sec && sec<=59)){
 					success = false; 
@@ -738,13 +741,16 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	else{
 
 		int len = REST.get_post_variable(request,"value",&string);
-		if (len==8){
+		if (len==8 && &string[2]==':'){
 				day = atoi(&string[0]);
 				month = atoi(&string[3]);
 				year = atoi(&string[6]);
 				if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
 					success=false;
 				} 
+				else if ( string[2]!='.' || string[5]!='.' ){
+					success=false;
+				}
 				else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day )){
 					success=false;
 				}
@@ -1039,7 +1045,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/cost?1 to get the tariff 1's costs.\nOr 0 to get the total costs, eg.: /tariff/cost?0\n"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff.\n0 is the total cost\n"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
@@ -1085,7 +1091,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	}
 	if(!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff, eg.: /tariff/consumed?1 to get the tariff 1's consumation.\nOr 0 to get the total consumation, eg.: /tariff/consumed?0\n"));
+		index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter [0;2] that specifies the tariff.\n0 is the total consumation\n"));
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, index);
 		return;
@@ -1383,6 +1389,31 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	REST.set_response_payload(response, (uint8_t *) temp , index);
 }
 
+/******************************** Stack ************************************
+
+RESOURCE(stack, METHOD_GET, "stack", "stack");
+
+void
+stack_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+	char temp[REST_MAX_CHUNK_SIZE];
+	int index=0;
+
+	//See contiki-raven-main.c for initialization of the magic numbers
+	extern uint16_t __bss_end;
+	uint16_t p=(uint16_t)&__bss_end;
+    do {
+      if (*(uint16_t *)p != 0x4242) {
+        index+=snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Never-used stack > %d bytes"),p-(uint16_t)&__bss_end);
+        break;
+      }
+      p+=100;
+    } while (p<RAMEND-100);
+
+	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	REST.set_response_payload(response, (uint8_t *) temp , index);
+}
+
+*/
 /****************************** Coap Process ***********************************/
 
 PROCESS_THREAD(coap_process, ev, data)
@@ -1408,6 +1439,8 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_timer);
 	rest_activate_resource(&resource_power);
 	rest_activate_resource(&resource_mode);
+
+//	rest_activate_resource(&resource_stack);
 
 
 	memset(&poll_data, 0, sizeof(poll_data));	
