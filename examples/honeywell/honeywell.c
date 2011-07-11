@@ -517,6 +517,9 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
 				success=0;
 			} 
+			else if ( string[2]!='.' || string[5]!='.' ){
+				success=0;
+			}
 			else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day )){
 				success=0;
 			}
@@ -574,10 +577,13 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			int minute=atoi(&string[3]);
 			int second=(length==5)?0:atoi(&string[6]);
 
-			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]))){
+			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){
 				success = 0;
 			}
 			else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
+				success = 0;
+			}
+			else if ( string[2]!=':' ){
 				success = 0;
 			}
 			else if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 && 0<=second && second<=59)){
