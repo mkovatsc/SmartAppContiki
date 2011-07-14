@@ -78,7 +78,7 @@ aaaa::212:7400:1024:24e0        sky5
 
 
 uint32_t get_mote_suffix(int rank) {
-    int i;
+//    int i;
 //    for(i=0; i<(sizeof(motes_addrs)/sizeof(struct id_to_addrs)); i++) {
 //        if(id == motes_addrs[i].id) {
 //            return motes_addrs[i].addr;
