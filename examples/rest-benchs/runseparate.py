@@ -301,10 +301,10 @@ def main():
     killBench()
     
     #hopsList = [1, 2, 4]
-    hopsList = [2, 4]
+    hopsList = [4]
 
     #waitList = range(50, 301, 50)
-    waitList = [5, 30, 60, 120, 240]
+    waitList = [5, 30, 60, 90, 120, 240]
 
     dstDir = "benchs"
     if not os.path.exists(dstDir):

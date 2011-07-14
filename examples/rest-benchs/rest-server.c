@@ -194,14 +194,14 @@ const struct uip_fallback_interface rpl_interface = {
   nothing, nothing
 };
 
-PROCESS(rest_server_example, "Rest Server Example");
+PROCESS(rest_server_example, "Rest Server Benchmark");
 AUTOSTART_PROCESSES(&rest_server_example);
 
 PROCESS_THREAD(rest_server_example, ev, data)
 {
   PROCESS_BEGIN();
 
-  PRINTF("Rest Example\n");
+  PRINTF("Rest Bench\n");
 
 #ifdef RF_CHANNEL
   PRINTF("RF channel: %u\n", RF_CHANNEL);

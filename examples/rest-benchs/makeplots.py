@@ -108,8 +108,8 @@ def main():
 	
 	payloads = []
 
-	dataDir = "benchs_11_100"
-	plotsDir = "plots_11_100"
+	dataDir = "benchs"
+	plotsDir = "plots_20_100"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):

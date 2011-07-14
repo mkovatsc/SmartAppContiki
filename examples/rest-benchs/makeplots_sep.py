@@ -61,7 +61,7 @@ def getResults(fileName, wait):
 	for line in lines:
 		results = line.split()
 		
-		if int(results[0]) > wait*100 + 4000:
+		if int(results[0]) > wait*100 + 800:
 			print fileName
 			print "ERROR: RTT %ums out of reasonable bound for %ums" % (int(results[0]), wait*100)
 			raw_input()
@@ -109,12 +109,12 @@ def getvalStr(str, token):
 def main():
 	overallResults = {}
 	
-	definedWaits = [5, 30, 60, 120, 240]
+	definedWaits = [5, 30, 60, 70, 80, 90, 100, 110, 120, 240]
 	
 	waits = []
 
 	dataDir = "benchs"
-	plotsDir = "plots_14_sep"
+	plotsDir = "plots_20_100"
 	
 	if os.path.exists(dataDir):
 		for file in os.listdir(dataDir):

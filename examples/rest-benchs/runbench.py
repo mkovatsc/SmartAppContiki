@@ -21,6 +21,7 @@ benchLaunched = False
 
 negCount = 0
 negLog = "neg.txt"
+failLog = "benchs/fails.txt"
 
 compilationNeeded = True
 resetNeeded = False
@@ -140,6 +141,7 @@ def onerun(hops, size, rdc):
     global resetNeeded
     global benchLaunched
     global failCount
+    global failLog
     
     print "Preparing bench"
     if compilationNeeded:
@@ -210,9 +212,17 @@ def onerun(hops, size, rdc):
         print "Bench failed"
         print ret["log"]
         return
-    if re.search("Request timed out", ret["log"][len(ret["log"])-2]):
+    if not re.search("Round Trip Time", ret["log"][len(ret["log"])-2]):
         print "No reply"
         failCount += 1
+        
+        if os.path.exists(failLog):
+            fail_file = open(failLog, 'a')
+        else:
+            fail_file = open(failLog, 'w')
+        fail_file.write("%d	%d	%s\n" % (hops, size, rdc) )
+        fail_file.close()
+        
         return
                 
     latency = getLatency(ret["log"])
@@ -338,12 +348,10 @@ def main():
     for niter in range(100):
         for size in sizeList:
             for hops in hopsList1:
-                if hops==4 and size>240:
-                    print "Skipping long RTT due to client bug"
-                    continue
                 dobench(hops, size, rdc, niter+1, dstDir)
     
     
+    return
     print "\n\nEXPERIMENT 2\n============\n"
     
     size = 64
