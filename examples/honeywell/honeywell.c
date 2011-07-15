@@ -757,6 +757,9 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 		return;
 	}
 	//overview code
+	//this would output an overview of all the slots in the timerset
+	//note that one needs to somehow retrieve the slots from the thermostat somewhere else
+	//To enable this you also need to enlarge the slot range from the interval [1;8] to [0;8] above
 	/*if(slot==-1){
 		if (REST.get_method_type(request)==METHOD_POST){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
@@ -871,7 +874,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 						success = 0;
 					}
 					else{
-						if(isdigit(time[0]) && isdigit(time[1]) && isdigit(time[3]) && isdigit(time[4]) ){
+						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){
 							int hour = atoi(&time[0]);
 							int minute = atoi(&time[3]);
 							if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){
