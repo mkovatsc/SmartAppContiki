@@ -32,7 +32,7 @@
 
 #include "coap-06-separate.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
@@ -52,12 +52,13 @@ coap_stack_dump("coap_separate_handlerX");
     PRINTF("Separate response for /%s \n", resource->url);
     /* send separate ACK. */
     coap_packet_t ack[1];
+    /* ACK with empty code (0) */
     coap_init_message(ack, COAP_TYPE_ACK, 0, ((coap_packet_t *)request)->tid);
     /* Should only overwrite Header which is already parsed to request. */
     coap_send_message(&UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport, (uip_appdata + uip_ext_len), coap_serialize_message(ack, (uip_appdata + uip_ext_len)));
 
     /* Change response to separate response. */
-    ((coap_packet_t *)response)->type = COAP_TYPE_NON;
+    ((coap_packet_t *)response)->type = COAP_TYPE_CON;
     ((coap_packet_t *)response)->tid = coap_get_tid();
   }
 }

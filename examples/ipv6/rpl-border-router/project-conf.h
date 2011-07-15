@@ -37,6 +37,8 @@
 #define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
 #endif
 
+#define NETSTACK_CONF_RDC       contikimac_driver
+
 #ifndef UIP_FALLBACK_INTERFACE
 #define UIP_FALLBACK_INTERFACE   rpl_interface
 #endif

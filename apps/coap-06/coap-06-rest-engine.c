@@ -502,8 +502,8 @@ const struct rest_implementation coap_rest_implementation = {
   coap_notify_observers,
   (restful_post_handler) coap_observe_handler,
 
-  (restful_pre_handler) coap_separate_handler,
-  NULL,
+  NULL, /* default pre-handler (set separate handler after activation if needed) */
+  NULL, /* default post-handler for non-observable resources */
 
   {
     CONTENT_2_05,

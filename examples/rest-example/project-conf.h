@@ -54,6 +54,6 @@
 #define WEBSERVER_CONF_CFS_CONNS 2
 #endif
 
-//#define NETSTACK_CONF_RDC       contikimac_driver
+#define NETSTACK_CONF_RDC       contikimac_driver
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
