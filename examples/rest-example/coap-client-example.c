@@ -16,6 +16,9 @@
 #elif WITH_COAP == 6
 #include "coap-06.h"
 #include "coap-06-transactions.h"
+#elif WITH_COAP == 7
+#include "coap-07.h"
+#include "coap-07-transactions.h"
 #else
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif

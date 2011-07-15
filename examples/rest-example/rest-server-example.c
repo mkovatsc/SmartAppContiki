@@ -18,13 +18,17 @@
 #include "dev/leds.h"
 #endif /*defined (CONTIKI_TARGET_SKY)*/
 
+
+/* For CoAP-specific example: not required for normal RESTful Web service. */
 #if WITH_COAP == 3
 #include "coap-03.h"
 #elif WITH_COAP == 6
 #include "coap-06.h"
+#elif WITH_COAP == 7
+#include "coap-07.h"
 #else
-#error "CoAP version defined by WITH_COAP not implemented"
-#endif
+#warning "REST example without CoAP"
+#endif /* CoAP-specific example */
 
 #define DEBUG 0
 #if DEBUG
@@ -116,6 +120,8 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   {
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UH %.*s\n", len, str);
   }
+
+/* CoAP-specific example: actions not required for normal RESTful Web service. */
 #if WITH_COAP > 1
   if (coap_get_header_observe(request, &observe))
   {
@@ -148,7 +154,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   {
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Bl %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
   }
-#elif WITH_COAP == 6
+#elif WITH_COAP >= 5
   if ((len = coap_get_header_location_path(request, &str)))
   {
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "LP %.*s\n", len, str);
@@ -165,9 +171,13 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   {
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "B1 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
   }
+#if WITH_COAP >= 7
+
 #endif
 
 #endif
+#endif /* CoAP-specific example */
+
   if ((len = REST.get_query(request, &query)))
   {
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Qu %.*s\n", len, query);
@@ -179,7 +189,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 
   if (strpos == REST_MAX_CHUNK_SIZE)
   {
-      buffer[REST_MAX_CHUNK_SIZE-1] = 0xBB;
+      buffer[REST_MAX_CHUNK_SIZE-1] = 0xBB; /* '»' to indicate truncation */
   }
 
   REST.set_response_payload(response, buffer, strpos);
@@ -189,22 +199,29 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   REST.set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
-  REST.set_header_etag(response, opaque, 3);
+  REST.set_header_etag(response, opaque, 2);
   REST.set_header_location(response, location); /* Initial slash is omitted by framework */
+
+/* CoAP-specific example: actions not required for normal RESTful Web service. */
 #if WITH_COAP > 1
   coap_set_header_uri_host(response, "tiki");
   coap_set_header_observe(response, 10);
   opaque[0] = 0x01;
-  opaque[1] = 0xCC;
-  coap_set_header_token(response, opaque, 2); /* If this function is not called, the Token is copied from the request by default. */
+  coap_set_header_token(response, opaque, 1); /* If this function is not called, the Token is copied from the request by default. */
 #if WITH_COAP == 3
   coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
-#elif WITH_COAP == 6
+#elif WITH_COAP >= 5
   coap_set_header_proxy_uri(response, "ftp://x");
   coap_set_header_block2(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
   coap_set_header_block1(response, 23, 0, 16);
+#if WITH_COAP >= 7
+  coap_set_header_accept(response, TEXT_PLAIN);
+  coap_set_header_accept(response, APPLICATION_JSON);
+  coap_set_header_if_none_match(response);
 #endif
+
 #endif
+#endif /* CoAP-specific example */
 }
 
 /*

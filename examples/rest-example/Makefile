@@ -8,7 +8,7 @@ PROJECT_SOURCEFILES += static-routing.c
 UIP_CONF_IPV6=1
 
 # variable for this Makefile
-WITH_COAP=6
+WITH_COAP=7
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
@@ -24,7 +24,13 @@ CFLAGS += -ffunction-sections
 LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 
 # REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 6)
+ifeq ($(WITH_COAP), 7)
+${info INFO: compiling with CoAP-07}
+CFLAGS += -DWITH_COAP=7
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += coap-07
+else ifeq ($(WITH_COAP), 6)
 ${info INFO: compiling with CoAP-06}
 CFLAGS += -DWITH_COAP=6
 CFLAGS += -DREST=coap_rest_implementation

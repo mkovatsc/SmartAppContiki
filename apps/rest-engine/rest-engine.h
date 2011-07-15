@@ -119,17 +119,23 @@ struct rest_implementation {
   /** Set the content-type of a response. */
   int (* set_header_content_type)(void *response, unsigned int content_type);
 
+  int (* get_header_accept)(void *request, uint16_t **accept);
+
   /** Get the Max-Age option of a request. */
   int (* get_header_max_age)(void *request, uint32_t *age);
 
   /** Set the Max-Age option of a response. */
   int (* set_header_max_age)(void *response, uint32_t age);
 
-  /** Get the ETag option of a request (If-None-Match for HTTP). */
-  int (* get_header_etag)(void *request, const uint8_t **etag);
-
   /** Set the ETag option of a response. */
   int (* set_header_etag)(void *response, uint8_t *etag, size_t length);
+
+  //FIXME support multiple ETags
+  /** Get the If-Match option of a request. */
+  int (* get_header_if_match)(void *request, const uint8_t **etag);
+
+  /** Get the If-Match option of a request. */
+  int (* get_header_if_none_match)(void *request);
 
   /** Get the Host option of a request. */
   int (* get_header_host)(void *request, const char **host);
