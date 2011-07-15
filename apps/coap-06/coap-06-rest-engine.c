@@ -79,6 +79,11 @@ handle_incoming_data(void)
   uint8_t *data = uip_appdata + uip_ext_len;
   uint16_t data_len = uip_datalen() - uip_ext_len;
 
+  /* Static declaration reduces stack peaks and program code size. */
+  static coap_packet_t message[1]; /* This way the packet can be treated as pointer as usual. */
+  static coap_packet_t response[1];
+  static coap_transaction_t *transaction = NULL;
+
   if (uip_newdata()) {
 
     PRINTF("receiving UDP datagram from: ");
@@ -86,9 +91,6 @@ handle_incoming_data(void)
     PRINTF(":%u\n  Length: %u\n  Data: ", uip_ntohs(UIP_UDP_BUF->srcport), data_len );
     PRINTBITS(data, data_len);
     PRINTF("\n");
-
-    coap_packet_t message[1];
-    coap_transaction_t *transaction = NULL;
 
     coap_error_code = coap_parse_message(message, data, data_len);
 
@@ -108,13 +110,12 @@ handle_incoming_data(void)
         /* Use transaction buffer for response to confirmable request. */
         if ( (transaction = coap_new_transaction(message->tid, &UIP_IP_BUF->srcipaddr, UIP_UDP_BUF->srcport)) )
         {
-          uint32_t block_num = 0;
-          uint16_t block_size = REST_MAX_CHUNK_SIZE;
-          uint32_t block_offset = 0;
-          int32_t new_offset = 0;
+          static uint32_t block_num = 0;
+          static uint16_t block_size = REST_MAX_CHUNK_SIZE;
+          static uint32_t block_offset = 0;
+          static int32_t new_offset = 0;
 
           /* prepare response */
-          coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
           if (message->type==COAP_TYPE_CON)
           {
             /* Reliable CON requests are answered with an ACK. */
@@ -202,7 +203,6 @@ handle_incoming_data(void)
       else
       {
         /* Responses */
-        coap_transaction_t *t;
 
         if (message->type==COAP_TYPE_ACK)
         {
@@ -219,18 +219,19 @@ handle_incoming_data(void)
           }
         }
 
-        if ( (t = coap_get_transaction_by_tid(message->tid)) )
+        if ( (transaction = coap_get_transaction_by_tid(message->tid)) )
         {
           /* Free transaction memory before callback, as it may create a new transaction. */
-          restful_response_handler callback = t->callback;
-          void *callback_data = t->callback_data;
-          coap_clear_transaction(t);
+          restful_response_handler callback = transaction->callback;
+          void *callback_data = transaction->callback_data;
+          coap_clear_transaction(transaction);
 
           /* Check if someone registered for the response */
           if (callback) {
             callback(callback_data, message);
           }
-        } /* if (transaction) */
+        } /* if (ACKed transaction) */
+        transaction = NULL;
       }
     } /* if (parsed correctly) */
 
@@ -240,6 +241,7 @@ handle_incoming_data(void)
     else
     {
       PRINTF("ERROR %u: %s\n", coap_error_code, coap_error_message);
+      coap_clear_transaction(transaction);
 
       /* Set to sendable error code. */
       if (coap_error_code >= 192)
@@ -495,8 +497,8 @@ const struct rest_implementation coap_rest_implementation = {
   coap_notify_observers,
   (restful_post_handler) coap_observe_handler,
 
-  (restful_pre_handler) coap_separate_handler,
-  NULL,
+  NULL, /* default pre-handler (set separate handler after activation if needed) */
+  NULL, /* default post-handler for non-observable resources */
 
   {
     CONTENT_2_05,
