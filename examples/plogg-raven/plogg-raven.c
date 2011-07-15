@@ -695,13 +695,13 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			 	sec=(len==5)?0:atoi(&string[6]);
 
 				if (len==8 && !(isdigit(string[6]) && isdigit(string[7]) && string[5]==':') ){
-					success = 0;
+					success = false;
 				}
 				else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 					success = false;
 				}
 				else if ( string[2]!=':' ){
-					success = 0;
+					success = false;
 				}
 				else if (!( 0<= hour && hour<=23 && 0<=min && min <=59 && 0<=sec && sec<=59)){
 					success = false; 
@@ -884,6 +884,9 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
+			else if ( string[2]!=':' ){
+				success = false;
+			}
 			else if (!( 0<= start_hour && start_hour<=23 && 0<=start_min && start_min <=59)){
 				success = false; 
 			}
@@ -898,6 +901,9 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			end_hour = atoi(&string[0]);
 			end_min = atoi(&string[3]);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
+				success = false;
+			}
+			else if ( string[2]!=':' ){
 				success = false;
 			}
 			else if (!( 0<= end_hour && end_hour<=23 && 0<=end_min && end_min <=59)){
@@ -1217,6 +1223,9 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
+			else if ( string[2]!=':' ){
+				success = false;
+			}
 			else if (!( 0<= start_hour && start_hour<=23 && 0<=start_min && start_min <=59)){
 				success = false; 
 			}
@@ -1231,6 +1240,9 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			end_hour = atoi(&string[0]);
 			end_min = atoi(&string[3]);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
+				success = false;
+			}
+			else if ( string[2]!=':' ){
 				success = false;
 			}
 			else if (!( 0<= end_hour && end_hour<=23 && 0<=end_min && end_min <=59)){
