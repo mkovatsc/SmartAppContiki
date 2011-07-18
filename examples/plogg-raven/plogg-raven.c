@@ -455,7 +455,7 @@ PROCESS_THREAD(plogg_process, ev, data)
   rs232_set_input(RS232_PORT_0, uart_get_char);
   Led1_on(); // red
 
-  etimer_set(&etimer, CLOCK_SECOND * 10);
+  etimer_set(&etimer, CLOCK_SECOND * 15);
 
   while (1) {
     PROCESS_WAIT_EVENT();
@@ -468,28 +468,28 @@ PROCESS_THREAD(plogg_process, ev, data)
 				case 0:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 
 				case 1:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 0000-0000\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 2:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 1 0000-0000\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 3:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 2 0000-0000\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 4:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 3 0000-0000\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 2);
+					etimer_set(&etimer, CLOCK_SECOND * 3);
 					break;
 
 
@@ -497,47 +497,51 @@ PROCESS_THREAD(plogg_process, ev, data)
 				case 128:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time0),eeprom_read_word(&ee_end_time0));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 129:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 1 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time1),eeprom_read_word(&ee_end_time1));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 130:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 2 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time2),eeprom_read_word(&ee_end_time2));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 131:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 3 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time3),eeprom_read_word(&ee_end_time3));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 1);
+					etimer_set(&etimer, CLOCK_SECOND *1);
 					break;
 				case 132:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 1\r\n"));
 					mode_switch_number++;
-					etimer_set(&etimer, CLOCK_SECOND * 2);
+					etimer_set(&etimer, CLOCK_SECOND * 3);
 					break;	
 
 				default:
-					etimer_set(&etimer, CLOCK_SECOND * 2);
+					etimer_set(&etimer, CLOCK_SECOND * 3);
 					Led2_toggle(); //Green
 					switch (poll_number){
 	    		 	case 15:
-	    		 	case 45:
+	    		 	case 35:
+						case 55:
 	      			printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 							break;
 						case 5:
-						case 35:
+						case 25:
+						case 45:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 							break;
-						case 25:
+					/*  No polling required for Tariff Timer and Rate?
+							case 25:
 	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
 							break;
 						case 55:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
 							break;
+					*/ 
 						default:
 							if (!(poll_number%10)){
 								printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
@@ -632,7 +636,7 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	int index=0;
 	const char * query = NULL;
 	bool success = true;
- 	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
+// 	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 
 	int len = REST.get_query(request, &query);
 
@@ -684,7 +688,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int hour, min,sec;
 
 	if (REST.get_method_type(request) == METHOD_GET){
-		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+//		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u:%02u:%02u\n"), poll_data.time_h,poll_data.time_m,poll_data.time_s);
 	}
 	else{
@@ -735,7 +739,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int month, day, year;
 
 	if (REST.get_method_type(request) == METHOD_GET){
-		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+//		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u %s %u\n"),poll_data.date_d,poll_data.date_m,poll_data.date_y);
 	}
 	else{
@@ -848,12 +852,12 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  		REST.set_response_status(response, REST.status.BAD_REQUEST);
 		*offset += REST_MAX_CHUNK_SIZE;
 		if (*offset >= strpos){
-			printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+//			printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 			*offset = -1;
 		}
 		return;
 	}
-	printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
+//	printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
@@ -1034,7 +1038,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	bool success = false;
 	uint8_t len;
 	const char * query = NULL;
-	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
+//	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 
 	if ((len = REST.get_query(request, &query))){
 		if(isdigit(query[0]) && len == 1){
@@ -1080,7 +1084,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	bool success = false;
 	uint8_t len;
 	const char * query = NULL;
-	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
+//	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 
 	if ((len = REST.get_query(request, &query))){
 		if(isdigit(query[0]) && len == 1){
@@ -1401,31 +1405,6 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	REST.set_response_payload(response, (uint8_t *) temp , index);
 }
 
-/******************************** Stack ************************************
-
-RESOURCE(stack, METHOD_GET, "stack", "stack");
-
-void
-stack_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	char temp[REST_MAX_CHUNK_SIZE];
-	int index=0;
-
-	//See contiki-raven-main.c for initialization of the magic numbers
-	extern uint16_t __bss_end;
-	uint16_t p=(uint16_t)&__bss_end;
-    do {
-      if (*(uint16_t *)p != 0x4242) {
-        index+=snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Never-used stack > %d bytes"),p-(uint16_t)&__bss_end);
-        break;
-      }
-      p+=100;
-    } while (p<RAMEND-100);
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t *) temp , index);
-}
-
-*/
 /****************************** Coap Process ***********************************/
 
 PROCESS_THREAD(coap_process, ev, data)
@@ -1451,8 +1430,6 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_timer);
 	rest_activate_resource(&resource_power);
 	rest_activate_resource(&resource_mode);
-
-//	rest_activate_resource(&resource_stack);
 
 
 	memset(&poll_data, 0, sizeof(poll_data));	
