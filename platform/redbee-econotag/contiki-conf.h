@@ -67,12 +67,12 @@
 #define CLIF
 
 /* Baud rate */
-#define MOD 9999
+#define BRMOD 9999
 /*  230400 bps, INC=767, MOD=9999, 24Mhz 16x samp */
 /*  115200 bps, INC=767, MOD=9999, 24Mhz 8x samp */
-#define INC 767  
+#define BRINC 767  
 /*  921600 bps, MOD=9999, 24Mhz 16x samp */
-//#define INC 3071 
+//#define BRINC 3071 
 #define SAMP UCON_SAMP_8X
 //#define SAMP UCON_SAMP_16X
 
@@ -85,6 +85,7 @@
 #define USE_32KHZ_XTAL              0
 
 #define BLOCKING_TX 1
+#define MACA_AUTOACK 1
 #define NULLRDC_CONF_802154_AUTOACK_HW 1
 
 #define USE_WDT 0
@@ -100,6 +101,9 @@
 #endif /* RF_CHANNEL */
 
 /* start of conitki config. */
+#define PLATFORM_HAS_LEDS 1
+#define PLATFORM_HAS_BUTTON 1
+
 #define RIMEADDR_CONF_SIZE              8
 
 /* EUI64 generation */

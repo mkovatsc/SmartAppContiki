@@ -191,7 +191,7 @@ struct file_header {
   uint8_t deprecated_eof_hint;
   uint8_t flags;
   char name[COFFEE_NAME_LENGTH];
-} __attribute__((packed));
+};
 
 /* This is needed because of a buggy compiler. */
 struct log_param {
@@ -799,7 +799,6 @@ create_log(struct file *file, struct file_header *hdr)
 static int
 merge_log(coffee_page_t file_page, int extend)
 {
-  coffee_page_t log_page;
   struct file_header hdr, hdr2;
   int fd, n;
   cfs_offset_t offset;
@@ -808,7 +807,6 @@ merge_log(coffee_page_t file_page, int extend)
   int i;
 
   read_header(&hdr, file_page);
-  log_page = hdr.log_page;
 
   fd = cfs_open(hdr.name, CFS_READ);
   if(fd < 0) {
@@ -1141,7 +1139,7 @@ cfs_read(int fd, void *buf, unsigned size)
       r = bytes_left;
     }
     fdp->offset += r;
-    buf += r;
+    buf = (char *)buf + r;
   }
 #endif /* COFFEE_MICRO_LOGS */
 
@@ -1208,7 +1206,7 @@ cfs_write(int fd, const void *buf, unsigned size)
 	/* A log record was written. */
 	bytes_left -= i;
 	fdp->offset += i;
-	buf += i;
+	buf = (char *)buf + i;
 
         /* Update the file end for a potential log merge that might
            occur while writing log records. */

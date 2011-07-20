@@ -10,13 +10,22 @@
 
 #include "rest-engine.h"
 
-#if defined (CONTIKI_TARGET_SKY) /* Any other targets will be added here (&& defined (OTHER))*/
-#include "dev/light-sensor.h"
+
+#if defined (PLATFORM_HAS_BUTTON)
 #include "dev/button-sensor.h"
-#include "dev/battery-sensor.h"
-#include "dev/sht11-sensor.h"
+#endif
+#if defined (PLATFORM_HAS_LEDS)
 #include "dev/leds.h"
-#endif /*defined (CONTIKI_TARGET_SKY)*/
+#endif
+#if defined (PLATFORM_HAS_LIGHT)
+#include "dev/light-sensor.h"
+#endif
+#if defined (PLATFORM_HAS_BATTERY)
+#include "dev/battery-sensor.h"
+#endif
+#if defined (PLATFORM_HAS_SHT11)
+#include "dev/sht11-sensor.h"
+#endif
 
 
 /* For CoAP-specific example: not required for normal RESTful Web service. */
@@ -306,7 +315,7 @@ polling_periodic_handler(resource_t *r)
   return 1;
 }
 
-#if defined (CONTIKI_TARGET_SKY)
+#if defined (PLATFORM_HAS_BUTTON)
 /*
  * Example for an event resource.
  * Additionally takes a period parameter that defines the interval to call [name]_periodic_handler().
@@ -341,7 +350,9 @@ event_event_handler(resource_t *r)
   REST.notify_subscribers(r->url, 0, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
   return 1;
 }
+#endif /* PLATFORM_HAS_BUTTON */
 
+#if defined (PLATFORM_HAS_LEDS)
 /*A simple actuator example, depending on the color query parameter and post variable mode, corresponding led is activated or deactivated*/
 RESOURCE(led, METHOD_POST | METHOD_PUT , "leds", "title=\"Led control (use ?color=red|green|blue and POST/PUT mode=on|off)\";rt=\"Control\"");
 
@@ -389,63 +400,6 @@ led_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
   }
 }
 
-/* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(light, METHOD_GET, "light", "title=\"Photosynthetic and solar light (supports JSON)\";rt=\"LightSensor\"");
-void
-light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  static uint8_t etag[] = {0xAB, 0xCD};
-
-  uint16_t light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
-  uint16_t light_solar = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
-
-  if (REST.get_header_content_type(request)==REST.type.TEXT_PLAIN || REST.get_header_content_type(request)==REST.type.TEXT_HTML) {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf(buffer, REST_MAX_CHUNK_SIZE, "%u;%u", light_photosynthetic, light_solar);
-
-    REST.set_header_etag(response, etag, 2);
-    REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-  } else if (REST.get_header_content_type(request)==REST.type.APPLICATION_JSON) {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
-
-    REST.set_header_etag(response, etag, 2);
-    REST.set_response_payload(response, buffer, strlen(buffer));
-  } else {
-    char *info = "Supporting content-types text/plain, text/html, and application/json";
-    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
-    REST.set_response_payload(response, (uint8_t *)info, strlen(info));
-  }
-}
-
-/* A simple getter example. Returns the reading from light sensor with a simple etag */
-RESOURCE(battery, METHOD_GET, "battery", "title=\"Battery status\";rt=\"Battery\"");
-void
-battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-  static uint8_t etag[] = {0xAB, 0xCD};
-
-  int battery = battery_sensor.value(0);
-
-  if (REST.get_header_content_type(request)==REST.type.TEXT_PLAIN || REST.get_header_content_type(request)==REST.type.TEXT_HTML) {
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    snprintf(buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
-
-    REST.set_header_etag(response, etag, 2);
-    REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
-  } else if (REST.get_header_content_type(request)==REST.type.APPLICATION_JSON) {
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
-
-    REST.set_header_etag(response, etag, 2);
-    REST.set_response_payload(response, buffer, strlen(buffer));
-  } else {
-    char *info = "Supporting content-types text/plain, text/html, and application/json";
-    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
-    REST.set_response_payload(response, (uint8_t *)info, strlen(info));
-  }
-}
-
 /* A simple actuator example. Toggles the red led */
 RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "toggle", "title=\"Red LED\";rt=\"Control\"");
 void
@@ -453,7 +407,81 @@ toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 {
   leds_toggle(LEDS_RED);
 }
-#endif /*defined (CONTIKI_TARGET_SKY)*/
+#endif /* PLATFORM_HAS_LEDS */
+
+#if defined (PLATFORM_HAS_LIGHT)
+/* A simple getter example. Returns the reading from light sensor with a simple etag */
+RESOURCE(light, METHOD_GET, "light", "title=\"Photosynthetic and solar light (supports JSON)\";rt=\"LightSensor\"");
+void
+light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  uint16_t light_photosynthetic = light_sensor.value(LIGHT_SENSOR_PHOTOSYNTHETIC);
+  uint16_t light_solar = light_sensor.value(LIGHT_SENSOR_TOTAL_SOLAR);
+
+  uint16_t *accept = NULL;
+  int num = REST.get_header_accept(request, &accept);
+
+  if ((num==0) | (num && accept[0]==REST.type.TEXT_PLAIN))
+  {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    snprintf(buffer, REST_MAX_CHUNK_SIZE, "%u;%u", light_photosynthetic, light_solar);
+
+    REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
+  }
+  else if (num && (accept[0]==REST.type.APPLICATION_XML))
+  {
+    REST.set_header_content_type(response, REST.type.APPLICATION_XML);
+    snprintf(buffer, REST_MAX_CHUNK_SIZE, "<light photosynthetic=\"%u\" solar=\"%u\"/>", light_photosynthetic, light_solar);
+
+    REST.set_response_payload(response, buffer, strlen(buffer));
+  }
+  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
+  {
+    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+    snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'light':{'photosynthetic':%u,'solar':%u}}", light_photosynthetic, light_solar);
+
+    REST.set_response_payload(response, buffer, strlen(buffer));
+  }
+  else
+  {
+    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
+    REST.set_response_payload(response, (uint8_t *)"Supporting content-types text/plain, application/xml, and application/json", 74);
+  }
+}
+#endif /* PLATFORM_HAS_LIGHT */
+
+#if defined (PLATFORM_HAS_BATTERY)
+/* A simple getter example. Returns the reading from light sensor with a simple etag */
+RESOURCE(battery, METHOD_GET, "battery", "title=\"Battery status\";rt=\"Battery\"");
+void
+battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  int battery = battery_sensor.value(0);
+
+  uint16_t *accept = NULL;
+  int num = REST.get_header_accept(request, &accept);
+
+  if ((num==0) | (num && accept[0]==REST.type.TEXT_PLAIN))
+  {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    snprintf(buffer, REST_MAX_CHUNK_SIZE, "%d", battery);
+
+    REST.set_response_payload(response, (uint8_t *)buffer, strlen(buffer));
+  }
+  else if (num && (accept[0]==REST.type.APPLICATION_JSON))
+  {
+    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+    snprintf(buffer, REST_MAX_CHUNK_SIZE, "{'battery':%d}", battery);
+
+    REST.set_response_payload(response, buffer, strlen(buffer));
+  }
+  else
+  {
+    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
+    REST.set_response_payload(response, (uint8_t *)"Supporting content-types text/plain and application/json", 56);
+  }
+}
+#endif /* PLATFORM_HAS_BATTERY */
 
 
 PROCESS(rest_server_example, "Rest Server Example");
@@ -476,10 +504,6 @@ PROCESS_THREAD(rest_server_example, ev, data)
   PRINTF("LL header: %u\n", UIP_LLH_LEN);
   PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
   PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
-#if WITH_COAP == 3
-  PRINTF("CoAP max packet: %u\n", COAP_MAX_PACKET_SIZE);
-  PRINTF("CoAP transactions: %u\n", COAP_MAX_OPEN_TRANSACTIONS);
-#endif
 
 /* if static routes are used rather than RPL */
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
@@ -496,28 +520,33 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_activate_resource(&resource_chunks);
   rest_activate_periodic_resource(&periodic_resource_polling);
 
-#if defined (CONTIKI_TARGET_SKY)
-  SENSORS_ACTIVATE(light_sensor);
+#if defined (PLATFORM_HAS_BUTTON)
   SENSORS_ACTIVATE(button_sensor);
-  SENSORS_ACTIVATE(battery_sensor);
-
   rest_activate_event_resource(&resource_event);
+#endif
+#if defined (PLATFORM_HAS_LEDS)
   rest_activate_resource(&resource_led);
-  rest_activate_resource(&resource_light);
-  rest_activate_resource(&resource_battery);
   rest_activate_resource(&resource_toggle);
-#endif /*defined (CONTIKI_TARGET_SKY)*/
+#endif /* PLATFORM_HAS_LEDS */
+#if defined (PLATFORM_HAS_LIGHT)
+  SENSORS_ACTIVATE(light_sensor);
+  rest_activate_resource(&resource_light);
+#endif
+#if defined (PLATFORM_HAS_BATTERY)
+  SENSORS_ACTIVATE(battery_sensor);
+  rest_activate_resource(&resource_battery);
+#endif
 
   /* Define application-specific events here. */
   while(1) {
     PROCESS_WAIT_EVENT();
-#if defined (CONTIKI_TARGET_SKY)
+#if defined (PLATFORM_HAS_BUTTON)
     if (ev == sensors_event && data == &button_sensor) {
       PRINTF("BUTTON\n");
       /* Call the event_handler for this application-specific event. */
       event_event_handler(&resource_event);
     }
-#endif
+#endif /* PLATFORM_HAS_BUTTON */
   } /* while (1) */
 
   PROCESS_END();

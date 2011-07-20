@@ -35,10 +35,16 @@
  * Updated : $Date: 2010/08/24 16:26:38 $
  *           $Revision: 1.1 $
  */
-
+#include "contiki.h"
 #include "dev/battery-sensor.h"
 #include "dev/sky-sensors.h"
+
+#ifdef __IAR_SYSTEMS_ICC__
+#include <msp430.h>
+#else
 #include <io.h>
+#endif
+
 
 const struct sensors_sensor battery_sensor;
 static uint8_t active;

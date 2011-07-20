@@ -52,4 +52,3 @@ TODOs
 * Blockwise uploads (for POST/PUT payload)
 * Multiple If-Match ETags
 * (Message deduplication)
-
