@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -24,7 +27,13 @@
  * SUCH DAMAGE.
  *
  * This file is part of the Contiki operating system.
- *
+ */
+
+/**
+ * \file
+ *      CoAP's reliable transport
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #include "contiki.h"
