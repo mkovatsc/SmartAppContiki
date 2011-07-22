@@ -82,7 +82,7 @@ static unsigned char uart_buf_data[128] = {0};
 #if DEBUG
 static char debug_buffer[128];
 #endif
-static int poll_time = 10;
+static uint8_t poll_time = 90;
 
 enum mode {manual=0, timers=1, valve=2};
 enum request_type {debug, idle, poll, auto_temperatures, set_auto_temperatures, auto_mode, get_timer};
@@ -186,7 +186,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	Led1_on(); // red
 
-	//etimer_set(&etimer, CLOCK_SECOND * poll_time);
+	etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
 	request_state = idle;
 
@@ -352,25 +352,25 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		bool success = true;
 
-		int len = REST.get_post_variable(request, "mode", &string);
+		int len = coap_get_payload(request, &string);
 		if(len == 0){ 
 			success = false;
 		}
 		else{
-			if(strncmp_P(string,PSTR("manual"),len)==0){
+			if(strncmp_P((char*)string,PSTR("manual"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M00\n"));
 				strncpy_P((char*)buffer, PSTR("New mode is: manual"), preferred_size);
 			}
-			else if(strncmp_P(string,PSTR("auto"),len)==0){
+			else if(strncmp_P((char*)string,PSTR("auto"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M01\n"));
 				strncpy_P((char*)buffer, PSTR("New mode is: auto"), preferred_size);
 			}
-			else if(strncmp_P(string,PSTR("valve"),len)==0){
+			else if(strncmp_P((char*)string,PSTR("valve"),len)==0){
 				request_state = poll;
 				printf_P(PSTR("M02\n"));
 				strncpy_P((char*)buffer, PSTR("New mode is: valve"), preferred_size);
@@ -382,7 +382,7 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strcpy_P((char*)buffer, PSTR("Payload format: mode={auto, manual, valve}"));
+			strcpy_P((char*)buffer, PSTR("Payload format: {auto, manual, valve}"));
 		}
 	}
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -398,25 +398,30 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 		printf_P(PSTR("D\n"));
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		if(REST.get_post_variable(request, "value", &string) == 0){
+		int len = coap_get_payload(request, &string);
+		if(len != 3 && len != 2){
 			success = 0;
 		}
 		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				request_state = poll;
-				printf_P(PSTR("A%02x\n"),value/5);
-				strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
+			int i;
+			for(i=0; i<len; i++){
+				if (!isdigit(string[i])){
+					success = 0;
+					break;
+				}
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
+		}
+		else{
+			uint16_t value = atoi((char*)string);
+			request_state = poll;
+			printf_P(PSTR("A%02x\n"),value/5);
+			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 		}
 	}
 
@@ -431,19 +436,23 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_time);
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		if(REST.get_post_variable(request, "value", &string) == 0){
+		int len = coap_get_payload(request, &string);
+		if(len == 0){
 			success = 0;
 		}
 		else{
-			if (!isdigit(string[0])){
-				success=0;
-			} 
-			else{
-				// the poll intervall has to be bigger than 0
-				int poll_intervall = atoi(string);
-				if(poll_intervall > 0){
+			int i;
+			for(i=0; i<len; i++){
+				if (!isdigit(string[i])){
+					success = 0;
+					break;
+				}
+			}
+			if(success){
+				int poll_intervall = atoi((char*)string);
+				if(poll_intervall < 255 && poll_intervall > 0){
 					poll_time = poll_intervall;
 					strncpy_P((char*)buffer, PSTR("Successfully set poll intervall"), preferred_size);
 				}
@@ -454,7 +463,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=aa, eg: value=15 sets the poll interval to 15 seconds"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 15 sets the poll interval to 15 seconds"), preferred_size);
 		}
 	}
 
@@ -471,25 +480,30 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 		printf_P(PSTR("D\n"));
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		if(REST.get_post_variable(request, "value", &string) == 0){
+		int len = coap_get_payload(request, &string);
+		if(len != 2){
 			success = 0;
 		}
 		else{
-			if (!isdigit(string[0])){
-				success=0;
-			} 
-			else{
-				int new_valve=atoi(string);
-				request_state = poll;
-				printf_P(PSTR("E%02x\n"),new_valve);
-				strncpy_P((char*)buffer, PSTR("Successfully set valve position"), preferred_size);
+			int i;
+			for(i=0; i<len; i++){
+				if (!isdigit(string[i])){
+					success = 0;
+					break;
+				}
 			}
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=aa, eg: value=47 sets the valve 47 percent"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 47 sets the valve to 47 percent"), preferred_size);
+		}
+		else{
+			int new_valve=atoi((char*)string);
+			request_state = poll;
+			printf_P(PSTR("E%02x\n"),new_valve);
+			strncpy_P((char*)buffer, PSTR("Successfully set valve position"), preferred_size);
 		}
 	}
 
@@ -506,13 +520,13 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		printf_P(PSTR("D\n"));
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		int length = REST.get_post_variable(request, "value", &string);
+		int length = coap_get_payload(request, &string);
 		if( length == 8 ){
-			int day=atoi(&string[0]);
-			int month=atoi(&string[3]);
-			int year=atoi(&string[6]);
+			int day=atoi((char*)&string[0]);
+			int month=atoi((char*)&string[3]);
+			int year=atoi((char*)&string[6]);
 
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
 				success=0;
@@ -547,7 +561,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=dd.mm.yy"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: dd.mm.yy"), preferred_size);
 		}
 	}
 
@@ -569,13 +583,13 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		printf_P(PSTR("D\n"));
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		int length = REST.get_post_variable(request, "value", &string);
+		int length = coap_get_payload(request, &string);
 		if(length==8 || length==5){
-			int hour=atoi(&string[0]);
-			int minute=atoi(&string[3]);
-			int second=(length==5)?0:atoi(&string[6]);
+			int hour=atoi((char*)&string[0]);
+			int minute=atoi((char*)&string[3]);
+			int second=(length==5)?0:atoi((char*)&string[6]);
 
 			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){
 				success = 0;
@@ -601,7 +615,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=hh:mm[:ss]"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: hh:mm[:ss]"), preferred_size);
 		}
 	}
 
@@ -616,25 +630,31 @@ static void handle_temperature(int temperature, int index, void * request, void*
 		printf_P(PSTR("G0%d\n"), index);
 	}
 	else{
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		if(REST.get_post_variable(request, "value", &string) == 0){
+		int len = coap_get_payload(request, &string);
+		if(len !=2 && len !=3){
 			success = 0;
 		}
 		else{
-			if (!isdigit(string[0])){
-				success = 0;
-			} 
-			else{
-				uint16_t value = atoi(string);
-				printf_P(PSTR("S0%d%02x\n"),index, value/5);
-				request_state = set_auto_temperatures;
-				strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
+			int i;
+			for(i=0; i<len; i++){
+				if (!isdigit(string[i])){
+					success = 0;
+					break;
+				}
 			}
 		}
+
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value=ttt, eg: value=155 sets the temperature to 15.5 degrees (steps of 0.5 between 5 and 30 possible)"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
+		}
+		else{
+			uint16_t value = atoi((char*)string);
+			printf_P(PSTR("S0%d%02x\n"),index, value/5);
+			request_state = set_auto_temperatures;
+			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 		}
 	}
 
@@ -678,19 +698,19 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode", "auto/timermode");
 void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	if (REST.get_method_type(request)==METHOD_POST){
-		const char * string = NULL;
+		const uint8_t * string = NULL;
 		int success = 1;
-		int len = REST.get_post_variable(request, "value", &string);
+		int len = coap_get_payload(request, &string);
 		if( len == 0 ){
 			success = 0;
 		}
 		else {
-			if(strncmp_P(string, PSTR("weekdays"), MAX(len,8))==0){
+			if(strncmp_P((char*)string, PSTR("weekdays"), MAX(len,8))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2201\n"));
 				strncpy_P((char*)buffer, PSTR("Timermode set to weekdays"), preferred_size);
 			}
-			else if(strncmp_P(string, PSTR("justOne"), MAX(len,7))==0){
+			else if(strncmp_P((char*)string, PSTR("justOne"), MAX(len,7))==0){
 				request_state=auto_mode;
 				printf_P(PSTR("S2200\n"));
 				strncpy_P((char*)buffer, PSTR("Timermode set to justOne"), preferred_size);
@@ -701,7 +721,7 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		if(!success){
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: value={justOne, weekdays}"), preferred_size);
+			strncpy_P((char*)buffer, PSTR("Payload format: {justOne, weekdays}"), preferred_size);
 		}
 	}
 	else{
