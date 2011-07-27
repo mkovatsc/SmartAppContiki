@@ -592,25 +592,25 @@ void
 reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
-	const char* string=NULL;
+	const uint8_t * string=NULL;
 	bool success=true;
 
 
-	int len = REST.get_post_variable(request, "section", &string);
+	int len = coap_get_payload(request, &string);
 	if(len == 0){ 
 		success = false;
 	}
 	else{
-		if (strncmp_P(string, PSTR("cost"),MAX(len,4))==0){
+		if (strncmp_P((char*)string, PSTR("cost"),MAX(len,4))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SC 1\r\n"));
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
-		else if(strncmp_P(string, PSTR("max"),MAX(len,3))==0){
+		else if(strncmp_P((char*)string, PSTR("max"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SM 1\r\n"));
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 
-		else if(strncmp_P(string, PSTR("acc"),MAX(len,3))==0){
+		else if(strncmp_P((char*)string, PSTR("acc"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SR\r\n"));
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
@@ -619,7 +619,7 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		}
 	}
   if(!success){
-		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: section={acc,cost,max}\n"));
+		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: {acc,cost,max}\n"));
  	 	REST.set_response_status(response, REST.status.BAD_REQUEST);
 	}
  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -684,7 +684,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
 	bool success = true;
-	const char* string=NULL;
+	const uint8_t * string=NULL;
 	int hour, min,sec;
 
 	if (REST.get_method_type(request) == METHOD_GET){
@@ -692,11 +692,11 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u:%02u:%02u\n"), poll_data.time_h,poll_data.time_m,poll_data.time_s);
 	}
 	else{
-		int len = REST.get_post_variable(request, "value", &string);
+		int len = coap_get_payload(request, &string);
 		if (len == 5 || len ==8){
-				hour = atoi(&string[0]);
-				min = atoi(&string[3]);
-			 	sec=(len==5)?0:atoi(&string[6]);
+				hour = atoi((char*)&string[0]);
+				min = atoi((char*)&string[3]);
+			 	sec=(len==5)?0:atoi((char*)&string[6]);
 
 				if (len==8 && !(isdigit(string[6]) && isdigit(string[7]) && string[5]==':') ){
 					success = false;
@@ -719,7 +719,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Time set to %02d:%02d:%02d\n"),hour,min,sec);
 		}
 		else{
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: value=hh:mm[:ss]\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: hh:mm[:ss]\n"));
  		 	REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
@@ -735,7 +735,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
 	bool success = true;
-	const char* string = NULL;
+	const uint8_t * string = NULL;
 	int month, day, year;
 
 	if (REST.get_method_type(request) == METHOD_GET){
@@ -744,11 +744,11 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	}
 	else{
 
-		int len = REST.get_post_variable(request,"value",&string);
+		int len = coap_get_payload(request, &string);
 		if (len==8){
-				day = atoi(&string[0]);
-				month = atoi(&string[3]);
-				year = atoi(&string[6]);
+				day = atoi((char*)&string[0]);
+				month = atoi((char*)&string[3]);
+				year = atoi((char*)&string[6]);
 				if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
 					success=false;
 				} 
@@ -779,7 +779,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Date set to %02i.%02i.%02i\n"),day,month,year);
 		}
 		else{
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: value=dd.mm.yy\n"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: dd.mm.yy\n"));
  		  REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
@@ -941,7 +941,7 @@ void
 tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
-	const char* string=NULL;
+	const uint8_t * string=NULL;
 	bool success= false;
 	uint16_t rate=0;
 	int tariff=0;
@@ -1000,12 +1000,12 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%u pence/kWh\n"),rate);
 	}
 	else{
-		int len = REST.get_post_variable(request, "value", &string);
+		int len = coap_get_payload(request, &string);
 		if (len==0){
 			success=false;
 		}
 		else{
-			rate = atoi(&string[0]);
+			rate = atoi((char*)&string[0]);
 			if (!(isdigit(string[0]))){
 				success = false;
 			}
@@ -1015,10 +1015,10 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=SS %u %u\r\n"),tariff,rate);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff+1,rate);
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff+1,rate);
 		}
 		else{
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: value=ppp\n"));
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE, PSTR("Payload: ppp\n"));
  			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
@@ -1298,7 +1298,7 @@ RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "Mode auto/manual");
 void
 mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
   
-	const char* string=NULL;
+	const uint8_t * string=NULL;
   bool success = true;
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
@@ -1317,12 +1317,12 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		}
 	}
 	else{
-		int len=REST.get_post_variable(request, "mode", &string);
+		int len = coap_get_payload(request, &string);
 		if(len == 0){
 			success = false;
 		}
 		else{
-			if(strncmp_P(string,PSTR("manual"),MAX(len,6))==0){
+			if(strncmp_P((char*) string,PSTR("manual"),MAX(len,6))==0){
 				//set all timers to 0000-0000
 				// Needs to be done by interrupts, can't send all commands at once
 				mode_switch_number=0;
@@ -1330,7 +1330,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("New mode is: manual\n"));
 				poll_data.powered = true;
 			}
-			else if(strncmp_P(string, PSTR("auto"),MAX(len,4))==0){
+			else if(strncmp_P((char*) string, PSTR("auto"),MAX(len,4))==0){
 				//set all timers
 				// Needs to be done by interrupts, can't send all commands at once
 				mode_switch_number=128;
@@ -1342,7 +1342,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			}
 		}
  	 	if (!success){
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: mode={manual,auto}"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: {manual,auto}"));
  	 	  REST.set_response_status(response, REST.status.BAD_REQUEST);
  	 	}
 	}
@@ -1356,7 +1356,7 @@ RESOURCE(power, METHOD_GET | METHOD_POST, "power", "Power On/Off");
 void
 power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
   
-	const char* string=NULL;
+	const uint8_t * string=NULL;
 	bool success = true;
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
@@ -1377,17 +1377,17 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		}
 	}
 	else{
-		int len=REST.get_post_variable(request, "value", &string);
+		int len = coap_get_payload(request, &string);
 		if(len == 0){
 			success = false;
 		}
 		else{
-			if(strncmp_P(string,PSTR("on"),MAX(len,2))==0){
+			if(strncmp_P((char*)string,PSTR("on"),MAX(len,2))==0){
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
 	  		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Power on\n"));
 				poll_data.powered=true;
 			}
-			else if(strncmp_P(string, PSTR("off"),MAX(len,2))==0){
+			else if(strncmp_P((char*)string, PSTR("off"),MAX(len,2))==0){
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 1\r\n"));
 	  		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Power off\n"));
 				poll_data.powered=false;
@@ -1397,7 +1397,7 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			}
 		}
  	 	if (!success){
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: value={on,off}"));
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Payload: {on,off}"));
  	 	  REST.set_response_status(response, REST.status.BAD_REQUEST);
  	 	}
 	}
