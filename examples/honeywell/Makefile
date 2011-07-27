@@ -5,6 +5,6 @@ all:
 	avr-size -C --mcu=at90usb1287 honeywell.elf
 
 clean:
-	${MAKE} -f Makefile.honeywell clean
+	${MAKE} TARGET=avr-ravenmote -f Makefile.honeywell clean
 	rm -rf obj_avr-ravenmote
 	rm symbols.c symbols.h honeywell.elf *.hex
