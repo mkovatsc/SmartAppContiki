@@ -534,14 +534,12 @@ PROCESS_THREAD(plogg_process, ev, data)
 						case 45:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 							break;
-					/*  No polling required for Tariff Timer and Rate?
-							case 25:
+						case 68:
 	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
 							break;
-						case 55:
+						case 78:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
 							break;
-					*/ 
 						default:
 							if (!(poll_number%10)){
 								printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
@@ -603,15 +601,18 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	else{
 		if (strncmp_P((char*)string, PSTR("cost"),MAX(len,4))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SC 1\r\n"));
+			poll_number = 15;
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 		else if(strncmp_P((char*)string, PSTR("max"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SM 1\r\n"));
+			poll_number = 25;
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 
 		else if(strncmp_P((char*)string, PSTR("acc"),MAX(len,3))==0){
 			printf_P(PSTR("UCAST:0021ED000004699D=SR\r\n"));
+			poll_number = 10;
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 		else{
@@ -716,6 +717,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=rtt%02d.%02d.%02d\r\n"),hour,min,sec);
+			poll_number = 10;
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Time set to %02d:%02d:%02d\n"),hour,min,sec);
 		}
 		else{
@@ -776,6 +778,7 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=rtd%02i.%02i.%02i\r\n"),year,month,day);
+			poll_number = 10;
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Date set to %02i.%02i.%02i\n"),day,month,year);
 		}
 		else{
@@ -873,6 +876,7 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	int index=0;
 	const char* string=NULL;
 	bool success= true;
+	char minutes[3];
 
 	if (REST.get_method_type(request) == METHOD_GET){
 	  printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
@@ -883,8 +887,10 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 		int start_hour=0;
 		int start_min=0;
 		if (len == 5){
+			strncpy(minutes, &string[3], 2);
+			minutes[2]=0;
 			start_hour = atoi(&string[0]);
-			start_min = atoi(&string[3]);
+			start_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
@@ -902,8 +908,10 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 		int end_hour=0;
 		int end_min=0;
 		if (len == 5){
+			strncpy(minutes, &string[3], 2);
+			minutes[2]=0;
 			end_hour = atoi(&string[0]);
-			end_min = atoi(&string[3]);
+			end_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
@@ -921,7 +929,8 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			uint16_t tariff_start=start_hour*100+start_min;
 			uint16_t tariff_end=end_hour*100+end_min;
 			printf_P(PSTR("UCAST:0021ED000004699D=ST %04u-%04u\r\n"),tariff_start,tariff_end);
-			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff 0 active Time: %02u:%02u-%02u:%02u\n"),tariff_start/100,tariff_start % 100,tariff_end/100,tariff_end % 100);
+			poll_number = 68;
+			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Tariff 1 active Time: %02u:%02u-%02u:%02u\n"),tariff_start/100,tariff_start % 100,tariff_end/100,tariff_end % 100);
 		}
 		else{
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE, PSTR("Payload: start=hh:mm&end=hh:mm\n"));
@@ -1015,6 +1024,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=SS %u %u\r\n"),tariff,rate);
+			poll_number = 78;
 			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("Tariff %u is now %u pence/kWh\n"),tariff+1,rate);
 		}
 		else{
@@ -1132,6 +1142,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	bool success = false;
 	uint8_t len;
 	const char * query = NULL;
+	char minutes[3];
 
 	if (!(poll_data.mode == AUTO)){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
@@ -1222,8 +1233,10 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		int start_hour=0;
 		int start_min=0;
 		if (len == 5){
+			strncpy(minutes, &string[3], 2);
+			minutes[2]=0;
 			start_hour = atoi(&string[0]);
-			start_min = atoi(&string[3]);
+			start_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
@@ -1241,8 +1254,10 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		int end_hour=0;
 		int end_min=0;
 		if (len == 5){
+			strncpy(minutes, &string[3], 2);
+			minutes[2]=0;
 			end_hour = atoi(&string[0]);
-			end_min = atoi(&string[3]);
+			end_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
 				success = false;
 			}
