@@ -279,10 +279,10 @@ coap_set_service_callback(service_callback_t callback)
   service_cbk = callback;
 }
 /*-----------------------------------------------------------------------------------*/
-rest_method_t
+rest_resource_flags_t
 coap_get_rest_method(void *packet)
 {
-  return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
+  return (rest_resource_flags_t)(1 << (((coap_packet_t *)packet)->code - 1));
 }
 /*-----------------------------------------------------------------------------------*/
 int

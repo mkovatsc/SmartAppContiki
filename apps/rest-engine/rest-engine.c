@@ -164,6 +164,12 @@ rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
   resource->post_handler = post_handler;
 }
 
+void
+rest_set_special_flags(resource_t* resource, rest_resource_flags_t flags)
+{
+  resource->flags |= flags;
+}
+
 int
 rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
@@ -178,17 +184,15 @@ rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint
   for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
   {
     /*if the web service handles that kind of requests and urls matches*/
-    if (REST.get_url(request, &url)==strlen(resource->url) && strncmp(resource->url, url, strlen(resource->url)) == 0)
+    if ((REST.get_url(request, &url)==strlen(resource->url) || (REST.get_url(request, &url)>strlen(resource->url) && (resource->flags & HAS_SUB_RESOURCES)))
+        && strncmp(resource->url, url, strlen(resource->url)) == 0)
     {
-      /* The resource URL is '\0'-terminated: a much better handle, e.g., for observing */
-      REST.set_url(request, (char *) resource->url);
-
       found = 1;
-      rest_method_t method = REST.get_method_type(request);
+      rest_resource_flags_t method = REST.get_method_type(request);
 
-      PRINTF("method %u, resource->methods_to_handle %u\n", (uint16_t)method, resource->methods_to_handle);
+      PRINTF("method %u, resource->flags %u\n", (uint16_t)method, resource->flags);
 
-      if (resource->methods_to_handle & method)
+      if (resource->flags & method)
       {
         allowed = 1;
 

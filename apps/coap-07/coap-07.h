@@ -93,16 +93,6 @@
 #define SET_OPTION(packet, opt) ((packet)->options |= 1L<<opt)
 #define IS_OPTION(packet, opt) ((packet)->options & 1L<<opt)
 
-
-#define COAP_BLOCKING_REQUEST(server_addr, server_port, request, chunk_handler) \
-static struct request_state_t request_state; \
-PT_SPAWN(process_pt, &request_state.pt, \
-             coap_blocking_request(&request_state, ev, \
-                                   server_addr, server_port, \
-                                   request, chunk_handler) \
-    );
-
-
 #ifndef MIN
 #define MIN(a, b) ((a) < (b)? (a) : (b))
 #endif /* MIN */
@@ -258,6 +248,7 @@ typedef struct {
   uint8_t *payload;
 
 } coap_packet_t;
+
 
 /* To store error code and human-readable payload */
 extern coap_status_t coap_error_code;

@@ -43,6 +43,7 @@
 #include "contiki-net.h"
 
 #if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
+#warning "Compiling with static routing!"
 #include "static-routing.h"
 #endif
 
@@ -123,7 +124,7 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 }
 
 /* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response. */
-RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
+RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE | HAS_SUB_RESOURCES, "mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
 
 void
 mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -191,6 +192,11 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
         strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
     }
     strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+  }
+  if ((len = coap_get_header_uri_path(request, &str)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "UP ");
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%.*s\n", len, str);
   }
 #if WITH_COAP == 3
   if ((len = coap_get_header_location(request, &str)))
@@ -346,9 +352,9 @@ polling_periodic_handler(resource_t *r)
   PRINTF("TICK /%s\n", r->url);
   periodic_i = periodic_i + 1;
 
-  // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
   /* Notify the registered observers with the given message type, observe option, and payload. */
   REST.notify_subscribers(r->url, 1, periodic_i, (uint8_t *)content, snprintf(content, sizeof(content), "TICK %lu", periodic_i));
+  /*                              |-> implementation-specific, e.g. CoAP: 1=CON and 0=NON notification */
 
   return 1;
 }
@@ -459,7 +465,7 @@ light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
   uint16_t *accept = NULL;
   int num = REST.get_header_accept(request, &accept);
 
-  if ((num==0) | (num && accept[0]==REST.type.TEXT_PLAIN))
+  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
   {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf(buffer, REST_MAX_CHUNK_SIZE, "%u;%u", light_photosynthetic, light_solar);
@@ -499,7 +505,7 @@ battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferr
   uint16_t *accept = NULL;
   int num = REST.get_header_accept(request, &accept);
 
-  if ((num==0) | (num && accept[0]==REST.type.TEXT_PLAIN))
+  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
   {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
     snprintf(buffer, REST_MAX_CHUNK_SIZE, "%d", battery);

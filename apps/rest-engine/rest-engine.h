@@ -56,14 +56,17 @@
 #define MIN(a, b) ((a) < (b)? (a) : (b))
 #endif /* MIN */
 
-/*REST method types*/
+/* REST method types */
 typedef enum {
+  /* methods to handle */
   METHOD_GET = (1 << 0),
   METHOD_POST = (1 << 1),
   METHOD_PUT = (1 << 2),
-  METHOD_DELETE = (1 << 3)
-} rest_method_t;
+  METHOD_DELETE = (1 << 3),
 
+  /* special flags */
+  HAS_SUB_RESOURCES = (1<<7)
+} rest_resource_flags_t;
 
 struct resource_s;
 struct periodic_resource_s;
@@ -146,7 +149,7 @@ struct rest_implementation {
   int (* set_url)(void *request, char *url);
 
   /** Get the method of a request. */
-  rest_method_t (* get_method_type)(void *request);
+  rest_resource_flags_t (* get_method_type)(void *request);
 
   /** Set the status code of a response. */
   int (* set_response_status)(void *response, unsigned int code);
@@ -225,9 +228,9 @@ extern const struct rest_implementation REST;
  */
 struct resource_s {
   struct resource_s *next; /* for LIST, points to next resource defined */
-  rest_method_t methods_to_handle; /* handled RESTful methods */
+  rest_resource_flags_t flags; /* handled RESTful methods */
   const char* url; /*handled URL*/
-  const char* attributes; /* link-format attributes; can be omitted for HTTP */
+  const char* attributes; /* link-format attributes */
   restful_handler handler; /* handler function */
   restful_pre_handler pre_handler; /* to be called before handler, may perform initializations */
   restful_post_handler post_handler; /* to be called after handler, may perform finalizations (cleanup, etc) */
@@ -245,13 +248,24 @@ struct periodic_resource_s {
 };
 typedef struct periodic_resource_s periodic_resource_t;
 
+
 /*
  * Macro to define a Resource
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
-#define RESOURCE(name, methods_to_handle, url, attributes) \
+#define RESOURCE(name, flags, url, attributes) \
 void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
-resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}
+resource_t resource_##name = {NULL, flags, url, attributes, name##_handler, NULL, NULL, NULL}
+
+/*
+ * Macro to define an event resource
+ * Like periodic resources, event resources have a post_handler that manages a subscriber list.
+ * Instead of a periodic_handler, an event_callback must be provided.
+ */
+#define EVENT_RESOURCE(name, flags, url, attributes) \
+void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
+resource_t resource_##name = {NULL, flags, url, attributes, name##_handler, NULL, NULL, NULL}; \
+int name##_event_handler(resource_t*)
 
 /*
  * Macro to define a periodic resource
@@ -259,21 +273,12 @@ resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_h
  * For instance polling a sensor and publishing a changed value to subscribed clients would be done there.
  * The subscriber list will be maintained by the post_handler rest_subscription_handler() (see rest-mapping header file).
  */
-#define PERIODIC_RESOURCE(name, methods_to_handle, url, attributes, period) \
+#define PERIODIC_RESOURCE(name, flags, url, attributes, period) \
 void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
-resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
+resource_t resource_##name = {NULL, flags, url, attributes, name##_handler, NULL, NULL, NULL}; \
 int name##_periodic_handler(resource_t*); \
 periodic_resource_t periodic_resource_##name = {NULL, &resource_##name, period, {{0}}, name##_periodic_handler}
 
-/*
- * Macro to define an event resource
- * Like periodic resources, event resources have a post_handler that manages a subscriber list.
- * Instead of a periodic_handler, an event_callback must be provided.
- */
-#define EVENT_RESOURCE(name, methods_to_handle, url, attributes) \
-void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
-resource_t resource_##name = {NULL, methods_to_handle, url, attributes, name##_handler, NULL, NULL, NULL}; \
-int name##_event_handler(resource_t*)
 
 /*
  * Initializes REST framework and starts HTTP or COAP process
@@ -300,13 +305,9 @@ int rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, 
 list_t rest_get_resources(void);
 
 /*
- * Getter method for user specific data.
+ * Getter and setter methods for user specific data.
  */
 void* rest_get_user_data(resource_t* resource);
-
-/*
- * Setter method for user specific data.
- */
 void rest_set_user_data(resource_t* resource, void* user_data);
 
 /*
@@ -322,5 +323,10 @@ void rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
  * Can be used to do cleanup (deallocate memory, etc) after resource handling.
  */
 void rest_set_post_handler(resource_t* resource, restful_post_handler post_handler);
+
+/*
+ * Sets resource flags for special properties, e.g., handling of sub-resources of URI-path.
+ */
+void rest_set_special_flags(resource_t* resource, rest_resource_flags_t flags);
 
 #endif /*REST_ENGINE_H_*/
