@@ -2,7 +2,9 @@ all: rest-server-example coap-client-example
 
 CONTIKI=../..
 
+ifneq ($(TARGET), minimal-net)
 PROJECT_SOURCEFILES += static-routing.c
+endif
 
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
@@ -15,7 +17,10 @@ CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables
+# minimal-net does not support RPL, avoid redefine warnings
+ifneq ($(TARGET), minimal-net)
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
+endif
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
