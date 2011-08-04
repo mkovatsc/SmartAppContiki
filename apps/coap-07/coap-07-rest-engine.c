@@ -150,6 +150,10 @@ handle_incoming_data(void)
               block_size = MIN(block_size, REST_MAX_CHUNK_SIZE);
               new_offset = block_offset;
           }
+          else
+          {
+            new_offset = 0;
+          }
 
           /* Invoke resource handler. */
           if (service_cbk)
@@ -166,6 +170,8 @@ handle_incoming_data(void)
                   PRINTF("Blockwise: unaware resource with payload length %u/%u\n", response->payload_len, block_size);
                   if (block_offset >= response->payload_len)
                   {
+                    PRINTF("handle_incoming_data(): block_offset >= response->payload_len\n");
+
                     response->code = BAD_OPTION_4_02;
                     coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
                   }
@@ -360,6 +366,8 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     }
     else
     {
+      PRINTF("well_known_core_handler(): bufpos<=0\n");
+
       coap_set_rest_status(response, BAD_OPTION_4_02);
       coap_set_payload(response, (uint8_t*)"Block out of scope", 18);
     }
