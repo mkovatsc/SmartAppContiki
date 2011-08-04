@@ -259,8 +259,6 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 #if WITH_COAP > 1
   coap_set_header_uri_host(response, "tiki");
   coap_set_header_observe(response, 10);
-  opaque[0] = 0x01;
-  coap_set_header_token(response, opaque, 1); /* If this function is not called, the Token is copied from the request by default. */
 #if WITH_COAP == 3
   coap_set_header_block(response, 42, 0, 64); /* The block option might be overwritten by the framework when blockwise transfer is requested. */
 #elif WITH_COAP >= 5

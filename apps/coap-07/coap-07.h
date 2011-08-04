@@ -216,14 +216,14 @@ typedef struct {
   char *proxy_uri;
   uint8_t etag_len;
   uint8_t etag[COAP_ETAG_LEN];
-  uint8_t uri_host_len;
+  size_t uri_host_len;
   char *uri_host;
-  uint8_t location_path_len;
+  size_t location_path_len;
   char *location_path;
   uint16_t uri_port;
-  uint8_t location_query_len;
+  size_t location_query_len;
   char *location_query;
-  uint8_t uri_path_len;
+  size_t uri_path_len;
   char *uri_path;
   uint16_t observe;
   uint8_t token_len;
@@ -240,7 +240,7 @@ typedef struct {
   uint8_t block1_more;
   uint16_t block1_size;
   uint32_t block1_offset;
-  uint8_t uri_query_len;
+  size_t uri_query_len;
   char *uri_query;
   uint8_t if_none_match;
 

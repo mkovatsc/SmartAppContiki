@@ -149,25 +149,29 @@ serialize_int_option(int number, int current_number, uint8_t *buffer, uint32_t v
   return i;
 }
 /*-----------------------------------------------------------------------------------*/
+/*
+ * Pass the char to split the string at in split_option and receive the number of options in split_option on return.
+ */
 static
 size_t
-serialize_array_option(int number, int current_number, uint8_t *buffer, uint8_t *array, size_t length, uint8_t *split_path)
+serialize_array_option(int number, int current_number, uint8_t *buffer, uint8_t *array, size_t length, uint8_t *split_option)
 {
   /* Insert fence-posts for large deltas */
   size_t i = insert_option_fence_posts(number, &current_number, buffer);
 
-  if (split_path!=NULL)
+  if (split_option!=NULL)
   {
     int j;
     uint8_t *part_start = array;
     uint8_t *part_end = NULL;
     size_t temp_length;
 
-    *split_path = 0; /* Ensure reflecting the created option count */
+    char split_char = *split_option;
+    *split_option = 0; /* Ensure reflecting the created option count */
 
     for (j = 0; j<=length; ++j)
     {
-      if (array[j]=='/' || j==length)
+      if (array[j]==split_char || j==length)
       {
         part_end = array + j;
         temp_length = part_end-part_start;
@@ -178,7 +182,7 @@ serialize_array_option(int number, int current_number, uint8_t *buffer, uint8_t 
 
         PRINTF("OPTION type %u, delta %u, len %u, part [%.*s]\n", number, number - current_number, i, temp_length, part_start);
 
-        ++(*split_path);
+        ++(*split_option);
         ++j; /* skip the slash */
         current_number = number;
         while( array[j]=='/') ++j;
@@ -196,6 +200,31 @@ serialize_array_option(int number, int current_number, uint8_t *buffer, uint8_t 
   }
 
   return i;
+}
+/*-----------------------------------------------------------------------------------*/
+static
+void
+coap_merge_multi_option(char **dst, size_t *dst_len, uint8_t *option, size_t option_len, char separator)
+{
+  /* Merge multiple options. */
+  if (*dst_len > 0)
+  {
+    (*dst)[*dst_len] = separator;
+    *dst_len += 1;
+
+    if (option_len>15)
+    {
+      (*dst)[*dst_len] = separator;
+      *dst_len += 1;
+    }
+
+    *dst_len += option_len;
+  }
+  else
+  {
+    *dst = (char *) option;
+    *dst_len = option_len;
+  }
 }
 /*-----------------------------------------------------------------------------------*/
 static
@@ -337,7 +366,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH)) {
     PRINTF("Location [%.*s]\n", ((coap_packet_t *)packet)->location_path_len, ((coap_packet_t *)packet)->location_path);
 
-    uint8_t split_options;
+    uint8_t split_options = '/';
 
     option += serialize_array_option(COAP_OPTION_LOCATION_PATH, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->location_path, ((coap_packet_t *)packet)->location_path_len, &split_options);
     ((coap_packet_t *)packet)->option_count += split_options;
@@ -353,14 +382,16 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_QUERY)) {
     PRINTF("Location-Query [%.*s]\n", ((coap_packet_t *)packet)->location_query_len, ((coap_packet_t *)packet)->location_query);
 
-    option += serialize_array_option(COAP_OPTION_LOCATION_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->location_query, ((coap_packet_t *)packet)->location_query_len, NULL);
-    ((coap_packet_t *)packet)->option_count += 1;
+    uint8_t split_options = '&';
+
+    option += serialize_array_option(COAP_OPTION_LOCATION_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->location_query, ((coap_packet_t *)packet)->location_query_len, &split_options);
+    ((coap_packet_t *)packet)->option_count += split_options;
     current_number = COAP_OPTION_LOCATION_QUERY;
   }
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_PATH)) {
     PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
 
-    uint8_t split_options;
+    uint8_t split_options = '/';
 
     option += serialize_array_option(COAP_OPTION_URI_PATH, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_path, ((coap_packet_t *)packet)->uri_path_len, &split_options);
     ((coap_packet_t *)packet)->option_count += split_options;
@@ -410,11 +441,12 @@ coap_serialize_message(void *packet, uint8_t *buffer)
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
     PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
 
-    option += serialize_array_option(COAP_OPTION_URI_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, NULL);
-    ((coap_packet_t *)packet)->option_count += 1 + (COAP_OPTION_URI_QUERY-current_number)/COAP_OPTION_FENCE_POST;
+    uint8_t split_options = '&';
+
+    option += serialize_array_option(COAP_OPTION_URI_QUERY, current_number, option, (uint8_t *) ((coap_packet_t *)packet)->uri_query, ((coap_packet_t *)packet)->uri_query_len, &split_options);
+    ((coap_packet_t *)packet)->option_count += split_options + (COAP_OPTION_URI_QUERY-current_number)/COAP_OPTION_FENCE_POST;
     current_number = COAP_OPTION_URI_QUERY;
   }
-
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_BLOCK2))
   {
     PRINTF("Block2 [%lu%s (%u B/blk)]\n", ((coap_packet_t *)packet)->block2_num, ((coap_packet_t *)packet)->block2_more ? "+" : "", ((coap_packet_t *)packet)->block2_size);
@@ -527,7 +559,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
     uint8_t option_index = 0;
 
     uint8_t current_number = 0;
-    uint16_t option_len = 0;
+    size_t option_len = 0;
 
     PRINTF("-Parsing %u options-\n", ((coap_packet_t *)packet)->option_count);
     for (option_index=0; option_index < ((coap_packet_t *)packet)->option_count; ++option_index) {
@@ -584,23 +616,8 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Uri-Host [%.*s]\n", ((coap_packet_t *)packet)->uri_host_len, ((coap_packet_t *)packet)->uri_host);
           break;
         case COAP_OPTION_LOCATION_PATH:
-          /* Merge multiple options. */
-          if ( ((coap_packet_t *)packet)->location_path_len > 0 )
-          {
-            ((coap_packet_t *)packet)->location_path[((coap_packet_t *)packet)->location_path_len] = '/';
-            if (option_len>15)
-            {
-              // FIXME
-              ((coap_packet_t *)packet)->location_path[((coap_packet_t *)packet)->location_path_len + 1] = '/';
-              ((coap_packet_t *)packet)->location_path_len += 1;
-            }
-            ((coap_packet_t *)packet)->location_path_len += option_len + 1;
-          }
-          else
-          {
-            ((coap_packet_t *)packet)->location_path = (char *) current_option;
-            ((coap_packet_t *)packet)->location_path_len = option_len;
-          }
+          coap_merge_multi_option(&(((coap_packet_t *)packet)->location_path), &(((coap_packet_t *)packet)->location_path_len), current_option, option_len, '/');
+          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Location-Path [%.*s]\n", ((coap_packet_t *)packet)->location_path_len, ((coap_packet_t *)packet)->location_path);
           break;
         case COAP_OPTION_URI_PORT:
@@ -608,28 +625,13 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Uri-Port [%u]\n", ((coap_packet_t *)packet)->uri_port);
           break;
         case COAP_OPTION_LOCATION_QUERY:
-          ((coap_packet_t *)packet)->location_query = (char *) current_option;
-          ((coap_packet_t *)packet)->location_query_len = option_len;
+          coap_merge_multi_option(&(((coap_packet_t *)packet)->location_query), &(((coap_packet_t *)packet)->location_query_len), current_option, option_len, '&');
+          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Location-Query [%.*s]\n", ((coap_packet_t *)packet)->location_query_len, ((coap_packet_t *)packet)->location_query);
           break;
         case COAP_OPTION_URI_PATH:
-          /* Merge multiple options. */
-          if ( ((coap_packet_t *)packet)->uri_path_len > 0 )
-          {
-            ((coap_packet_t *)packet)->uri_path[((coap_packet_t *)packet)->uri_path_len] = '/';
-            if (option_len>15)
-            {
-              // FIXME
-              ((coap_packet_t *)packet)->uri_path[((coap_packet_t *)packet)->uri_path_len + 1] = '/';
-              ((coap_packet_t *)packet)->uri_path_len += 1;
-            }
-            ((coap_packet_t *)packet)->uri_path_len += option_len + 1;
-          }
-          else
-          {
-            ((coap_packet_t *)packet)->uri_path = (char *) current_option;
-            ((coap_packet_t *)packet)->uri_path_len = option_len;
-          }
+          coap_merge_multi_option(&(((coap_packet_t *)packet)->uri_path), &(((coap_packet_t *)packet)->uri_path_len), current_option, option_len, '/');
+          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
           break;
         case COAP_OPTION_OBSERVE:
@@ -677,8 +679,8 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Fence-Post\n");
           break;
         case COAP_OPTION_URI_QUERY:
-          ((coap_packet_t *)packet)->uri_query = (char *) current_option;
-          ((coap_packet_t *)packet)->uri_query_len = option_len;
+          coap_merge_multi_option(&(((coap_packet_t *)packet)->uri_query), &(((coap_packet_t *)packet)->uri_query_len), current_option, option_len, '&');
+          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
           break;
         case COAP_OPTION_BLOCK2:

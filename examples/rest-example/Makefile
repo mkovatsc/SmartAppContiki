@@ -10,6 +10,7 @@ endif
 UIP_CONF_IPV6=1
 
 # variable for this Makefile
+# configure CoAP implementation (3|6|7)
 WITH_COAP=7
 
 # radio configuration
@@ -50,6 +51,7 @@ APPS += coap-03
 else
 ${info INFO: compiling with HTTP}
 CFLAGS += -DWITH_HTTP
+CFLAGS += -DREST=http_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=1
 APPS += rest-http-engine
 endif
