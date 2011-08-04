@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -24,7 +27,13 @@
  * SUCH DAMAGE.
  *
  * This file is part of the Contiki operating system.
- *
+ */
+
+/**
+ * \file
+ *      An implementation of the Constrained Application Protocol (draft 07)
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #ifndef COAP_06_H_
@@ -153,7 +162,6 @@ typedef enum {
   COAP_OPTION_URI_PATH = 9,       /* 1-270 B */
     COAP_OPTION_OBSERVE = 10,       /* 0-2 B */
   COAP_OPTION_TOKEN = 11,         /* 1-8 B */
-    COAP_OPTION_DEPRICATED_BLOCK = 13,         /* 1-3 B */
   COAP_OPTION_FENCE_POST = 14,    /* 0 B */
   COAP_OPTION_URI_QUERY = 15,     /* 1-270 B */
     COAP_OPTION_BLOCK2 = 17,        /* 1-3 B */
@@ -230,6 +238,7 @@ typedef struct {
   uint8_t *payload;
 
 } coap_packet_t;
+
 
 /* To store error code and human-readable payload */
 extern coap_status_t coap_error_code;

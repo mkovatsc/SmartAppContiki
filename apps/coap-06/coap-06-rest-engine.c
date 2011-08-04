@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -24,7 +27,13 @@
  * SUCH DAMAGE.
  *
  * This file is part of the Contiki operating system.
- *
+ */
+
+/**
+ * \file
+ *      CoAP implementation of the REST Engine
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #include <stdio.h>
@@ -276,10 +285,10 @@ coap_set_service_callback(service_callback_t callback)
   service_cbk = callback;
 }
 /*-----------------------------------------------------------------------------------*/
-rest_method_t
+rest_resource_flags_t
 coap_get_rest_method(void *packet)
 {
-  return (rest_method_t)(1 << (((coap_packet_t *)packet)->code - 1));
+  return (rest_resource_flags_t)(1 << (((coap_packet_t *)packet)->code - 1));
 }
 /*-----------------------------------------------------------------------------------*/
 int
@@ -491,7 +500,6 @@ const struct rest_implementation coap_rest_implementation = {
   NULL,
   coap_get_header_max_age,
   coap_set_header_max_age,
-  coap_get_header_etag,
   coap_set_header_etag,
   NULL,
   NULL,

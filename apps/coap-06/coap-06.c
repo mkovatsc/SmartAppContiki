@@ -380,9 +380,6 @@ coap_serialize_message(void *packet, uint8_t *buffer)
     ((coap_packet_t *)packet)->option_count += 1;
     current_number = COAP_OPTION_TOKEN;
   }
-  if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_DEPRICATED_BLOCK)) {
-    PRINTF("OPTION WARNING: Depricated Block option 13 was set\n");
-  }
   if (IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_QUERY)) {
     PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
 
@@ -617,11 +614,6 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
             ((coap_packet_t *)packet)->token[6],
             ((coap_packet_t *)packet)->token[7]
           ); // FIXME always prints 8 bytes...
-          break;
-        case COAP_OPTION_DEPRICATED_BLOCK:
-          PRINTF("Block DEPRICATED\n");
-          coap_error_message = "Block option 13 is depricated";
-          return BAD_OPTION_4_02;
           break;
         case COAP_OPTION_FENCE_POST:
           PRINTF("Fence-Post\n");
