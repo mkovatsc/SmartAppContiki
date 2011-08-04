@@ -134,7 +134,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 
   /* Strings are not copied and should be static or in program memory (char *str = "string in .text";).
    * They must be '\0'-terminated as the setters use strlen(). */
-  static char location[] = {'/','f','a','?','k','e', 0};
+  static char location[] = {'/','f','/','a','?','k','&','e', 0};
 
   /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
   unsigned int content_type = REST.get_header_content_type(request);
@@ -267,7 +267,6 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   coap_set_header_block1(response, 23, 0, 16);
 #if WITH_COAP >= 7
   coap_set_header_accept(response, TEXT_PLAIN);
-  coap_set_header_accept(response, APPLICATION_JSON);
   coap_set_header_if_none_match(response);
 #endif
 
