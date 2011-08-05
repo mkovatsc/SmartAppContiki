@@ -1,4 +1,4 @@
-all: plogg-raven
+all: plogg
 
 CONTIKI = ../..
 
@@ -18,6 +18,8 @@ CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 CFLAGS += -DUIP_CONF_TCP=0
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 #used to be able to use sscanf
 LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
@@ -50,8 +52,5 @@ APPS += rest-http-engine
 endif
 
 APPS += rest-engine
-
-
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 include $(CONTIKI)/Makefile.include

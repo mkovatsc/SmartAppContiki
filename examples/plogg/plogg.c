@@ -450,8 +450,8 @@ PROCESS_THREAD(plogg_process, ev, data)
   char buf[128];
 
   PROCESS_BEGIN();
-
-  ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
+  
+	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
   rs232_set_input(RS232_PORT_0, uart_get_char);
   Led1_on(); // red
 
