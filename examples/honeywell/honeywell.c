@@ -775,7 +775,7 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-static char * getModeString(int mode){
+static char * getEnergyLevelString(int mode){
 	char * string;
 	switch(mode){
 		case 0: string = PSTR("frost"); break;
@@ -841,7 +841,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 					strpos += snprintf_P((char*)buffer+bufpos, REST_MAX_CHUNK_SIZE-bufpos+1, PSTR("Slot %d: disabled\n"), i+1);
 				}
 				else{
-					strpos += snprintf_P((char*)buffer+bufpos, REST_MAX_CHUNK_SIZE-bufpos+1, PSTR("Slot %d: %S at %02d:%02d\n"), i+1, getModeString(poll_data.timers[day][i].mode), time/60, time%60 );
+					strpos += snprintf_P((char*)buffer+bufpos, REST_MAX_CHUNK_SIZE-bufpos+1, PSTR("Slot %d: %S at %02d:%02d\n"), i+1, getEnergyLevelString(poll_data.timers[day][i].mode), time/60, time%60 );
 				}
 
 				if (strpos <= *offset)
@@ -938,7 +938,11 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 					else{
 						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){
 							int hour = atoi(&time[0]);
-							int minute = atoi(&time[3]);
+							/*the time string is not NULL terminated */
+							char minutes[3];
+							strncpy(minutes, &time[3], 2);
+							minutes[2] = 0;
+							int minute = atoi(minutes);
 							if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){
 								success = 0; 
 							}
@@ -946,7 +950,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 								char buf[12];
 								snprintf_P(buf, 10, PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
 								enQueue(buf, false, get_timer);
-								strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Set slot %d of %s to time %02d:%02d and mode %S"), slot + 1, timerString, hour, minute, getModeString(level));
+								strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Set slot %d of %s to time %02d:%02d and mode %S"), slot + 1, timerString, hour, minute, getEnergyLevelString(level));
 							}
 						}
 						else{
@@ -972,7 +976,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("disabled"));
 		}
 		else{
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("%S at %02d:%02d"), getModeString(poll_data.timers[day][slot].mode), time/60, time%60 );
+			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("%S at %02d:%02d"), getEnergyLevelString(poll_data.timers[day][slot].mode), time/60, time%60 );
 		}
 	}
 
