@@ -52,38 +52,20 @@
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
 
-#define MAX(a,b) ((a)<(b)?(b):(a))
-
+//adds the debug resource that can be used to output the debug buffer
 #define DEBUG 0
 
-/*#include "UsefulMicropendousDefines.h"
-// set up external SRAM prior to anything else to make sure malloc() has access to it
-void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
-void EnableExternalSRAM(void)
-{
-  PORTE_EXT_SRAM_SETUP;  // set up control port
-  ENABLE_EXT_SRAM;       // enable the external SRAM
-  XMCRA = ((1 << SRE));  // enable XMEM interface with 0 wait states
-  XMCRB = 0;
-  SELECT_EXT_SRAM_BANK0; // select Bank 0
-}*/
-
+//sets the size of the request queue
+#define REQUEST_QUEUE_SIZE 3
 
 #define MAX(a,b) ((a)<(b)?(b):(a))
 
 
-/*---------------------------------------------------------------------------*/
+/*--PROCESSES----------------------------------------------------------------*/
 PROCESS(honeywell_process, "Honeywell comm");
 PROCESS(coap_process, "coap");
 
 /*---------------------------------------------------------------------------*/
-static struct ringbuf uart_buf;
-static unsigned char uart_buf_data[128] = {0};
-#if DEBUG
-static char debug_buffer[128];
-#endif
-static uint8_t poll_time = 90;
-
 enum mode {manual=0, timers=1, valve=2};
 enum request_type {
 #if DEBUG
@@ -95,15 +77,28 @@ enum request_type {
 	auto_mode, 
 	get_timer
 };
-
-static enum request_type request_state = idle;
-
-
 typedef struct {
 	uint8_t mode;
 	uint16_t time;
 } hw_timer_slot_t;
 
+typedef struct {
+	char command[15];
+	enum request_type type;
+} request;
+
+static enum request_type request_state = idle;
+static struct ringbuf uart_buf;
+static unsigned char uart_buf_data[128] = {0};
+
+#if DEBUG
+//debug buffer
+static char debug_buffer[128];
+#endif
+
+static uint8_t poll_time = 90;
+
+//struct for the cache
 static struct {
 	uint8_t day;
 	uint8_t month;
@@ -134,13 +129,8 @@ static struct {
 } poll_data;
 
 
-typedef struct {
-	char command[15];
-	enum request_type type;
-} request;
-
-#define QUEUE_SIZE 3
-static request queue[QUEUE_SIZE];
+/*--REQUEST-QUEUE-IMPLEMENTATION---------------------------------------------*/
+static request queue[REQUEST_QUEUE_SIZE];
 static int queueTail = 0;
 static int queueHead = -1;
 
@@ -152,7 +142,7 @@ static void deQueue(){
 	if(queueHead!=-1 && request_state==idle){
 		printf(queue[queueHead].command);
 		request_state=queue[queueHead].type;
-		queueHead = (queueHead + 1) % QUEUE_SIZE;
+		queueHead = (queueHead + 1) % REQUEST_QUEUE_SIZE;
 		if(queueHead == queueTail){
 			queueHead = -1;
 		}
@@ -170,7 +160,7 @@ static void enQueue(char * command, bool rom, enum request_type type){
 		}
 	}
 	else{
-		int newPos = (queueTail + 1) % QUEUE_SIZE;
+		int newPos = (queueTail + 1) % REQUEST_QUEUE_SIZE;
 		if(newPos == queueHead){
 			request_state = idle;
 			//queue is full deQueue a request
@@ -191,7 +181,7 @@ static void enQueue(char * command, bool rom, enum request_type type){
 }
 
 
-/*---------------------------------------------------------------------------*/
+/*--HONEYWELL-PROCESS-IMPLEMENTATION-----------------------------------------*/
 static int uart_get_char(unsigned char c)
 {
 	ringbuf_put(&uart_buf, c);
@@ -202,12 +192,14 @@ static int uart_get_char(unsigned char c)
 	return 1;
 }
 
+//fill in the cache
 static void parseD(char * data){
 	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
 	if(data[0]=='D'){
 		poll_data.valve = atoi(&data[29]);
 		uint16_t is_temperature = atoi(&data[35]);
 		if(poll_data.is_temperature != is_temperature){
+			//send event to the coap process that the temperature changed to notify all the subscribers
 			process_post(&coap_process, PROCESS_EVENT_MSG, NULL);
 		}
 		poll_data.is_temperature = is_temperature;
@@ -267,7 +259,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 				if (buf_pos<126 && (char)rx=='\n') {
 					buf[buf_pos++] = '\n';
 					buf[buf_pos] = '\0';
-					//printf("%s\r\n", buf);
+					//switch statement for the different request states
 					switch(request_state){
 						case idle:
 							break;
@@ -322,7 +314,9 @@ PROCESS_THREAD(honeywell_process, ev, data)
 							}
 							break;
 					}
+					//we are done so we set back the request state do idle
 					request_state = idle;
+					//de queue another job if there is one in the queue
 					deQueue();
 					buf_pos = 0;
 					continue;
@@ -341,7 +335,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 
 
-/*---------------------------------------------------------------------------*/
+/*--RESOURCES----------------------------------------------------------------*/
 EVENT_RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -569,25 +563,25 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			int month=atoi((char*)&string[3]);
 			int year=atoi((char*)&string[6]);
 
-			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
+			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){ //digit check
 				success=0;
 			} 
-			else if ( string[2]!='.' || string[5]!='.' ){
+			else if ( string[2]!='.' || string[5]!='.' ){ //delimiter check
 				success=0;
 			}
-			else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day )){
+			else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day)){ //month and day check
 				success=0;
 			}
-			else if( (month==4 || month ==6 || month==9 || month==11) && day>30){
+			else if( (month==4 || month==6 || month==9 || month==11) && day>30){ //30 days check
 				success=0;
 			}
-			else if( month==2 && !((year%4)==0) && day > 28) {
+			else if( month==2 && !((year%4)==0) && day > 28) { //no leap year check
 				success=0;
 			}
-			else if( month==2 && day>29){
+			else if( month==2 && day>29){ //leap year check
 				success=0;
 			}
-			else if( day > 31){
+			else if( day > 31){ //31 days check
 				success=0;
 			}
 
@@ -633,16 +627,16 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			int minute=atoi((char*)&string[3]);
 			int second=(length==5)?0:atoi((char*)&string[6]);
 
-			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){
+			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){ //seconds digit and delimiter checks
 				success = 0;
 			}
-			else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
+			else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){ //hours and minute digit checks
 				success = 0;
 			}
-			else if ( string[2]!=':' ){
+			else if ( string[2]!=':' ){ //delimiter check
 				success = 0;
 			}
-			else if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 && 0<=second && second<=59)){
+			else if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 && 0<=second && second<=59)){ //range check
 				success = 0; 
 			}
 
@@ -797,7 +791,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	char timerString[10];
 	snprintf_P(timerString, 10, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
 	
-	if ((len = REST.get_query(request, &query))){
+	if ((len = REST.get_query(request, &query))){ //GET variable check
 		if(isdigit(query[0]) && len == 1){
 			char c[2];
 			c[0]=query[0];
@@ -815,11 +809,11 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [1;8] e.g. /auto/%s?3 to interact with slot 3"), timerString);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strpos);
-		return;
+		return; //no or invalid GET variable specified
 	}
 	//overview code
 	//this would output an overview of all the slots in the timerset
-	//note that one needs to somehow retrieve the slots from the thermostat somewhere else
+	//note that one needs to somehow retrieve the slots from the thermostat somewhere else because of chaching
 	//To enable this you also need to enlarge the slot range from the interval [1;8] to [0;8] above
 	/*if(slot==-1){
 		if (REST.get_method_type(request)==METHOD_POST){
@@ -936,14 +930,14 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 						success = 0;
 					}
 					else{
-						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){
+						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){ //digit checks
 							int hour = atoi(&time[0]);
 							/*the time string is not NULL terminated */
 							char minutes[3];
 							strncpy(minutes, &time[3], 2);
 							minutes[2] = 0;
 							int minute = atoi(minutes);
-							if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){
+							if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){ //range checks
 								success = 0; 
 							}
 							else{
@@ -964,8 +958,8 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
 		}
-	}
-	else{
+	} 
+	else{ //GET request
 		char buf[12];
 		snprintf_P(buf, 10, PSTR("R%d%d\n"),day,slot);
 		enQueue(buf, false, get_timer);
@@ -1024,7 +1018,8 @@ PROCESS_THREAD(coap_process, ev, data)
 	PROCESS_BEGIN();
 
 	rest_init_framework();
-
+	
+	//activate the resources
 #if DEBUG
 	rest_activate_resource(&resource_debug);
 #endif
@@ -1052,6 +1047,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_day6timer);
 	rest_activate_resource(&resource_day7timer);
 
+	//call the temperature handler if the temperature changed
 	while(1){
 		PROCESS_WAIT_EVENT();
 		if(ev == PROCESS_EVENT_MSG){
