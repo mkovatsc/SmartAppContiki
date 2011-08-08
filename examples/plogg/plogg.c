@@ -344,8 +344,7 @@ static void parse_Poll(){
 }
 
 
-//This function simulates the original ZigBee module.
-
+//Simulate the original ZigBee module.
 static void ATInterpreterProcessCommand(char* command)
 {
 	// HACK: dummy commands we need to accept
