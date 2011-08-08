@@ -52,20 +52,6 @@
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
 
-
-#include "UsefulMicropendousDefines.h"
-// set up external SRAM prior to anything else to make sure malloc() has access to it
-void EnableExternalSRAM (void) __attribute__ ((naked)) __attribute__ ((section (".init3")));
-void EnableExternalSRAM(void)
-{
-  PORTE_EXT_SRAM_SETUP;  // set up control port
-  ENABLE_EXT_SRAM;       // enable the external SRAM
-  XMCRA = ((1 << SRE));  // enable XMEM interface with 0 wait states
-  XMCRB = 0;
-  SELECT_EXT_SRAM_BANK0; // select Bank 0
-}
-
-
 #ifndef MAX 
 #define MAX(a,b) ((a)<(b)?(b):(a))
 #endif /* MAX */
@@ -76,7 +62,6 @@ void EnableExternalSRAM(void)
 
 PROCESS(coap_process, "Coap");
 PROCESS(plogg_process, "Plogg comm");
-
 
 // request
 #define AT_COMMAND_PREFIX "AT"
@@ -105,9 +90,9 @@ static char state = 0;
 static uint8_t poll_number = 6;
 static uint8_t mode_switch_number = 255;
 static char poll_return[128];
-
 enum mode{MANUAL=0, AUTO=1};
 
+// Set Up EEPROM variables
 uint16_t ee_start_time0 EEMEM=0;
 uint16_t ee_end_time0 EEMEM=0;
 uint16_t ee_start_time1 EEMEM=0;
@@ -117,6 +102,8 @@ uint16_t ee_end_time2 EEMEM=0;
 uint16_t ee_start_time3 EEMEM=0;
 uint16_t ee_end_time3 EEMEM=0;
 
+
+// Caching Struct
 static struct {
 
  	uint16_t date_y;
@@ -201,12 +188,14 @@ static int uart_get_char(unsigned char c)
   return 1;
 }
 
-static long get_signed_pseudo_float_3(char* string){
+
+// Parses a signed float with up to 3 decimals and stores it as long int.
+static long get_signed_pseudo_float_3(char* start){
 	long number=0;
 	char deci = '0';
 	char centi = '0';
 	char mili = '0';
-	sscanf_P(string,PSTR("%ld%*c%c%c%c"),&number, &deci, &centi, &mili);
+	sscanf_P(start,PSTR("%ld%*c%c%c%c"),&number, &deci, &centi, &mili);
 	if (number< 0){
 		number *= 1000;
 		if (isdigit(deci)){
@@ -234,12 +223,13 @@ static long get_signed_pseudo_float_3(char* string){
 	return number;
 }
 
-static unsigned long get_unsigned_pseudo_float_3(char* string){
+// Parses a unsigned float with up to 3 decimals and stores it as unsigned long int.
+static unsigned long get_unsigned_pseudo_float_3(char* start){
 	unsigned long number=0;
 	char deci = '0';
 	char centi = '0';
 	char mili = '0';
-	sscanf_P(string,PSTR("%lu%*c%c%c%c"),&number, &deci, &centi, &mili);
+	sscanf_P(start,PSTR("%lu%*c%c%c%c"),&number, &deci, &centi, &mili);
 	number *= 1000;
 	if (isdigit(deci)){
 		number += (deci -'0') * 100;
@@ -253,6 +243,8 @@ static unsigned long get_unsigned_pseudo_float_3(char* string){
 	return number;
 }
 
+
+//Parses the responses from the Plogg and stores the values in the caching struct
 static void parse_Poll(){
 
 	if( strncmp_P(poll_return,PSTR("Time entry"),10) == 0) {
@@ -352,6 +344,7 @@ static void parse_Poll(){
 }
 
 
+//This function simulates the original ZigBee module.
 
 static void ATInterpreterProcessCommand(char* command)
 {
@@ -417,7 +410,8 @@ static void ATInterpreterProcessCommand(char* command)
 			}
 		}
 
-		// Copy Response to new buffer
+		// The plogg uses ~~ to tell us there should be a newline
+		// This code segment constructs a complete line and then calls the parsing function.
 		uint8_t length = strlen(poll_return);
 		strcpy(poll_return+length,payload);
 		while (strstr(poll_return,"~~") != NULL){
@@ -460,10 +454,8 @@ PROCESS_THREAD(plogg_process, ev, data)
   while (1) {
     PROCESS_WAIT_EVENT();
     if(ev == PROCESS_EVENT_TIMER) {
-      //etimer_reset(&etimer);
-			//send the nessecary commands to switch modes with delay (simple method)
+			//send the nessecary commands to switch modes with a delay (simple method)
 			switch (mode_switch_number){
-
 				//manual mode
 				case 0:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
@@ -491,7 +483,6 @@ PROCESS_THREAD(plogg_process, ev, data)
 					mode_switch_number++;
 					etimer_set(&etimer, CLOCK_SECOND * 3);
 					break;
-
 
 				//Auto Mode
 				case 128:
@@ -522,24 +513,28 @@ PROCESS_THREAD(plogg_process, ev, data)
 
 				default:
 					etimer_set(&etimer, CLOCK_SECOND * 3);
-					Led2_toggle(); //Green
 					switch (poll_number){
-	    		 	case 15:
+	    		 	// This makes sure the costs are polled every minute.
+						case 15:
 	    		 	case 35:
 						case 55:
 	      			printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 							break;
+	    		 	// This makes sure the max values are polled every minute.
 						case 5:
 						case 25:
 						case 45:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 							break;
+						// This polls the new set tariff time.
 						case 68:
 	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
 							break;
+						// This polls the new set tariff rate.
 						case 78:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
 							break;
+						//This polls the new current values every 30 seconds.
 						default:
 							if (!(poll_number%10)){
 								printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
@@ -556,7 +551,6 @@ PROCESS_THREAD(plogg_process, ev, data)
           rx = ringbuf_get(&uart_buf);
           if ((char)rx=='\n') {
             buf[buf_pos] = '\0';
-            //printf("%s\r\n", buf);
             ATInterpreterProcessCommand(buf);
             buf_pos = 0;
             continue;
@@ -569,7 +563,6 @@ PROCESS_THREAD(plogg_process, ev, data)
         }
         if (buf_pos==127) {
           buf[buf_pos] = 0;
-//          telnet("ERROR: RX buffer overflow\r\n");
 
           buf_pos = 0;
         }
@@ -637,7 +630,6 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	int index=0;
 	const char * query = NULL;
 	bool success = true;
-// 	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 
 	int len = REST.get_query(request, &query);
 
@@ -689,7 +681,6 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int hour, min,sec;
 
 	if (REST.get_method_type(request) == METHOD_GET){
-//		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u:%02u:%02u\n"), poll_data.time_h,poll_data.time_m,poll_data.time_s);
 	}
 	else{
@@ -741,7 +732,6 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	int month, day, year;
 
 	if (REST.get_method_type(request) == METHOD_GET){
-//		printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u %s %u\n"),poll_data.date_d,poll_data.date_m,poll_data.date_y);
 	}
 	else{
@@ -855,12 +845,10 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  		REST.set_response_status(response, REST.status.BAD_REQUEST);
 		*offset += REST_MAX_CHUNK_SIZE;
 		if (*offset >= strpos){
-//			printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 			*offset = -1;
 		}
 		return;
 	}
-//	printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
@@ -1048,7 +1036,6 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	bool success = false;
 	uint8_t len;
 	const char * query = NULL;
-//	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 
 	if ((len = REST.get_query(request, &query))){
 		if(isdigit(query[0]) && len == 1){
@@ -1094,7 +1081,6 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	bool success = false;
 	uint8_t len;
 	const char * query = NULL;
-//	printf_P(PSTR("UCAST:0021ED000004699D=SC\r\n"));
 
 	if ((len = REST.get_query(request, &query))){
 		if(isdigit(query[0]) && len == 1){
