@@ -244,7 +244,8 @@ static unsigned long get_unsigned_pseudo_float_3(char* start){
 }
 
 
-//Parses the responses from the Plogg and stores the values in the caching struct
+// Parses the responses from the Plogg and stores the values in the caching struct
+// Make sure the strings matches the responses of the plogg
 static void parse_Poll(){
 
 	if( strncmp_P(poll_return,PSTR("Time entry"),10) == 0) {
@@ -315,13 +316,10 @@ static void parse_Poll(){
 	else if (strncmp_P(poll_return,PSTR("No highest wattage was recorded"),31) == 0){
 		poll_data.watts_max_value=0;
 	}
-
-
 	else if (strncmp_P(poll_return,PSTR("Tarrif 0 Cost"),13) == 0){ //Tarrif is not a typo. Plogg returns Tarrif in this case
 		sscanf_P(poll_return+16,PSTR("%u"),&poll_data.tariff0_rate);
 	}
-
-	else if (strncmp_P(poll_return,PSTR("Tarrif 1 Cost"),13) == 0){//Tarrif is not a typo. Plogg returns Tarrif in this case
+	else if (strncmp_P(poll_return,PSTR("Tarrif 1 Cost"),13) == 0){ //Tarrif is not a typo. Plogg returns Tarrif in this case
 		sscanf_P(poll_return+16,PSTR("%u"),&poll_data.tariff1_rate);
 	}
 	else if (strncmp_P(poll_return,PSTR("Current tarrif zone"),19)==0){
@@ -340,7 +338,6 @@ static void parse_Poll(){
 		char* cost = strstr_P(poll_return,PSTR("Cost"));
 		poll_data.tariff1_cost = get_unsigned_pseudo_float_3(cost+5);
 	}
-	
 }
 
 
@@ -397,7 +394,6 @@ static void ATInterpreterProcessCommand(char* command)
 			*payload = '\0';
 			payload++;
 		}
-
 		// trim CR/LF at the end of the payload
 		int len = strlen(payload);
 		if (len > 0 && (payload[len-1] == '\r' || payload[len-1] == '\n'))
@@ -408,9 +404,8 @@ static void ATInterpreterProcessCommand(char* command)
 				payload[len-2] = '\0';
 			}
 		}
-
 		// The plogg uses ~~ to tell us there should be a newline
-		// This code segment constructs a complete line and then calls the parsing function.
+		// This code segment constructs complete lines and then calls the parsing function.
 		uint8_t length = strlen(poll_return);
 		strcpy(poll_return+length,payload);
 		while (strstr(poll_return,"~~") != NULL){
@@ -420,9 +415,7 @@ static void ATInterpreterProcessCommand(char* command)
 			uint8_t rest_length = strlen(start+2);
 			memmove(poll_return,start+2,rest_length+1);
 		}
-
 		printf_P(PSTR("+UCAST:00\r\n%s\r\n"), AT_RESPONSE_OK);
-
 		// HOST is waiting for "ACK:00" or NACK
 		printf_P(PSTR("ACK:00\r\n"));
 	}
@@ -446,7 +439,6 @@ PROCESS_THREAD(plogg_process, ev, data)
   
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
   rs232_set_input(RS232_PORT_0, uart_get_char);
-  Led1_on(); // red
 
   etimer_set(&etimer, CLOCK_SECOND * 15);
 
@@ -455,7 +447,8 @@ PROCESS_THREAD(plogg_process, ev, data)
     if(ev == PROCESS_EVENT_TIMER) {
 			//send the nessecary commands to switch modes with a delay (simple method)
 			switch (mode_switch_number){
-				//manual mode
+				// manual mode
+				// Turns off the timer and sets all timers to 0000-0000
 				case 0:
 					printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
 					mode_switch_number++;
@@ -483,7 +476,8 @@ PROCESS_THREAD(plogg_process, ev, data)
 					etimer_set(&etimer, CLOCK_SECOND * 3);
 					break;
 
-				//Auto Mode
+				// Auto Mode
+				// Restores all timers and activates timer
 				case 128:
 					printf_P(PSTR("UCAST:0021ED000004699D=SO 0 %04u-%04u\r\n"),eeprom_read_word(&ee_start_time0),eeprom_read_word(&ee_end_time0));
 					mode_switch_number++;
@@ -526,10 +520,12 @@ PROCESS_THREAD(plogg_process, ev, data)
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SM\r\n"));
 							break;
 						// This polls the new set tariff time.
+						// Only called if the time changes.
 						case 68:
 	    		  	printf_P(PSTR("UCAST:0021ED000004699D=ST\r\n"));
 							break;
 						// This polls the new set tariff rate.
+						// Only called if the tariff changes.
 						case 78:
 			      	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
 							break;
@@ -538,10 +534,8 @@ PROCESS_THREAD(plogg_process, ev, data)
 							if (!(poll_number%10)){
 								printf_P(PSTR("UCAST:0021ED000004699D=SV\r\n"));
 							}
-
 					}
 					poll_number = (poll_number+1) % 60;
-					
 			}
     } else if (ev == PROCESS_EVENT_MSG) {
       buf_pos = 0;
@@ -574,7 +568,6 @@ PROCESS_THREAD(plogg_process, ev, data)
 /*_______________________________COAP________________________________________*/
 /*---------------------------------------------------------------------------*/
 
-
 /****************************** Reset ****************************************/ 
 RESOURCE(reset, METHOD_POST, "reset", "Reset");
 
@@ -584,7 +577,6 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	char temp[REST_MAX_CHUNK_SIZE];
 	const uint8_t * string=NULL;
 	bool success=true;
-
 
 	int len = coap_get_payload(request, &string);
 	if(len == 0){ 
@@ -618,6 +610,7 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  	REST.set_response_payload(response, (uint8_t *) temp , index);
 }
+
 
 /**************************** Max Values *************************************/
 RESOURCE(max, METHOD_GET, "max", "Max Values");
@@ -655,7 +648,6 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 		else{
 			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest wattage was recorded\n"));
 		}
-		
 	}
 	else{
 		success = false;
@@ -664,10 +656,11 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
 		index += snprintf_P(temp, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter to select a peak. available peaks {voltage,current,wattage}\neg.: /max?voltage to get the voltage's peak\n"));
 	}
-
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
+
+
 /***************************** Date & Time ***********************************/
 RESOURCE(time, METHOD_GET | METHOD_POST, "time", "Time");
 
@@ -688,7 +681,6 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				hour = atoi((char*)&string[0]);
 				min = atoi((char*)&string[3]);
 			 	sec=(len==5)?0:atoi((char*)&string[6]);
-
 				if (len==8 && !(isdigit(string[6]) && isdigit(string[7]) && string[5]==':') ){
 					success = false;
 				}
@@ -734,7 +726,6 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("%02u %s %u\n"),poll_data.date_d,poll_data.date_m,poll_data.date_y);
 	}
 	else{
-
 		int len = coap_get_payload(request, &string);
 		if (len==8){
 				day = atoi((char*)&string[0]);
@@ -778,6 +769,8 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
  	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
+
+
 /**************************** Current Values **********************************/
 RESOURCE(state, METHOD_GET, "state", "State");
 
@@ -788,7 +781,6 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	int index =0;
 
 	int len = REST.get_query(request,&query);
-
 	if (strncmp_P(query, PSTR("voltage"),MAX(len,7))==0){
 		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ld V\n"),poll_data.voltage/1000, (poll_data.voltage <0 ) ? ((poll_data.voltage % 1000)*-1) : (poll_data.voltage %1000));
 	
@@ -854,7 +846,6 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 
 
 /***************************** Tariff Timer ************************************/
-
 RESOURCE(tariff_timer,METHOD_GET | METHOD_POST, "tariff/timer", "Tariff Timer");
 
 void
@@ -1023,6 +1014,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
  	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
 
+
 /****************************** Costs ************************************/
 RESOURCE(tariff_cost,METHOD_GET, "tariff/cost", "Tarrif Costs");
 
@@ -1056,8 +1048,6 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 		REST.set_response_payload(response, buffer, index);
 		return;
 	}
-
-
 	switch (tariff){
 		case 0: cost=poll_data.tariff0_cost; break;
 		case 1: cost=poll_data.tariff1_cost; break;
@@ -1067,6 +1057,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
+
 
 /****************************** Tariff Consumed ************************************/
 RESOURCE(tariff_consumed,METHOD_GET, "tariff/consumed", "Tariff Consumation in kWh");
@@ -1101,7 +1092,6 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 		REST.set_response_payload(response, buffer, index);
 		return;
 	}
-
 	switch (tariff){
 		case 0: consumed=poll_data.tariff0_consumed; break;
 		case 1: consumed=poll_data.tariff1_consumed; break;
@@ -1111,6 +1101,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
 }
+
 
 /********************************** Timers *************************************/
 
@@ -1136,7 +1127,6 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		REST.set_response_payload(response, (uint8_t *)temp , index);
 		return;
 	}
-
 	if ((len = REST.get_query(request, &query))){
 		if(isdigit(query[0]) && len == 1){
 			char c[2];
@@ -1210,7 +1200,6 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 				end_time =  eeprom_read_word(&ee_end_time3);
 				break;	
 		}
-
 		index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%02u:%02u-%02u:%02u\n"),start_time/100,start_time % 100,end_time/100,end_time % 100);
 	}
 	else{
@@ -1291,8 +1280,6 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 
 
 /****************************** Modes ******************************************/
-
-
 RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "Mode auto/manual");
 
 void
@@ -1348,8 +1335,9 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	}
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   REST.set_response_payload(response, (uint8_t *) temp , index);
-
 }
+
+
 /****************************** Power On/Off ***********************************/
 RESOURCE(power, METHOD_GET | METHOD_POST, "power", "Power On/Off");
 
@@ -1405,8 +1393,8 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	REST.set_response_payload(response, (uint8_t *) temp , index);
 }
 
-/****************************** Coap Process ***********************************/
 
+/****************************** Coap Process ***********************************/
 PROCESS_THREAD(coap_process, ev, data)
 {
   PROCESS_BEGIN();
@@ -1430,7 +1418,6 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_timer);
 	rest_activate_resource(&resource_power);
 	rest_activate_resource(&resource_mode);
-
 
 	memset(&poll_data, 0, sizeof(poll_data));	
 	poll_data.powered=true;
