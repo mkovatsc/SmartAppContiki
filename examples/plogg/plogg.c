@@ -569,7 +569,7 @@ PROCESS_THREAD(plogg_process, ev, data)
 /*---------------------------------------------------------------------------*/
 
 /****************************** Reset ****************************************/ 
-RESOURCE(reset, METHOD_POST, "reset", "Reset");
+RESOURCE(reset, METHOD_PUT, "reset", "Reset");
 
 void
 reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -662,7 +662,7 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 
 
 /***************************** Date & Time ***********************************/
-RESOURCE(time, METHOD_GET | METHOD_POST, "time", "Time");
+RESOURCE(time, METHOD_GET | METHOD_PUT, "time", "Time");
 
 void
 time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -712,7 +712,7 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 }
 
 
-RESOURCE(date, METHOD_GET | METHOD_POST, "date", "Date");
+RESOURCE(date, METHOD_GET | METHOD_PUT, "date", "Date");
 
 void
 date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -846,7 +846,7 @@ state_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 
 
 /***************************** Tariff Timer ************************************/
-RESOURCE(tariff_timer,METHOD_GET | METHOD_POST, "tariff/timer", "Tariff Timer");
+RESOURCE(tariff_timer,METHOD_GET | METHOD_PUT, "tariff/timer", "Tariff Timer");
 
 void
 tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -922,7 +922,7 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 
 /***************************** Tariff Rate ************************************/
-RESOURCE(tariff_rate,METHOD_GET | METHOD_POST, "tariff/rate", "Tariff Rate");
+RESOURCE(tariff_rate,METHOD_GET | METHOD_PUT, "tariff/rate", "Tariff Rate");
 
 void
 tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -958,9 +958,9 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	}
 	if (tariff==-1){
 	 	printf_P(PSTR("UCAST:0021ED000004699D=SS\r\n"));
-		if (REST.get_method_type(request)==METHOD_POST){
+		if (REST.get_method_type(request)==METHOD_PUT){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with POST"));
+			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with PUT"));
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, index);
 		}
@@ -1105,7 +1105,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 /********************************** Timers *************************************/
 
-RESOURCE(timer,METHOD_GET|METHOD_POST, "timer", "Timers");
+RESOURCE(timer,METHOD_GET|METHOD_PUT, "timer", "Timers");
 
 void
 timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -1148,9 +1148,9 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 		return;
 	}
 	if(timer==-1){
-		if (REST.get_method_type(request)==METHOD_POST){
+		if (REST.get_method_type(request)==METHOD_PUT){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with POST"));
+			index += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Overview not allowed with PUT"));
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, index);
 		}
@@ -1280,7 +1280,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 
 
 /****************************** Modes ******************************************/
-RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "Mode auto/manual");
+RESOURCE(mode, METHOD_GET | METHOD_PUT, "mode", "Mode auto/manual");
 
 void
 mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
@@ -1339,7 +1339,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 
 
 /****************************** Power On/Off ***********************************/
-RESOURCE(power, METHOD_GET | METHOD_POST, "power", "Power On/Off");
+RESOURCE(power, METHOD_GET | METHOD_PUT, "power", "Power On/Off");
 
 void
 power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
