@@ -56,7 +56,7 @@ CFLAGS += -DUIP_CONF_TCP=1
 APPS += rest-http-engine
 endif
 
-APPS += rest-engine
+APPS += erbium
 
 
 include $(CONTIKI)/Makefile.include

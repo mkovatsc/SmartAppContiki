@@ -8,7 +8,7 @@
 #include "static-routing.h"
 #endif
 
-#include "rest-engine.h"
+#include "erbium.h"
 #if WITH_COAP==3
 #include "coap-03-rest-engine.h"
 #elif WITH_COAP==6

@@ -36,8 +36,8 @@
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#ifndef REST_ENGINE_H_
-#define REST_ENGINE_H_
+#ifndef ERBIUM_H_
+#define ERBIUM_H_
 
 /*includes*/
 #include <stdio.h>
@@ -329,4 +329,4 @@ void rest_set_post_handler(resource_t* resource, restful_post_handler post_handl
  */
 void rest_set_special_flags(resource_t* resource, rest_resource_flags_t flags);
 
-#endif /*REST_ENGINE_H_*/
+#endif /*ERBIUM_H_*/

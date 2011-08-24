@@ -47,7 +47,7 @@ CFLAGS += -DUIP_CONF_TCP=1
 APPS += rest-http-engine
 endif
 
-APPS += rest-engine
+APPS += erbium
 
 CUSTOM_RULE_C_TO_CO = 1
 

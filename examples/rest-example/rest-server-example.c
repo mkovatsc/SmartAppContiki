@@ -47,7 +47,7 @@
 #include "static-routing.h"
 #endif
 
-#include "rest-engine.h"
+#include "erbium.h"
 
 
 #if defined (PLATFORM_HAS_BUTTON)

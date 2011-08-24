@@ -10,7 +10,7 @@
 
 #include <stddef.h> /* for size_t */
 #include "contiki-net.h"
-#include "rest-engine.h"
+#include "erbium.h"
 
 #define COAP_DEFAULT_PORT                    61616
 
