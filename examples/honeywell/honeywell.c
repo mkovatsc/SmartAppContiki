@@ -370,7 +370,7 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(mode, METHOD_GET | METHOD_POST, "mode", "mode");
+RESOURCE(mode, METHOD_GET | METHOD_PUT, "mode", "mode");
 void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -424,7 +424,7 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(target, METHOD_GET | METHOD_POST, "target", "target");
+RESOURCE(target, METHOD_GET | METHOD_PUT, "target", "target");
 void target_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -464,7 +464,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(poll, METHOD_GET | METHOD_POST, "poll", "poll");
+RESOURCE(poll, METHOD_GET | METHOD_PUT, "poll", "poll");
 void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -506,7 +506,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(valve, METHOD_GET | METHOD_POST, "valve", "valve");
+RESOURCE(valve, METHOD_GET | METHOD_PUT, "valve", "valve");
 void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -547,7 +547,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(date, METHOD_GET | METHOD_POST, "date", "date");
+RESOURCE(date, METHOD_GET | METHOD_PUT, "date", "date");
 void date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -607,7 +607,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 }
 
 
-RESOURCE(time, METHOD_GET | METHOD_POST, "time", "time");
+RESOURCE(time, METHOD_GET | METHOD_PUT, "time", "time");
 void time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
@@ -701,10 +701,10 @@ static void handle_temperature(int temperature, int index, void * request, void*
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(frost, METHOD_GET | METHOD_POST, "auto/frost", "auto/frost");
-RESOURCE(energy, METHOD_GET | METHOD_POST, "auto/energy", "auto/energy");
-RESOURCE(comfort, METHOD_GET | METHOD_POST, "auto/comfort", "auto/comfort");
-RESOURCE(supercomfort, METHOD_GET | METHOD_POST, "auto/supercomfort", "auto/supercomfort");
+RESOURCE(frost, METHOD_GET | METHOD_PUT, "auto/frost", "auto/frost");
+RESOURCE(energy, METHOD_GET | METHOD_PUT, "auto/energy", "auto/energy");
+RESOURCE(comfort, METHOD_GET | METHOD_PUT, "auto/comfort", "auto/comfort");
+RESOURCE(supercomfort, METHOD_GET | METHOD_PUT, "auto/supercomfort", "auto/supercomfort");
 
 void frost_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handle_temperature(poll_data.frost_temperature, 1, request, response, buffer, preferred_size, offset);
@@ -720,9 +720,9 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 }
 
 #if DEBUG
-RESOURCE(debug, METHOD_GET | METHOD_POST, "debug", "debug");
+RESOURCE(debug, METHOD_GET | METHOD_PUT, "debug", "debug");
 void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	if (REST.get_method_type(request)==METHOD_POST){
+	if (REST.get_method_type(request)==METHOD_PUT){
 		const char * string = NULL;
 		REST.get_post_variable(request, "value", &string);
 		enQueue((char*)string, false, debug);
@@ -733,9 +733,9 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 }
 #endif
 
-RESOURCE(timermode, METHOD_GET | METHOD_POST, "auto/timermode", "auto/timermode");
+RESOURCE(timermode, METHOD_GET | METHOD_PUT, "auto/timermode", "auto/timermode");
 void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	if (REST.get_method_type(request)==METHOD_POST){
+	if (REST.get_method_type(request)==METHOD_PUT){
 		const uint8_t * string = NULL;
 		int success = 1;
 		int len = coap_get_payload(request, &string);
@@ -816,9 +816,9 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	//note that one needs to somehow retrieve the slots from the thermostat somewhere else because of chaching
 	//To enable this you also need to enlarge the slot range from the interval [1;8] to [0;8] above
 	/*if(slot==-1){
-		if (REST.get_method_type(request)==METHOD_POST){
+		if (REST.get_method_type(request)==METHOD_PUT){
 			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("POST not allowed in overview"));
+			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("PUT not allowed in overview"));
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, strpos);
 		}
@@ -882,7 +882,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 		}
 		return;
 	}*/
-	if (REST.get_method_type(request)==METHOD_POST){
+	if (REST.get_method_type(request)==METHOD_PUT){
 		const uint8_t * disable = NULL;
 		len = coap_get_payload(request, &disable);
 		if(len == 7){
@@ -978,14 +978,14 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	REST.set_response_payload(response, buffer, strpos);
 }
 
-RESOURCE(weektimer, METHOD_GET | METHOD_POST, "auto/weektimer", "auto/weektimer");
-RESOURCE(day1timer, METHOD_GET | METHOD_POST, "auto/day1timer", "auto/day1timer");
-RESOURCE(day2timer, METHOD_GET | METHOD_POST, "auto/day2timer", "auto/day2timer");
-RESOURCE(day3timer, METHOD_GET | METHOD_POST, "auto/day3timer", "auto/day3timer");
-RESOURCE(day4timer, METHOD_GET | METHOD_POST, "auto/day4timer", "auto/day4timer");
-RESOURCE(day5timer, METHOD_GET | METHOD_POST, "auto/day5timer", "auto/day5timer");
-RESOURCE(day6timer, METHOD_GET | METHOD_POST, "auto/day6timer", "auto/day6timer");
-RESOURCE(day7timer, METHOD_GET | METHOD_POST, "auto/day7timer", "auto/day7timer");
+RESOURCE(weektimer, METHOD_GET | METHOD_PUT, "auto/weektimer", "auto/weektimer");
+RESOURCE(day1timer, METHOD_GET | METHOD_PUT, "auto/day1timer", "auto/day1timer");
+RESOURCE(day2timer, METHOD_GET | METHOD_PUT, "auto/day2timer", "auto/day2timer");
+RESOURCE(day3timer, METHOD_GET | METHOD_PUT, "auto/day3timer", "auto/day3timer");
+RESOURCE(day4timer, METHOD_GET | METHOD_PUT, "auto/day4timer", "auto/day4timer");
+RESOURCE(day5timer, METHOD_GET | METHOD_PUT, "auto/day5timer", "auto/day5timer");
+RESOURCE(day6timer, METHOD_GET | METHOD_PUT, "auto/day6timer", "auto/day6timer");
+RESOURCE(day7timer, METHOD_GET | METHOD_PUT, "auto/day7timer", "auto/day7timer");
 
 void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	handleTimer(0, request, response, buffer, preferred_size, offset);
