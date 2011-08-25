@@ -65,7 +65,7 @@
 #define PRINTBITS(buf,len)
 #endif
 
-PROCESS(coap_server, "Coap Server");
+PROCESS(coap_receiver, "CoAP Receiver");
 
 /*-----------------------------------------------------------------------------------*/
 /*- Constants -----------------------------------------------------------------------*/
@@ -266,9 +266,9 @@ handle_incoming_data(void)
 }
 /*-----------------------------------------------------------------------------------*/
 void
-coap_server_init()
+coap_receiver_init()
 {
-  process_start(&coap_server, NULL);
+  process_start(&coap_receiver, NULL);
 }
 /*-----------------------------------------------------------------------------------*/
 void
@@ -372,10 +372,10 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
   }
 }
 /*-----------------------------------------------------------------------------------*/
-PROCESS_THREAD(coap_server, ev, data)
+PROCESS_THREAD(coap_receiver, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("Starting CoAP-03 server...\n");
+  PRINTF("Starting CoAP-03 receiver...\n");
 
   rest_activate_resource(&resource_well_known_core);
 
@@ -477,7 +477,7 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
 const struct rest_implementation coap_rest_implementation = {
     "CoAP-03",
 
-    coap_server_init,
+    coap_receiver_init,
     coap_set_service_callback,
 
     coap_get_header_uri_path,

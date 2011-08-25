@@ -51,14 +51,11 @@
 #include "dev/button-sensor.h"
 
 #if WITH_COAP == 3
-#include "coap-03.h"
-#include "coap-03-transactions.h"
+#include "coap-03-rest-engine.h"
 #elif WITH_COAP == 6
-#include "coap-06.h"
-#include "coap-06-transactions.h"
+#include "coap-06-rest-engine.h"
 #elif WITH_COAP == 7
-#include "coap-07.h"
-#include "coap-07-transactions.h"
+#include "coap-07-rest-engine.h"
 #else
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif
@@ -99,7 +96,7 @@ static int uri_switch = 0;
 
 /* This function is will be passed to COAP_BLOCKING_REQUEST() to handle responses. */
 void
-chunk_handler(void *response)
+client_chunk_handler(void *response)
 {
   const uint8_t *chunk;
   int len = coap_get_payload(response, &chunk);
@@ -115,7 +112,7 @@ PROCESS_THREAD(coap_client_example, ev, data)
   SERVER_NODE(&server_ipaddr);
 
   /* receives all CoAP messages */
-  coap_server_init();
+  coap_receiver_init();
 
   etimer_set(&et, TOGGLE_INTERVAL * CLOCK_SECOND);
 
@@ -144,7 +141,7 @@ PROCESS_THREAD(coap_client_example, ev, data)
       PRINT6ADDR(&server_ipaddr);
       PRINTF(" : %u\n", UIP_HTONS(REMOTE_PORT));
 
-      COAP_BLOCKING_REQUEST(&server_ipaddr, REMOTE_PORT, request, chunk_handler);
+      COAP_BLOCKING_REQUEST(&server_ipaddr, REMOTE_PORT, request, client_chunk_handler);
 
       printf("\n--Done--\n");
 
@@ -163,7 +160,7 @@ PROCESS_THREAD(coap_client_example, ev, data)
       PRINT6ADDR(&server_ipaddr);
       PRINTF(" : %u\n", UIP_HTONS(REMOTE_PORT));
 
-      COAP_BLOCKING_REQUEST(&server_ipaddr, REMOTE_PORT, request, chunk_handler);
+      COAP_BLOCKING_REQUEST(&server_ipaddr, REMOTE_PORT, request, client_chunk_handler);
 
       printf("\n--Done--\n");
 
