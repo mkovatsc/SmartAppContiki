@@ -391,6 +391,7 @@ PROCESS_THREAD(coap_server, ev, data)
 
   coap_register_as_transaction_handler();
   coap_init_connection(SERVER_LISTEN_PORT);
+  PRINTF("Listening on port %u\n", UIP_HTONS(SERVER_LISTEN_PORT));
 
   while(1) {
     PROCESS_YIELD();

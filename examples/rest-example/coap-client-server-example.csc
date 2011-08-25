@@ -46,7 +46,7 @@
     <motetype>
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>skyweb</identifier>
-      <description>Rest</description>
+      <description>CoAP Server</description>
       <source EXPORT="discard">[CONTIKI_DIR]/examples/rest-example/rest-server-example.c</source>
       <commands EXPORT="discard">make rest-server-example.sky TARGET=sky</commands>
       <firmware EXPORT="copy">[CONTIKI_DIR]/examples/rest-example/rest-server-example.sky</firmware>
@@ -69,7 +69,9 @@
     <motetype>
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
-      <description>Coap Client</description>
+      <description>CoAP Client</description>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/rest-example/coap-client-example.c</source>
+      <commands EXPORT="discard">make coap-client-example.sky TARGET=sky</commands>
       <firmware EXPORT="copy">[CONTIKI_DIR]/examples/rest-example/coap-client-example.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
