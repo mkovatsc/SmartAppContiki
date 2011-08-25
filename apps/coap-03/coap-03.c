@@ -270,6 +270,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_HOST - index;
+      ((coap_header_option_t *)option)->s.length = 15;
       ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_host_len - 15;
       option += 2;
     }
@@ -287,6 +288,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_LOCATION_PATH - index;
+      ((coap_header_option_t *)option)->s.length = 15;
       ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->location_path_len - 15;
       option += 2;
     }
@@ -304,6 +306,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_PATH - index;
+      ((coap_header_option_t *)option)->s.length = 15;
       ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_path_len - 15;
       option += 2;
     }
@@ -354,6 +357,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       option += 1;
     } else {
       ((coap_header_option_t *)option)->l.delta = COAP_OPTION_URI_QUERY - index;
+      ((coap_header_option_t *)option)->s.length = 15;
       ((coap_header_option_t *)option)->l.length = ((coap_packet_t *)packet)->uri_query_len - 15;
       option += 2;
     }
