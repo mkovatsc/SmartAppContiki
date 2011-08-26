@@ -134,8 +134,8 @@ uint8_t mac_address[8] EEMEM = {0x02, 0x11, 0x22, 0xff, 0xfe, 0x33, 0x44, 0x55};
 #endif
 
 
-#ifdef CHANNEL_802_15_4
-uint8_t rf_channel[2] EEMEM = {CHANNEL_802_15_4, ~CHANNEL_802_15_4};
+#ifdef RF_CHANNEL
+uint8_t rf_channel[2] EEMEM = {RF_CHANNEL, ~RF_CHANNEL};
 //uint8_t rf_channel[2] EEMEM = {11, ~11};  //econotag test
 #else
 uint8_t rf_channel[2] EEMEM = {26, ~26};
@@ -150,9 +150,9 @@ static uint8_t get_channel_from_eeprom() {
 	if(eeprom_channel==~eeprom_check)
 		return eeprom_channel;
 
-#ifdef CHANNEL_802_15_4
+#ifdef RF_CHANNEL
 //return(11);
-	return(CHANNEL_802_15_4);
+	return(RF_CHANNEL);
 #else
 	return 26;
 #endif

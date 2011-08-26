@@ -1,1 +1,0 @@
-coap-07_src = coap-07-rest-engine.c coap-07.c coap-07-transactions.c coap-07-observing.c coap-07-separate.c

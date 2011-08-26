@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2011, Matthias Kovatsch and other contributors.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,33 +26,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
+ * This file is part of the Contiki operating system.
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+/**
+ * \file
+ *      CoAP's separate response mechanism
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
+ */
 
-#define IN_COOJA                1
-#define SICSLOWPAN_CONF_FRAG	1
+#ifndef COAP_SEPARATE_H_
+#define COAP_SEPARATE_H_
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
-#endif
+#include "er-coap-07.h"
 
-#ifndef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    128
-#endif
+void coap_separate_handler(resource_t *resource, void *request, void *response);
 
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    240
-#endif
-
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
-
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
-
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#endif /* COAP_SEPARATE_H_ */
