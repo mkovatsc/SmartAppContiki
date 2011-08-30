@@ -641,12 +641,12 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest current was recorded\n"));
 		}
 	}
-	else if(strncmp_P(query, PSTR("wattage"),MAX(len,7))==0){
+	else if(strncmp_P(query, PSTR("power"),MAX(len,5))==0){
 		if (poll_data.watts_max_value !=0){
 			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("%ld.%03ldW at %u %s %02u %02u:%02u:%02u\n"),poll_data.watts_max_value/1000, (poll_data.watts_max_value <0 ) ? ((poll_data.watts_max_value % 1000)*-1) : (poll_data.watts_max_value %1000), poll_data.watts_max_date_y, poll_data.watts_max_date_m, poll_data.watts_max_date_d,poll_data.watts_max_time_h, poll_data.watts_max_time_m, poll_data.watts_max_time_s);
 		}
 		else{
-			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest wattage was recorded\n"));
+			index += snprintf_P(temp+index,REST_MAX_CHUNK_SIZE,PSTR("No highest power was recorded\n"));
 		}
 	}
 	else{
@@ -654,7 +654,7 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	}
 	if (!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		index += snprintf_P(temp, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter to select a peak. available peaks {voltage,current,wattage}\neg.: /max?voltage to get the voltage's peak\n"));
+		index += snprintf_P(temp, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter to select a peak. available peaks {voltage, current, power}\ne.g.: /max?voltage to get the voltage's peak\n"));
 	}
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, (uint8_t *)temp , index);
