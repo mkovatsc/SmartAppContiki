@@ -1,8 +1,39 @@
 /*
- * coap-03.h
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * All rights reserved.
  *
- *  Created on: 12 Apr 2011
- *      Author: Matthias Kovatsch, based on Dogan Yazar's work
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ */
+
+/**
+ * \file
+ *      An implementation of the Constrained Application Protocol (draft 03)
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #ifndef COAP_03_H_
@@ -226,13 +257,13 @@ int coap_set_header_max_age(void *packet, uint32_t age);
 int coap_get_header_etag(void *packet, const uint8_t **etag);
 int coap_set_header_etag(void *packet, uint8_t *etag, size_t etag_len);
 
-int coap_get_header_uri_host(void *packet, const char **host); // in-place string might not be 0-terminated
+int coap_get_header_uri_host(void *packet, const char **host); /*CAUTION in-place string might not be 0-terminated */
 int coap_set_header_uri_host(void *packet, char *host);
 
-int coap_get_header_location(void *packet, const char **uri); // in-place string might not be 0-terminated
+int coap_get_header_location(void *packet, const char **uri); /*CAUTION in-place string might not be 0-terminated */
 int coap_set_header_location(void *packet, char *uri);
 
-int coap_get_header_uri_path(void *packet, const char **uri); // in-place string might not be 0-terminated
+int coap_get_header_uri_path(void *packet, const char **uri); /*CAUTION in-place string might not be 0-terminated */
 int coap_set_header_uri_path(void *packet, char *uri);
 
 int coap_get_header_observe(void *packet, uint32_t *observe);
@@ -244,7 +275,7 @@ int coap_set_header_token(void *packet, uint8_t *token, size_t token_len);
 int coap_get_header_block(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block(void *packet, uint32_t num, uint8_t more, uint16_t size);
 
-int coap_get_header_uri_query(void *packet, const char **query); // in-place string might not be 0-terminated
+int coap_get_header_uri_query(void *packet, const char **query); /*CAUTION in-place string might not be 0-terminated */
 int coap_set_header_uri_query(void *packet, char *query);
 
 int coap_get_payload(void *packet, const uint8_t **payload);

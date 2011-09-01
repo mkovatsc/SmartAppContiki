@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -24,7 +27,13 @@
  * SUCH DAMAGE.
  *
  * This file is part of the Contiki operating system.
- *
+ */
+
+/**
+ * \file
+ *      CoAP module for observing resources
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #include <stdio.h>
@@ -126,8 +135,8 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
     {
       coap_transaction_t *transaction = NULL;
 
-      // FIXME CON vs NON, implement special transaction for CON, sharing the same buffer, updating retransmissions with newer notifications, etc.
-      //       Maybe even less max retransmissions.
+      /*TODO implement special transaction for CON, sharing the same buffer to allow for more observers */
+
       if ( (transaction = coap_new_transaction(coap_get_tid(), &obs->addr, obs->port)) )
       {
         /* Use CON to check whether client is still there/interested after COAP_OBSERVING_REFRESH_INTERVAL. */

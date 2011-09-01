@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,7 +78,7 @@ const char* error_messages[] = {
   "Memory boundary exceeded",
 
   /* CoAP errors */
-  "Request has unknown critical option", //FIXME which one?
+  "Request has unknown critical option", /*FIXME which one? */
   "Packet could not be serialized"
 };
 /*-----------------------------------------------------------------------------------*/
@@ -115,8 +115,7 @@ handle_incoming_data(void)
     if (error==NO_ERROR)
     {
 
-      // FIXME
-      // duplicates suppression
+      /*TODO duplicates suppression, if required */
 
       PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", message->version, message->type, message->option_count, message->code, message->tid);
       PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
@@ -171,7 +170,7 @@ handle_incoming_data(void)
 
 
             /* apply blockwise transfers */
-            if ( IS_OPTION(message, COAP_OPTION_BLOCK) ) //|| new_offset!=0 && new_offset!=block_offset
+            if ( IS_OPTION(message, COAP_OPTION_BLOCK) )
             {
               /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
               if (new_offset==block_offset)

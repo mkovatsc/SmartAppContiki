@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -171,7 +171,6 @@ struct rest_implementation {
   /** Set the ETag option of a response. */
   int (* set_header_etag)(void *response, uint8_t *etag, size_t length);
 
-  //FIXME support multiple ETags
   /** Get the If-Match option of a request. */
   int (* get_header_if_match)(void *request, const uint8_t **etag);
 

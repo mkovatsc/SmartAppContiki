@@ -1,8 +1,39 @@
 /*
- * coap-observing.c
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * All rights reserved.
  *
- *  Created on: 03 May 2011
- *      Author: Matthias Kovatsch
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ */
+
+/**
+ * \file
+ *      CoAP module for observing resources
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #include <stdio.h>
@@ -100,8 +131,8 @@ coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payl
     {
       coap_transaction_t *transaction = NULL;
 
-      // FIXME CON vs NON, implement special transaction for CON, sharing the same buffer, updating retransmissions with newer notifications, etc.
-      //       Maybe even less max retransmissions.
+      /*TODO implement special transaction for CON, sharing the same buffer to allow for more observers */
+
       if ( (transaction = coap_new_transaction(coap_get_tid(), &obs->addr, obs->port)) )
       {
         /* Use CON to check whether client is still there/interested after COAP_OBSERVING_REFRESH_INTERVAL. */

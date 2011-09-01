@@ -1,8 +1,39 @@
 /*
- * coap-03-transactions.c
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * All rights reserved.
  *
- *  Created on: 12 Apr 2011
- *      Author: Matthias Kovatsch
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of the Contiki operating system.
+ */
+
+/**
+ * \file
+ *      CoAP module for reliable transport
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 #include "contiki.h"
@@ -67,7 +98,7 @@ coap_send_transaction(coap_transaction_t *t)
     {
       PRINTF("Keeping transaction %u\n", t->tid);
 
-      // FIXME Hack, maybe there is a better way that is lighter than posting everything to the process
+      /*FIXME hack, maybe there is a better way, but avoid posting everything to the process */
       struct process *process_actual = PROCESS_CURRENT();
       process_current = transaction_handler_process;
       etimer_set(&t->retrans_timer, CLOCK_SECOND * COAP_RESPONSE_TIMEOUT * (1<<(t->retrans_counter)));

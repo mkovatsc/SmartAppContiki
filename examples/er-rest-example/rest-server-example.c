@@ -387,7 +387,7 @@ event_event_handler(resource_t *r)
   /* Notify registered observers with the given message type, observe option, and payload.
    * The token will be set automatically. */
 
-  // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
+  /*FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE? */
   REST.notify_subscribers(r->url, 0, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
   return 1;
 }

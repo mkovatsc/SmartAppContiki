@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -254,7 +254,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
     ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->etag_len;
     memcpy(++option, ((coap_packet_t *)packet)->etag, ((coap_packet_t *)packet)->etag_len);
     PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_ETAG, ((coap_packet_t *)packet)->etag_len, COAP_OPTION_ETAG - index);
-    PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); // FIXME always prints 4 bytes...
+    PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); /*FIXME always prints 4 bytes */
     PRINTF("%02X", ((coap_packet_t *)packet)->etag[1]);
     PRINTF("%02X", ((coap_packet_t *)packet)->etag[2]);
     PRINTF("%02X", ((coap_packet_t *)packet)->etag[3]);
@@ -332,7 +332,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
     ((coap_header_option_t *)option)->s.length = ((coap_packet_t *)packet)->token_len;
     memcpy(++option, ((coap_packet_t *)packet)->token, ((coap_packet_t *)packet)->token_len);
     PRINTF("OPTION %u (type %u, len %u, delta %u): ", ((coap_packet_t *)packet)->option_count, COAP_OPTION_TOKEN, ((coap_packet_t *)packet)->token_len, COAP_OPTION_TOKEN - index);
-    PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
+    PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); /*FIXME always prints 2 bytes */
     index = COAP_OPTION_TOKEN;
     option += ((coap_packet_t *)packet)->token_len;
     ++(((coap_packet_t *)packet)->option_count);
@@ -451,7 +451,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
         case COAP_OPTION_ETAG:
           ((coap_packet_t *)packet)->etag_len = MIN(COAP_ETAG_LEN, option_len);
           memcpy(((coap_packet_t *)packet)->etag, option_data, ((coap_packet_t *)packet)->etag_len);
-          PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); // FIXME always prints 4 bytes...
+          PRINTF("ETag %u [0x%02X", ((coap_packet_t *)packet)->etag_len, ((coap_packet_t *)packet)->etag[0]); /*FIXME always prints 4 bytes */
           PRINTF("%02X", ((coap_packet_t *)packet)->etag[1]);
           PRINTF("%02X", ((coap_packet_t *)packet)->etag[2]);
           PRINTF("%02X", ((coap_packet_t *)packet)->etag[3]);
@@ -479,7 +479,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
         case COAP_OPTION_TOKEN:
           ((coap_packet_t *)packet)->token_len = MIN(COAP_TOKEN_LEN, option_len);
           memcpy(((coap_packet_t *)packet)->token, option_data, ((coap_packet_t *)packet)->token_len);
-          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); // FIXME always prints 2 bytes...
+          PRINTF("Token %u [0x%02X%02X]\n", ((coap_packet_t *)packet)->token_len, ((coap_packet_t *)packet)->token[0], ((coap_packet_t *)packet)->token[1]); /*FIXME always prints 2 bytes */
           break;
         case COAP_OPTION_BLOCK:
           ((coap_packet_t *)packet)->block_num = bytes_2_uint32(option_data, option_len);
@@ -596,7 +596,7 @@ coap_set_header_etag(void *packet, uint8_t *etag, size_t etag_len)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_uri_host(void *packet, const char **host) // in-place host might not be 0-terminated
+coap_get_header_uri_host(void *packet, const char **host)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST)) return 0;
 
@@ -615,7 +615,7 @@ coap_set_header_uri_host(void *packet, char *host)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_location(void *packet, const char **uri) // in-place uri might not be 0-terminated
+coap_get_header_location(void *packet, const char **uri)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH)) return 0;
 

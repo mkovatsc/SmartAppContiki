@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 
 /**
  * \file
- *      CoAP's separate response mechanism
+ *      CoAP module for separate responses
  * \author
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */

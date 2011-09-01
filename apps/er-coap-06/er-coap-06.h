@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 
 /**
  * \file
- *      An implementation of the Constrained Application Protocol (draft 07)
+ *      An implementation of the Constrained Application Protocol (draft 06)
  * \author
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
@@ -72,7 +72,7 @@
  * Conservative size limit, as not all options have to be set at the same time.
  */
 /*                            Hdr CoT Age  Tag              Obs  Tok               Blo strings */
-#define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 10) // 50
+#define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 10) /* 50 */
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
 #if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)

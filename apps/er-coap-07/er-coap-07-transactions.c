@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 
 /**
  * \file
- *      CoAP's reliable transport
+ *      CoAP module for reliable transport
  * \author
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
@@ -116,7 +116,7 @@ coap_send_transaction(coap_transaction_t *t)
         PRINTF("Doubled (%u) interval %f\n", t->retrans_counter, (float)t->retrans_timer.timer.interval/CLOCK_SECOND);
       }
 
-      // FIXME Hack, maybe there is a better way, but which is still lighter than posting everything to the process
+      /*FIXME hack, maybe there is a better way, but avoid posting everything to the process */
       struct process *process_actual = PROCESS_CURRENT();
       process_current = transaction_handler_process;
       etimer_restart(&t->retrans_timer); /* interval updated above */

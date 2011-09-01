@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -103,8 +103,7 @@ handle_incoming_data(void)
     if (coap_error_code==NO_ERROR)
     {
 
-      // FIXME
-      // duplicates suppression
+      /*TODO duplicates suppression, if required */
 
       PRINTF("  Parsed: v %u, t %u, oc %u, c %u, tid %u\n", message->version, message->type, message->option_count, message->code, message->tid);
       PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
@@ -159,7 +158,7 @@ handle_incoming_data(void)
             if (service_cbk(message, response, transaction->packet+COAP_MAX_HEADER_SIZE, block_size, &new_offset))
             {
               /* Apply blockwise transfers. */
-              if ( IS_OPTION(message, COAP_OPTION_BLOCK2) ) //|| new_offset!=0 && new_offset!=block_offset
+              if ( IS_OPTION(message, COAP_OPTION_BLOCK2) )
               {
                 /* unchanged new_offset indicates that resource is unaware of blockwise transfer */
                 if (new_offset==block_offset)

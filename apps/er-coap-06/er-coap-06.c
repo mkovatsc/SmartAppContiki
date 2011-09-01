@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -202,7 +202,6 @@ static
 void
 coap_merge_multi_option(char **dst, size_t *dst_len, uint8_t *option, size_t option_len, char separator)
 {
-  /* Merge multiple options. */
   if (*dst_len > 0)
   {
     (*dst)[*dst_len] = separator;
@@ -346,7 +345,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       ((coap_packet_t *)packet)->etag[5],
       ((coap_packet_t *)packet)->etag[6],
       ((coap_packet_t *)packet)->etag[7]
-    ); // FIXME always prints 8 bytes...
+    ); /*FIXME always prints 8 bytes */
 
     option += serialize_array_option(COAP_OPTION_ETAG, current_number, option, ((coap_packet_t *)packet)->etag, ((coap_packet_t *)packet)->etag_len, NULL);
     ((coap_packet_t *)packet)->option_count += 1;
@@ -410,7 +409,7 @@ coap_serialize_message(void *packet, uint8_t *buffer)
       ((coap_packet_t *)packet)->token[5],
       ((coap_packet_t *)packet)->token[6],
       ((coap_packet_t *)packet)->token[7]
-    ); // FIXME always prints 8 bytes...
+    ); /*FIXME always prints 8 bytes */
 
     option += serialize_array_option(COAP_OPTION_TOKEN, current_number, option, ((coap_packet_t *)packet)->token, ((coap_packet_t *)packet)->token_len, NULL);
     ((coap_packet_t *)packet)->option_count += 1;
@@ -558,10 +557,10 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           PRINTF("Max-Age [%lu]\n", ((coap_packet_t *)packet)->max_age);
           break;
         case COAP_OPTION_PROXY_URI:
-          // FIXME check for own end-point
+          /*FIXME check for own end-point */
           ((coap_packet_t *)packet)->proxy_uri = (char *) current_option;
           ((coap_packet_t *)packet)->proxy_uri_len = option_len;
-          // TODO lengeh > 270 not implemented (actually not required)
+          /*TODO length > 270 not implemented (actually not required) */
           PRINTF("Proxy-Uri NOT IMPLEMENTED [%.*s]\n", ((coap_packet_t *)packet)->proxy_uri_len, ((coap_packet_t *)packet)->proxy_uri);
           coap_error_message = "This is a constrained server (Contiki)";
           return PROXYING_NOT_SUPPORTED_5_05;
@@ -578,7 +577,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
             ((coap_packet_t *)packet)->etag[5],
             ((coap_packet_t *)packet)->etag[6],
             ((coap_packet_t *)packet)->etag[7]
-          ); // FIXME always prints 8 bytes...
+          ); /*FIXME always prints 8 bytes */
           break;
         case COAP_OPTION_URI_HOST:
           ((coap_packet_t *)packet)->uri_host = (char *) current_option;
@@ -587,7 +586,6 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           break;
         case COAP_OPTION_LOCATION_PATH:
           coap_merge_multi_option(&(((coap_packet_t *)packet)->location_path), &(((coap_packet_t *)packet)->location_path_len), current_option, option_len, '/');
-          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Location-Path [%.*s]\n", ((coap_packet_t *)packet)->location_path_len, ((coap_packet_t *)packet)->location_path);
           break;
         case COAP_OPTION_URI_PORT:
@@ -596,12 +594,10 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           break;
         case COAP_OPTION_LOCATION_QUERY:
           coap_merge_multi_option(&(((coap_packet_t *)packet)->location_query), &(((coap_packet_t *)packet)->location_query_len), current_option, option_len, '&');
-          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Location-Query [%.*s]\n", ((coap_packet_t *)packet)->location_query_len, ((coap_packet_t *)packet)->location_query);
           break;
         case COAP_OPTION_URI_PATH:
           coap_merge_multi_option(&(((coap_packet_t *)packet)->uri_path), &(((coap_packet_t *)packet)->uri_path_len), current_option, option_len, '/');
-          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Uri-Path [%.*s]\n", ((coap_packet_t *)packet)->uri_path_len, ((coap_packet_t *)packet)->uri_path);
           break;
         case COAP_OPTION_OBSERVE:
@@ -620,14 +616,13 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
             ((coap_packet_t *)packet)->token[5],
             ((coap_packet_t *)packet)->token[6],
             ((coap_packet_t *)packet)->token[7]
-          ); // FIXME always prints 8 bytes...
+          ); /*FIXME always prints 8 bytes */
           break;
         case COAP_OPTION_FENCE_POST:
           PRINTF("Fence-Post\n");
           break;
         case COAP_OPTION_URI_QUERY:
           coap_merge_multi_option(&(((coap_packet_t *)packet)->uri_query), &(((coap_packet_t *)packet)->uri_query_len), current_option, option_len, '&');
-          // FIXME merge double separators from two-byte-header-field options
           PRINTF("Uri-Query [%.*s]\n", ((coap_packet_t *)packet)->uri_query_len, ((coap_packet_t *)packet)->uri_query);
           break;
         case COAP_OPTION_BLOCK2:
@@ -640,7 +635,7 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
           break;
         case COAP_OPTION_BLOCK1:
           PRINTF("Block1 NOT IMPLEMENTED\n");
-          // TODO implement
+          /*TODO implement */
           coap_error_message = "Blockwise POST/PUT not supported";
           return NOT_IMPLEMENTED_5_01;
           break;
@@ -759,7 +754,7 @@ coap_set_header_token(void *packet, uint8_t *token, size_t token_len)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_proxy_uri(void *packet, const char **uri) // in-place host might not be 0-terminated
+coap_get_header_proxy_uri(void *packet, const char **uri)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_PROXY_URI)) return 0;
 
@@ -778,7 +773,7 @@ coap_set_header_proxy_uri(void *packet, char *uri)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_uri_host(void *packet, const char **host) // in-place host might not be 0-terminated
+coap_get_header_uri_host(void *packet, const char **host)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_URI_HOST)) return 0;
 
@@ -839,7 +834,7 @@ coap_set_header_uri_query(void *packet, char *query)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_location_path(void *packet, const char **path) // in-place uri might not be 0-terminated
+coap_get_header_location_path(void *packet, const char **path)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_PATH)) return 0;
 
@@ -871,7 +866,7 @@ coap_set_header_location_path(void *packet, char *path)
 }
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_header_location_query(void *packet, const char **query) // in-place uri might not be 0-terminated
+coap_get_header_location_query(void *packet, const char **query)
 {
   if (!IS_OPTION((coap_packet_t *)packet, COAP_OPTION_LOCATION_QUERY)) return 0;
 
