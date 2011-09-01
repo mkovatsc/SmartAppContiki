@@ -212,17 +212,14 @@ coap_merge_multi_option(char **dst, size_t *dst_len, uint8_t *option, size_t opt
     (*dst)[*dst_len] = separator;
     *dst_len += 1;
 
-    if (option_len>15)
-    {
-      (*dst)[*dst_len] = separator;
-      *dst_len += 1;
-    }
+    /* memmove handles 2-byte option headers */
+    memmove((*dst)+(*dst_len), option, option_len);
 
     *dst_len += option_len;
   }
   else
   {
-    *dst = (char *) option;
+    *dst = (char *) option; /* thus pointer pointer */
     *dst_len = option_len;
   }
 }
