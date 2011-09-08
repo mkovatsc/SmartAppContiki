@@ -284,10 +284,13 @@ unsigned long clock_seconds(void);
 #define RF230_MIN_RX_POWER 30
  */
 
+#ifndef UIP_CONF_BUFFER_SIZE
+#define UIP_CONF_BUFFER_SIZE     240
+#endif
+
 #define UIP_CONF_ROUTER             1
 #define RPL_BORDER_ROUTER           1
 #define RPL_CONF_STATS              0
-#define UIP_CONF_BUFFER_SIZE	 1300
 //#define UIP_CONF_DS6_NBR_NBU       12
 //#define UIP_CONF_DS6_ROUTE_NBU     12
 #define UIP_CONF_ND6_SEND_RA		0
