@@ -3,7 +3,6 @@ all:
 	avr-objcopy -O ihex -j .text -j .data plogg.elf plogg_flash.hex
 	avr-objcopy -O ihex -j .eeprom plogg.elf plogg_eeprom.hex
 	avr-size -C --mcu=at90usb1287 plogg.elf
-	cp plogg.elf /mnt/hgfs/vm-share/plogg.elf
 
 program:
 	avrdude -p usb1287 -c jtagmkII -P usb -U flash:w:plogg_flash.hex -U eeprom:w:plogg_eeprom.hex

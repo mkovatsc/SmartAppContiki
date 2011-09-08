@@ -2,7 +2,7 @@ all: rest-server-example coap-client-example
 
 CONTIKI=../..
 
-ifneq ($(TARGET), minimal-net)
+ifeq ($(TARGET), sky)
 PROJECT_SOURCEFILES += static-routing.c
 endif
 
@@ -16,6 +16,11 @@ WITH_COAP=7
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
+ifneq ($(ADDR), )
+CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
+endif
 
 # must be CFLAGS not variables
 # minimal-net does not support RPL, avoid redefine warnings
