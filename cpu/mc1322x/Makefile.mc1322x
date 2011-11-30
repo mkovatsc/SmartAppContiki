@@ -73,7 +73,7 @@ CFLAGS += -I$(OBJECTDIR) -I$(CONTIKI_CPU)/board -DBOARD=$(TARGET)
 
 $(OBJECTDIR)/board.h: $(OBJECTDIR) 
 	# Always copy for CIFS mounts
-	cp $(CONTIKI_CPU)/board/$(TARGET).h $(OBJECTDIR)/board.h
+	cp -f $(CONTIKI_CPU)/board/$(TARGET).h $(OBJECTDIR)/board.h
 
 
 $(OBJECTDIR)/isr.o: $(CONTIKI_CPU)/src/isr.c

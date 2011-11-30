@@ -31,7 +31,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h> //Enric_Joakim
+#include <stdarg.h>
 
 #include "contiki.h"
 #ifdef __IAR_SYSTEMS_ICC__
@@ -53,9 +53,9 @@
 #include "net/mac/frame802154.h"
 #include "dev/button-sensor.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/uip-ds6.h"
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #include "net/rime.h"
 
@@ -109,6 +109,8 @@ static uint8_t is_gateway;
 #else
 #define PRINTF(...)
 #endif
+
+void init_platform(void);
 
 /*---------------------------------------------------------------------------*/
 #if 0
@@ -184,9 +186,9 @@ set_gateway(void)
   if(!is_gateway) {
     leds_on(LEDS_RED);
     printf("%d.%d: making myself the IP network gateway.\n\n",
-	   rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
+           rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
     printf("IPv4 address of the gateway: %d.%d.%d.%d\n\n",
-	   uip_ipaddr_to_quad(&uip_hostaddr));
+           uip_ipaddr_to_quad(&uip_hostaddr));
     uip_over_mesh_set_gateway(&rimeaddr_node_addr);
     uip_over_mesh_make_announced_gateway();
     is_gateway = 1;
@@ -212,20 +214,6 @@ main(int argc, char **argv)
   slip_arch_init(BAUD2UBR(115200));
 #endif /* WITH_UIP */
 
-  /* XXX hack: Fix it so that the 802.15.4 MAC address is compatible
-     with an Ethernet MAC address - byte 0 (byte 2 in the DS ID)
-     cannot be odd. */
-  //Enric node_mac[2] &= 0xfe;
-  node_mac[0] = 0x00;
-  node_mac[1] = 0x12;
-  node_mac[2] = 0x76;
-  node_mac[3] = 0x01;
-  node_mac[4] = 0x02;
-  node_mac[5] = 0x03;
-  node_mac[2] = 0x04;
-  node_mac[7] = 0x05;
-
-  
   xmem_init();
 
   rtimer_init();
@@ -233,31 +221,59 @@ main(int argc, char **argv)
    * Hardware initialization done!
    */
 
-  
   /* Restore node id if such has been stored in external mem */
   node_id_restore();
 
+  /* If no MAC address was burned, we use the node ID. */
+  if(node_mac[0] | node_mac[1] | node_mac[2] | node_mac[3] |
+     node_mac[4] | node_mac[5] | node_mac[6] | node_mac[7]) {
+    node_mac[0] = 0xc1;  /* Hardcoded for Z1 */
+    node_mac[1] = 0x0c;  /* Hardcoded for Revision C */
+    node_mac[2] = 0x00;  /* Hardcoded to arbitrary even number so that
+                            the 802.15.4 MAC address is compatible with
+                            an Ethernet MAC address - byte 0 (byte 2 in
+                            the DS ID) */
+    node_mac[3] = 0x00;  /* Hardcoded */
+    node_mac[4] = 0x00;  /* Hardcoded */
+    node_mac[5] = 0x00;  /* Hardcoded */
+    node_mac[6] = node_id >> 8;
+    node_mac[7] = node_id & 0xff;
+  }
 
-  /* for setting "hardcoded" IEEE 802.15.4 MAC addresses */
+  /* Overwrite node MAC if desired at compile time */
+#ifdef MACID
+  #warning "***** CHANGING DEFAULT MAC *****"
+  node_mac[0] = 0xc1;  /* Hardcoded for Z1 */
+  node_mac[1] = 0x0c;  /* Hardcoded for Revision C */
+  node_mac[2] = 0x00;  /* Hardcoded to arbitrary even number so that
+                          the 802.15.4 MAC address is compatible with
+                          an Ethernet MAC address - byte 0 (byte 2 in
+                          the DS ID) */
+  node_mac[3] = 0x00;  /* Hardcoded */
+  node_mac[4] = 0x00;  /* Hardcoded */
+  node_mac[5] = 0x00;  /* Hardcoded */
+  node_mac[6] = MACID >> 8;
+  node_mac[7] = MACID & 0xff;
+#endif
+
 #ifdef IEEE_802154_MAC_ADDRESS
+  /* for setting "hardcoded" IEEE 802.15.4 MAC addresses */
   {
     uint8_t ieee[] = IEEE_802154_MAC_ADDRESS;
     memcpy(node_mac, ieee, sizeof(uip_lladdr.addr));
     node_mac[7] = node_id & 0xff;
   }
-#endif
+#endif /* IEEE_802154_MAC_ADDRESS */
 
-  //Enric random_init(node_mac[0] + node_id);
-  
    /*
    * Initialize Contiki and our processes.
    */
   process_init();
   process_start(&etimer_process, NULL);
 
-  process_start(&sensors_process, NULL);
-
   ctimer_init();
+
+  init_platform();
 
   set_rime_addr();
 
@@ -290,12 +306,8 @@ main(int argc, char **argv)
     PRINTF("Node id is not set.\n");
   }
 
-  //Enric printf("MAC %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
-	 //Enric node_mac[0], node_mac[1], node_mac[2], node_mac[3],
-	 //Enric node_mac[4], node_mac[5], node_mac[6], node_mac[7]);
 
-#if WITH_UIP6
-  PRINTF("in WITH_UIP6\n"); //Enric
+#if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, node_mac, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -343,7 +355,7 @@ main(int argc, char **argv)
            ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
   }
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -354,9 +366,9 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
-#if !WITH_UIP && !WITH_UIP6
+#if !WITH_UIP && !UIP_CONF_IPV6
   uart0_set_input(serial_line_input_byte);
   serial_line_init();
 #endif
@@ -374,7 +386,7 @@ main(int argc, char **argv)
 
 #if WITH_UIP
   process_start(&tcpip_process, NULL);
-  process_start(&uip_fw_process, NULL);	/* Start IP output */
+  process_start(&uip_fw_process, NULL); /* Start IP output */
   process_start(&slip_process, NULL);
 
   slip_set_input_callback(set_gateway);
@@ -385,7 +397,7 @@ main(int argc, char **argv)
     uip_init();
 
     uip_ipaddr(&hostaddr, 172,16,
-	       rimeaddr_node_addr.u8[0],rimeaddr_node_addr.u8[1]);
+               rimeaddr_node_addr.u8[0],rimeaddr_node_addr.u8[1]);
     uip_ipaddr(&netmask, 255,255,0,0);
     uip_ipaddr_copy(&meshif.ipaddr, &hostaddr);
 
@@ -397,7 +409,7 @@ main(int argc, char **argv)
     uip_fw_default(&meshif);
     uip_over_mesh_init(UIP_OVER_MESH_CHANNEL);
     printf("uIP started with IP address %d.%d.%d.%d\n",
-	   uip_ipaddr_to_quad(&hostaddr));
+           uip_ipaddr_to_quad(&hostaddr));
   }
 #endif /* WITH_UIP */
 
@@ -432,18 +444,18 @@ main(int argc, char **argv)
     /*
      * Idle processing.
      */
-    int s = splhigh();		/* Disable interrupts. */
+    int s = splhigh();          /* Disable interrupts. */
     /* uart0_active is for avoiding LPM3 when still sending or receiving */
     if(process_nevents() != 0 || uart0_active()) {
-      splx(s);			/* Re-enable interrupts. */
+      splx(s);                  /* Re-enable interrupts. */
     } else {
       static unsigned long irq_energest = 0;
 
 #if DCOSYNCH_CONF_ENABLED
       /* before going down to sleep possibly do some management */
       if (timer_expired(&mgt_timer)) {
-	timer_reset(&mgt_timer);
-	msp430_sync_dco();
+        timer_reset(&mgt_timer);
+        msp430_sync_dco();
       }
 #endif
 
@@ -451,19 +463,19 @@ main(int argc, char **argv)
       ENERGEST_OFF(ENERGEST_TYPE_CPU);
       ENERGEST_ON(ENERGEST_TYPE_LPM);
       /* We only want to measure the processing done in IRQs when we
-	 are asleep, so we discard the processing time done when we
-	 were awake. */
+         are asleep, so we discard the processing time done when we
+         were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
       watchdog_stop();
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
-					      statement will block
-					      until the CPU is
-					      woken up by an
-					      interrupt that sets
-					      the wake up flag. */
+                                              statement will block
+                                              until the CPU is
+                                              woken up by an
+                                              interrupt that sets
+                                              the wake up flag. */
 
       /* We get the current processing time for interrupts that was
-	 done during the LPM and store it for next time around.  */
+         done during the LPM and store it for next time around.  */
       dint();
       irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
       eint();

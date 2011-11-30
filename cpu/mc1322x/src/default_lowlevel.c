@@ -85,7 +85,6 @@ void uart1_init(volatile uint16_t inc, volatile uint16_t mod, volatile uint8_t s
 	GPIO->FUNC_SEL.GPIO_15 = 1;
        
 	/* interrupt when there are this number or more bytes free in the TX buffer*/
-
 	UART1->TXCON = 16;
 	u1_tx_head = 0; u1_tx_tail = 0;
 

@@ -68,15 +68,21 @@ unsigned long clock_seconds(void);
 #define INFINITE_TIME 0xffff
 
 /* Clock ticks per second */
-#define CLOCK_CONF_SECOND 125
+#define CLOCK_CONF_SECOND 128
 
-/* Maximum tick interval is 0xffff/125 = 524 seconds */
-#define RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME CLOCK_CONF_SECOND * 524UL /* Default uses 600UL */
-#define COLLECT_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME CLOCK_CONF_SECOND * 524UL /* Default uses 600UL */
+/* Maximum tick interval is 0xffff/128 = 511 seconds */
+#define RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME INFINITE_TIME/CLOCK_CONF_SECOND /* Default uses 600 */
+#define COLLECT_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME INFINITE_TIME/CLOCK_CONF_SECOND /* Default uses 600 */
 
 /* The 1284p can use TIMER2 with the external 32768Hz crystal to keep time. Else TIMER0 is used. */
 /* The sleep timer in raven-lcd.c also uses the crystal and adds a TIMER2 interrupt routine if not already define by clock.c */
-#define AVR_CONF_USE32KCRYSTAL 0
+#define AVR_CONF_USE32KCRYSTAL 1
+
+/* Rtimer is implemented through the 16 bit Timer1, clocked at F_CPU through a 1024 prescaler. */
+/* This gives 7812 counts per second, 128 microsecond precision and maximum interval 8.388 seconds. */
+/* Change clock source and prescaler for greater precision and shorter maximum interval. */
+/* 0 will disable the Rtimer code */
+//#define RTIMER_ARCH_PRESCALER 256UL /*0, 1, 8, 64, 256, 1024 */
 
 /* COM port to be used for SLIP connection. Not tested on Raven */
 #define SLIP_PORT RS232_PORT_0
@@ -88,6 +94,27 @@ unsigned long clock_seconds(void);
 /* Starting address for code received via the codeprop facility. Not tested on Raven */
 //#define EEPROMFS_ADDR_CODEPROP 0x8000
 
+/* RADIO_CONF_CALIBRATE_INTERVAL is used in rf230bb and clock.c. If nonzero a 256 second interval is used */
+/* Calibration is automatic when the radio wakes so is not necessary when the radio periodically sleeps */
+//#define RADIO_CONF_CALIBRATE_INTERVAL 256
+
+/* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
+#define RADIOSTATS                1
+
+/* More extensive stats */
+#define ENERGEST_CONF_ON          0
+
+/* Use settings manager to save configuration in EEPROM */
+/* Adds ~1700 bytes to progmem */
+#define CONTIKI_CONF_SETTINGS_MANAGER 1
+
+/* Possible watchdog timeouts depend on mcu. Default is WDTO_2S. -1 Disables the watchdog. */
+/* AVR Studio simulator tends to reboot due to clocking the WD 8 times too fast */
+//#define WATCHDOG_CONF_TIMEOUT -1
+
+/* Debugflow macro, useful for tracing path through mac and radio interrupts */
+//#define DEBUGFLOWSIZE 128
+
 /* Network setup. The new NETSTACK interface requires RF230BB (as does ip4) */
 #if RF230BB
 #undef PACKETBUF_CONF_HDR_SIZE                  //Use the packetbuf default for header size
@@ -97,18 +124,11 @@ unsigned long clock_seconds(void);
 
 #if UIP_CONF_IPV6
 
-#ifndef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL        1
-#endif /*UIP_CONF_IPV6_RPL */
-
 #define RIMEADDR_CONF_SIZE        8
 #define UIP_CONF_ICMP6            1
 #define UIP_CONF_UDP              1
-
-#ifndef UIP_CONF_TCP
-#define UIP_CONF_TCP             1
-#endif /*UIP_CONF_TCP */
-
+#define UIP_CONF_TCP              1
+//#define UIP_CONF_IPV6_RPL         0
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
 #else
@@ -181,12 +201,19 @@ unsigned long clock_seconds(void);
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
 
+#define RADIO_CONF_CALIBRATE_INTERVAL 256
 /* AUTOACK receive mode gives better rssi measurements, even if ACK is never requested */
 #define RF230_CONF_AUTOACK        1
 /* Request 802.15.4 ACK on all packets sent (else autoretry). This is primarily for testing. */
 #define SICSLOWPAN_CONF_ACK_ALL   0
-/* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
-#define RF230_CONF_AUTORETRIES    2
+/* Number of auto retry attempts+1, 1-16. Set zero to disable extended TX_ARET_ON mode with CCA) */
+#define RF230_CONF_AUTORETRIES    3
+/* Number of CSMA attempts 0-7. 802.15.4 2003 standard max is 5. */
+#define RF230_CONF_CSMARETRIES    5
+/* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the expected minimum rssi to avoid packet collisions */
+/* The Jackdaw menu 'm' command is helpful for determining the smallest ever received rssi */
+#define RF230_CONF_CCA_THRES    -85
+/* Allow 6lowpan fragments (needed for large TCP maximum segment size) */
 #define SICSLOWPAN_CONF_FRAG      1
 /* Most browsers reissue GETs after 3 seconds which stops fragment reassembly so a longer MAXAGE does no good */
 #define SICSLOWPAN_CONF_MAXAGE    3
@@ -194,13 +221,17 @@ unsigned long clock_seconds(void);
 #define UIP_CONF_WAIT_TIMEOUT     5
 
 #elif 1  /* Contiki-mac radio cycling */
-//#define NETSTACK_CONF_MAC         nullmac_driver
-#define NETSTACK_CONF_MAC         csma_driver
+#define NETSTACK_CONF_MAC         nullmac_driver
+//#define NETSTACK_CONF_MAC         csma_driver
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define RF230_CONF_AUTOACK        0
-#define RF230_CONF_AUTORETRIES    0
+/* The radio needs to interrupt during an rtimer interrupt */
+#define RTIMER_CONF_NESTED_INTERRUPTS 1
+#define RF230_CONF_AUTOACK        1
+#define RF230_CONF_AUTORETRIES    1
+#define RF230_CONF_CSMARETRIES    1
+#define CONTIKIMAC_CONF_RADIO_ALWAYS_ON  0
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8

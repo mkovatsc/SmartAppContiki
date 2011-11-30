@@ -9,6 +9,7 @@
  *	Mike Vidales mavida404@gmail.com
  *	Kevin Brown kbrown3@uccs.edu
  *	Nate Bohlmann nate@elfwerks.com
+ *  David Kopf dak664@embarqmail.com
  *
  *   All rights reserved.
  *
@@ -45,7 +46,6 @@
  *  \file
  *  \brief This file contains radio driver code.
  *
- *   $Id: rf230bb.h,v 1.6 2010/12/15 16:50:44 dak664 Exp $
  */
 
 #ifndef RADIO_H
@@ -69,7 +69,11 @@
 /* RF230 does not support RX_START interrupts in extended mode, but it seems harmless to always enable it. */
 /* In non-extended mode this allows RX_START to sample the RF rssi at the end of the preamble */
 //#define RF230_SUPPORTED_INTERRUPT_MASK        ( 0x0C )  //disable RX_START
+#if defined(__AVR_ATmega128RFA1__)
+#define RF230_SUPPORTED_INTERRUPT_MASK          ( 0xFF )
+#else
 #define RF230_SUPPORTED_INTERRUPT_MASK          ( 0x0F )
+#endif
 
 #define RF230_MIN_CHANNEL                       ( 11 )
 #define RF230_MAX_CHANNEL                       ( 26 )

@@ -50,11 +50,11 @@
 #include "net/mac/frame802154.h"
 #include "lib/include/mc1322x.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/sicslowpan.h"
 #include "net/uip-ds6.h"
 #include "net/mac/sicslowmac.h"
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #include "net/rime.h"
 
@@ -66,6 +66,24 @@
 #include "default_lowlevel.h"
 #include "contiki-maca.h"
 #include "contiki-uart.h"
+
+/* Get periodic prints from idle loop, from clock seconds or rtimer interrupts */
+/* Use of rtimer will conflict with other rtimer interrupts such as contikimac radio cycling */
+#define PERIODICPRINTS 0
+#if PERIODICPRINTS
+//#define PINGS 64
+#define ROUTES 300
+#define STAMPS 60
+#define STACKMONITOR 600
+//#define HEAPMONITOR 60
+uint16_t clocktime;
+#define TESTRTIMER 0
+#if TESTRTIMER
+uint8_t rtimerflag=1;
+struct rtimer rt;
+void rtimercycle(void) {rtimerflag=1;}
+#endif
+#endif
 
 #define DEBUG 0
 #if DEBUG
@@ -182,7 +200,8 @@ init_lowlevel(void)
 	
 	/* uart init */
 	uart_init(BRINC, BRMOD, SAMP);
-	
+	printf("Booting...\n");
+
 	default_vreg_init();
 
 	maca_init();
@@ -262,6 +281,8 @@ void oui_to_eui64(rimeaddr_t *eui64, uint32_t oui, uint64_t ext) {
 	eui64->u8[7] =  ext        & 0xff;
 }
 
+unsigned short node_id = 0;
+
 void
 set_rimeaddr(rimeaddr_t *addr) 
 {
@@ -314,6 +335,7 @@ set_rimeaddr(rimeaddr_t *addr)
 		PRINTF("loading rime address from flash.\n\r");
 	}
 
+	node_id = (addr->u8[6] << 8 | addr->u8[7]);
 	rimeaddr_set_node_addr(addr);
 }
 
@@ -326,6 +348,36 @@ main(void)
 	/* Initialize hardware and */
 	/* go into user mode */
 	init_lowlevel();
+
+#if STACKMONITOR
+  /* Simple stack pointer highwater monitor. Checks for magic numbers in the main
+   * loop. In conjuction with PERIODICPRINTS, never-used stack will be printed
+   * every STACKMONITOR seconds.
+   */
+{
+extern uint32_t __und_stack_top__, __sys_stack_top__;
+uint32_t p=(uint32_t)&__und_stack_top__;
+    do {
+      *(uint32_t *)p = 0x42424242;
+      p+=16;
+    } while (p<(uint32_t)&__sys_stack_top__-100); //don't overwrite our own stack
+}
+#endif
+#if HEAPMONITOR
+  /* Simple heap pointer highwater monitor. Checks for magic numbers in the main
+   * loop. In conjuction with PERIODICPRINTS, never-used heap will be printed
+   * every HEAPMONITOR seconds.
+   * This routine assumes a linear FIFO heap as used by the printf _sbrk call.
+   */
+{
+extern uint32_t __heap_start__, __heap_end__;
+uint32_t p=(uint32_t)&__heap_end__-4;
+  do {
+     *(uint32_t *)p = 0x42424242;
+	 p-=4;
+  } while (p>=(uint32_t)&__heap_start__);
+}
+#endif
 
 	/* Clock */
 	clock_init();	
@@ -353,7 +405,7 @@ main(void)
 	printf("%02X\n", addr.u8[i]);
 
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, &addr.u8, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -365,11 +417,12 @@ main(void)
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid %04X\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
                          NETSTACK_RDC.channel_check_interval()),
-         RF_CHANNEL);
+         RF_CHANNEL,
+         IEEE802154_CONF_PANID);
 
   process_start(&tcpip_process, NULL);
 
@@ -406,7 +459,7 @@ main(void)
   }
 
   
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -417,7 +470,7 @@ main(void)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
   *MACA_MACPANID = 0xcdab; /* this is the hardcoded contiki pan, register is PACKET order */
   *MACA_MAC16ADDR = 0xffff; /* short addressing isn't used, set this to 0xffff for now */
@@ -498,6 +551,124 @@ main(void)
 	  }
 	         
 	  process_run();
+
+#if PERIODICPRINTS
+#if TESTRTIMER
+/* Timeout can be increased up to 8 seconds maximum.
+ * A one second cycle is convenient for triggering the various debug printouts.
+ * The triggers are staggered to avoid printing everything at once.
+ */
+    if (rtimerflag) {
+      rtimer_set(&rt, RTIMER_NOW()+ RTIMER_ARCH_SECOND*1UL, 1,(void *) rtimercycle, NULL);
+      rtimerflag=0;
+#else
+  if (clocktime!=clock_seconds()) {
+     clocktime=clock_seconds();
+#endif
+
+#if STAMPS
+if ((clocktime%STAMPS)==0) {
+#if ENERGEST_CONF_ON
+#include "lib/print-stats.h"
+	print_stats();
+#elif RADIOSTATS
+extern volatile unsigned long radioontime;
+  printf("\r%u(%u)s ",clocktime,radioontime);
+#else
+  printf("%us\n",clocktime);
+#endif
+
+}
+#endif
+#if TESTRTIMER
+      clocktime+=1;
+#endif
+
+#if PINGS && UIP_CONF_IPV6
+extern void raven_ping6(void); 
+if ((clocktime%PINGS)==1) {
+  printf("**Ping\n");
+  raven_ping6();
+}
+#endif
+
+#if ROUTES && UIP_CONF_IPV6
+if ((clocktime%ROUTES)==2) {
+      
+extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
+extern uip_ds6_route_t uip_ds6_routing_table[];
+extern uip_ds6_netif_t uip_ds6_if;
+
+  uint8_t i,j;
+  printf("\nAddresses [%u max]\n",UIP_DS6_ADDR_NB);
+  for (i=0;i<UIP_DS6_ADDR_NB;i++) {
+    if (uip_ds6_if.addr_list[i].isused) {
+      uip_debug_ipaddr_print(&uip_ds6_if.addr_list[i].ipaddr);
+      printf("\n");
+    }
+  }
+  printf("\nNeighbors [%u max]\n",UIP_DS6_NBR_NB);
+  for(i = 0,j=1; i < UIP_DS6_NBR_NB; i++) {
+    if(uip_ds6_nbr_cache[i].isused) {
+      uip_debug_ipaddr_print(&uip_ds6_nbr_cache[i].ipaddr);
+      printf("\n");
+      j=0;
+    }
+  }
+  if (j) printf("  <none>");
+  printf("\nRoutes [%u max]\n",UIP_DS6_ROUTE_NB);
+  for(i = 0,j=1; i < UIP_DS6_ROUTE_NB; i++) {
+    if(uip_ds6_routing_table[i].isused) {
+      uip_debug_ipaddr_print(&uip_ds6_routing_table[i].ipaddr);
+      printf("/%u (via ", uip_ds6_routing_table[i].length);
+      uip_debug_ipaddr_print(&uip_ds6_routing_table[i].nexthop);
+ //     if(uip_ds6_routing_table[i].state.lifetime < 600) {
+        printf(") %lus\n", uip_ds6_routing_table[i].state.lifetime);
+ //     } else {
+ //       printf(")\n");
+ //     }
+      j=0;
+    }
+  }
+  if (j) printf("  <none>");
+  printf("\n---------\n");
+}
+#endif
+
+#if STACKMONITOR
+if ((clocktime%STACKMONITOR)==3) {
+extern uint32_t __und_stack_top__, __sys_stack_top__;
+uint32_t p=(uint32_t)&__und_stack_top__;
+  do {
+    if (*(uint32_t *)p != 0x42424242) {
+      printf("Never-Used stack > %d bytes\n",p-(uint32_t)&__und_stack_top__);
+      break;
+    }
+    p+=16;
+  } while (p<(uint32_t)&__sys_stack_top__-100);
+}
+#endif
+#if HEAPMONITOR
+if ((clocktime%HEAPMONITOR)==4) {
+extern uint32_t __heap_start__, __heap_end__;
+uint32_t p=(uint32_t)&__heap_end__-4;
+  do {
+    if (*(uint32_t *)p != 0x42424242) {
+      break;
+    }
+    p-=4;
+  } while (p>=(uint32_t)&__heap_start__);
+  printf("Never-used heap >= %d bytes\n",(uint32_t)&__heap_end__-p-4);
+#if 0
+#include <stdlib.h>
+char *ptr=malloc(1);  //allocates 16 bytes from the heap
+printf("********Got pointer %x\n",ptr);
+#endif
+}
+#endif
+
+    }
+#endif /* PERIODICPRINTS */
   }
   
   return 0;

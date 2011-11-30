@@ -2,12 +2,12 @@ all: sky-websense
 
 CONTIKI=../../..
 
-WITH_UIP6=1
 UIP_CONF_IPV6=1
+CFLAGS+= -DUIP_CONF_IPV6_RPL
 
-APPS += webserver webbrowser
+APPS += webbrowser
 
-CFLAGS += -DPROJECT_CONF_H=1
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 CONTIKI_SOURCEFILES += wget.c
 PROJECTDIRS += ../rpl-border-router
 PROJECT_SOURCEFILES += httpd-simple.c

@@ -47,9 +47,9 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>skyweb</identifier>
       <description>Rest</description>
-      <source EXPORT="discard">[CONTIKI_DIR]/examples/rest-example/rest-server-example.c</source>
+      <source EXPORT="discard">[CONTIKI_DIR]/examples/er-rest-example/rest-server-example.c</source>
       <commands EXPORT="discard">make rest-server-example.sky TARGET=sky</commands>
-      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/rest-example/rest-server-example.sky</firmware>
+      <firmware EXPORT="copy">[CONTIKI_DIR]/examples/er-rest-example/rest-server-example.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>

@@ -3,6 +3,14 @@ APPS=servreg-hack
 CONTIKI=../../..
 
 UIP_CONF_IPV6=1
+CFLAGS+= -DUIP_CONF_IPV6_RPL
+
+ifdef SERVER_REPLY
+CFLAGS+=-DSERVER_REPLY=$(SERVER_REPLY)
+endif
+ifdef PERIOD
+CFLAGS+=-DPERIOD=$(PERIOD)
+endif
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1

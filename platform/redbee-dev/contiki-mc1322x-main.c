@@ -49,11 +49,11 @@
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/sicslowpan.h"
 #include "net/uip-ds6.h"
 #include "net/mac/sicslowmac.h"
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #include "net/rime.h"
 
@@ -361,7 +361,7 @@ main(void)
 	printf("%02X\n", addr.u8[i]);
 
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, &addr.u8, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -414,7 +414,7 @@ main(void)
   }
 
   
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -425,7 +425,7 @@ main(void)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #if PROFILE_CONF_ON
   profile_init();

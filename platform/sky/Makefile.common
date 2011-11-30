@@ -7,11 +7,7 @@ ARCH=spi.c ds2411.c xmem.c i2c.c node-id.c sensors.c cfs-coffee.c \
 
 CONTIKI_TARGET_DIRS = . dev apps net
 ifndef CONTIKI_TARGET_MAIN
-CONTIKI_TARGET_MAIN = contiki-sky-main.c
-endif
-
-ifdef UIP_CONF_IPV6
-CFLAGS += -DWITH_UIP6=1
+	CONTIKI_TARGET_MAIN = contiki-sky-main.c
 endif
 
 CONTIKI_TARGET_SOURCEFILES += $(ARCH) $(UIPDRIVERS) $(CONTIKI_TARGET_MAIN)
@@ -72,6 +68,8 @@ ifndef MOTELIST
      perl -ne 'print $$1 . " " if(m-(/dev/\w+)-);')
   CMOTES=$(MOTES)
 endif
+
+motelist: sky-motelist
 
 sky-motelist:
 	$(MOTELIST)

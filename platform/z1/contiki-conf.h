@@ -37,16 +37,21 @@
 #define XMAC_CONF_COMPOWER          1
 #define CXMAC_CONF_COMPOWER         1
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
-/* #define NETSTACK_CONF_MAC nullmac_driver */
-/* #define NETSTACK_CONF_RDC sicslowmac_driver */
 #define NETSTACK_CONF_MAC     csma_driver
 #define NETSTACK_CONF_RDC     contikimac_driver
 #define NETSTACK_CONF_RADIO   cc2420_driver
 #define NETSTACK_CONF_FRAMER  framer_802154
+
+/* Specify a minimum packet size for 6lowpan compression to be
+   enabled. This is needed for ContikiMAC, which needs packets to be
+   larger than a specified size, if no ContikiMAC header should be
+   used. */
+#define SICSLOWPAN_CONF_COMPRESSION_THRESHOLD 63
+#define CONTIKIMAC_CONF_WITH_CONTIKIMAC_HEADER 0
 
 #define CC2420_CONF_AUTOACK              1
 #define NETSTACK_RDC_CHANNEL_CHECK_RATE  8
@@ -56,18 +61,17 @@
 
 #define QUEUEBUF_CONF_NUM                4
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
 /* Network setup for non-IPv6 (rime). */
 
 #define NETSTACK_CONF_NETWORK rime_driver
 #define NETSTACK_CONF_MAC     csma_driver
-/* #define NETSTACK_CONF_RDC     contikimac_driver */
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RDC     contikimac_driver
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
 #define NETSTACK_CONF_FRAMER  framer_802154
 
-#define CC2420_CONF_AUTOACK              0
-#define MAC_CONF_CHANNEL_CHECK_RATE      8
+#define CC2420_CONF_AUTOACK              1
 
 #define COLLECT_CONF_ANNOUNCEMENTS       1
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
@@ -83,7 +87,7 @@
 
 #define QUEUEBUF_CONF_NUM          8
 
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
@@ -100,7 +104,7 @@
 #define CFS_CONF_OFFSET_TYPE	long
 
 #define PROFILE_CONF_ON 0
-#define ENERGEST_CONF_ON 0
+#define ENERGEST_CONF_ON 1
 
 #define ELFLOADER_CONF_TEXT_IN_ROM 0
 #define ELFLOADER_CONF_DATAMEMORY_SIZE 0x400
@@ -118,7 +122,7 @@
 
 #define UART0_CONF_TX_WITH_INTERRUPT 0 // So far, printfs without interrupt.
 
-#ifdef WITH_UIP6
+#if UIP_CONF_IPV6
 
 #define RIMEADDR_CONF_SIZE              8
 
@@ -158,10 +162,10 @@
 #endif /* SICSLOWPAN_CONF_FRAG */
 #define SICSLOWPAN_CONF_CONVENTIONAL_MAC	1
 #define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS       2
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 #define UIP_CONF_IP_FORWARD      1
 #define UIP_CONF_BUFFER_SIZE     108
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH 1
 

@@ -28,10 +28,6 @@ ifndef CONTIKI_TARGET_MAIN
 CONTIKI_TARGET_MAIN = contiki-z1-main.c
 endif
 
-ifdef UIP_CONF_IPV6
-CFLAGS += -DWITH_UIP6=1
-endif
-
 ifdef nodemac
 CFLAGS += -DMACID=$(nodemac)
 endif
@@ -66,6 +62,8 @@ ifndef MOTELIST
      perl -ne 'print $$1 . " " if(m-(/dev/\w+)-);')
   CMOTES=$(MOTES)
 endif
+
+motelist: z1-motelist
 
 z1-motelist:
 	$(MOTELIST)

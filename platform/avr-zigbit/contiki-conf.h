@@ -96,7 +96,7 @@
 #define NETSTACK_CONF_RDC         sicslowmac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define CHANNEL_802_15_4          26
+#define RF_CHANNEL                26
 #define RF230_CONF_AUTOACK        1
 #define RF230_CONF_AUTORETRIES    2
 #define SICSLOWPAN_CONF_FRAG      1

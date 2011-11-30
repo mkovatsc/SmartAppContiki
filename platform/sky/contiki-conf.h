@@ -4,11 +4,6 @@
 #ifndef CONTIKI_CONF_H
 #define CONTIKI_CONF_H
 
-
-#ifdef PROJECT_CONF_H
-#include "project-conf.h"
-#endif /* PROJECT_CONF_H */
-
 #ifdef PLATFORM_CONF_H
 #include PLATFORM_CONF_H
 #else
@@ -74,6 +69,14 @@
 #if UIP_CONF_IPV6
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
+
+/* Specify a minimum packet size for 6lowpan compression to be
+   enabled. This is needed for ContikiMAC, which needs packets to be
+   larger than a specified size, if no ContikiMAC header should be
+   used. */
+#define SICSLOWPAN_CONF_COMPRESSION_THRESHOLD 63
+#define CONTIKIMAC_CONF_WITH_CONTIKIMAC_HEADER 0
+
 #define CXMAC_CONF_ANNOUNCEMENTS         0
 #define XMAC_CONF_ANNOUNCEMENTS          0
 
@@ -146,32 +149,27 @@
 
 #if UIP_CONF_IPV6
 
-#ifndef UIP_CONF_IPV6_RPL
+#define UIP_CONF_ROUTER                 1
 #define UIP_CONF_IPV6_RPL               1
-#endif /* UIP_CONF_IPV6_RPL */
 
 #define RIMEADDR_CONF_SIZE              8
 
 #define UIP_CONF_LL_802154              1
 #define UIP_CONF_LLH_LEN                0
 
-#define UIP_CONF_ROUTER                 1
-
 /* configure number of neighbors and routes */
 #ifndef UIP_CONF_DS6_NBR_NBU
-#define UIP_CONF_DS6_NBR_NBU     30
+#define UIP_CONF_DS6_NBR_NBU     10
 #endif /* UIP_CONF_DS6_NBR_NBU */
 #ifndef UIP_CONF_DS6_ROUTE_NBU
-#define UIP_CONF_DS6_ROUTE_NBU   30
+#define UIP_CONF_DS6_ROUTE_NBU   10
 #endif /* UIP_CONF_DS6_ROUTE_NBU */
 
 #define UIP_CONF_ND6_SEND_RA		0
 #define UIP_CONF_ND6_REACHABLE_TIME     600000
 #define UIP_CONF_ND6_RETRANS_TIMER      10000
 
-#ifndef UIP_CONF_IPV6_QUEUE_PKT
 #define UIP_CONF_IPV6_QUEUE_PKT         0
-#endif /* UIP_CONF_IPV6_QUEUE_PKT */
 
 #define UIP_CONF_IPV6_CHECKS            1
 #define UIP_CONF_IPV6_REASSEMBLY        0
@@ -228,6 +226,12 @@
 #define UIP_CONF_TCP_SPLIT       0
 
 
+
+/* include the project config */
+/* PROJECT_CONF_H might be defined in the project Makefile */
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif /* PROJECT_CONF_H */
 
 
 #endif /* CONTIKI_CONF_H */

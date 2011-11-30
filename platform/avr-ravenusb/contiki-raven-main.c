@@ -234,7 +234,7 @@ uint16_t default_panid PROGMEM = IEEE802154_PANID;
 uint16_t default_panid PROGMEM = 0xABCD;
 #endif
 #ifdef IEEE802154_PANADDR
-uint16_t default_panaddr PROGMEM = IEEE802154_PANID;
+uint16_t default_panaddr PROGMEM = IEEE802154_PANADDR;
 #else
 uint16_t default_panaddr PROGMEM = 0;
 #endif
@@ -280,7 +280,7 @@ uint16_t eemem_panid EEMEM = IEEE802154_PANID;
 uint16_t eemem_panid EEMEM = 0xABCD;
 #endif
 #ifdef IEEE802154_PANADDR
-uint16_t eemem_panaddr EEMEM = IEEE802154_PANID;
+uint16_t eemem_panaddr EEMEM = IEEE802154_PANADDR;
 #else
 uint16_t eemem_panaddr EEMEM = 0;
 #endif
@@ -423,6 +423,18 @@ uint16_t p=(uint16_t)&__bss_end;
   Leds_init();
   Led1_on();
 
+/* Get a random (or probably different) seed for the 802.15.4 packet sequence number.
+ * Some layers will ignore duplicates found in a history (e.g. Contikimac)
+ * causing the initial packets to be ignored after a short-cycle restart.
+ */
+  ADMUX =0x1E;              //Select AREF as reference, measure 1.1 volt bandgap reference.
+  ADCSRA=1<<ADEN;           //Enable ADC, not free running, interrupt disabled, fastest clock
+  ADCSRA|=1<<ADSC;          //Start conversion
+  while (ADCSRA&(1<<ADSC)); //Wait till done
+  PRINTD("ADC=%d\n",ADC);
+  random_init(ADC);
+  ADCSRA=0;                 //Disable ADC
+  
 #if USB_CONF_RS232
   /* Use rs232 port for serial out (tx, rx, gnd are the three pads behind jackdaw leds */
   rs232_init(RS232_PORT_0, USART_BAUD_57600,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);

@@ -66,11 +66,11 @@ unsigned long clock_seconds(void);
 #define INFINITE_TIME 0xffff
 
 /* Clock ticks per second */
-#define CLOCK_CONF_SECOND 125
+#define CLOCK_CONF_SECOND 128
 
-/* Maximum tick interval is 0xffff/125 = 524 seconds */
-#define RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME CLOCK_CONF_SECOND * 524UL /* Default uses 600UL */
-#define COLLECT_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME CLOCK_CONF_SECOND * 524UL /* Default uses 600UL */
+/* Maximum tick interval is 0xffff/128 = 511 seconds */
+#define RIME_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME INFINITE_TIME/CLOCK_CONF_SECOND /* Default uses 600 */
+#define COLLECT_CONF_BROADCAST_ANNOUNCEMENT_MAX_TIME INFINITE_TIME/CLOCK_CONF_SECOND /* Default uses 600 */
 
 /* Michael Hartman's atmega128rfa1 board has an external 32768Hz crystal connected to TOSC1 and 2 pins similar to the Raven 1284p */
 /* and theoretically can use TIMER2 with it to keep time. Else TIMER0 is used. */
@@ -78,7 +78,7 @@ unsigned long clock_seconds(void);
 /* This has not been tested yet */
 #define AVR_CONF_USE32KCRYSTAL 0
 
-/* COM port to be used for SLIP connection. Not tested on Raven */
+/* COM port to be used for SLIP connection. This is usually UART0, but see above */
 #define SLIP_PORT RS232_PORT_0
 
 /* Pre-allocated memory for loadable modules heap space (in bytes)*/
@@ -88,6 +88,18 @@ unsigned long clock_seconds(void);
 /* Starting address for code received via the codeprop facility. Not tested on Raven */
 //#define EEPROMFS_ADDR_CODEPROP 0x8000
 
+/* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
+#define RADIOSTATS 1
+
+/* More extensive stats */
+#define ENERGEST_CONF_ON          1
+
+/* Possible watchdog timeouts depend on mcu. Default is WDTO_2S. -1 Disables the watchdog. */
+//#define WATCHDOG_CONF_TIMEOUT -1
+
+/* Debugflow macro, useful for tracing path through mac and radio interrupts */
+//#define DEBUGFLOWSIZE 128
+
 /* Network setup. The new NETSTACK interface requires RF230BB (as does ip4) */
 #if RF230BB
 #undef PACKETBUF_CONF_HDR_SIZE                  //Use the packetbuf default for header size
@@ -96,20 +108,11 @@ unsigned long clock_seconds(void);
 #endif /*RF230BB */
 
 #if UIP_CONF_IPV6
-
-#ifndef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL               1
-#endif /* UIP_CONF_IPV6_RPL */
-
 #define RIMEADDR_CONF_SIZE        8
 #define UIP_CONF_ICMP6            1
 #define UIP_CONF_UDP              1
-
-#ifndef UIP_CONF_TCP
-#define UIP_CONF_TCP              1
-#endif /* UIP_CONF_TCP */
-
-
+#define UIP_CONF_TCP              0
+//#define UIP_CONF_IPV6_RPL         0
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
 #else
@@ -206,8 +209,12 @@ unsigned long clock_seconds(void);
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define RF230_CONF_AUTOACK        0
-#define RF230_CONF_AUTORETRIES    0
+/* The radio needs to interrupt during an rtimer interrupt */
+#define RTIMER_CONF_NESTED_INTERRUPTS 1
+#define RF230_CONF_AUTOACK        1
+#define RF230_CONF_AUTORETRIES    1
+#define RF230_CONF_CSMARETRIES    1
+#define CONTIKIMAC_CONF_RADIO_ALWAYS_ON  0
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
@@ -266,6 +273,8 @@ unsigned long clock_seconds(void);
 
 #undef UIP_CONF_UDP_CONNS
 #define UIP_CONF_UDP_CONNS       12
+/* For slow slip connections, to prevent buffer overruns */
+//#define UIP_CONF_RECEIVE_WINDOW 300
 #undef UIP_CONF_FWCACHE_SIZE
 #define UIP_CONF_FWCACHE_SIZE    30
 #define UIP_CONF_BROADCAST       1

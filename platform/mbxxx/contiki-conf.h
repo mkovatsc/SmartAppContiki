@@ -80,7 +80,7 @@ typedef unsigned short uip_stats_t;
 
 #define NETSTACK_CONF_RADIO		stm32w_radio_driver
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 
 /* No radio cycling */
 #define NETSTACK_CONF_NETWORK		sicslowpan_driver
@@ -123,7 +123,7 @@ typedef unsigned short uip_stats_t;
 #define SICSLOWPAN_CONF_MAXAGE                  2
 
 #define UIP_CONF_ICMP6				0
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define UIP_CONF_UDP				1
 #define UIP_CONF_TCP				1
