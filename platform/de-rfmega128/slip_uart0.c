@@ -31,12 +31,30 @@
  * @(#)$$
  */
 
-/**
- * \file
- *         Machine dependent AVR SLIP routines for UART0.
- * \author
- *         Kasun Hewage <kasun.ch@gmail.com>
- */
+#include "contiki.h"
+#include "lib/sensors.h"
+#include "dev/sky-sensors.h"
+#include "dev/light-sensor.h"
+#include "dev/potentiometer-sensor.h"
+
+/* Photodiode 1 (P64) on INCH_4 */
+/* Photodiode 2 (P65) on INCH_5 */
+//Enric#define INPUT_CHANNEL      ((1 << INCH_4) | (1 << INCH_5))
+#ifndef INPUT_CHANNEL
+#define INPUT_CHANNEL      (1 << INCH_4)
+#endif
+
+#ifndef INPUT_REFERENCE
+#define INPUT_REFERENCE     SREF_0
+#endif
+
+#ifdef POTENTIOMETER_MEM
+#define PHOTOSYNTHETIC_MEM  POTENTIOMETER_MEM
+#define TOTAL_SOLAR_MEM     POTENTIOMETER_MEM
+#else
+#define PHOTOSYNTHETIC_MEM  ADC12MEM4
+#define TOTAL_SOLAR_MEM     ADC12MEM4
+#endif
 
 #include <stdio.h>
 #include "contiki.h"

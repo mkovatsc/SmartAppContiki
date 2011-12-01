@@ -232,13 +232,19 @@ hal_init(void)
 //  hal_reset_flags();
 
     /*IO Specific Initialization - sleep and reset pins. */
+    /* Set pins low before they are initialized as output? Does not seem to matter */
+//  hal_set_rst_low();
+//  hal_set_slptr_low();
     DDR_SLP_TR |= (1 << SLP_TR); /* Enable SLP_TR as output. */
     DDR_RST    |= (1 << RST);    /* Enable RST as output. */
 
     /*SPI Specific Initialization.*/
     /* Set SS, CLK and MOSI as output. */
-    HAL_DDR_SPI  |= (1 << HAL_DD_SS) | (1 << HAL_DD_SCK) | (1 << HAL_DD_MOSI);
+    /* To avoid a SPI glitch, the port register shall be set before the DDR register */ 
     HAL_PORT_SPI |= (1 << HAL_DD_SS) | (1 << HAL_DD_SCK); /* Set SS and CLK high */
+    HAL_DDR_SPI  |= (1 << HAL_DD_SS) | (1 << HAL_DD_SCK) | (1 << HAL_DD_MOSI);
+    HAL_DDR_SPI  &=~ (1<< HAL_DD_MISO);                   /* MISO input */ 
+
     /* Run SPI at max speed */
     SPCR         = (1 << SPE) | (1 << MSTR); /* Enable SPI module and master operation. */
     SPSR         = (1 << SPI2X); /* Enable doubled SPI speed in master mode. */
@@ -871,7 +877,7 @@ ISR(TRX24_PLL_UNLOCK_vect)
 	DEBUGFLOW('5');
 }
 /* Flag is set by the following interrupts */
-extern volatile uint8_t rf230_interruptwait;
+extern volatile uint8_t rf230_interruptwait,rf230_ccawait;
 
 /* Wake has finished */
 ISR(TRX24_AWAKE_vect)
@@ -899,7 +905,7 @@ ISR(TRX24_XAH_AMI_vect)
 ISR(TRX24_CCA_ED_DONE_vect)
 {
 	DEBUGFLOW('4');
-	rf230_interruptwait=0;
+	rf230_ccawait=0;
 }
 
 #else /* defined(__AVR_ATmega128RFA1__) */
@@ -952,7 +958,7 @@ HAL_RF230_ISR()
     /* Save RSSI for this packet if not in extended mode, scaling to 1dB resolution */
 #if !RF230_CONF_AUTOACK
 #if 0  // 3-clock shift and add is faster on machines with no hardware multiply
-       // While the compiler should use similar code for multiply by 3 there may be a bug with -Os in avr-gcc that calls the general subroutine
+       // With -Os avr-gcc saves a byte by using the general routine for multiply by 3
         rf230_last_rssi = hal_subregister_read(SR_RSSI);
         rf230_last_rssi = (rf230_last_rssi <<1)  + rf230_last_rssi;
 #else  // Faster with 1-clock multiply. Raven and Jackdaw have 2-clock multiply so same speed while saving 2 bytes of program memory

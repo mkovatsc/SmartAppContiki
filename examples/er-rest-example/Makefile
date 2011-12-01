@@ -1,8 +1,10 @@
 all: rest-server-example coap-client-example
 
 CONTIKI=../..
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
-ifeq ($(TARGET), sky)
+# for static routing, if enabled
+ifneq ($(TARGET), minimal-net)
 PROJECT_SOURCEFILES += static-routing.c
 endif
 
@@ -28,11 +30,8 @@ ifneq ($(TARGET), minimal-net)
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
 endif
 
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
-
 # linker optimizations
-CFLAGS += -ffunction-sections
-LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
+SMALL=1
 
 # REST framework, requires WITH_COAP
 ifeq ($(WITH_COAP), 7)
@@ -77,4 +76,3 @@ connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 
 connect-router-port:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -s /dev/ttyUSB$(PORT) aaaa::1/64
-

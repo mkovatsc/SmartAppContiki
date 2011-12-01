@@ -283,7 +283,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
  */
 RESOURCE(chunks, METHOD_GET, "chunks", "title=\"Blockwise demo\";rt=\"Data\"");
 
-#define CHUNKS_TOTAL    1030
+#define CHUNKS_TOTAL    2050
 
 void
 chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -294,26 +294,35 @@ chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   if (*offset>=CHUNKS_TOTAL)
   {
     REST.set_response_status(response, REST.status.BAD_OPTION);
-    REST.set_response_payload(response, (uint8_t*)"Block out of scope", 18);
+    /* A block error message should not exceed the minimum block size (16). */
+    REST.set_response_payload(response, (uint8_t*)"BlockOutOfScope", 15);
     return;
   }
 
   /* Generate data until reaching CHUNKS_TOTAL. */
-  while (strpos<REST_MAX_CHUNK_SIZE) {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "|%ld|", *offset);
+  while (strpos<preferred_size)
+  {
+    strpos += snprintf((char *)buffer+strpos, preferred_size-strpos+1, "|%ld|", *offset);
   }
-  /* Truncate if above. */
-  if (*offset+strpos > CHUNKS_TOTAL)
+
+  /* snprintf() does not adjust return value if truncated by size. */
+  if (strpos > preferred_size)
+  {
+    strpos = preferred_size;
+  }
+
+  /* Truncate if above total size. */
+  if (*offset+(int32_t)strpos > CHUNKS_TOTAL)
   {
     strpos = CHUNKS_TOTAL - *offset;
   }
 
   REST.set_response_payload(response, buffer, strpos);
 
-  /* Signal chunk awareness of resource to framework. */
+  /* IMPORTANT for chunk-wise resources: Signal chunk awareness to REST engine. */
   *offset += strpos;
 
-  /* Signal end of resource. */
+  /* Signal end of resource representation. */
   if (*offset>=CHUNKS_TOTAL)
   {
     *offset = -1;
@@ -387,7 +396,7 @@ event_event_handler(resource_t *r)
   /* Notify registered observers with the given message type, observe option, and payload.
    * The token will be set automatically. */
 
-  /*FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE? */
+  // FIXME provide a rest_notify_subscribers call; how to manage specific options such as COAP_TYPE?
   REST.notify_subscribers(r->url, 0, event_i, content, snprintf(content, sizeof(content), "EVENT %lu", event_i));
   return 1;
 }
@@ -569,6 +578,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   rest_activate_resource(&resource_led);
   rest_activate_resource(&resource_toggle);
 #endif /* PLATFORM_HAS_LEDS */
+
 #if defined (PLATFORM_HAS_LIGHT)
   SENSORS_ACTIVATE(light_sensor);
   rest_activate_resource(&resource_light);

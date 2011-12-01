@@ -18,13 +18,13 @@ c) Optional: Save Tmotes as default target
 
 COOJA HOWTO
 -----------
-Server:
+Server only:
 1) $ make TARGET=cooja rest-server-example.csc
 2) Open new terminal
 3) $ make connect-router-cooja
 4) Start Copper and discover resources at coap://cooja2:5683/
 
-Client:
+With client:
 1) $ make TARGET=cooja coap-client-server-example.csc
 2) Wait until red LED toggles on mote 2 (server)
 3) Choose "Click button on Sky 3" from the context menu of mote 3 (client) and watch serial output

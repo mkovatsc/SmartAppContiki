@@ -120,13 +120,14 @@ typedef unsigned long rtimer_clock_t;
 
 #define FLASH_BLANK_ADDR /* if defined then the generated rime address will flashed */
 
-#if UIP_CONF_IPV6
-/* Network setup for IPv6 */
-#define NETSTACK_CONF_NETWORK sicslowpan_driver
 #define NETSTACK_CONF_MAC     csma_driver
 #define NETSTACK_CONF_RDC     nullrdc_driver
 #define NETSTACK_CONF_RADIO   contiki_maca_driver
 #define NETSTACK_CONF_FRAMER  framer_802154
+
+#if UIP_CONF_IPV6
+/* Network setup for IPv6 */
+#define NETSTACK_CONF_NETWORK sicslowpan_driver
 
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE      8
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
@@ -135,12 +136,7 @@ typedef unsigned long rtimer_clock_t;
 
 #else /* UIP_CONF_IPV6 */
 /* Network setup for non-IPv6 (rime). */
-
 #define NETSTACK_CONF_NETWORK rime_driver
-#define NETSTACK_CONF_MAC     csma_driver
-#define NETSTACK_CONF_RDC     sicslowmac_driver
-#define NETSTACK_CONF_RADIO   contiki_maca_driver
-#define NETSTACK_CONF_FRAMER  framer_802154
 
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE      8
 

@@ -15,56 +15,19 @@
 #define RF_CHANNEL              26
 #endif /* RF_CHANNEL */
 
-#if 1 /* No radio duty cycling */
-
-#ifndef NETSTACK_CONF_RADIO
-#define NETSTACK_CONF_RADIO       cc2420_driver
-#endif /* NETSTACK_CONF_RADIO */
-
-#ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC         csma_driver
-#endif /* NETSTACK_CONF_MAC */
-
-#ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC         nullrdc_driver
-#endif /* NETSTACK_CONF_RDC */
-
-#ifndef NETSTACK_CONF_FRAMER
-#define NETSTACK_CONF_FRAMER      framer_802154
-#endif /* NETSTACK_CONF_FRAMER */
-
-#ifndef CC2420_CONF_AUTOACK
-#define CC2420_CONF_AUTOACK       1
-#endif /* CC2420_CONF_AUTOACK */
-
-#else /* ContikiMAC duty cycling */
-
-#ifndef NETSTACK_CONF_MAC
-#define NETSTACK_CONF_MAC     csma_driver
-#endif /* NETSTACK_CONF_MAC */
-
-#ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     contikimac_driver
-#endif /* NETSTACK_CONF_RDC */
-
-#ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
-#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
-#endif /* NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE */
-
-#ifndef NETSTACK_CONF_RADIO
-#define NETSTACK_CONF_RADIO   cc2420_driver
-#endif /* NETSTACK_CONF_RADIO */
-
-#ifndef NETSTACK_CONF_FRAMER
-#define NETSTACK_CONF_FRAMER  framer_802154
-#endif /* NETSTACK_CONF_FRAMER */
-
-#ifndef CC2420_CONF_AUTOACK
 #define CC2420_CONF_AUTOACK              1
-#endif /* CC2420_CONF_AUTOACK */
 
-#endif /* radio config */
+/* Specify whether the RDC layer should enable
+   per-packet power profiling. */
+#define CONTIKIMAC_CONF_COMPOWER         1
+#define XMAC_CONF_COMPOWER               1
+#define CXMAC_CONF_COMPOWER              1
 
+
+#define NETSTACK_CONF_MAC     csma_driver
+#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RADIO   cc2420_driver
+#define NETSTACK_CONF_FRAMER  framer_802154
 
 #if UIP_CONF_IPV6
 /* Network setup for IPv6 */
@@ -85,19 +48,13 @@
 #endif
 
 #else /* UIP_CONF_IPV6 */
-
 /* Network setup for non-IPv6 (rime). */
-
 #define NETSTACK_CONF_NETWORK rime_driver
 
 #define COLLECT_CONF_ANNOUNCEMENTS       1
 #define CXMAC_CONF_ANNOUNCEMENTS         0
 #define XMAC_CONF_ANNOUNCEMENTS          0
 #define CONTIKIMAC_CONF_ANNOUNCEMENTS    0
-
-#define CONTIKIMAC_CONF_COMPOWER         1
-#define XMAC_CONF_COMPOWER               1
-#define CXMAC_CONF_COMPOWER              1
 
 #ifndef COLLECT_NEIGHBOR_CONF_MAX_COLLECT_NEIGHBORS
 #define COLLECT_NEIGHBOR_CONF_MAX_COLLECT_NEIGHBORS     32
