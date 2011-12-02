@@ -33,9 +33,9 @@
 
 #include "contiki.h"
 #include "lib/sensors.h"
-#include "dev/sky-sensors.h"
-#include "dev/light-sensor.h"
-#include "dev/potentiometer-sensor.h"
+//#include "dev/sky-sensors.h"
+//#include "dev/light-sensor.h"
+//#include "dev/potentiometer-sensor.h"
 
 /* Photodiode 1 (P64) on INCH_4 */
 /* Photodiode 2 (P65) on INCH_5 */

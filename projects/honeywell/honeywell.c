@@ -126,7 +126,7 @@ static struct {
 
 	/* 0 : justOne
 	*  1 : weekdays */
-	bool automode;
+	uint8_t automode;
 
 	clock_time_t last_poll;
 } poll_data;
@@ -137,7 +137,7 @@ static request queue[REQUEST_QUEUE_SIZE];
 static int queueTail = 0;
 static int queueHead = -1;
 
-static bool queueEmpty(){
+static uint8_t queueEmpty(){
 	return (queueHead == -1);
 }
 
@@ -152,7 +152,7 @@ static void deQueue(){
 	}
 }
 
-static void enQueue(char * command, bool rom, enum request_type type){
+static void enQueue(char * command, uint8_t rom, enum request_type type){
 	if(queueEmpty() && request_state==idle){
 		request_state = type;
 		if(rom){
@@ -255,7 +255,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 		PROCESS_WAIT_EVENT();
 		if(ev == PROCESS_EVENT_TIMER) {
 			etimer_set(&etimer, CLOCK_SECOND * poll_time);
-			enQueue(PSTR("D\n"),true,poll);
+			enQueue(PSTR("D\n"),1,poll);
 		} else if (ev == PROCESS_EVENT_MSG) {
 			buf_pos = 0;
 			while ((rx=ringbuf_get(&uart_buf))!=-1) {
@@ -344,7 +344,7 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 	
-	enQueue(PSTR("D\n"), true, poll);
+	enQueue(PSTR("D\n"), 1, poll);
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
@@ -367,7 +367,7 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
 
-	enQueue(PSTR("D\n"), true, poll);
+	enQueue(PSTR("D\n"), 1, poll);
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
@@ -377,7 +377,7 @@ RESOURCE(mode, METHOD_GET | METHOD_PUT, "mode", "mode");
 void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET){
-		enQueue(PSTR("D\n"), true, poll);
+		enQueue(PSTR("D\n"), 1, poll);
 		switch(poll_data.mode){
 			case manual:
 				strncpy_P((char*)buffer, PSTR("manual"), preferred_size);
@@ -394,27 +394,27 @@ void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 	}
 	else{
 		const uint8_t * string = NULL;
-		bool success = true;
+		uint8_t success = 1;
 
 		int len = coap_get_payload(request, &string);
 		if(len == 0){ 
-			success = false;
+			success = 0;
 		}
 		else{
 			if(strncmp_P((char*)string,PSTR("manual"),MAX(len,6))==0){
-				enQueue(PSTR("M00\n"), true, poll);
+				enQueue(PSTR("M00\n"), 1, poll);
 				strncpy_P((char*)buffer, PSTR("New mode is: manual"), preferred_size);
 			}
 			else if(strncmp_P((char*)string,PSTR("auto"),MAX(len,4))==0){
-				enQueue(PSTR("M01\n"), true, poll);
+				enQueue(PSTR("M01\n"), 1, poll);
 				strncpy_P((char*)buffer, PSTR("New mode is: auto"), preferred_size);
 			}
 			else if(strncmp_P((char*)string,PSTR("valve"),MAX(len,5))==0){
-				enQueue(PSTR("M02\n"), true, poll);
+				enQueue(PSTR("M02\n"), 1, poll);
 				strncpy_P((char*)buffer, PSTR("New mode is: valve"), preferred_size);
 			}
 			else{
-				success = false;
+				success = 0;
 			}
 		}
 
@@ -432,7 +432,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
 		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
-		enQueue(PSTR("D\n"), true, poll);
+		enQueue(PSTR("D\n"), 1, poll);
 	}
 	else{
 		const uint8_t * string = NULL;
@@ -458,7 +458,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			uint16_t value = atoi((char*)string);
 			char buf[10];
 			snprintf_P(buf, 8, PSTR("A%02x\n"),value/5);
-			enQueue(buf, false, poll);
+			enQueue(buf, 0, poll);
 			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 		}
 	}
@@ -514,7 +514,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
 		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.valve);
-		enQueue(PSTR("D\n"), true, poll);
+		enQueue(PSTR("D\n"), 1, poll);
 	}
 	else{
 		const uint8_t * string = NULL;
@@ -540,7 +540,7 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 			int new_valve=atoi((char*)string);
 			char buf[12];
 			snprintf_P(buf, 10, PSTR("E%02x\n"),new_valve);
-			enQueue(buf, false, poll);
+			enQueue(buf, 0, poll);
 
 			strncpy_P((char*)buffer, PSTR("Successfully set valve position"), preferred_size);
 		}
@@ -555,7 +555,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 {	
 	if (REST.get_method_type(request)==METHOD_GET){
 		snprintf_P((char*)buffer, preferred_size, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
-		enQueue(PSTR("D\n"), true, poll);
+		enQueue(PSTR("D\n"), 1, poll);
 	}
 	else{
 		const uint8_t * string = NULL;
@@ -591,7 +591,7 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				char buf[12];
 				snprintf_P(buf, 10, PSTR("Y%02x%02x%02x\n"),year,month,day);
-				enQueue(buf, false, poll);
+				enQueue(buf, 0, poll);
 
 				strncpy_P((char*)buffer, PSTR("Successfully set date"), preferred_size);
 			}
@@ -619,7 +619,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 		int minute = poll_data.minute + (second / 60);
 		int hour = poll_data.hour + (minute / 60);
 		snprintf_P((char*)buffer, preferred_size, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
-		enQueue(PSTR("D\n"), true, poll);
+		enQueue(PSTR("D\n"), 1, poll);
 	}
 	else{
 		const uint8_t * string = NULL;
@@ -646,7 +646,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 			if(success){
 				char buf[12];
 				snprintf_P(buf, 10, PSTR("H%02x%02x%02x\n"),hour,minute,second);
-				enQueue(buf, false, poll);
+				enQueue(buf, 0, poll);
 				strncpy_P((char*)buffer, PSTR("Successfully set time"), preferred_size);
 			}
 		}
@@ -668,7 +668,7 @@ static void handle_temperature(int temperature, int index, void * request, void*
 		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), temperature/100, temperature%100);
 		char buf[12];
 		snprintf_P(buf, 10, PSTR("G0%d\n"), index);
-		enQueue(buf, false, auto_temperatures);
+		enQueue(buf, 0, auto_temperatures);
 	}
 	else{
 		const uint8_t * string = NULL;
@@ -695,7 +695,7 @@ static void handle_temperature(int temperature, int index, void * request, void*
 			uint16_t value = atoi((char*)string);
 			char buf[12];
 			snprintf_P(buf, 10, PSTR("S0%d%02x\n"),index, value/5);
-			enQueue(buf, false, auto_temperatures);
+			enQueue(buf, 0, auto_temperatures);
 			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
 		}
 	}
@@ -728,7 +728,7 @@ void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t pre
 	if (REST.get_method_type(request)==METHOD_PUT){
 		const char * string = NULL;
 		REST.get_post_variable(request, "value", &string);
-		enQueue((char*)string, false, debug);
+		enQueue((char*)string, 0, debug);
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -747,11 +747,11 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		else {
 			if(strncmp_P((char*)string, PSTR("weekdays"), MAX(len,8))==0){
-				enQueue(PSTR("S2201\n"),true,auto_mode);
+				enQueue(PSTR("S2201\n"),1,auto_mode);
 				strncpy_P((char*)buffer, PSTR("Timermode set to weekdays"), preferred_size);
 			}
 			else if(strncmp_P((char*)string, PSTR("justOne"), MAX(len,7))==0){
-				enQueue(PSTR("S2200\n"),true,auto_mode);
+				enQueue(PSTR("S2200\n"),1,auto_mode);
 				strncpy_P((char*)buffer, PSTR("Timermode set to justOne"), preferred_size);
 			}
 			else{
@@ -765,7 +765,7 @@ void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	}
 	else{
 		strncpy_P((char*)buffer, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"), preferred_size);
-		enQueue(PSTR("S22\n"),true,auto_mode);
+		enQueue(PSTR("S22\n"),1,auto_mode);
 	}
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -895,7 +895,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 			else{
 				char buf[12];
 				snprintf_P(buf, 10, PSTR("W%d%d0fff\n"),day,slot);
-				enQueue(buf, false, get_timer);
+				enQueue(buf, 0, get_timer);
 				strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Disabled slot %d of %s"), slot + 1, timerString);
 			}
 		}
@@ -946,7 +946,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 							else{
 								char buf[12];
 								snprintf_P(buf, 10, PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
-								enQueue(buf, false, get_timer);
+								enQueue(buf, 0, get_timer);
 								strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Set slot %d of %s to time %02d:%02d and mode %S"), slot + 1, timerString, hour, minute, getEnergyLevelString(level));
 							}
 						}
@@ -965,7 +965,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 	else{ //GET request
 		char buf[12];
 		snprintf_P(buf, 10, PSTR("R%d%d\n"),day,slot);
-		enQueue(buf, false, get_timer);
+		enQueue(buf, 0, get_timer);
 
 
 		uint16_t time = poll_data.timers[day][slot].time;

@@ -53,6 +53,9 @@ endif
 
 include $(CONTIKI)/Makefile.include
 
+tag.upload:
+	mc1322x-load.pl -f border-router_redbee-econotag.bin -t /dev/ttyUSB$(PORT)
+
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
 

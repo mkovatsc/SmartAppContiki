@@ -174,7 +174,7 @@ static struct {
 	unsigned long tariff1_cost;
 	
 	uint16_t mode;
-	bool powered;
+	uint8_t powered;
 
 } poll_data;
 
@@ -579,11 +579,11 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
 	const uint8_t * string=NULL;
-	bool success=true;
+	uint8_t success=1;
 
 	int len = coap_get_payload(request, &string);
 	if(len == 0){ 
-		success = false;
+		success = 0;
 	}
 	else{
 		if (strncmp_P((char*)string, PSTR("cost"),MAX(len,4))==0){
@@ -603,7 +603,7 @@ reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Reset successful\n"));
 		}
 		else{
-			success=false;
+			success=0;
 		}
 	}
   if(!success){
@@ -624,7 +624,7 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 	const char * query = NULL;
-	bool success = true;
+	uint8_t success = 1;
 
 	int len = REST.get_query(request, &query);
 
@@ -653,7 +653,7 @@ max_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
 		}
 	}
 	else{
-		success = false;
+		success = 0;
 	}
 	if (!success){
 		REST.set_response_status(response, REST.status.BAD_REQUEST);
@@ -671,7 +671,7 @@ void
 time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
-	bool success = true;
+	uint8_t success = 1;
 	const uint8_t * string=NULL;
 	int hour, min,sec;
 
@@ -685,20 +685,20 @@ time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				min = atoi((char*)&string[3]);
 			 	sec=(len==5)?0:atoi((char*)&string[6]);
 				if (len==8 && !(isdigit(string[6]) && isdigit(string[7]) && string[5]==':') ){
-					success = false;
+					success = 0;
 				}
 				else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
-					success = false;
+					success = 0;
 				}
 				else if ( string[2]!=':' ){
-					success = false;
+					success = 0;
 				}
 				else if (!( 0<= hour && hour<=23 && 0<=min && min <=59 && 0<=sec && sec<=59)){
-					success = false; 
+					success = 0;
 				}
 		}
 		else{
-			success = false;
+			success = 0;
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=rtt%02d.%02d.%02d\r\n"),hour,min,sec);
@@ -721,7 +721,7 @@ void
 date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	int index=0;
 	char temp[REST_MAX_CHUNK_SIZE];
-	bool success = true;
+	uint8_t success = 1;
 	const uint8_t * string = NULL;
 	int month, day, year;
 
@@ -735,29 +735,29 @@ date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				month = atoi((char*)&string[3]);
 				year = atoi((char*)&string[6]);
 				if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){
-					success=false;
+					success=0;
 				} 
 				else if ( string[2]!='.' || string[5]!='.' ){
-					success=false;
+					success=0;
 				}
 				else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day )){
-					success=false;
+					success=0;
 				}
 				else if( (month==4 || month ==6 || month==9 || month==11) && day>30){
-					success=false;
+					success=0;
 				}
 				else if( month==2 && !((year%4)==0) && day > 28) {
-					success=false;
+					success=0;
 				}
 				else if( month==2 && day>29){
-					success=false;
+					success=0;
 				}
 				else if( day > 31){
-					success=false;
+					success=0;
 				}
 		}
 		else{
-			success= false;	
+			success= 0;
 		}
 	 	if (success){
 			printf_P(PSTR("UCAST:0021ED000004699D=rtd%02i.%02i.%02i\r\n"),year,month,day);
@@ -856,7 +856,7 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 	const char* string=NULL;
-	bool success= true;
+	uint8_t success= 1;
 	char minutes[3];
 
 	if (REST.get_method_type(request) == METHOD_GET){
@@ -873,17 +873,17 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			start_hour = atoi(&string[0]);
 			start_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
-				success = false;
+				success = 0;
 			}
 			else if ( string[2]!=':' ){
-				success = false;
+				success = 0;
 			}
 			else if (!( 0<= start_hour && start_hour<=23 && 0<=start_min && start_min <=59)){
-				success = false; 
+				success = 0;
 			}
 		}
 		else{
-			success = false;
+			success = 0;
 		}
 		len = REST.get_post_variable(request, "end", &string);
 		int end_hour=0;
@@ -894,17 +894,17 @@ tariff_timer_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 			end_hour = atoi(&string[0]);
 			end_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
-				success = false;
+				success = 0;
 			}
 			else if ( string[2]!=':' ){
-				success = false;
+				success = 0;
 			}
 			else if (!( 0<= end_hour && end_hour<=23 && 0<=end_min && end_min <=59)){
-				success = false; 
+				success = 0;
 			}
 		}
 		else{
-			success = false;
+			success = 0;
 		}
 	 	if (success){
 			uint16_t tariff_start=start_hour*100+start_min;
@@ -932,7 +932,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 	const uint8_t * string=NULL;
-	bool success= false;
+	uint8_t success= 0;
 	uint16_t rate=0;
 	int tariff=0;
 	uint8_t len;
@@ -947,7 +947,7 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			if(tariff <= 2 && tariff >= 0){
 				//humans start counting from 1 not 0
 				tariff--;
-				success = true;
+				success = 1;
 			}
 		}
 	}
@@ -992,15 +992,15 @@ tariff_rate_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	else{
 		int len = coap_get_payload(request, &string);
 		if (len==0){
-			success=false;
+			success=0;
 		}
 		else{
 			rate = atoi((char*)&string[0]);
 			if (!(isdigit(string[0]))){
-				success = false;
+				success = 0;
 			}
 			else if (!( 0<= rate && rate < 1000)){
-				success = false; 
+				success = 0;
 			}
 		}
 	 	if (success){
@@ -1027,7 +1027,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 	int index=0;
 	unsigned long cost=0;
 	int tariff= 0;
-	bool success = false;
+	uint8_t success = 0;
 	uint8_t len;
 	const char * query = NULL;
 
@@ -1040,7 +1040,7 @@ tariff_cost_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			if(tariff <= 2 && tariff >= 0){
 				//humans start counting from 1 not 0
 				tariff--;
-				success = true;
+				success = 1;
 			}
 		}
 	}
@@ -1071,7 +1071,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	int index=0;
 	unsigned long consumed=0;
 	int tariff= 0;
-	bool success = false;
+	uint8_t success = 0;
 	uint8_t len;
 	const char * query = NULL;
 
@@ -1084,7 +1084,7 @@ tariff_consumed_handler(void* request, void* response, uint8_t *buffer, uint16_t
 			if(tariff <= 2 && tariff >= 0){
 				//humans start counting from 1 not 0
 				tariff--;
-				success = true;
+				success = 1;
 			}
 		}
 	}
@@ -1118,7 +1118,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	uint16_t start_time=0;
 	uint16_t end_time=0;
 	int timer= 0;
-	bool success = false;
+	uint8_t success = 0;
 	uint8_t len;
 	const char * query = NULL;
 	char minutes[3];
@@ -1139,7 +1139,7 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			if(timer <= 4 && timer >= 0){
 				//humans start counting from 1 not 0
 				timer--;
-				success = true;
+				success = 1;
 			}
 		}
 	}
@@ -1215,17 +1215,17 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			start_hour = atoi(&string[0]);
 			start_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
-				success = false;
+				success = 0;
 			}
 			else if ( string[2]!=':' ){
-				success = false;
+				success = 0;
 			}
 			else if (!( 0<= start_hour && start_hour<=23 && 0<=start_min && start_min <=59)){
-				success = false; 
+				success = 0;
 			}
 		}
 		else{
-			success = false;
+			success = 0;
 		}
 		len = REST.get_post_variable(request, "end", &string);
 		int end_hour=0;
@@ -1236,17 +1236,17 @@ timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 			end_hour = atoi(&string[0]);
 			end_min = atoi(minutes);
 			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){
-				success = false;
+				success = 0;
 			}
 			else if ( string[2]!=':' ){
-				success = false;
+				success = 0;
 			}
 			else if (!( 0<= end_hour && end_hour<=23 && 0<=end_min && end_min <=59)){
-				success = false; 
+				success = 0;
 			}
 		}
 		else{
-			success = false;
+			success = 0;
 		}
 	 	if (success){
 			start_time=start_hour*100+start_min;
@@ -1289,7 +1289,7 @@ void
 mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
   
 	const uint8_t * string=NULL;
-  bool success = true;
+  uint8_t success = 1;
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 
@@ -1309,7 +1309,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 	else{
 		int len = coap_get_payload(request, &string);
 		if(len == 0){
-			success = false;
+			success = 0;
 		}
 		else{
 			if(strncmp_P((char*) string,PSTR("manual"),MAX(len,6))==0){
@@ -1318,7 +1318,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				mode_switch_number=0;
 				poll_data.mode = MANUAL;
 				index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("New mode is: manual\n"));
-				poll_data.powered = true;
+				poll_data.powered = 1;
 			}
 			else if(strncmp_P((char*) string, PSTR("auto"),MAX(len,4))==0){
 				//set all timers
@@ -1328,7 +1328,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 				index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("New mode is: auto\n"));
 			}
  			else{
-	 	   	success = false;
+	 	   	success = 0;
 			}
 		}
  	 	if (!success){
@@ -1348,7 +1348,7 @@ void
 power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
   
 	const uint8_t * string=NULL;
-	bool success = true;
+	uint8_t success = 1;
 	char temp[REST_MAX_CHUNK_SIZE];
 	int index=0;
 	
@@ -1370,21 +1370,21 @@ power_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 	else{
 		int len = coap_get_payload(request, &string);
 		if(len == 0){
-			success = false;
+			success = 0;
 		}
 		else{
 			if(strncmp_P((char*)string,PSTR("on"),MAX(len,2))==0){
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 0\r\n"));
 	  		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Power on\n"));
-				poll_data.powered=true;
+				poll_data.powered=1;
 			}
 			else if(strncmp_P((char*)string, PSTR("off"),MAX(len,2))==0){
 				printf_P(PSTR("UCAST:0021ED000004699D=SE 1\r\n"));
 	  		index += snprintf_P(temp,REST_MAX_CHUNK_SIZE,PSTR("Power off\n"));
-				poll_data.powered=false;
+				poll_data.powered=0;
 			}
  			else{
-	 	   	success = false;
+	 	   	success = 0;
 			}
 		}
  	 	if (!success){
@@ -1423,7 +1423,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_mode);
 
 	memset(&poll_data, 0, sizeof(poll_data));	
-	poll_data.powered=true;
+	poll_data.powered=1;
 	poll_data.mode=255;
 
   PROCESS_END();
