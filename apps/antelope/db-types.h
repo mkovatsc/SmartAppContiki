@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2010, Swedish Institute of Computer Science
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,31 +25,40 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+/**
+ * \file
+ *	.
+ * \author
+ * 	Nicolas Tsiftes <nvt@sics.se>
+ */
 
-#define SICSLOWPAN_CONF_FRAG	1
+#ifndef DB_TYPES_H
+#define DB_TYPES_H
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
-#endif
+enum db_result {
+  DB_FINISHED = 3,
+  DB_GOT_ROW = 2,
+  DB_OK = 1,
+  DB_LIMIT_ERROR = -1,
+  DB_ALLOCATION_ERROR = -2,
+  DB_STORAGE_ERROR = -3,
+  DB_PARSING_ERROR = -4,
+  DB_NAME_ERROR = -5,
+  DB_RELATIONAL_ERROR = -6,
+  DB_TYPE_ERROR = -7,
+  DB_IMPLEMENTATION_ERROR = -8,
+  DB_INDEX_ERROR = -9,
+  DB_BUSY_ERROR = -10,
+  DB_INCONSISTENCY_ERROR = -11,
+  DB_ARGUMENT_ERROR = -12
+};
 
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    128
+typedef enum db_result db_result_t;
+typedef int db_storage_id_t;
 
-#undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    240
+#define DB_ERROR(result_code)	((result_code) < DB_OK)
+#define DB_SUCCESS(result_code) !DB_ERROR(result_code)
 
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
-
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
-
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#endif /* !DB_TYPES_H */

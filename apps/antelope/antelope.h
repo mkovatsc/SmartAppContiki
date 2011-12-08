@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2010, Swedish Institute of Computer Science
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,31 +25,29 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+/**
+ * \file
+ *	Declarations of the main Antelope functions.
+ * \author
+ * 	Nicolas Tsiftes <nvt@sics.se>
+ */
 
-#define SICSLOWPAN_CONF_FRAG	1
+#ifndef DB_H
+#define DB_H
 
-#ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM          6
-#endif
+#include "db-types.h"
+#include "result.h"
+#include "aql.h"
 
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    128
+typedef int (*db_output_function_t)(const char *, ...);
 
-#undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    240
+void db_init(void);
+void db_set_output_function(db_output_function_t f);
+const char *db_get_result_message(db_result_t code);
+db_result_t db_print_header(db_handle_t *handle);
+db_result_t db_print_tuple(db_handle_t *handle);
+int db_processing(db_handle_t *handle);
 
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
-
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
-
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#endif /* DB_H */
