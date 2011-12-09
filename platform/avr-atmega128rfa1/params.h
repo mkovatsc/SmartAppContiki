@@ -57,8 +57,8 @@ extern uint8_t eemem_domain_name[30];
 #else
 #define PARAMS_CHANNEL 26
 #endif
-#ifdef IEEE802154_PANID
-#define PARAMS_PANID IEEE802154_PANID
+#ifdef IEEE802154_CONF_PANID
+#define PARAMS_PANID IEEE802154_CONF_PANID
 #else
 #define PARAMS_PANID 0xABCD
 #endif

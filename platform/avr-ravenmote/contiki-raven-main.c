@@ -177,11 +177,11 @@ get_panid_from_eeprom(void) {
 #if JACKDAW_CONF_USE_SETTINGS
 	uint16_t x = settings_get_uint16(SETTINGS_KEY_PAN_ID, 0);
 	if(!x)
-		x = IEEE802154_PANID;
+		x = IEEE802154_CONF_PANID;
 	return x;
 #else
 	// TODO: Writeme!
-	return IEEE802154_PANID;
+	return IEEE802154_CONF_PANID;
 #endif
 }
 

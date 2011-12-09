@@ -116,6 +116,11 @@ rest_activate_resource(resource_t* resource)
 
   list_add(restful_services, resource);
 }
+void
+rest_deactivate_resource(resource_t* resource)
+{
+  list_remove(restful_services, resource);
+}
 
 void
 rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
@@ -124,6 +129,13 @@ rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
   rest_activate_resource(periodic_resource->resource);
 
   rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
+}
+void
+rest_deactivate_periodic_resource(periodic_resource_t* periodic_resource)
+{
+  list_remove(restful_periodic_services, periodic_resource);
+  etimer_stop(&periodic_resource->periodic_timer);
+  rest_deactivate_resource(periodic_resource->resource);
 }
 
 void

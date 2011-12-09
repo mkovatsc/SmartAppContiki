@@ -249,12 +249,19 @@ typedef struct periodic_resource_s periodic_resource_t;
 
 
 /*
- * Macro to define a Resource
+ * Macro to define a resource
  * Resources are statically defined for the sake of efficiency and better memory management.
  */
 #define RESOURCE(name, flags, url, attributes) \
 void name##_handler(void *, void *, uint8_t *, uint16_t, int32_t *); \
 resource_t resource_##name = {NULL, flags, url, attributes, name##_handler, NULL, NULL, NULL}
+
+/*
+ * Macro to define a sub-resource
+ * Make sure to define its parent resource beforehand and set 'parent' to that name.
+ */
+#define SUB_RESOURCE(name, flags, url, attributes, parent) \
+resource_t resource_##name = {NULL, flags, url, attributes, parent##_handler, NULL, NULL, NULL}
 
 /*
  * Macro to define an event resource
@@ -288,9 +295,11 @@ void rest_init_framework(void);
  * Resources wanted to be accessible should be activated with the following code.
  */
 void rest_activate_resource(resource_t* resource);
+void rest_deactivate_resource(resource_t* resource);
 void rest_activate_periodic_resource(periodic_resource_t* periodic_resource);
+void rest_deactivate_periodic_resource(periodic_resource_t* periodic_resource);
 void rest_activate_event_resource(resource_t* resource);
-
+/* use normal rest_activate_resource() for event resources. */
 
 /*
  * To be called by HTTP/COAP server as a callback function when a new service request appears.

@@ -228,8 +228,8 @@ uint8_t default_channel PROGMEM = RF_CHANNEL;
 #else
 uint8_t default_channel PROGMEM = 26;
 #endif
-#ifdef IEEE802154_PANID
-uint16_t default_panid PROGMEM = IEEE802154_PANID;
+#ifdef IEEE802154_CONF_PANID
+uint16_t default_panid PROGMEM = IEEE802154_CONF_PANID;
 #else
 uint16_t default_panid PROGMEM = 0xABCD;
 #endif

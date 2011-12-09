@@ -123,8 +123,16 @@ helloworld_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
   REST.set_response_payload(response, buffer, length);
 }
 
-/* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response. */
+/* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response.
+ * Notice the HAS_SUB_RESOURCES flag: This resource accepts any request whose Uri-Path starts with the given 'url' parameter (debug/mirror).
+ * The sub-resources will not appear in the resource discovery. You could provide a link-format description by your resource.
+ */
 RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE | HAS_SUB_RESOURCES, "debug/mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
+/*
+ * To have sub-resources that share the same handler and appear in the resource discovery, use the SUB_RESOURCE macro.
+ * Do not forget to activate this resource as well.
+ */
+SUB_RESOURCE(mirror_sub, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE, "debug/mirror/sub", "title=\"Discoverable sub-resource\";rt=\"Debug\"", mirror);
 
 void
 mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -567,6 +575,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   /* Activate the application-specific resources. */
   rest_activate_resource(&resource_helloworld);
   rest_activate_resource(&resource_mirror);
+  rest_activate_resource(&resource_mirror_sub);
   rest_activate_resource(&resource_chunks);
   rest_activate_periodic_resource(&periodic_resource_polling);
 
