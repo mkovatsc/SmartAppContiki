@@ -11,7 +11,7 @@ UIP_CONF_IPV6=1
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
-CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
@@ -54,7 +54,7 @@ endif
 include $(CONTIKI)/Makefile.include
 
 tag.upload:
-	mc1322x-load.pl -f smartapp-brouter_redbee-econotag.bin -t /dev/ttyUSB$(PORT)
+	mc1322x-load.pl -f smartapp-br_redbee-econotag.bin -t /dev/ttyUSB$(PORT)
 
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)

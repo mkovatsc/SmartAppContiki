@@ -32,9 +32,21 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
-#ifndef UIP_CONF_BUFFER_SIZE
+/* avr-ravenmote: 2 */
+#undef COAP_MAX_OPEN_TRANSACTIONS
+#define COAP_MAX_OPEN_TRANSACTIONS 4
+#undef COAP_MAX_OBSERVERS
+#define COAP_MAX_OBSERVERS         4
+
+#undef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE     128
+
+#undef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE    240
-#endif
+/*
+ * avr-ravenmote
+#define UIP_CONF_BUFFER_SIZE    224
+ */
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
 #define UIP_CONF_RECEIVE_WINDOW  60

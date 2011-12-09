@@ -92,7 +92,8 @@ unsigned long clock_seconds(void);
 #define RADIOSTATS 1
 
 /* More extensive stats */
-#define ENERGEST_CONF_ON          1
+/* Disable for these modules */
+#define ENERGEST_CONF_ON          0
 
 /* Possible watchdog timeouts depend on mcu. Default is WDTO_2S. -1 Disables the watchdog. */
 //#define WATCHDOG_CONF_TIMEOUT -1

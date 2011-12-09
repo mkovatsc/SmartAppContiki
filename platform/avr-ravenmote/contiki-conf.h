@@ -216,7 +216,7 @@ unsigned long clock_seconds(void);
 /* The host interface, jackdaw menu and rf230_send routines are temporarily disabled to prevent this */
 /* But some calls from an internal uip stack might get through, e.g. from CCA or low power protocols, */
 /* as temporarily disabling all the possible accesses would add considerable complication to the radio driver! */
-#define RF230_CONF_SNEEZER        1
+#define RF230_CONF_SNEEZER        0
 /* Allow 6loWPAN fragmentation (more efficient for large payloads over a reliable channel) */
 
 #define SICSLOWPAN_CONF_FRAG      1
@@ -390,5 +390,11 @@ unsigned long clock_seconds(void);
 
 #define CCIF
 #define CLIF
+
+/* include the project config */
+/* PROJECT_CONF_H might be defined in the project Makefile */
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif /* PROJECT_CONF_H */
 
 #endif /* __CONTIKI_CONF_H__ */

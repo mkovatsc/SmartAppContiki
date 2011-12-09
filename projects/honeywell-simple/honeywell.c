@@ -248,6 +248,11 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	
 	printf("TESTING");
 
+        // target temperature mode
+        enQueue(PSTR("M00\n"), TRUE, poll);
+        // 22 degC
+        enQueue("A16\n", FALSE, poll);
+
 	etimer_set(&etimer, CLOCK_SECOND * poll_time);
 	
 	request_state = idle;
@@ -339,727 +344,387 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 
 
-/*--RESOURCES----------------------------------------------------------------*/
-EVENT_RESOURCE(temperature, METHOD_GET, "temperature", "title=\"Get current temperature\";rt=\"Text\"");
+/*--SIMPLE RESOURCES---------------------------------------------------------*/
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temp", "title=\"Current temperature\";ct=0;rt=\"temperature:C\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
-	
-	enQueue(PSTR("D\n"), TRUE, poll);
+        snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+        enQueue(PSTR("D\n"), TRUE, poll);
+
+        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+        REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
-
 int temperature_event_handler(resource_t *r) {
-	static uint32_t event_i = 0;
-	char content[6];
-	
-	int size = snprintf_P(content, 6, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
+        static uint32_t event_i = 0;
+        char content[6];
 
-	++event_i;
-	
-	REST.notify_subscribers(r->url, 0, event_i, (uint8_t*)content, size);
-	return 1;
+        int size = snprintf_P(content, 6, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
+
+        ++event_i;
+
+        REST.notify_subscribers(r->url, 0, event_i, (uint8_t*)content, size);
+        return 1;
 }
 
-RESOURCE(battery, METHOD_GET, "battery", "battery");
+RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";ct=0;rt=\"voltage:mV\"");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
+        snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
 
-	enQueue(PSTR("D\n"), TRUE, poll);
+        enQueue(PSTR("D\n"), TRUE, poll);
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+        REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(mode, METHOD_GET | METHOD_PUT, "mode", "mode");
+
+RESOURCE(target, METHOD_GET | METHOD_PUT, "set/target", "title=\"Target temperature\";ct=0;rt=\"temperature:C\"");
+void target_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  if (REST.get_method_type(request)==METHOD_GET)
+  {
+    snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
+    enQueue(PSTR("D\n"), TRUE, poll);
+  }
+  else
+  {
+    //TODO tt.t format
+
+          const uint8_t * string = NULL;
+          int success = 1;
+          int len = coap_get_payload(request, &string);
+          if(len != 3 && len != 2){
+                  success = 0;
+          }
+          else{
+                  int i;
+                  for(i=0; i<len; i++){
+                          if (!isdigit(string[i])){
+                                  success = 0;
+                                  break;
+                          }
+                  }
+          }
+          if(!success){
+                  REST.set_response_status(response, REST.status.BAD_REQUEST);
+                  strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
+          }
+          else{
+                  uint16_t value = atoi((char*)string);
+                  char buf[10];
+                  snprintf_P(buf, 8, PSTR("A%02x\n"),value/5);
+
+                  // target mode
+                  enQueue(PSTR("M00\n"), TRUE, poll);
+
+                  enQueue(buf, FALSE, poll);
+                  strncpy_P((char*)buffer, PSTR("Success"), preferred_size);
+          }
+  }
+
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+RESOURCE(valve, METHOD_GET | METHOD_PUT, "set/valve", "title=\"Valve opening\";ct=0;rt=\"state:percent\"");
+void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  if (REST.get_method_type(request)==METHOD_GET){
+          snprintf_P((char*)buffer, preferred_size, PSTR("%d"), (poll_data.valve-30)*2);
+          enQueue(PSTR("D\n"), TRUE, poll);
+  }
+  else
+  {
+          const uint8_t * string = NULL;
+          int success = 1;
+          int len = coap_get_payload(request, &string);
+          int new_valve = 0;
+
+          if (len > 3)
+          {
+            success = 0;
+          }
+          else
+          {
+            int i;
+            for (i=0; i<len; ++i)
+            {
+              if (!isdigit(string[i]))
+              {
+                success = 0;
+                break;
+              }
+            }
+            if (success)
+            {
+              new_valve = atoi((char*)string);
+              if (new_valve > 100)
+              {
+                success = 0;
+              }
+              else
+              {
+                // internal valve values: 30-80
+                new_valve = (++new_valve)/2 + 30;
+              }
+            }
+          }
+
+          if (!success)
+          {
+            REST.set_response_status(response, REST.status.BAD_REQUEST);
+            strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 47 sets the valve to 47 percent"), preferred_size);
+          }
+          else
+          {
+            char buf[12];
+            snprintf_P(buf, 10, PSTR("E%02x\n"), new_valve);
+
+            // valve mode
+            enQueue(PSTR("M02\n"), TRUE, poll);
+
+            enQueue(buf, FALSE, poll);
+
+            strncpy_P((char*)buffer, PSTR("Success"), preferred_size);
+          }
+  }
+
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+
+RESOURCE(mode, METHOD_GET, "config/mode", "title=\"Control state (read-only)\";ct=0;rt=\"state:finite\"");
 void mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	if (REST.get_method_type(request)==METHOD_GET){
-		enQueue(PSTR("D\n"), TRUE, poll);
-		switch(poll_data.mode){
-			case manual:
-				strncpy_P((char*)buffer, PSTR("manual"), preferred_size);
-				break;
-			case timers:
-				strncpy_P((char*)buffer, PSTR("auto"), preferred_size);
-				break;
-			case valve:
-				strncpy_P((char*)buffer, PSTR("valve"), preferred_size);
-				break;
-			default:
-				strncpy_P((char*)buffer, PSTR("undefined"), preferred_size);
-		}
-	}
-	else{
-		const uint8_t * string = NULL;
-		uint8_t success = TRUE;
+  enQueue(PSTR("D\n"), 1, poll);
 
-		int len = coap_get_payload(request, &string);
-		if(len == 0){ 
-			success = FALSE;
-		}
-		else{
-			if(strncmp_P((char*)string,PSTR("manual"),MAX(len,6))==0){
-				enQueue(PSTR("M00\n"), TRUE, poll);
-				strncpy_P((char*)buffer, PSTR("New mode is: manual"), preferred_size);
-			}
-			else if(strncmp_P((char*)string,PSTR("auto"),MAX(len,4))==0){
-				enQueue(PSTR("M01\n"), TRUE, poll);
-				strncpy_P((char*)buffer, PSTR("New mode is: auto"), preferred_size);
-			}
-			else if(strncmp_P((char*)string,PSTR("valve"),MAX(len,5))==0){
-				enQueue(PSTR("M02\n"), TRUE, poll);
-				strncpy_P((char*)buffer, PSTR("New mode is: valve"), preferred_size);
-			}
-			else{
-				success = FALSE;
-			}
-		}
+  if (poll_data.mode==manual)
+  {
+    strncpy_P((char*)buffer, PSTR("manual"), preferred_size);
+  }
+  else if (poll_data.mode==timers)
+  {
+    strncpy_P((char*)buffer, PSTR("auto"), preferred_size);
+  }
+  else if (poll_data.mode==valve)
+  {
+    strncpy_P((char*)buffer, PSTR("valve"), preferred_size);
+  }
+  else
+  {
+    strncpy_P((char*)buffer, PSTR("undefined"), preferred_size);
+  }
 
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strcpy_P((char*)buffer, PSTR("Payload format: {auto, manual, valve}"));
-		}
-	}
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(target, METHOD_GET | METHOD_PUT, "target", "target");
-void target_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{	
-	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.target_temperature/100, poll_data.target_temperature%100);
-		enQueue(PSTR("D\n"), TRUE, poll);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int len = coap_get_payload(request, &string);
-		if(len != 3 && len != 2){
-			success = 0;
-		}
-		else{
-			int i;
-			for(i=0; i<len; i++){
-				if (!isdigit(string[i])){
-					success = 0;
-					break;
-				}
-			}
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
-		}
-		else{
-			uint16_t value = atoi((char*)string);
-			char buf[10];
-			snprintf_P(buf, 8, PSTR("A%02x\n"),value/5);
-			enQueue(buf, FALSE, poll);
-			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
-		}
-	}
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
-}
-
-RESOURCE(poll, METHOD_GET | METHOD_PUT, "poll", "poll");
+RESOURCE(poll, METHOD_GET | METHOD_PUT, "config/poll", "title=\"Polling interval\";ct=0;rt=\"time:s\"");
 void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{	
-	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_time);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int len = coap_get_payload(request, &string);
-		if(len == 0){
-			success = 0;
-		}
-		else{
-			int i;
-			for(i=0; i<len; i++){
-				if (!isdigit(string[i])){
-					success = 0;
-					break;
-				}
-			}
-			if(success){
-				int poll_intervall = atoi((char*)string);
-				if(poll_intervall < 255 && poll_intervall > 0){
-					poll_time = poll_intervall;
-					strncpy_P((char*)buffer, PSTR("Successfully set poll intervall"), preferred_size);
-				}
-				else{
-					success = 0;
-				}
-			}
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 15 sets the poll interval to 15 seconds"), preferred_size);
-		}
-	}
+{
+  if (REST.get_method_type(request)==METHOD_GET)
+  {
+    snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_time);
+  }
+  else
+  {
+    const uint8_t * string = NULL;
+    int success = 1;
+    int len = coap_get_payload(request, &string);
+    if(len == 0){
+            success = 0;
+    }
+    else
+      {
+            int i;
+            for(i=0; i<len; i++){
+                    if (!isdigit(string[i])){
+                            success = 0;
+                            break;
+                    }
+            }
+            if(success){
+                    int poll_intervall = atoi((char*)string);
+                    if(poll_intervall < 255 && poll_intervall > 0){
+                            poll_time = poll_intervall;
+                            strncpy_P((char*)buffer, PSTR("Successfully set poll intervall"), preferred_size);
+                    }
+                    else{
+                            success = 0;
+                    }
+            }
+    }
+    if(!success){
+            REST.set_response_status(response, REST.status.BAD_REQUEST);
+            strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 15 sets the poll interval to 15 seconds"), preferred_size);
+    }
+  }
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(valve, METHOD_GET | METHOD_PUT, "valve", "valve");
-void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{	
-	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.valve);
-		enQueue(PSTR("D\n"), TRUE, poll);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int len = coap_get_payload(request, &string);
-		if(len != 2){
-			success = 0;
-		}
-		else{
-			int i;
-			for(i=0; i<len; i++){
-				if (!isdigit(string[i])){
-					success = 0;
-					break;
-				}
-			}
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: aa, e.g. 47 sets the valve to 47 percent"), preferred_size);
-		}
-		else{
-			int new_valve=atoi((char*)string);
-			char buf[12];
-			snprintf_P(buf, 10, PSTR("E%02x\n"),new_valve);
-			enQueue(buf, FALSE, poll);
-
-			strncpy_P((char*)buffer, PSTR("Successfully set valve position"), preferred_size);
-		}
-	}
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
-}
-
-RESOURCE(date, METHOD_GET | METHOD_PUT, "date", "date");
+RESOURCE(date, METHOD_GET | METHOD_PUT, "config/date", "title=\"Thermostat date\";ct=0;rt=\"datetime:dd.mm.yy\"");
 void date_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{	
-	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
-		enQueue(PSTR("D\n"), TRUE, poll);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int length = coap_get_payload(request, &string);
-		if( length == 8 ){
-			int day=atoi((char*)&string[0]);
-			int month=atoi((char*)&string[3]);
-			int year=atoi((char*)&string[6]);
+{
+        if (REST.get_method_type(request)==METHOD_GET){
+                snprintf_P((char*)buffer, preferred_size, PSTR("%02d.%02d.%02d"), poll_data.day, poll_data.month, poll_data.year);
+                enQueue(PSTR("D\n"), TRUE, poll);
+        }
+        else{
+                const uint8_t * string = NULL;
+                int success = 1;
+                int length = coap_get_payload(request, &string);
+                if( length == 8 ){
+                        int day=atoi((char*)&string[0]);
+                        int month=atoi((char*)&string[3]);
+                        int year=atoi((char*)&string[6]);
 
-			if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){ //digit check
-				success=0;
-			} 
-			else if ( string[2]!='.' || string[5]!='.' ){ //delimiter check
-				success=0;
-			}
-			else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day)){ //month and day check
-				success=0;
-			}
-			else if( (month==4 || month==6 || month==9 || month==11) && day>30){ //30 days check
-				success=0;
-			}
-			else if( month==2 && !((year%4)==0) && day > 28) { //no leap year check
-				success=0;
-			}
-			else if( month==2 && day>29){ //leap year check
-				success=0;
-			}
-			else if( day > 31){ //31 days check
-				success=0;
-			}
+                        if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && isdigit(string[6]) && isdigit(string[7]))){ //digit check
+                                success=0;
+                        }
+                        else if ( string[2]!='.' || string[5]!='.' ){ //delimiter check
+                                success=0;
+                        }
+                        else if (!(0<=year && year <=99 && 1<=month && month<=12 && 1<=day)){ //month and day check
+                                success=0;
+                        }
+                        else if( (month==4 || month==6 || month==9 || month==11) && day>30){ //30 days check
+                                success=0;
+                        }
+                        else if( month==2 && !((year%4)==0) && day > 28) { //no leap year check
+                                success=0;
+                        }
+                        else if( month==2 && day>29){ //leap year check
+                                success=0;
+                        }
+                        else if( day > 31){ //31 days check
+                                success=0;
+                        }
 
-			if(success){
-				char buf[12];
-				snprintf_P(buf, 10, PSTR("Y%02x%02x%02x\n"),year,month,day);
-				enQueue(buf, FALSE, poll);
+                        if(success){
+                                char buf[12];
+                                snprintf_P(buf, 10, PSTR("Y%02x%02x%02x\n"),year,month,day);
+                                enQueue(buf, FALSE, poll);
 
-				strncpy_P((char*)buffer, PSTR("Successfully set date"), preferred_size);
-			}
-		}
-		else{
-			success = 0;
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: dd.mm.yy"), preferred_size);
-		}
-	}
+                                strncpy_P((char*)buffer, PSTR("Successfully set date"), preferred_size);
+                        }
+                }
+                else{
+                        success = 0;
+                }
+                if(!success){
+                        REST.set_response_status(response, REST.status.BAD_REQUEST);
+                        strncpy_P((char*)buffer, PSTR("Payload format: dd.mm.yy"), preferred_size);
+                }
+        }
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+        REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 
-RESOURCE(time, METHOD_GET | METHOD_PUT, "time", "time");
+RESOURCE(time, METHOD_GET | METHOD_PUT, "config/time", "title=\"Thermostat time\";ct=0;rt=\"datetime:hh:mm:ss\"");
 void time_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{	
-	if (REST.get_method_type(request)==METHOD_GET){
-		clock_time_t now = clock_time();
-		int second = poll_data.second + (now - poll_data.last_poll) / CLOCK_SECOND;
-		int minute = poll_data.minute + (second / 60);
-		int hour = poll_data.hour + (minute / 60);
-		snprintf_P((char*)buffer, preferred_size, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
-		enQueue(PSTR("D\n"), TRUE, poll);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int length = coap_get_payload(request, &string);
-		if(length==8 || length==5){
-			int hour=atoi((char*)&string[0]);
-			int minute=atoi((char*)&string[3]);
-			int second=(length==5)?0:atoi((char*)&string[6]);
+{
+        if (REST.get_method_type(request)==METHOD_GET){
+                clock_time_t now = clock_time();
+                int second = poll_data.second + (now - poll_data.last_poll) / CLOCK_SECOND;
+                int minute = poll_data.minute + (second / 60);
+                int hour = poll_data.hour + (minute / 60);
+                snprintf_P((char*)buffer, preferred_size, PSTR("%02d:%02d:%02d"), hour % 24, minute % 60, second % 60 );
+                enQueue(PSTR("D\n"), TRUE, poll);
+        }
+        else{
+                const uint8_t * string = NULL;
+                int success = 1;
+                int length = coap_get_payload(request, &string);
+                if(length==8 || length==5){
+                        int hour=atoi((char*)&string[0]);
+                        int minute=atoi((char*)&string[3]);
+                        int second=(length==5)?0:atoi((char*)&string[6]);
 
-			if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){ //seconds digit and delimiter checks
-				success = 0;
-			}
-			else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){ //hours and minute digit checks
-				success = 0;
-			}
-			else if ( string[2]!=':' ){ //delimiter check
-				success = 0;
-			}
-			else if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 && 0<=second && second<=59)){ //range check
-				success = 0; 
-			}
+                        if (length==8 && ! (isdigit(string[6]) && isdigit(string[7]) && string[5]==':' )){ //seconds digit and delimiter checks
+                                success = 0;
+                        }
+                        else if (!(isdigit(string[0]) &&  isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]))){ //hours and minute digit checks
+                                success = 0;
+                        }
+                        else if ( string[2]!=':' ){ //delimiter check
+                                success = 0;
+                        }
+                        else if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 && 0<=second && second<=59)){ //range check
+                                success = 0;
+                        }
 
-			if(success){
-				char buf[12];
-				snprintf_P(buf, 10, PSTR("H%02x%02x%02x\n"),hour,minute,second);
-				enQueue(buf, FALSE, poll);
-				strncpy_P((char*)buffer, PSTR("Successfully set time"), preferred_size);
-			}
-		}
-		else{
-			success = 0;
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: hh:mm[:ss]"), preferred_size);
-		}
-	}
+                        if(success){
+                                char buf[12];
+                                snprintf_P(buf, 10, PSTR("H%02x%02x%02x\n"),hour,minute,second);
+                                enQueue(buf, FALSE, poll);
+                                strncpy_P((char*)buffer, PSTR("Successfully set time"), preferred_size);
+                        }
+                }
+                else{
+                        success = 0;
+                }
+                if(!success){
+                        REST.set_response_status(response, REST.status.BAD_REQUEST);
+                        strncpy_P((char*)buffer, PSTR("Payload format: hh:mm[:ss]"), preferred_size);
+                }
+        }
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+        REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-static void handle_temperature(int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	if (REST.get_method_type(request)==METHOD_GET){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), temperature/100, temperature%100);
-		char buf[12];
-		snprintf_P(buf, 10, PSTR("G0%d\n"), index);
-		enQueue(buf, FALSE, auto_temperatures);
-	}
-	else{
-		const uint8_t * string = NULL;
-		int success = 1;
-		int len = coap_get_payload(request, &string);
-		if(len !=2 && len !=3){
-			success = 0;
-		}
-		else{
-			int i;
-			for(i=0; i<len; i++){
-				if (!isdigit(string[i])){
-					success = 0;
-					break;
-				}
-			}
-		}
 
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
-		}
-		else{
-			uint16_t value = atoi((char*)string);
-			char buf[12];
-			snprintf_P(buf, 10, PSTR("S0%d%02x\n"),index, value/5);
-			enQueue(buf, FALSE, auto_temperatures);
-			strncpy_P((char*)buffer, PSTR("Successfully set value"), preferred_size);
-		}
-	}
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
-}
-
-RESOURCE(frost, METHOD_GET | METHOD_PUT, "auto/frost", "auto/frost");
-RESOURCE(energy, METHOD_GET | METHOD_PUT, "auto/energy", "auto/energy");
-RESOURCE(comfort, METHOD_GET | METHOD_PUT, "auto/comfort", "auto/comfort");
-RESOURCE(supercomfort, METHOD_GET | METHOD_PUT, "auto/supercomfort", "auto/supercomfort");
-
-void frost_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(poll_data.frost_temperature, 1, request, response, buffer, preferred_size, offset);
-}
-void energy_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(poll_data.energy_temperature, 2, request, response, buffer, preferred_size, offset);
-}
-void comfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(poll_data.comfort_temperature, 3, request, response, buffer, preferred_size, offset);
-}
-void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handle_temperature(poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
-}
 
 #if DEBUG
 RESOURCE(debug, METHOD_GET | METHOD_PUT, "debug", "debug");
 void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	if (REST.get_method_type(request)==METHOD_PUT){
-		const char * string = NULL;
-		REST.get_post_variable(request, "value", &string);
-		enQueue((char*)string, FALSE, debug);
-	}
+        if (REST.get_method_type(request)==METHOD_PUT){
+                const char * string = NULL;
+                REST.get_post_variable(request, "value", &string);
+                enQueue((char*)string, 0, debug);
+        }
 
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, (uint8_t*)debug_buffer, strlen(debug_buffer));
+        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+        REST.set_response_payload(response, (uint8_t*)debug_buffer, strlen(debug_buffer));
 }
 #endif
-
-RESOURCE(timermode, METHOD_GET | METHOD_PUT, "auto/timermode", "auto/timermode");
-void timermode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	if (REST.get_method_type(request)==METHOD_PUT){
-		const uint8_t * string = NULL;
-		int success = 1;
-		int len = coap_get_payload(request, &string);
-		if( len == 0 ){
-			success = 0;
-		}
-		else {
-			if(strncmp_P((char*)string, PSTR("weekdays"), MAX(len,8))==0){
-				enQueue(PSTR("S2201\n"),TRUE,auto_mode);
-				strncpy_P((char*)buffer, PSTR("Timermode set to weekdays"), preferred_size);
-			}
-			else if(strncmp_P((char*)string, PSTR("justOne"), MAX(len,7))==0){
-				enQueue(PSTR("S2200\n"),TRUE,auto_mode);
-				strncpy_P((char*)buffer, PSTR("Timermode set to justOne"), preferred_size);
-			}
-			else{
-				success = 0;
-			}
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strncpy_P((char*)buffer, PSTR("Payload format: {justOne, weekdays}"), preferred_size);
-		}
-	}
-	else{
-		strncpy_P((char*)buffer, (poll_data.automode)?PSTR("weekdays"):PSTR("justOne"), preferred_size);
-		enQueue(PSTR("S22\n"),TRUE,auto_mode);
-	}
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strlen((char*)buffer));
-}
-
-static char * getEnergyLevelString(int mode){
-	char * string;
-	switch(mode){
-		case 0: string = PSTR("frost"); break;
-		case 1: string = PSTR("energy"); break;
-		case 2: string = PSTR("comfort"); break;
-		case 3: string = PSTR("supercomfort"); break;
-		default: string = PSTR("undefined");
-	}
-	return string;
-}
-
-static void handleTimer(int day, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	int strpos = 0;
-	const char * query = NULL;
-	int success = 0;
-	int len;
-	int slot;
-
-	char timerString[10];
-	snprintf_P(timerString, 10, (day == 0)?PSTR("weektimer"):PSTR("daytimer%d"), day);
-	
-	if ((len = REST.get_query(request, &query))){ //GET variable check
-		if(isdigit(query[0]) && len == 1){
-			char c[2];
-			c[0]=query[0];
-			c[1]='\0';
-			slot = atoi(c);
-			if(slot <= 8 && slot >= 1){
-				//slot is in interval [0;7] on honeywell but [1;8] on ravenmote
-				slot--;
-				success = 1;
-			}
-		}
-	}
-	if(!success){
-		REST.set_response_status(response, REST.status.BAD_REQUEST);
-		strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Add a get parameter that specifies the slot in [1;8] e.g. /auto/%s?3 to interact with slot 3"), timerString);
-		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-		REST.set_response_payload(response, buffer, strpos);
-		return; //no or invalid GET variable specified
-	}
-	//overview code
-	//this would output an overview of all the slots in the timerset
-	//note that one needs to somehow retrieve the slots from the thermostat somewhere else because of chaching
-	//To enable this you also need to enlarge the slot range from the interval [1;8] to [0;8] above
-	/*if(slot==-1){
-		if (REST.get_method_type(request)==METHOD_PUT){
-			REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("PUT not allowed in overview"));
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-			REST.set_response_payload(response, buffer, strpos);
-		}
-		else{
-			//request_state = get_timer;
-			//printf_P(PSTR("R%d0\n"),day);
-
-			size_t strpos = 0;
-			size_t bufpos = 0;
-			int i;
-			for (i=0; i<8; i++){
-				uint16_t time = poll_data.timers[day][i].time;
-				if(time > 23*60 + 59){
-					strpos += snprintf_P((char*)buffer+bufpos, REST_MAX_CHUNK_SIZE-bufpos+1, PSTR("Slot %d: disabled\n"), i+1);
-				}
-				else{
-					strpos += snprintf_P((char*)buffer+bufpos, REST_MAX_CHUNK_SIZE-bufpos+1, PSTR("Slot %d: %S at %02d:%02d\n"), i+1, getEnergyLevelString(poll_data.timers[day][i].mode), time/60, time%60 );
-				}
-
-				if (strpos <= *offset)
-				{
-					// Discard output before current block
-					bufpos = 0;
-				}
-				else // (strpos > *offset)
-				{
-					// output partly in block
-					size_t len = MIN(strpos - *offset, preferred_size);
-
-					// Block might start in the middle of the output; align with buffer start.
-					if (bufpos == 0)
-					{
-						memmove(buffer, buffer+strlen((char *)buffer)-strpos+*offset, len);
-					}
-
-					bufpos = len;
-
-					if (bufpos >= preferred_size)
-					{
-						break;
-					}
-				}
-			}
-
-			if (bufpos>0) {
-				REST.set_response_payload(response, buffer, bufpos);
-			}
-			else
-			{
-				REST.set_response_status(response, REST.status.BAD_OPTION);
-				REST.set_response_payload(response, (uint8_t*)"Block out of scope", 18);
-			}
-
-			if (i>=7) {
-				*offset = -1;
-			}
-			else
-			{
-				*offset += bufpos;
-			}
-		}
-		return;
-	}*/
-	if (REST.get_method_type(request)==METHOD_PUT){
-		const uint8_t * disable = NULL;
-		len = coap_get_payload(request, &disable);
-		if(len == 7){
-			if(strncmp_P((char*)disable, PSTR("disable"), len)!=0){
-				success = 0;
-			}
-			else{
-				char buf[12];
-				snprintf_P(buf, 10, PSTR("W%d%d0fff\n"),day,slot);
-				enQueue(buf, FALSE, get_timer);
-				strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Disabled slot %d of %s"), slot + 1, timerString);
-			}
-		}
-		else{
-			const char * mode = NULL;
-			len = REST.get_post_variable(request, "mode", &mode);
-			if(len == 0){
-				success = 0;
-			}
-			else {
-				// frost -> 0
-				// energy -> 1
-				// comfort -> 2
-				// supercomfort -> 3
-				int level;
-				if(strncmp_P(mode, PSTR("frost"), MAX(len,5))==0){
-					level = 0;
-				}
-				else if(strncmp_P(mode, PSTR("energy"), MAX(len,6))==0){
-					level = 1;
-				}
-				else if(strncmp_P(mode, PSTR("comfort"), MAX(len,7))==0){
-					level = 2;
-				}
-				else if(strncmp_P(mode, PSTR("supercomfort"), MAX(len,12))==0){
-					level = 3;
-				}
-				else{
-					success = 0;
-				}
-
-				if(success){
-					const char * time = NULL;
-					if(REST.get_post_variable(request, "time", &time)!=5){
-						success = 0;
-					}
-					else{
-						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){ //digit checks
-							int hour = atoi(&time[0]);
-							/*the time string is not NULL terminated */
-							char minutes[3];
-							strncpy(minutes, &time[3], 2);
-							minutes[2] = 0;
-							int minute = atoi(minutes);
-							if (!( 0<=hour && hour<=23 && 0<=minute && minute<=59 )){ //range checks
-								success = 0; 
-							}
-							else{
-								char buf[12];
-								snprintf_P(buf, 10, PSTR("W%d%d%d%03x\n"),day, slot, level, hour*60 + minute);
-								enQueue(buf, FALSE, get_timer);
-								strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Set slot %d of %s to time %02d:%02d and mode %S"), slot + 1, timerString, hour, minute, getEnergyLevelString(level));
-							}
-						}
-						else{
-							success = 0;
-						}
-					}
-				}
-			}
-		}
-		if(!success){
-			REST.set_response_status(response, REST.status.BAD_REQUEST);
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("Payload format: [ time=hh:mm&mode={frost,energy,comfort,supercomfort} | disable=disable ]"));
-		}
-	} 
-	else{ //GET request
-		char buf[12];
-		snprintf_P(buf, 10, PSTR("R%d%d\n"),day,slot);
-		enQueue(buf, FALSE, get_timer);
-
-
-		uint16_t time = poll_data.timers[day][slot].time;
-		if(time > 23*60 + 59){
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("disabled"));
-		}
-		else{
-			strpos += snprintf_P((char*)buffer, REST_MAX_CHUNK_SIZE, PSTR("%S at %02d:%02d"), getEnergyLevelString(poll_data.timers[day][slot].mode), time/60, time%60 );
-		}
-	}
-
-	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	REST.set_response_payload(response, buffer, strpos);
-}
-
-RESOURCE(weektimer, METHOD_GET | METHOD_PUT, "auto/weektimer", "auto/weektimer");
-RESOURCE(day1timer, METHOD_GET | METHOD_PUT, "auto/day1timer", "auto/day1timer");
-RESOURCE(day2timer, METHOD_GET | METHOD_PUT, "auto/day2timer", "auto/day2timer");
-RESOURCE(day3timer, METHOD_GET | METHOD_PUT, "auto/day3timer", "auto/day3timer");
-RESOURCE(day4timer, METHOD_GET | METHOD_PUT, "auto/day4timer", "auto/day4timer");
-RESOURCE(day5timer, METHOD_GET | METHOD_PUT, "auto/day5timer", "auto/day5timer");
-RESOURCE(day6timer, METHOD_GET | METHOD_PUT, "auto/day6timer", "auto/day6timer");
-RESOURCE(day7timer, METHOD_GET | METHOD_PUT, "auto/day7timer", "auto/day7timer");
-
-void weektimer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(0, request, response, buffer, preferred_size, offset);
-}
-void day1timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(1, request, response, buffer, preferred_size, offset);
-}
-void day2timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(2, request, response, buffer, preferred_size, offset);
-}
-void day3timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(3, request, response, buffer, preferred_size, offset);
-}
-void day4timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(4, request, response, buffer, preferred_size, offset);
-}
-void day5timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(5, request, response, buffer, preferred_size, offset);
-}
-void day6timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(6, request, response, buffer, preferred_size, offset);
-}
-void day7timer_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
-	handleTimer(7, request, response, buffer, preferred_size, offset);
-}
 
 
 PROCESS_THREAD(coap_process, ev, data)
 {
-	PROCESS_BEGIN();
+  PROCESS_BEGIN();
 
-	rest_init_framework();
-	
-	//activate the resources
+  rest_init_framework();
+
+  //activate the resources
 #if DEBUG
-	rest_activate_resource(&resource_debug);
+  rest_activate_resource(&resource_debug);
 #endif
 
-	rest_activate_resource(&resource_date);
-	rest_activate_resource(&resource_time);
-	rest_activate_event_resource(&resource_temperature);
-	rest_activate_resource(&resource_battery);
-	rest_activate_resource(&resource_target);
-	rest_activate_resource(&resource_mode);
-	rest_activate_resource(&resource_poll);
-	rest_activate_resource(&resource_valve);
-	rest_activate_resource(&resource_frost);
-	rest_activate_resource(&resource_energy);
-	rest_activate_resource(&resource_comfort);
-	rest_activate_resource(&resource_supercomfort);
-	rest_activate_resource(&resource_timermode);
-	
-	rest_activate_resource(&resource_weektimer);
-	rest_activate_resource(&resource_day1timer);
-	rest_activate_resource(&resource_day2timer);
-	rest_activate_resource(&resource_day3timer);
-	rest_activate_resource(&resource_day4timer);
-	rest_activate_resource(&resource_day5timer);
-	rest_activate_resource(&resource_day6timer);
-	rest_activate_resource(&resource_day7timer);
+  rest_activate_resource(&resource_date);
+  rest_activate_resource(&resource_time);
+  rest_activate_event_resource(&resource_temperature);
+  rest_activate_resource(&resource_battery);
+  rest_activate_resource(&resource_target);
+  rest_activate_resource(&resource_mode);
+  rest_activate_resource(&resource_poll);
+  rest_activate_resource(&resource_valve);
 
-	//call the temperature handler if the temperature changed
-	while(1){
-		PROCESS_WAIT_EVENT();
-		if(ev == PROCESS_EVENT_MSG){
-			temperature_event_handler(&resource_temperature);
-		}
-	}
+  //call the temperature handler if the temperature changed
+  while(1){
+    PROCESS_WAIT_EVENT();
+    if(ev == PROCESS_EVENT_MSG){
+      temperature_event_handler(&resource_temperature);
+    }
+  }
 
-	PROCESS_END();
+  PROCESS_END();
 }
 
 /*---------------------------------------------------------------------------*/
