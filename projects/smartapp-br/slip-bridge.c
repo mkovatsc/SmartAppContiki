@@ -42,6 +42,7 @@
 #include "net/uip.h"
 #include "net/uip-ds6.h"
 #include "dev/slip.h"
+#include "net/netstack.h"
 #include "dev/uart1.h"
 #include <string.h>
 
@@ -51,6 +52,8 @@
 #include "net/uip-debug.h"
 
 void set_prefix_64(uip_ipaddr_t *);
+
+extern uint8_t radio_channel;
 
 static uip_ipaddr_t last_sender;
 /*---------------------------------------------------------------------------*/
@@ -62,14 +65,24 @@ slip_input_callback(void)
     PRINTF("Got configuration message of type %c\n", uip_buf[1]);
     uip_len = 0;
     if(uip_buf[1] == 'P') {
-      uip_ipaddr_t prefix;
+        //TODO set channel as well
+      uip_ipaddr_t new_prefix;
       /* Here we set a prefix !!! */
-      memset(&prefix, 0, 16);
-      memcpy(&prefix, &uip_buf[2], 8);
+      memset(&new_prefix, 0, 16);
+      memcpy(&new_prefix, &uip_buf[2], 8);
       PRINTF("Setting prefix ");
-      PRINT6ADDR(&prefix);
+      PRINT6ADDR(&new_prefix);
       PRINTF("\n");
-      set_prefix_64(&prefix);
+      set_prefix_64(&new_prefix);
+    }
+    if(uip_buf[1] == 'C') {
+      int channel = atoi(uip_buf+2);
+      if (channel>=11 && channel<=26) {
+        PRINTF("Setting channel %s\n", uip_buf+2);
+        radio_channel = channel;
+        NETSTACK_CONF_RADIO.set_channel(radio_channel);
+
+      }
     }
   } else if (uip_buf[0] == '?') {
     PRINTF("Got request message of type %c\n", uip_buf[1]);

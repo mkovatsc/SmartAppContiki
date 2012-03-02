@@ -10,13 +10,11 @@ WITH_COAP=7
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
+#CFLAGS += -DRF_CHANNEL=16
+#CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
-ifeq ($(ADDR), )
-ADDR=0x55
-endif
+CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xC2,0xff,0xff,0x18,0x8d,0x2d}
 
-# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
-CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
 
 # must be CFLAGS not variable
 CFLAGS += -DUIP_CONF_IPV6_RPL=1

@@ -248,6 +248,7 @@ const struct radio_driver rf230_driver =
     rf230_transmit,
     rf230_send,
     rf230_read,
+    rf230_set_channel,
     rf230_cca,
     rf230_receiving_packet,
     rf230_pending_packet,

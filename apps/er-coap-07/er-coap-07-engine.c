@@ -309,8 +309,8 @@ RESOURCE(well_known_core, METHOD_GET, ".well-known/core", "ct=40");
 void
 well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-    size_t strpos = 0;
-    size_t bufpos = 0;
+    size_t strpos = 0; // overall position without chunks
+    size_t bufpos = 0; // position within chunk
     size_t tmplen = 0;
     resource_t* resource = NULL;
 

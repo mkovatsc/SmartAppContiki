@@ -73,6 +73,7 @@ extern uint8_t eemem_domain_name[30];
 #define PARAMS_TXPOWER 0
 #endif
 #ifdef EUI64_ADDRESS
+#warning "USING CUSTOM EUI-64"
 #define PARAMS_EUI64ADDR EUI64_ADDRESS
 #else
 /* This form of of EUI64 mac allows full 6LoWPAN header compression from mac address */

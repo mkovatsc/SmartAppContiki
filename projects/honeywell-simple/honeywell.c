@@ -41,21 +41,14 @@
 #include "ringbuf.h"
 #include "sys/clock.h"
 
-#if WITH_COAP == 3
-#include "er-coap-03.h"
-#include "er-coap-03-transactions.h"
-#elif WITH_COAP == 6
-#include "er-coap-06.h"
-#include "er-coap-06-transactions.h"
-#elif WITH_COAP == 7
+#include "net/uip-ds6.h"
+#include "net/rpl/rpl.h"
+
 #include "er-coap-07.h"
 #include "er-coap-07-transactions.h"
-#else
-#error "CoAP version defined by WITH_COAP not implemented"
-#endif
 
 //adds the debug resource that can be used to output the debug buffer
-#define DEBUG 0
+#define DEBUG 1
 
 //sets the size of the request queue
 #define REQUEST_QUEUE_SIZE 3
@@ -63,6 +56,10 @@
 #define MAX(a,b) ((a)<(b)?(b):(a))
 #define TRUE 1
 #define FALSE 0
+
+
+extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
+extern uip_ds6_route_t uip_ds6_routing_table[];
 
 /*--PROCESSES----------------------------------------------------------------*/
 PROCESS(honeywell_process, "Honeywell comm");
@@ -94,12 +91,21 @@ static enum request_type request_state = idle;
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 
+
+/* events for observing */
+static process_event_t changed_valve_event;
+static process_event_t changed_temp_event;
+static process_event_t changed_battery_event;
+
+
+static uint8_t radio_channel = RF_CHANNEL;
+
 #if DEBUG
 //debug buffer
 static char debug_buffer[128];
 #endif
 
-static uint8_t poll_time = 90;
+static uint8_t poll_time = 15;
 
 //struct for the cache
 static struct {
@@ -196,18 +202,31 @@ static int uart_get_char(unsigned char c)
 }
 
 //fill in the cache
-static void parseD(char * data){
+static void parseD(char * data) {
 	//D: d5 01.01.10 14:20:07 A V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
 	if(data[0]=='D'){
-		poll_data.valve = atoi(&data[29]);
+                uint8_t valve_state = atoi(&data[29]);
+                if(poll_data.valve != valve_state){
+                        //send event to the coap process that the valve changed to notify all the subscribers
+                        process_post(&coap_process, changed_valve_event, NULL);
+                }
+		poll_data.valve = valve_state;
+
 		uint16_t is_temperature = atoi(&data[35]);
 		if(poll_data.is_temperature != is_temperature){
 			//send event to the coap process that the temperature changed to notify all the subscribers
-			process_post(&coap_process, PROCESS_EVENT_MSG, NULL);
+			process_post(&coap_process, changed_temp_event, NULL);
 		}
 		poll_data.is_temperature = is_temperature;
+
 		poll_data.target_temperature = atoi(&data[43]);
-		poll_data.battery = atoi(&data[51]);
+
+		uint16_t battery_state = atoi(&data[51]);
+                if(poll_data.battery != battery_state){
+                        //send event to the coap process that the battery changed to notify all the subscribers
+                        process_post(&coap_process, changed_battery_event, NULL);
+                }
+                poll_data.battery = battery_state;
 
 		switch(data[24]){
 			case 'M':
@@ -230,6 +249,8 @@ static void parseD(char * data){
 		poll_data.second=atoi(&data[21]);
 
 		poll_data.last_poll = clock_time();
+
+
 	}
 }
 
@@ -242,11 +263,15 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	int buf_pos;
 	char buf[128];
 
-
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
-	
-	printf("TESTING");
+
+        changed_valve_event = process_alloc_event();
+	changed_temp_event = process_alloc_event();
+	changed_battery_event = process_alloc_event();
+
+	// finish booting first
+	PROCESS_PAUSE();
 
         // target temperature mode
         enQueue(PSTR("M00\n"), TRUE, poll);
@@ -367,15 +392,26 @@ int temperature_event_handler(resource_t *r) {
         return 1;
 }
 
-RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";ct=0;rt=\"voltage:mV\"");
+EVENT_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";ct=0;rt=\"voltage:mV\"");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-        snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
+  snprintf_P((char*)buffer, preferred_size, PSTR("%d"), poll_data.battery);
 
-        enQueue(PSTR("D\n"), TRUE, poll);
+  enQueue(PSTR("D\n"), TRUE, poll);
 
-        REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-        REST.set_response_payload(response, buffer, strlen((char*)buffer));
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+int battery_event_handler(resource_t *r) {
+  static uint32_t event_i = 0;
+  char content[6];
+
+  int size = snprintf_P(content, 6, PSTR("%u"), poll_data.battery);
+
+  ++event_i;
+
+  REST.notify_subscribers(r->url, 0, event_i, (uint8_t*)content, size);
+  return 1;
 }
 
 
@@ -427,7 +463,7 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
   REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-RESOURCE(valve, METHOD_GET | METHOD_PUT, "set/valve", "title=\"Valve opening\";ct=0;rt=\"state:percent\"");
+EVENT_RESOURCE(valve, METHOD_GET | METHOD_PUT, "set/valve", "title=\"Valve opening\";ct=0;rt=\"state:percent\"");
 void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   if (REST.get_method_type(request)==METHOD_GET){
@@ -492,6 +528,17 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+int valve_event_handler(resource_t *r) {
+  static uint32_t event_i = 0;
+  char content[6];
+
+  int size = snprintf_P(content, 6, PSTR("%u"), poll_data.valve);
+
+  ++event_i;
+
+  REST.notify_subscribers(r->url, 0, event_i, (uint8_t*)content, size);
+  return 1;
 }
 
 
@@ -681,18 +728,196 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 
 
+
 #if DEBUG
-RESOURCE(debug, METHOD_GET | METHOD_PUT, "debug", "debug");
+RESOURCE(debug, METHOD_GET | METHOD_PUT, "debug/uart", "title=\"UART communication\"; ct=0");
 void debug_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
         if (REST.get_method_type(request)==METHOD_PUT){
-                const char * string = NULL;
-                REST.get_post_variable(request, "value", &string);
-                enQueue((char*)string, 0, debug);
+                char *string;
+                size_t len = REST.get_request_payload(request, (const uint8_t**) &string);
+                string[len] = '\0';
+                enQueue(string, 0, debug);
         }
 
         REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
         REST.set_response_payload(response, (uint8_t*)debug_buffer, strlen(debug_buffer));
 }
+
+/*---------------------------------------------------------------------------*/
+static size_t
+print_ipaddr(char *buf, size_t size, const uip_ipaddr_t *addr)
+{
+  uint16_t a;
+  int i, f;
+  size_t blen = 0;
+  for(i = 0, f = 0; i < sizeof(uip_ipaddr_t); i += 2) {
+    a = (addr->u8[i] << 8) + addr->u8[i + 1];
+    if(a == 0 && f >= 0) {
+      if(f++ == 0 && size - blen >= 2) {
+        buf[blen++] = ':';
+        buf[blen++] = ':';
+      }
+    } else {
+      if(f > 0) {
+        f = -1;
+      } else if(i > 0 && blen < size) {
+        buf[blen++] = ':';
+      }
+      blen += snprintf_P(&buf[blen], size - blen, PSTR("%x"), a);
+    }
+  }
+  return blen;
+}
+
+RESOURCE(debug_ch, METHOD_GET | METHOD_PUT, "debug/channel", "title=\"LoWPAN info\"");
+void debug_ch_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+
+  if (REST.get_method_type(request)==METHOD_GET)
+  {
+    REST.set_response_payload(response, buffer, snprintf_P((char*)buffer, preferred_size, PSTR("%u"), radio_channel ));
+  }
+  else
+  {
+    const uint8_t * string = NULL;
+    int success = 1;
+    int len = coap_get_payload(request, &string);
+
+    if (len==0 || len>2)
+    {
+      success = 0;
+    }
+    else
+    {
+      int ch = atoi((char*)string);
+      if (ch>=11 && ch<=26)
+      {
+        radio_channel = (uint8_t)ch;
+        NETSTACK_CONF_RADIO.set_channel(radio_channel);
+        REST.set_response_payload(response, (uint8_t *)PSTR("Success"), 7);
+      }
+      else
+      {
+        success = 0;
+      }
+    }
+    if (!success)
+    {
+      REST.set_response_status(response, REST.status.BAD_REQUEST);
+      REST.set_response_payload(response, (uint8_t *)PSTR("Usage: 11-26"), 12);
+    }
+  }
+}
+
+RESOURCE(debug_addr, METHOD_GET, "debug/addresses", "title=\"RPL info\"; ct=53");
+void debug_addr_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+
+  size_t bufpos = 0;
+  uint8_t i;
+
+  bufpos += snprintf_P((char *)(buffer+bufpos), preferred_size-bufpos+1, PSTR("{addresses:["));
+
+  for (i = 0; i < UIP_DS6_ADDR_NB; ++i) {
+    if (uip_ds6_if.addr_list[i].isused) {
+      buffer[bufpos++] = '"';
+      bufpos += print_ipaddr((char *)(buffer+bufpos), preferred_size-bufpos+1, &uip_ds6_if.addr_list[i].ipaddr);
+      buffer[bufpos++] = '"';
+      if (preferred_size-bufpos > 0)
+      {
+        buffer[bufpos++] = ',';
+      }
+      else
+      {
+        break;
+      }
+    }
+  }
+  if (bufpos==12) ++bufpos; // if no routes
+  buffer[bufpos-1] = ']';
+  buffer[bufpos++] = '}';
+
+  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+  REST.set_response_payload(response, buffer, bufpos);
+}
+
+RESOURCE(debug_nbr, METHOD_GET, "debug/neighbors", "title=\"RPL info\"; ct=53");
+void debug_nbr_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+
+  size_t bufpos = 0;
+  uint8_t i;
+
+  bufpos += snprintf_P((char *)(buffer+bufpos), preferred_size-bufpos+1, PSTR("{neighbors:["));
+
+  for (i = 0; i < UIP_DS6_NBR_NB; ++i) {
+    if (uip_ds6_nbr_cache[i].isused) {
+      buffer[bufpos++] = '"';
+      bufpos += print_ipaddr((char *)(buffer+bufpos), preferred_size-bufpos+1, &uip_ds6_nbr_cache[i].ipaddr);
+      buffer[bufpos++] = '"';
+      if (preferred_size-bufpos > 0)
+      {
+        buffer[bufpos++] = ',';
+      }
+      else
+      {
+        break;
+      }
+    }
+  }
+  if (bufpos==12) ++bufpos; // if no routes
+  buffer[bufpos-1] = ']';
+  buffer[bufpos++] = '}';
+
+  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+  REST.set_response_payload(response, buffer, bufpos);
+}
+
+RESOURCE(debug_rts, METHOD_GET, "debug/routes", "title=\"RPL info\"; ct=53");
+void debug_rts_handler(void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
+
+  size_t bufpos = 0;
+  uint8_t i;
+
+
+  /*
+  for(i = 0; i < UIP_DS6_ROUTE_NB; i++) {
+      if(uip_ds6_routing_table[i].isused) {
+        ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+        ADD("/%u (via ", uip_ds6_routing_table[i].length);
+        ipaddr_add(&uip_ds6_routing_table[i].nexthop);
+        if(uip_ds6_routing_table[i].state.lifetime < 600) {
+          ADD(") %lus\n", uip_ds6_routing_table[i].state.lifetime);
+        } else {
+          ADD(")\n");
+        }
+        SEND_STRING(&s->sout, buf);
+        blen = 0;
+      }
+    }
+    */
+
+  bufpos += snprintf_P((char *)(buffer+bufpos), preferred_size-bufpos+1, PSTR("{routes:["));
+  for (i = 0; i < UIP_DS6_ROUTE_NB; ++i) {
+    if (uip_ds6_routing_table[i].isused) {
+      buffer[bufpos++] = '"';
+      bufpos += print_ipaddr((char *)(buffer+bufpos), preferred_size-bufpos+1, &uip_ds6_routing_table[i].ipaddr);
+      buffer[bufpos++] = '"';
+      if (preferred_size-bufpos > 1)
+      {
+        buffer[bufpos++] = ',';
+      }
+      else
+      {
+        break;
+      }
+    }
+  }
+  if (bufpos==9) ++bufpos; // if no routes
+  buffer[bufpos-1] = ']';
+  buffer[bufpos++] = '}';
+
+  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+  REST.set_response_payload(response, buffer, bufpos);
+}
+
 #endif
 
 
@@ -705,22 +930,30 @@ PROCESS_THREAD(coap_process, ev, data)
   //activate the resources
 #if DEBUG
   rest_activate_resource(&resource_debug);
+  rest_activate_resource(&resource_debug_ch);
+  rest_activate_resource(&resource_debug_addr);
+  rest_activate_resource(&resource_debug_nbr);
+  rest_activate_resource(&resource_debug_rts);
 #endif
 
   rest_activate_resource(&resource_date);
   rest_activate_resource(&resource_time);
   rest_activate_event_resource(&resource_temperature);
-  rest_activate_resource(&resource_battery);
+  rest_activate_event_resource(&resource_battery);
   rest_activate_resource(&resource_target);
   rest_activate_resource(&resource_mode);
   rest_activate_resource(&resource_poll);
-  rest_activate_resource(&resource_valve);
+  rest_activate_event_resource(&resource_valve);
 
   //call the temperature handler if the temperature changed
   while(1){
     PROCESS_WAIT_EVENT();
-    if(ev == PROCESS_EVENT_MSG){
+    if (ev == changed_valve_event){
+      valve_event_handler(&resource_valve);
+    } else if (ev == changed_temp_event){
       temperature_event_handler(&resource_temperature);
+    } else if (ev == changed_battery_event){
+      battery_event_handler(&resource_battery);
     }
   }
 

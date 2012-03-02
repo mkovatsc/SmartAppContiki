@@ -12,6 +12,8 @@ UIP_CONF_IPV6=1
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
 CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
+#CFLAGS += -DRF_CHANNEL=16
+#CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # must be CFLAGS not variables
 CFLAGS += -DUIP_CONF_IPV6_RPL=1
@@ -51,10 +53,17 @@ ifeq ($(PORT), )
 PORT = 1
 endif
 
+ifeq ($(DYN_CH), )
+DYN_CH = 21
+endif
+
 include $(CONTIKI)/Makefile.include
 
 tag.upload:
 	mc1322x-load.pl -f smartapp-br_redbee-econotag.bin -t /dev/ttyUSB$(PORT)
+
+tag.flash:
+	mc1322x-load.pl -f /home/user/libmc1322x/tests/flasher_redbee-econotag.bin -s smartapp-br_redbee-econotag.bin -t /dev/ttyUSB$(PORT)
 
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
@@ -63,7 +72,7 @@ connect-router:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 aaaa::1/64
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
+	sudo $(CONTIKI)/tools/tunslip6 -c $(DYN_CH) -a 127.0.0.1 aaaa::1/64
 
 connect-router-port:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -s /dev/ttyUSB$(PORT) aaaa::1/64

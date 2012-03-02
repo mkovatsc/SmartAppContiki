@@ -76,7 +76,7 @@ extern void *cc2430_rf_payload;
 /* RF driver functions */
 void cc2430_rf_init(void) __banked;
 void cc2430_rf_command(uint8_t command) __banked;
-int8_t cc2430_rf_channel_set(uint8_t channel);
+void cc2430_rf_channel_set(uint8_t channel);
 int8_t cc2430_rf_power_set(uint8_t new_power);
 int8_t cc2430_rf_rx_enable(void) __banked;
 int8_t cc2430_rf_rx_disable(void) __banked;

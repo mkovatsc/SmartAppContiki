@@ -443,7 +443,7 @@ uint32_t p=(uint32_t)&__heap_end__-4;
     }
   }
   
-  if(1) {
+  if (1) {
     uip_ipaddr_t ipaddr;
     int i;
     uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
@@ -465,11 +465,12 @@ uint32_t p=(uint32_t)&__heap_end__-4;
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%04X\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
-         RF_CHANNEL);
+         RF_CHANNEL,
+         IEEE802154_CONF_PANID);
 #endif /* UIP_CONF_IPV6 */
 
   *MACA_MACPANID = 0xcdab; /* this is the hardcoded contiki pan, register is PACKET order */

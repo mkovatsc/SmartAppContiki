@@ -54,6 +54,8 @@
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
+uint8_t radio_channel = RF_CHANNEL;
+
 uint16_t dag_id[] = {0x1111, 0x1100, 0, 0, 0, 0, 0, 0x0011};
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -122,6 +124,19 @@ ipaddr_add(const uip_ipaddr_t *addr)
 }
 /*---------------------------------------------------------------------------*/
 static
+PT_THREAD(generate_channel(struct httpd_state *s))
+{
+  static int i;
+  PSOCK_BEGIN(&s->sout);
+
+  snprintf(buf, sizeof(buf), "%u", radio_channel);
+
+  SEND_STRING(&s->sout, buf);
+
+  PSOCK_END(&s->sout);
+}
+/*---------------------------------------------------------------------------*/
+static
 PT_THREAD(generate_routes(struct httpd_state *s))
 {
   static int i;
@@ -130,7 +145,21 @@ PT_THREAD(generate_routes(struct httpd_state *s))
   SEND_STRING(&s->sout, TOP);
 
   blen = 0;
-  ADD("Neighbors<pre>");
+
+  ADD("Server IPv6 addresses<pre>");
+  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
+    uint8_t state = uip_ds6_if.addr_list[i].state;
+    if(uip_ds6_if.addr_list[i].isused && (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
+      ipaddr_add(&uip_ds6_if.addr_list[i].ipaddr);
+      ADD("\n");
+      if(blen > sizeof(buf) - 45) {
+        SEND_STRING(&s->sout, buf);
+        blen = 0;
+      }
+    }
+  }
+
+  ADD("</pre>Neighbors<pre>");
   for(i = 0; i < UIP_DS6_NBR_NB; i++) {
     if(uip_ds6_nbr_cache[i].isused) {
       ipaddr_add(&uip_ds6_nbr_cache[i].ipaddr);
@@ -173,7 +202,14 @@ PT_THREAD(generate_routes(struct httpd_state *s))
 httpd_simple_script_t
 httpd_simple_get_script(const char *name)
 {
-  return generate_routes;
+  if (name[0]=='c')
+  {
+    return generate_channel;
+  }
+  else
+  {
+    return generate_routes;
+  }
 }
 
 #endif /* WEBSERVER */
@@ -240,11 +276,19 @@ PROCESS_THREAD(border_router_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   }
 
+  PRINTF("Creating RPL DAG\n");
+
   dag = rpl_set_root((uip_ip6addr_t *)dag_id);
   if(dag != NULL) {
     rpl_set_prefix(dag, &prefix, 64);
-    PRINTF("created a new RPL dag\n");
+    PRINTF("created a new RPL DAG: ");
+    uip_debug_ipaddr_print(&prefix);
+    PRINTF("\n");
   }
+  else
+    {
+      PRINTF("dag==NULL\n");
+    }
 
 #if DEBUG || 1
   print_local_addresses();

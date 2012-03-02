@@ -34,9 +34,9 @@
 
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS 4
+#define COAP_MAX_OPEN_TRANSACTIONS 6
 #undef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS         4
+#define COAP_MAX_OBSERVERS         6
 
 #undef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE     128
@@ -47,6 +47,13 @@
  * avr-ravenmote
 #define UIP_CONF_BUFFER_SIZE    224
  */
+
+/* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
+#undef PERIODICPRINTS
+#define PERIODICPRINTS 0
+#undef RADIOSTATS
+#define RADIOSTATS 0
+
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
 #define UIP_CONF_RECEIVE_WINDOW  60

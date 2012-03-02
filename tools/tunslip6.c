@@ -57,6 +57,8 @@
 
 #include <err.h>
 
+
+int channel = 0;
 int verbose = 1;
 const char *ipaddr;
 const char *netmask;
@@ -76,6 +78,7 @@ void slip_send_char(int fd, unsigned char c);
 #define PROGRESS(s) do { } while (0)
 
 char tundev[32] = { "" };
+char channel_str[3] = { "26" };
 
 int
 ssystem(const char *fmt, ...) __attribute__((__format__ (__printf__, 1, 2)));
@@ -151,6 +154,45 @@ is_sensible_string(const unsigned char *s, int len)
   return 1;
 }
 
+void
+send_prefix()
+{
+  struct in6_addr addr;
+  int i;
+  char *s = strchr(ipaddr, '/');
+  if(s != NULL) {
+    *s = '\0';
+  }
+  inet_pton(AF_INET6, ipaddr, &addr);
+  if(timestamp) stamptime();
+  fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+         ipaddr,
+         addr.s6_addr[0], addr.s6_addr[1],
+         addr.s6_addr[2], addr.s6_addr[3],
+         addr.s6_addr[4], addr.s6_addr[5],
+         addr.s6_addr[6], addr.s6_addr[7]);
+  slip_send(slipfd, '!');
+  slip_send(slipfd, 'P');
+  for(i = 0; i < 8; i++) {
+    /* need to call the slip_send_char for stuffing */
+    slip_send_char(slipfd, addr.s6_addr[i]);
+  }
+  slip_send(slipfd, SLIP_END);
+}
+
+void
+send_channel()
+{
+  slip_send(slipfd, '!');
+  slip_send(slipfd, 'C');
+  slip_send(slipfd, channel_str[0]);
+  slip_send(slipfd, channel_str[1]);
+  slip_send(slipfd, channel_str[2]);
+  slip_send(slipfd, SLIP_END);
+  channel = 0;
+  fprintf(stderr, "configured channel %s\n", channel_str);
+}
+
 /*
  * Read from serial, when we have a packet write it to tun. No output
  * buffering, input buffered by stdio.
@@ -217,28 +259,9 @@ serial_to_tun(FILE *inslip, int outfd)
       } else if(uip.inbuf[0] == '?') {
 	if(uip.inbuf[1] == 'P') {
           /* Prefix info requested */
-          struct in6_addr addr;
-	  int i;
-	  char *s = strchr(ipaddr, '/');
-	  if(s != NULL) {
-	    *s = '\0';
-	  }
-          inet_pton(AF_INET6, ipaddr, &addr);
-          if(timestamp) stamptime();
-          fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
- //         printf("*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
-		 ipaddr, 
-		 addr.s6_addr[0], addr.s6_addr[1],
-		 addr.s6_addr[2], addr.s6_addr[3],
-		 addr.s6_addr[4], addr.s6_addr[5],
-		 addr.s6_addr[6], addr.s6_addr[7]);
-	  slip_send(slipfd, '!');
-	  slip_send(slipfd, 'P');
-	  for(i = 0; i < 8; i++) {
-	    /* need to call the slip_send_char for stuffing */
-	    slip_send_char(slipfd, addr.s6_addr[i]);
-	  }
-	  slip_send(slipfd, SLIP_END);
+          send_prefix();
+
+	  channel = 1;
         }
 #define DEBUG_LINE_MARKER '\r'
       } else if(uip.inbuf[0] == DEBUG_LINE_MARKER) {    
@@ -622,11 +645,12 @@ main(int argc, char **argv)
   int baudrate = -2;
   int tap = 0;
   slipfd = 0;
+  int ch = 0;
 
   prog = argv[0];
   setvbuf(stdout, NULL, _IOLBF, 0); /* Line buffered output. */
 
-  while((c = getopt(argc, argv, "B:H:D:Lhs:t:v::d::a:p:T")) != -1) {
+  while((c = getopt(argc, argv, "c:B:H:D:Lhs:t:v::d::a:p:T")) != -1) {
     switch(c) {
     case 'B':
       baudrate = atoi(optarg);
@@ -677,6 +701,16 @@ main(int argc, char **argv)
     case 'T':
       tap = 1;
       break;
+
+    /* added to define channel */
+    case 'c':
+      ch = atoi(optarg);
+      if (ch >= 11 && ch <= 26) {
+        strncpy(channel_str, optarg, sizeof(channel_str));
+        /* channel config is activated set when asked for prefix */
+        //channel = 1;
+        break;
+      }
  
     case '?':
     case 'h':
@@ -703,6 +737,7 @@ fprintf(stderr,"                Actual delay is basedelay*(#6LowPAN fragments) m
 fprintf(stderr,"                -d is equivalent to -d10.\n");
 fprintf(stderr," -a serveraddr  \n");
 fprintf(stderr," -p serverport  \n");
+fprintf(stderr," -c channel     IEEE 802.15.4 channel for the border-router (11-26)\n");
 exit(1);
       break;
     }
@@ -835,10 +870,18 @@ exit(1);
   signal(SIGALRM, sigalarm);
   ifconf(tundev, ipaddr);
 
+  /* init */
+  channel = 1;
+
   while(1) {
     maxfd = 0;
     FD_ZERO(&rset);
     FD_ZERO(&wset);
+
+    /* added to define channel */
+    if (channel) {
+      send_channel();
+    }
 
 /* do not send IPA all the time... - add get MAC later... */
 /*     if(got_sigalarm) { */
