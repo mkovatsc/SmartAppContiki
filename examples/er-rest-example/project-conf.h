@@ -41,6 +41,16 @@
 #undef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE    128
 
+/* Multiplies with chunk size, be aware of memory constraints. */
+#ifndef COAP_MAX_OPEN_TRANSACTIONS
+#define COAP_MAX_OPEN_TRANSACTIONS   4
+#endif
+
+/* Must be <= open transaction number. */
+#ifndef COAP_MAX_OBSERVERS
+#define COAP_MAX_OBSERVERS      COAP_MAX_OPEN_TRANSACTIONS-1
+#endif
+
 #undef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE    240
 
