@@ -228,12 +228,9 @@ static int stm32w_radio_init(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-int stm32w_radio_set_channel(uint8_t channel)
+void stm32w_radio_set_channel(unsigned short channel)
 {
-  if (ST_RadioSetChannel(channel) == ST_SUCCESS)
-    return 0;
-  else
-    return 1;
+  ST_RadioSetChannel(channel);
 }
 /*---------------------------------------------------------------------------*/
 static int wait_for_tx(void){

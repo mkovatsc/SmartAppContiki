@@ -88,3 +88,6 @@ connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 
 connect-router-port:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -s /dev/ttyUSB$(PORT) aaaa::1/64
+
+tap0up:
+	sudo ip address add fdfd::1/64 dev tap0

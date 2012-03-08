@@ -12,6 +12,8 @@
  *
  * Note the parameters in this file can be changed without forcing a complete rebuild.
  */
+#define WITH_NODE_ID 1 // for optional static routing
+
 //#define PARAMETER_STORAGE 0
 //#define PARAMETER_STORAGE 1 //+476
 //#define PARAMETER_STORAGE 2 //+2045

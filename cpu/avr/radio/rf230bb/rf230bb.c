@@ -1170,7 +1170,7 @@ rf230_get_channel(void)
 }
 /*---------------------------------------------------------------------------*/
 void
-rf230_set_channel(uint8_t c)
+rf230_set_channel(unsigned short c)
 {
  /* Wait for any transmission to end. */
   PRINTF("rf230: Set Channel %u\n",c);
@@ -1180,7 +1180,7 @@ rf230_set_channel(uint8_t c)
 }
 /*---------------------------------------------------------------------------*/
 void
-rf230_listen_channel(uint8_t c)
+rf230_listen_channel(unsigned short c)
 {
  /* Same as set channel but forces RX_ON state for sniffer or energy scan */
 //  PRINTF("rf230: Listen Channel %u\n",c);

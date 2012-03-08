@@ -67,6 +67,8 @@ typedef union uip_ip6addr_t {
 } uip_ip6addr_t;
 
 typedef uip_ip6addr_t uip_ipaddr_t;
+
+void remove_ext_hdr(void);
 #else /* UIP_CONF_IPV6 */
 typedef union uip_ip4addr_t {
   uint8_t  u8[4];			/* Initializer, must come first!!! */
@@ -76,6 +78,7 @@ typedef union uip_ip4addr_t {
 #endif
 } uip_ip4addr_t;
 typedef uip_ip4addr_t uip_ipaddr_t;
+
 #endif /* UIP_CONF_IPV6 */
 
 

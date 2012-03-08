@@ -99,7 +99,6 @@ typedef unsigned short uip_stats_t;
  * They should all attach to a minimal-net rpl border that uses the same primary interface.
  * For multihop testing, configure intermediate notes as routers.
  */
-#define RPL_CONF_ADJUST_LLH_LEN    1
 #define HARD_CODED_ADDRESS      "fdfd::10"  //the prefix is ignored for a rpl node
 #define UIP_CONF_ROUTER                 0
 #define UIP_CONF_ND6_SEND_RA            0
