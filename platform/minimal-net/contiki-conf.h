@@ -73,7 +73,7 @@ typedef unsigned short uip_stats_t;
  * rebuilds when making multiple instances of a minimal-net client.
 */
 //#define HARD_CODED_ADDRESS      "::10" //assign link-layer address fe80::ff:fe00:10, wait for RA or RPL prefix
-#define HARD_CODED_ADDRESS      "fdfd::" //assign prefix; address becomes fdfd::206:98ff:fe00:232
+//#define HARD_CODED_ADDRESS      "fdfd::" //assign prefix; address becomes fdfd::206:98ff:fe00:232
 //#define HARD_CODED_ADDRESS      "fdfd::10" //assign prefix and ipv6 address fdfd::ff:fe00:10
 
 /* The status.shtml page shows addresses, neighbors, and routes on ipv6 builds. Use this define to enable
@@ -85,11 +85,9 @@ typedef unsigned short uip_stats_t;
  */
 #define WEBSERVER_CONF_STATUSPAGE   1
 
-/* RPL currently works only on Windows. *nix would require converting the tun interface to two pcap tees. */
-#undef UIP_CONF_IPV6_RPL
-#define UIP_CONF_IPV6_RPL           0
-#define RPL_BORDER_ROUTER           0
-
+/* RPL currently works only on Windows. *nix would require converting the tun interface to two pcap tees. */ 
+//#define UIP_CONF_IPV6_RPL           0
+//#define RPL_BORDER_ROUTER           0
 #endif   
 
 #if UIP_CONF_IPV6_RPL
@@ -150,13 +148,8 @@ typedef unsigned short uip_stats_t;
 /* Not used but avoids compile errors while sicslowpan.c is being developed */
 #define SICSLOWPAN_CONF_COMPRESSION       SICSLOWPAN_COMPRESSION_HC06
 
-#ifndef UIP_CONF_UDP
 #define UIP_CONF_UDP                  1
-#endif
-
-#ifndef UIP_CONF_TCP
 #define UIP_CONF_TCP                  1
-#endif
 
 #if UIP_CONF_IPV6
 #define UIP_CONF_IPV6_QUEUE_PKT       1
