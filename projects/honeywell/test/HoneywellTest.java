@@ -14,10 +14,10 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import coap.GETRequest;
-import coap.POSTRequest;
-import coap.Request;
-import coap.Response;
+import ch.ethz.inf.vs.californium.coap.GETRequest;
+import ch.ethz.inf.vs.californium.coap.POSTRequest;
+import ch.ethz.inf.vs.californium.coap.Request;
+import ch.ethz.inf.vs.californium.coap.Response;
 
 
 public class HoneywellTest {
