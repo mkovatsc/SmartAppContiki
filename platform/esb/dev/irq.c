@@ -30,11 +30,11 @@
  *
  * @(#)$Id: irq.c,v 1.4 2010/01/14 17:39:35 nifi Exp $
  */
+#include "contiki.h"
 #include "lib/sensors.h"
 #include "dev/irq.h"
 #include "dev/lpm.h"
-#include <io.h>
-#include <signal.h>
+#include "isr_compat.h"
 
 #define ADC12MCTL_NO(adcno) ((unsigned char *) ADC12MCTL0_)[adcno]
 
@@ -43,8 +43,7 @@ static int (* port1_irq[8])(void);
 static unsigned char adcflags;
 
 /*---------------------------------------------------------------------------*/
-interrupt(PORT1_VECTOR)
-     irq_p1(void)
+ISR(PORT1, irq_p1)
 {
   int i;
   ENERGEST_ON(ENERGEST_TYPE_IRQ);
@@ -59,8 +58,7 @@ interrupt(PORT1_VECTOR)
   ENERGEST_OFF(ENERGEST_TYPE_IRQ);
 }
 /*---------------------------------------------------------------------------*/
-interrupt (ADC_VECTOR)
-     irq_adc(void)
+ISR(ADC, irq_adc)
 {
   int i;
   ENERGEST_ON(ENERGEST_TYPE_IRQ);

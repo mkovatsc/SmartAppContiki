@@ -1,0 +1,69 @@
+all: plogg
+
+CONTIKI = ../..
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+# set the baud rate
+CFLAGS += -DAPP_BAUD_RATE=USART_BAUD_19200
+
+# variable for root Makefile.include
+UIP_CONF_IPV6=1
+
+# variable for this Makefile
+WITH_COAP=7
+
+# radio configuration
+CFLAGS += -DRF_CHANNEL=21
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+ifeq ($(ADDR), )
+ADDR=0x55
+endif
+
+# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
+CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
+
+# must be CFLAGS not variables
+CFLAGS += -DUIP_CONF_IPV6_RPL=1
+
+#used to be able to use sscanf
+LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
+
+#extmem
+#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
+
+# linker optimizations
+CFLAGS += -ffunction-sections
+LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
+
+
+# REST framework, requires WITH_COAP
+ifeq ($(WITH_COAP), 7)
+${info INFO: compiling with CoAP-07}
+CFLAGS += -DWITH_COAP=7
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-07
+else ifeq ($(WITH_COAP), 6)
+${info INFO: compiling with CoAP-06}
+CFLAGS += -DWITH_COAP=6
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-06
+else ifeq ($(WITH_COAP), 3)
+${info INFO: compiling with CoAP-03}
+CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-03
+else
+${info INFO: compiling with HTTP}
+CFLAGS += -DWITH_HTTP
+CFLAGS += -DREST=http_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=1
+APPS += rest-http-engine
+endif
+
+APPS += erbium
+
+include $(CONTIKI)/Makefile.include

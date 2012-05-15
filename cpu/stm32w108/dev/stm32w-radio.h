@@ -46,12 +46,14 @@
 #include "hal/hal.h"
 #include "simplemac/include/phy-library.h"
 
-int stm32w_radio_set_channel(u8_t channel);
+void stm32w_radio_set_channel(unsigned short channel);
 short last_packet_rssi();
 
 #define STM32W_MAX_PACKET_LEN      127
 
 extern const struct radio_driver stm32w_radio_driver;
+
+int stm32w_radio_is_on(void);
 
 
 #endif /* __STM32W_H__ */

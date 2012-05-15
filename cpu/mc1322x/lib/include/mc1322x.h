@@ -44,8 +44,11 @@
 #include "kbi.h"
 #include "maca.h"
 #include "packet.h"
-#include "uart1.h"
+#include "uart.h"
 #include "utils.h"
 #include "asm.h"
+#include "i2c.h"
+#include "rtc.h"
+#include "adc.h"
 
 #endif

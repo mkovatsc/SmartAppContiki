@@ -262,6 +262,7 @@ public class TimeLine extends VisPlugin {
 
     getContentPane().add(splitPane);
 
+    recalculateMoteHeight();
     pack();
     setSize(gui.getDesktopPane().getWidth(), 150);
     setLocation(0, gui.getDesktopPane().getHeight() - 150);
@@ -620,26 +621,28 @@ public class TimeLine extends VisPlugin {
   };
 
   private Action clearAction = new AbstractAction("Clear logs") {
-		private static final long serialVersionUID = -4592530582786872403L;
-		private void clearLogs() {
-  		for (MoteEvents me : allMoteEvents) {
-  			me.clear();
-  		}
-  		repaint();
-  	}
+    private static final long serialVersionUID = -4592530582786872403L;
     public void actionPerformed(ActionEvent e) {
       if (simulation.isRunning()) {
-      	simulation.invokeSimulationThread(new Runnable() {
-					public void run() {
-		      	clearLogs();
-					}
-				});
+        simulation.invokeSimulationThread(new Runnable() {
+          public void run() {
+            clear();
+          }
+        });
       } else {
-      	clearLogs();
+        clear();
       }
     }
   };
 
+  public void clear() {
+    for (MoteEvents me : allMoteEvents) {
+      me.clear();
+    }
+    repaint();
+  }
+  
+  
   private class MoteStatistics {
     Mote mote;
     long onTimeRedLED = 0, onTimeGreenLED = 0, onTimeBlueLED = 0;
@@ -879,6 +882,14 @@ public class TimeLine extends VisPlugin {
         LogListener plugin = (LogListener) p;
         plugin.trySelectTime(time);
       }
+    }
+  };
+
+  private Action showInAllAction = new AbstractAction("All") {
+    private static final long serialVersionUID = -2458733078524773995L;
+    public void actionPerformed(ActionEvent e) {
+      logListenerAction.actionPerformed(null);
+      radioLoggerAction.actionPerformed(null);
     }
   };
 
@@ -1182,9 +1193,11 @@ public class TimeLine extends VisPlugin {
     if (showWatchpoints) {
       h += EVENT_PIXEL_HEIGHT;
     }
-    paintedMoteHeight = h;
-    timelineMoteRuler.repaint();
-    timeline.repaint();
+    if (h != paintedMoteHeight) {
+      paintedMoteHeight = h;
+      timelineMoteRuler.repaint();
+      timeline.repaint();
+    }
   }
 
   public void closePlugin() {
@@ -1336,6 +1349,7 @@ public class TimeLine extends VisPlugin {
     return true;
   }
 
+  
   private int mousePixelPositionX = -1;
   private int mousePixelPositionY = -1;
   private int mouseDownPixelPositionX = -1; 
@@ -1368,7 +1382,9 @@ public class TimeLine extends VisPlugin {
       
       popupMenu.addSeparator();
 
-      JMenu focusMenu = new JMenu("Focus");
+      JMenu focusMenu = new JMenu("Show in");
+      focusMenu.add(new JMenuItem(showInAllAction));
+      focusMenu.addSeparator();
       focusMenu.add(new JMenuItem(logListenerAction));
       focusMenu.add(new JMenuItem(radioLoggerAction));
       popupMenu.add(focusMenu);
@@ -1399,8 +1415,7 @@ public class TimeLine extends VisPlugin {
           /* Focus on double-click */
           if (System.currentTimeMillis() - lastClick < 250) {
             popupLocation = e.getPoint();
-            logListenerAction.actionPerformed(null);
-            radioLoggerAction.actionPerformed(null);
+            showInAllAction.actionPerformed(null);
 
             long time = (long) ((double)popupLocation.x*currentPixelDivisor);
             Plugin[] plugins = simulation.getGUI().getStartedPlugins();

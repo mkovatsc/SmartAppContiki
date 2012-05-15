@@ -29,6 +29,8 @@
 
 package se.sics.cooja.motes;
 
+import java.util.HashMap;
+
 import org.apache.log4j.Logger;
 
 import se.sics.cooja.Mote;
@@ -96,6 +98,16 @@ public abstract class AbstractWakeupMote implements Mote {
   }
 
   /**
+   * @return Next wakeup time, or -1 if not scheduled
+   */
+  public long getNextWakeupTime() {
+	  if (!executeMoteEvent.isScheduled()) {
+		  return -1;
+	  }
+	  return executeMoteEvent.getTime();
+  }
+  
+  /**
    * Execute mote software at given time, or earlier.
    * 
    * If a wakeup is already scheduled earlier than given argument,
@@ -124,10 +136,25 @@ public abstract class AbstractWakeupMote implements Mote {
       /*logger.info("Rescheduled wakeup from " + executeMoteEvent.getTime() + " to " + time);*/
       executeMoteEvent.remove();
     }
+
     simulation.scheduleEvent(executeMoteEvent, time);
     return true;
   }
 
   public void removed() {
+  }
+  
+  private HashMap<String, Object> properties = null;
+  public void setProperty(String key, Object obj) {
+    if (properties == null) {
+      properties = new HashMap<String, Object>();
+    }
+    properties.put(key, obj);
+  }
+  public Object getProperty(String key) {
+    if (properties == null) {
+      return null;
+    }
+    return properties.get(key);
   }
 }

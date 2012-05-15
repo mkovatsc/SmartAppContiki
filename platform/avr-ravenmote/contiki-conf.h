@@ -43,26 +43,15 @@
 #ifndef __CONTIKI_CONF_H__
 #define __CONTIKI_CONF_H__
 
-/* ************************************************************************** */
-//#pragma mark Basic Configuration
-/* ************************************************************************** */
-
 /* MCU and clock rate */
-#define PLATFORM         PLATFORM_AVR
-#define RAVEN_REVISION	 RAVENUSB_C
+#define PLATFORM       PLATFORM_AVR
+#define RAVEN_REVISION RAVENUSB_C
 #ifndef F_CPU
-#define F_CPU            8000000UL
+#define F_CPU          8000000UL
 #endif
-
-#include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
-#ifdef PROJECT_CONF_H
-#include PROJECT_CONF_H
-#endif
-
-typedef int32_t  s32_t;
+typedef int32_t s32_t;
 typedef unsigned char u8_t;
 typedef unsigned short u16_t;
 typedef unsigned long u32_t;
@@ -147,10 +136,7 @@ unsigned long clock_seconds(void);
 
 #define UIP_CONF_ICMP6           1
 #define UIP_CONF_UDP             1
-
-#ifndef UIP_CONF_TCP
-#define UIP_CONF_TCP             1
-#endif /*UIP_CONF_TCP */
+#define UIP_CONF_TCP             0
 
 #define NETSTACK_CONF_NETWORK       sicslowpan_driver
 #define SICSLOWPAN_CONF_COMPRESSION SICSLOWPAN_COMPRESSION_HC06
@@ -163,7 +149,7 @@ unsigned long clock_seconds(void);
 /* See uip-ds6.h */
 #define UIP_CONF_DS6_NBR_NBU      10
 #define UIP_CONF_DS6_DEFRT_NBU    2
-#define UIP_CONF_DS6_PREFIX_NBU   3
+#define UIP_CONF_DS6_PREFIX_NBU   2
 #define UIP_CONF_DS6_ROUTE_NBU    10
 #define UIP_CONF_DS6_ADDR_NBU     3
 #define UIP_CONF_DS6_MADDR_NBU    0
@@ -221,7 +207,20 @@ unsigned long clock_seconds(void);
 /* Broadcasts will be duplicated by the retry count! */
 #define SICSLOWPAN_CONF_ACK_ALL   0
 /* Number of auto retry attempts 0-15 (0 implies don't use extended TX_ARET_ON mode with CCA) */
-#define RF230_CONF_AUTORETRIES    1
+#define RF230_CONF_AUTORETRIES    2
+/* CCA theshold energy -91 to -61 dBm (default -77). Set this smaller than the expected minimum rssi to avoid packet collisions */
+/* The Jackdaw menu 'm' command is helpful for determining the smallest ever received rssi */
+#define RF230_CONF_CCA_THRES    -85
+/* Number of CSMA attempts 0-7. 802.15.4 2003 standard max is 5. */
+#define RF230_CONF_CSMARETRIES    5
+/* Allow sneeze command from jackdaw menu. Useful for testing CCA on other radios */
+/* During sneezing, any access to an RF230 register will hang the MCU and cause a watchdog reset */
+/* The host interface, jackdaw menu and rf230_send routines are temporarily disabled to prevent this */
+/* But some calls from an internal uip stack might get through, e.g. from CCA or low power protocols, */
+/* as temporarily disabling all the possible accesses would add considerable complication to the radio driver! */
+#define RF230_CONF_SNEEZER        0
+/* Allow 6loWPAN fragmentation (more efficient for large payloads over a reliable channel) */
+
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
 
@@ -231,10 +230,34 @@ unsigned long clock_seconds(void);
 #define NETSTACK_CONF_RDC         contikimac_driver
 #define NETSTACK_CONF_FRAMER      framer_802154
 #define NETSTACK_CONF_RADIO       rf230_driver
-#define RF230_CONF_AUTOACK        0
-#define RF230_CONF_AUTORETRIES    0
+#define RF230_CONF_AUTORETRIES    1
+#define RF230_CONF_AUTOACK        1
+#define RF230_CONF_CSMARETRIES    0
 #define SICSLOWPAN_CONF_FRAG      1
 #define SICSLOWPAN_CONF_MAXAGE    3
+/* Jackdaw has USB power, can be always listening */
+#define CONTIKIMAC_CONF_RADIO_ALWAYS_ON  1
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
+
+/* Contiki-mac is a memory hog */
+#define PROCESS_CONF_NO_PROCESS_NAMES 1
+#undef QUEUEBUF_CONF_NUM
+#define QUEUEBUF_CONF_NUM           2
+#undef QUEUEBUF_CONF_REF_NUM
+#define QUEUEBUF_CONF_REF_NUM       1
+#undef UIP_CONF_TCP_SPLIT
+#define UIP_CONF_TCP_SPLIT          0
+#undef UIP_CONF_STATISTICS
+#define UIP_CONF_STATISTICS         0
+#undef UIP_CONF_IPV6_QUEUE_PKT
+#define UIP_CONF_IPV6_QUEUE_PKT     0
+#define UIP_CONF_PINGADDRCONF       0
+#define UIP_CONF_LOGGING            0
+#undef UIP_CONF_MAX_CONNECTIONS
+#define UIP_CONF_MAX_CONNECTIONS    2
+#undef UIP_CONF_MAX_LISTENPORTS
+#define UIP_CONF_MAX_LISTENPORTS    2
+#define UIP_CONF_UDP_CONNS          6
 
 #elif 1             /* cx-mac radio cycling */
 #define NETSTACK_CONF_MAC         nullmac_driver
@@ -291,18 +314,14 @@ unsigned long clock_seconds(void);
  */
 
 #define UIP_CONF_ROUTER             1
-#define RPL_BORDER_ROUTER           1
-#define RPL_CONF_STATS              0
-
-#ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE	 1300
-#endif
-
-//#define UIP_CONF_DS6_NBR_NBU       12
-//#define UIP_CONF_DS6_ROUTE_NBU     12
-#define UIP_CONF_ND6_SEND_RA		0
+#define UIP_CONF_ND6_SEND_RA        0
 #define UIP_CONF_ND6_REACHABLE_TIME 600000
 #define UIP_CONF_ND6_RETRANS_TIMER  10000
+#define RPL_BORDER_ROUTER           0
+#define RPL_CONF_STATS              0
+#define UIP_CONF_BUFFER_SIZE        240
+//#define UIP_CONF_DS6_NBR_NBU       12
+//#define UIP_CONF_DS6_ROUTE_NBU     12
 
 /* Save all the RAM we can */
 #define PROCESS_CONF_NO_PROCESS_NAMES 1
@@ -373,5 +392,11 @@ unsigned long clock_seconds(void);
 
 #define CCIF
 #define CLIF
+
+/* include the project config */
+/* PROJECT_CONF_H might be defined in the project Makefile */
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif /* PROJECT_CONF_H */
 
 #endif /* __CONTIKI_CONF_H__ */

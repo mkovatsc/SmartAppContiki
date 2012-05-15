@@ -39,6 +39,7 @@
  */
 
 #include "i2cmaster.h"
+#include "isr_compat.h"
 
 signed   char tx_byte_ctr, rx_byte_ctr;
 unsigned char rx_buf[2];
@@ -59,7 +60,7 @@ volatile unsigned int i;	// volatile to prevent optimization
 //       unsigned char prescale        =>  SCL clock adjustment 
 //-----------------------------------------------------------------------------
 void
-i2c_receiveinit(u8_t slave_address) {
+i2c_receiveinit(uint8_t slave_address) {
   UCB1CTL1 = UCSWRST;                    // Enable SW reset
   UCB1CTL0 = UCMST + UCMODE_3 + UCSYNC;  // I2C Master, synchronous mode
   UCB1CTL1 = UCSSEL_2 | UCSWRST;         // Use SMCLK, keep SW reset
@@ -86,7 +87,7 @@ i2c_receiveinit(u8_t slave_address) {
 //       unsigned char prescale        =>  SCL clock adjustment 
 //------------------------------------------------------------------------------
 void
-i2c_transmitinit(u8_t slave_address) {
+i2c_transmitinit(uint8_t slave_address) {
   UCB1CTL1 |= UCSWRST;		           // Enable SW reset
   UCB1CTL0 |= (UCMST | UCMODE_3 | UCSYNC); // I2C Master, synchronous mode
   UCB1CTL1  = UCSSEL_2 + UCSWRST;          // Use SMCLK, keep SW reset
@@ -107,9 +108,9 @@ i2c_transmitinit(u8_t slave_address) {
 // OUT:  unsigned char rx_buf     =>  receive data buffer
 // OUT:  int n_received           =>  number of bytes read
 //------------------------------------------------------------------------------
-static volatile u8_t rx_byte_tot = 0;
-u8_t
-i2c_receive_n(u8_t byte_ctr, u8_t *rx_buf) {
+static volatile uint8_t rx_byte_tot = 0;
+uint8_t
+i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
 
   rx_byte_tot = byte_ctr;
   rx_byte_ctr = byte_ctr;
@@ -136,7 +137,7 @@ i2c_receive_n(u8_t byte_ctr, u8_t *rx_buf) {
   return 0;
 
 #else
-  u8_t n_received = 0;
+  uint8_t n_received = 0;
 
   PRINTFDEBUG(" RX Interrupts: NO \n");
 
@@ -157,14 +158,14 @@ i2c_receive_n(u8_t byte_ctr, u8_t *rx_buf) {
 
 
 //------------------------------------------------------------------------------
-// u8_t i2c_busy()
+// uint8_t i2c_busy()
 //
 // This function is used to check if there is communication in progress. 
 //
 // OUT:  unsigned char  =>  0: I2C bus is idle, 
 //                          1: communication is in progress
 //------------------------------------------------------------------------------
-u8_t
+uint8_t
 i2c_busy(void) {
   return (UCB1STAT & UCBBUSY);
 }
@@ -191,9 +192,9 @@ i2c_enable(void) {
 // IN:   unsigned char byte_ctr   =>  number of bytes to be transmitted
 //       unsigned char *tx_buf    =>  Content to transmit. Read and transmitted from [0] to [byte_ctr]
 //------------------------------------------------------------------------------
-static volatile u8_t tx_byte_tot = 0;
+static volatile uint8_t tx_byte_tot = 0;
 void
-i2c_transmit_n(u8_t byte_ctr, u8_t *tx_buf) {
+i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf) {
   tx_byte_tot = byte_ctr;
   tx_byte_ctr = byte_ctr;
   tx_buf_ptr  = tx_buf;
@@ -201,8 +202,8 @@ i2c_transmit_n(u8_t byte_ctr, u8_t *tx_buf) {
 }
 
 /*----------------------------------------------------------------------------*/
-interrupt (USCIAB1TX_VECTOR)   
-i2c_tx_interrupt (void) {
+ISR(USCIAB1TX, i2c_tx_interrupt)
+{
   // TX Part
   if (UC1IFG & UCB1TXIFG) {        // TX int. condition
     if (tx_byte_ctr == 0) {
@@ -232,13 +233,11 @@ i2c_tx_interrupt (void) {
 #endif
 }
 
-interrupt(USCIAB1RX_VECTOR)
-i2c_rx_interrupt(void) {
-  if (UCB1STAT & UCNACKIFG){
+ISR(USCIAB1RX, i2c_rx_interrupt)
+{
+  if(UCB1STAT & UCNACKIFG) {
     PRINTFDEBUG("!!! NACK received in RX\n");
     UCB1CTL1 |= UCTXSTP;
     UCB1STAT &= ~UCNACKIFG;
   }
 }
-
-

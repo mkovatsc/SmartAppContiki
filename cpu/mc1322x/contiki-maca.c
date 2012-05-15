@@ -45,6 +45,7 @@
 
 #include "mc1322x.h"
 #include "contiki-conf.h"
+#include "maca.h"
 
 #define CONTIKI_MACA_DEBUG 0
 #if CONTIKI_MACA_DEBUG
@@ -77,6 +78,8 @@ int contiki_maca_channel_clear(void);
 int contiki_maca_receiving_packet(void);
 int contiki_maca_pending_packet(void);
 
+void contiki_maca_set_channel(unsigned short chan);
+
 const struct radio_driver contiki_maca_driver =
 {
 	.init = contiki_maca_init,
@@ -89,6 +92,7 @@ const struct radio_driver contiki_maca_driver =
 	.channel_clear = contiki_maca_channel_clear,
 	.on = contiki_maca_on_request,
 	.off = contiki_maca_off_request,
+        .set_channel = contiki_maca_set_channel,
 };
 
 static volatile uint8_t contiki_maca_request_on = 0;
@@ -301,3 +305,9 @@ void maca_tx_callback(volatile packet_t *p __attribute((unused))) {
 	tx_status = p->status;
 }
 #endif
+
+/* convenience function as this platform's channel index starts at 0, not the official 11 */
+void contiki_maca_set_channel(unsigned short chan) {
+  set_channel(chan - 11);
+}
+

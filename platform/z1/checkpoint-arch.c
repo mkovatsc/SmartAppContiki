@@ -46,9 +46,6 @@
 #include "cfs/cfs-coffee.h"
 #include "dev/leds.h"
 #include "dev/watchdog.h"
-
-#include <io.h>
-#include <signal.h>
 #include <stdio.h>
 
 #define DEBUG 1

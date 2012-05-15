@@ -37,7 +37,7 @@
  * Updated : $Date: 2010/11/05 10:31:57 $
  *           $Revision: 1.3 $
  */
-#include <io.h>
+
 #include "contiki.h"
 #include "lib/sensors.h"
 #include "dev/z1-phidgets.h"

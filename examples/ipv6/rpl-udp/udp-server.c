@@ -64,9 +64,11 @@ tcpip_handler(void)
     appdata = (char *)uip_appdata;
     appdata[uip_datalen()] = 0;
     PRINTF("DATA recv '%s' from ", appdata);
-    PRINTF("%d", UIP_IP_BUF->srcipaddr.u8[15]);
+    PRINTF("%d",
+           UIP_IP_BUF->srcipaddr.u8[sizeof(UIP_IP_BUF->srcipaddr.u8) - 1]);
     PRINTF("\n");
 #if SERVER_REPLY
+    PRINTF("DATA sending reply\n");
     uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
     uip_udp_packet_send(server_conn, "Reply", sizeof("Reply"));
     uip_create_unspecified(&server_conn->ripaddr);
@@ -133,8 +135,7 @@ PROCESS_THREAD(udp_server_process, ev, data)
   root_if = uip_ds6_addr_lookup(&ipaddr);
   if(root_if != NULL) {
     rpl_dag_t *dag;
-    rpl_set_root((uip_ip6addr_t *)&ipaddr);
-    dag = rpl_get_dag(RPL_ANY_INSTANCE);
+    dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)&ipaddr);
     uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
     rpl_set_prefix(dag, &ipaddr, 64);
     PRINTF("created a new RPL dag\n");
@@ -150,6 +151,10 @@ PROCESS_THREAD(udp_server_process, ev, data)
   NETSTACK_MAC.off(1);
 
   server_conn = udp_new(NULL, UIP_HTONS(UDP_CLIENT_PORT), NULL);
+  if(server_conn == NULL) {
+    PRINTF("No UDP connection available, exiting the process!\n");
+    PROCESS_EXIT();
+  }
   udp_bind(server_conn, UIP_HTONS(UDP_SERVER_PORT));
 
   PRINTF("Created a server connection with remote address ");
@@ -163,7 +168,7 @@ PROCESS_THREAD(udp_server_process, ev, data)
       tcpip_handler();
     } else if (ev == sensors_event && data == &button_sensor) {
       PRINTF("Initiaing global repair\n");
-      rpl_repair_dag(rpl_get_dag(RPL_ANY_INSTANCE));
+      rpl_repair_root(RPL_DEFAULT_INSTANCE);
     }
   }
 

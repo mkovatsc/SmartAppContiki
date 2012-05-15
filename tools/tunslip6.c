@@ -29,10 +29,12 @@
  *
  * This file is part of the uIP TCP/IP stack.
  *
- * $Id: tunslip6.c,v 1.6 2010/11/29 18:14:54 joxe Exp $
  *
  */
 
+ /* Below define allows importing saved output into Wireshark as "Raw IP" packet type */
+#define WIRESHARK_IMPORT_FORMAT 1
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -54,6 +56,8 @@
 
 #include <err.h>
 
+
+int channel = 0;
 int verbose = 1;
 const char *ipaddr;
 const char *netmask;
@@ -73,6 +77,7 @@ void slip_send_char(int fd, unsigned char c);
 #define PROGRESS(s) do { } while (0)
 
 char tundev[32] = { "" };
+char channel_str[3] = { "26" };
 
 int
 ssystem(const char *fmt, ...) __attribute__((__format__ (__printf__, 1, 2)));
@@ -148,6 +153,45 @@ is_sensible_string(const unsigned char *s, int len)
   return 1;
 }
 
+void
+send_prefix()
+{
+  struct in6_addr addr;
+  int i;
+  char *s = strchr(ipaddr, '/');
+  if(s != NULL) {
+    *s = '\0';
+  }
+  inet_pton(AF_INET6, ipaddr, &addr);
+  if(timestamp) stamptime();
+  fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+         ipaddr,
+         addr.s6_addr[0], addr.s6_addr[1],
+         addr.s6_addr[2], addr.s6_addr[3],
+         addr.s6_addr[4], addr.s6_addr[5],
+         addr.s6_addr[6], addr.s6_addr[7]);
+  slip_send(slipfd, '!');
+  slip_send(slipfd, 'P');
+  for(i = 0; i < 8; i++) {
+    /* need to call the slip_send_char for stuffing */
+    slip_send_char(slipfd, addr.s6_addr[i]);
+  }
+  slip_send(slipfd, SLIP_END);
+}
+
+void
+send_channel()
+{
+  slip_send(slipfd, '!');
+  slip_send(slipfd, 'C');
+  slip_send(slipfd, channel_str[0]);
+  slip_send(slipfd, channel_str[1]);
+  slip_send(slipfd, channel_str[2]);
+  slip_send(slipfd, SLIP_END);
+  channel = 0;
+  fprintf(stderr, "configured channel %s\n", channel_str);
+}
+
 /*
  * Read from serial, when we have a packet write it to tun. No output
  * buffering, input buffered by stdio.
@@ -170,9 +214,9 @@ serial_to_tun(FILE *inslip, int outfd)
 
  read_more:
   if(inbufptr >= sizeof(uip.inbuf)) {
-     inbufptr = 0;
      if(timestamp) stamptime();
      fprintf(stderr, "*** dropping large %d byte packet\n",inbufptr);
+	 inbufptr = 0;
   }
   ret = fread(&c, 1, 1, inslip);
 #ifdef linux
@@ -214,28 +258,9 @@ serial_to_tun(FILE *inslip, int outfd)
       } else if(uip.inbuf[0] == '?') {
 	if(uip.inbuf[1] == 'P') {
           /* Prefix info requested */
-          struct in6_addr addr;
-	  int i;
-	  char *s = strchr(ipaddr, '/');
-	  if(s != NULL) {
-	    *s = '\0';
-	  }
-          inet_pton(AF_INET6, ipaddr, &addr);
-          if(timestamp) stamptime();
-          fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
- //         printf("*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
-		 ipaddr, 
-		 addr.s6_addr[0], addr.s6_addr[1],
-		 addr.s6_addr[2], addr.s6_addr[3],
-		 addr.s6_addr[4], addr.s6_addr[5],
-		 addr.s6_addr[6], addr.s6_addr[7]);
-	  slip_send(slipfd, '!');
-	  slip_send(slipfd, 'P');
-	  for(i = 0; i < 8; i++) {
-	    /* need to call the slip_send_char for stuffing */
-	    slip_send_char(slipfd, addr.s6_addr[i]);
-	  }
-	  slip_send(slipfd, SLIP_END);
+          send_prefix();
+
+	  channel = 1;
         }
 #define DEBUG_LINE_MARKER '\r'
       } else if(uip.inbuf[0] == DEBUG_LINE_MARKER) {    
@@ -250,15 +275,17 @@ serial_to_tun(FILE *inslip, int outfd)
           if (timestamp) stamptime();
           printf("Packet from SLIP of length %d - write TUN\n", inbufptr);
           if (verbose>4) {
+#if WIRESHARK_IMPORT_FORMAT
+            printf("0000");
+	        for(i = 0; i < inbufptr; i++) printf(" %02x",uip.inbuf[i]);
+#else
             printf("         ");
             for(i = 0; i < inbufptr; i++) {
               printf("%02x", uip.inbuf[i]);
-              if((i & 3) == 3) {
-	        printf(" ");
-              }
-              if((i & 15) == 15)
-              printf("\n         ");
+              if((i & 3) == 3) printf(" ");
+              if((i & 15) == 15) printf("\n         ");
             }
+#endif
             printf("\n");
           }
         }
@@ -383,15 +410,17 @@ write_to_serial(int outfd, void *inbuf, int len)
     if (timestamp) stamptime();
     printf("Packet from TUN of length %d - write SLIP\n", len);
     if (verbose>4) {
+#if WIRESHARK_IMPORT_FORMAT
+      printf("0000");
+	  for(i = 0; i < len; i++) printf(" %02x", p[i]);
+#else
       printf("         ");
       for(i = 0; i < len; i++) {
         printf("%02x", p[i]);
-        if((i & 3) == 3) {
-	  printf(" ");
-        }
-        if((i & 15) == 15)
-        printf("\n         ");
+        if((i & 3) == 3) printf(" ");
+        if((i & 15) == 15) printf("\n         ");
       }
+#endif
       printf("\n");
     }
   }
@@ -589,6 +618,54 @@ ifconf(const char *tundev, const char *ipaddr)
   ssystem("ifconfig %s inet `hostname` up", tundev);
   if (timestamp) stamptime();
   ssystem("ifconfig %s add %s", tundev, ipaddr);
+
+/* radvd needs a link local address for routing */
+#if 0
+/* fe80::1/64 is good enough */
+  ssystem("ifconfig %s add fe80::1/64", tundev);
+#elif 1
+/* Generate a link local address a la sixxs/aiccu */
+/* First a full parse, stripping off the prefix length */
+  {
+    char lladdr[40];
+    char c, *ptr=(char *)ipaddr;
+    uint16_t digit,ai,a[8],cc,scc,i;
+    for(ai=0; ai<8; ai++) {
+      a[ai]=0;
+    }
+    ai=0;
+    cc=scc=0;
+    while(c=*ptr++) {
+      if(c=='/') break;
+      if(c==':') {
+	if(cc)
+	  scc = ai;
+	cc = 1;
+	if(++ai>7) break;
+      } else {
+	cc=0;
+	digit = c-'0';
+	if (digit > 9) 
+	  digit = 10 + (c & 0xdf) - 'A';
+	a[ai] = (a[ai] << 4) + digit;
+      }
+    }
+    /* Get # elided and shift what's after to the end */
+    cc=8-ai;
+    for(i=0;i<cc;i++) {
+      if ((8-i-cc) <= scc) {
+	a[7-i] = 0;
+      } else {
+	a[7-i] = a[8-i-cc];
+	a[8-i-cc]=0;
+      }
+    }
+    sprintf(lladdr,"fe80::%x:%x:%x:%x",a[1]&0xfefd,a[2],a[3],a[7]);
+    if (timestamp) stamptime();
+    ssystem("ifconfig %s add %s/64", tundev, lladdr);
+  }
+#endif /* link local */
+
 #else
   if (timestamp) stamptime();
   ssystem("ifconfig %s inet `hostname` %s up", tundev, ipaddr);
@@ -615,11 +692,12 @@ main(int argc, char **argv)
   int baudrate = -2;
   int tap = 0;
   slipfd = 0;
+  int ch = 0;
 
   prog = argv[0];
   setvbuf(stdout, NULL, _IOLBF, 0); /* Line buffered output. */
 
-  while((c = getopt(argc, argv, "B:H:D:Lhs:t:v::d::a:p:T")) != -1) {
+  while((c = getopt(argc, argv, "c:B:H:D:Lhs:t:v::d::a:p:T")) != -1) {
     switch(c) {
     case 'B':
       baudrate = atoi(optarg);
@@ -670,6 +748,16 @@ main(int argc, char **argv)
     case 'T':
       tap = 1;
       break;
+
+    /* added to define channel */
+    case 'c':
+      ch = atoi(optarg);
+      if (ch >= 11 && ch <= 26) {
+        strncpy(channel_str, optarg, sizeof(channel_str));
+        /* channel config is activated set when asked for prefix */
+        //channel = 1;
+        break;
+      }
  
     case '?':
     case 'h':
@@ -677,7 +765,7 @@ main(int argc, char **argv)
 fprintf(stderr,"usage:  %s [options] ipaddress\n", prog);
 fprintf(stderr,"example: tunslip6 -L -v2 -s ttyUSB1 aaaa::1/64\n");
 fprintf(stderr,"Options are:\n");
-fprintf(stderr," -B baudrate    9600,19200,38400,57600,115200 (default)\n");
+fprintf(stderr," -B baudrate    9600,19200,38400,57600,115200 default),230400,460800,921600\n");
 fprintf(stderr," -H             Hardware CTS/RTS flow control (default disabled)\n");
 fprintf(stderr," -L             Log output format (adds time stamps)\n");
 fprintf(stderr," -s siodev      Serial device (default /dev/ttyUSB0)\n");
@@ -696,6 +784,7 @@ fprintf(stderr,"                Actual delay is basedelay*(#6LowPAN fragments) m
 fprintf(stderr,"                -d is equivalent to -d10.\n");
 fprintf(stderr," -a serveraddr  \n");
 fprintf(stderr," -p serverport  \n");
+fprintf(stderr," -c channel     IEEE 802.15.4 channel for the border-router (11-26)\n");
 exit(1);
       break;
     }
@@ -725,6 +814,15 @@ exit(1);
     break;
   case 115200:
     b_rate = B115200;
+    break;
+  case 230400:
+    b_rate = B230400;
+    break;
+  case 460800:
+    b_rate = B460800;
+    break;
+  case 921600:
+    b_rate = B921600;
     break;
   default:
     err(1, "unknown baudrate %d", baudrate);
@@ -828,10 +926,18 @@ exit(1);
   signal(SIGALRM, sigalarm);
   ifconf(tundev, ipaddr);
 
+  /* init */
+  channel = 1;
+
   while(1) {
     maxfd = 0;
     FD_ZERO(&rset);
     FD_ZERO(&wset);
+
+    /* added to define channel */
+    if (channel) {
+      send_channel();
+    }
 
 /* do not send IPA all the time... - add get MAC later... */
 /*     if(got_sigalarm) { */

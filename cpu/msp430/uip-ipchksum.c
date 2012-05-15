@@ -41,12 +41,19 @@
 #define asmv(arg) __asm__ __volatile__(arg)
 /*---------------------------------------------------------------------------*/
 #ifdef UIP_ARCH_IPCHKSUM
-u16_t
+#ifdef __IAR_SYSTEMS_ICC__
+uint16_t
+uip_ipchksum(void)
+{
+  return 0;
+}
+#else
+uint16_t
 uip_ipchksum(void)
 {
   /* Assumes proper alignement of uip_buf. */
-  u16_t *p = (u16_t *)&uip_buf[UIP_LLH_LEN];
-  register u16_t sum;
+  uint16_t *p = (uint16_t *)&uip_buf[UIP_LLH_LEN];
+  register uint16_t sum;
 
   sum = p[0];
   asmv("add  %[p], %[sum]": [sum] "+r" (sum): [p] "m" (p[1]));
@@ -65,5 +72,6 @@ uip_ipchksum(void)
   /* Return sum in network byte order. */
   return (sum == 0) ? 0xffff : sum;
 }
+#endif
 #endif
 /*---------------------------------------------------------------------------*/

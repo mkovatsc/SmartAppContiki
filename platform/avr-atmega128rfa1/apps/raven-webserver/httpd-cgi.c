@@ -165,7 +165,7 @@ generate_file_stats(void *arg)
   static const char httpd_cgi_filestat3[] HTTPD_STRING_ATTR = "%5u";
   char tmp[20];
   struct httpd_fsdata_file_noconst *f,fram;
-  u16_t i;
+  uint16_t i;
   unsigned short numprinted;
 
   /* Transfer arg from whichever flash that contains the html file to RAM */
@@ -268,7 +268,7 @@ make_processes(void *p)
   static const char httpd_cgi_proc[] HTTPD_STRING_ATTR = "<tr align=\"center\"><td>%p</td><td>%s</td><td>%p</td><td>%s</td></tr>\r\n";
   char name[40],tstate[20];
 
-  strncpy(name, ((struct process *)p)->name, 40);
+  strncpy(name, PROCESS_NAME_STRING((struct process *)p), 40);
   petsciiconv_toascii(name, 40);
   httpd_strcpy(tstate,states[9 + ((struct process *)p)->state]);
   return httpd_snprintf((char *)uip_appdata, uip_mss(), httpd_cgi_proc, p, name,

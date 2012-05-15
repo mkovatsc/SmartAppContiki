@@ -2,7 +2,6 @@ all: mb851-websense
 
 CONTIKI=../../..
 
-WITH_UIP6=1
 UIP_CONF_IPV6=1
 
 APPS += webserver webbrowser

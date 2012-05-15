@@ -270,5 +270,4 @@ public class MicaZMote extends AbstractEmulatedMote implements Mote {
   public String toString() {
     return "MicaZ " + getID();
   }
-
 }

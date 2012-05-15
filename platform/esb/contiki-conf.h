@@ -1,6 +1,10 @@
 #ifndef __CONTIKI_CONF_H__
 #define __CONTIKI_CONF_H__
 
+#define PLATFORM_HAS_LEDS    1
+#define PLATFORM_HAS_BUTTON  1
+#define PLATFORM_HAS_BATTERY 1
+
 /* DCO speed resynchronization for more robust UART, etc. */
 #define DCOSYNCH_CONF_ENABLED 1
 #define DCOSYNCH_CONF_PERIOD 30
@@ -12,8 +16,8 @@
 #define ENERGEST_CONF_ON 1
 
 #define HAVE_STDINT_H
-#define MSP430_MEMCPY_WORKAROUND 1
 #include "msp430def.h"
+
 
 #define PROCESS_CONF_NUMEVENTS 8
 #define PROCESS_CONF_STATS 0
@@ -30,8 +34,6 @@
 
 #define CC_CONF_REGISTER_ARGS          1
 #define CC_CONF_FUNCTION_POINTER_ARGS  1
-
-#define CC_CONF_INLINE inline
 
 #define CC_CONF_VA_ARGS                1
 

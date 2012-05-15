@@ -51,12 +51,11 @@ Berlin, 2007
  * ScatterWeb Bootload and Contiki.
  */
 
-#include <io.h>
-#include <signal.h>
+#include "contiki.h"
 #include <string.h>
 #include "dev/msb430-uart1.h"
-#include "msp430.h"
 #include "dev/lpm.h"
+#include "isr_compat.h"
 
 #ifndef U1ME
 #define U1ME	ME2
@@ -206,8 +205,7 @@ uart_get_mode(void)
   return uart_mode;
 }
 /*---------------------------------------------------------------------------*/
-interrupt(UART1RX_VECTOR)
-uart_rx(void)
+ISR(UART1RX, uart_rx)
 {
   uart_handler_t handler = uart_handler[uart_mode];
   int c;

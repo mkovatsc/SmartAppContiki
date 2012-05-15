@@ -18,7 +18,7 @@ CONTIKI_CPU_DIRS = . dev hal simplemac hal/micro/cortexm3 hal/micro/cortexm3/stm
 
 STM32W_C = leds-arch.c leds.c clock.c watchdog.c uart1.c uart1-putchar.c slip_uart1.c slip.c\
 		stm32w-radio.c stm32w_systick.c uip_arch.c rtimer-arch.c adc.c micro.c sleep.c \
-		micro-common.c micro-common-internal.c clocks.c mfg-token.c nvm.c flash.c rand.c
+		micro-common.c micro-common-internal.c clocks.c mfg-token.c nvm.c flash.c rand.c system-timer.c
 
 STM32W_S = spmr.s79 context-switch.s79 
 
@@ -92,12 +92,12 @@ ifndef DEBUG
 OPTI = -Os -ffunction-sections 
 endif
 
-CFLAGSNO = -mthumb -mcpu=cortex-m3 -fsigned-char -D "PLATFORM_HEADER=\"hal/micro/cortexm3/compiler/gnu.h\"" \
+CFLAGSNO = -mthumb -mcpu=cortex-m3 -D "PLATFORM_HEADER=\"hal/micro/cortexm3/compiler/gnu.h\"" \
 			-D BOARD_HEADER=\"board.h\" -g -Wall -Wno-strict-aliasing -mlittle-endian \
 			-D BOARD_MB851   -D CORTEXM3 -D CORTEXM3_STM32W108 -D PHY_STM32W108XX -D DISABLE_WATCHDOG -D ENABLE_ADC_EXTENDED_RANGE_BROKEN \
 			-D __SOURCEFILE__=\"$*.c\"
 CFLAGS  += $(CFLAGSNO) $(OPTI)
-ASFLAGS = -mthumb -mcpu=cortex-m3 -fsigned-char -c -g -Wall -Os -ffunction-sections \
+ASFLAGS = -mthumb -mcpu=cortex-m3 -c -g -Wall -Os -ffunction-sections \
 	    -mlittle-endian -fshort-enums -x assembler-with-cpp -Wa,-EL
 LDFLAGS += -mcpu=cortex-m3 \
 	    -mthumb  \
@@ -162,14 +162,11 @@ endif
 
 
 
-
-FLASHER = $(CONTIKI)/tools/stm32w/stm32w_flasher/linux/stm32w_flasher
+FLASHER = $(CONTIKI)/tools/stm32w/stm32w_flasher/stm32w_flasher
 
 # Check if we are running under Windows
-ifdef OS
-  ifneq (,$(findstring Windows,$(OS)))
-  	FLASHER = $(CONTIKI)/tools/stm32w/stm32w_flasher/win/stm32w_flasher    
-  endif   
+ifeq ($(HOST_OS),Windows)
+  FLASHER = $(CONTIKI)/tools/stm32w/stm32w_flasher/stm32w_flasher.exe
 endif
 
 

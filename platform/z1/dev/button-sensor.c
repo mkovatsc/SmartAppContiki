@@ -30,10 +30,12 @@
  *
  * @(#)$Id: button-sensor.c,v 1.2 2010/08/26 16:01:20 joxe Exp $
  */
+
+#include "contiki.h"
 #include "lib/sensors.h"
 #include "dev/hwconf.h"
 #include "dev/button-sensor.h"
-#include <signal.h>
+#include "isr_compat.h"
 
 const struct sensors_sensor button_sensor;
 
@@ -44,8 +46,7 @@ HWCONF_PIN(BUTTON, 2, 5);
 HWCONF_IRQ(BUTTON, 2, 5);
 
 /*---------------------------------------------------------------------------*/
-interrupt(PORT2_VECTOR)
-     irq_p2(void)
+ISR(PORT2, irq_p2)
 {
   ENERGEST_ON(ENERGEST_TYPE_IRQ);
 

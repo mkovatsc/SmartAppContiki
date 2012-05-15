@@ -73,13 +73,12 @@ Contributors: Thomas Pietsch, Bjoern Lichtblau
  ** \endcode
  **/
 
-#include <io.h>
-#include <signal.h>
-
+#include "contiki.h"
 #include "dev/ir.h"
 
 #include "dev/leds.h"
 #include "dev/beep.h"
+#include "isr_compat.h"
 
 PROCESS(ir_process, "IR receiver");
 process_event_t ir_event_received;
@@ -177,13 +176,13 @@ unsigned char recir_getAddress(void){ return ((recvdata & 0x07C0) >> 6); }
 unsigned char recir_getToggle(void){  return ((recvdata & 0x0800) >> 11); }
 unsigned char recir_getError(void){ return ((recvdata & 0x2000) >> 13); }
 
-u16_t
+uint16_t
 ir_data(void)
 {
   return recvdata;
 }
 
-u8_t
+uint8_t
 ir_poll(void)
 {
   if(recvdata & 0x1000) {
@@ -204,7 +203,7 @@ static void clearDataAvailableBit(void){ recvdata &= 0xEFFF; }
 
 
 /// Timer B0 interrupt service routine
-interrupt(TIMERB1_VECTOR) Timer_B1 (void) {
+ISR(TIMERB1, Timer_B1) {
 
   /*P2OUT = (P2OUT & 0xf7) | (8 - (P2OUT & 0x08));*/
   

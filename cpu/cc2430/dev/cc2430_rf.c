@@ -85,6 +85,7 @@ const struct radio_driver cc2430_rf_driver =
   {
     cc2430_rf_send,
     cc2430_rf_read,
+    cc2430_rf_channel_set,
     cc2430_rf_set_receiver,
     cc2430_rf_on,
     cc2430_rf_off,
@@ -314,7 +315,7 @@ void cc2430_rf_command(uint8_t command) __banked
  /* channel freqdiv = (2048 + FSCTRL(9:0)) / 4
             freq = (2048 + FSCTRL(9:0)) MHz */
 
-int8_t
+void
 cc2430_rf_channel_set(uint8_t channel)
 {
   uint16_t freq;
@@ -336,8 +337,6 @@ cc2430_rf_channel_set(uint8_t channel)
   cc2430_rf_command(ISRXON);
 
   rf_channel = channel;
-
-  return (int8_t) channel;
 }
 /*---------------------------------------------------------------------------*/
 /*PA_LEVEL TXCTRL register Output Power [dBm] Current Consumption [mA]

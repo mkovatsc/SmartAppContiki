@@ -30,6 +30,9 @@
 package se.sics.cooja.motes;
 
 import se.sics.cooja.Mote;
+import se.sics.cooja.plugins.BufferListener;
+import se.sics.cooja.plugins.BufferListener.BufferAccess;
+import se.sics.cooja.plugins.TimeLine;
 
 public abstract class AbstractEmulatedMote extends AbstractWakeupMote implements Mote {
 
@@ -42,8 +45,23 @@ public abstract class AbstractEmulatedMote extends AbstractWakeupMote implements
   
   /**
    * @return Execution details, for instance a stack trace
+   * @see TimeLine
    */
   public String getExecutionDetails() {
-  	return null;
+    return null;
+  }
+
+  /**
+   * @return One-liner describing current PC, for instance source file and line.
+   * May return null.
+   * 
+   * @see BufferListener
+   */
+  public String getPCString() {
+    return null;
+  }
+
+  public String getStackTrace() {
+    return null;
   }
 }

@@ -71,7 +71,8 @@ collect_common_net_print(void)
 {
   rpl_dag_t *dag;
   int i;
-  dag = rpl_get_dag(RPL_ANY_INSTANCE);
+  /* Let's suppose we have only one instance */
+  dag = rpl_get_any_dag();
   if(dag->preferred_parent != NULL) {
     PRINTF("Preferred parent: ");
     PRINT6ADDR(&dag->preferred_parent->addr);
@@ -128,19 +129,22 @@ collect_common_send(void)
   rimeaddr_copy(&parent, &rimeaddr_null);
   parent_etx = 0;
 
-  dag = rpl_get_dag(RPL_DEFAULT_INSTANCE);
+  /* Let's suppose we have only one instance */
+  dag = rpl_get_any_dag();
   if(dag != NULL) {
     preferred_parent = dag->preferred_parent;
     if(preferred_parent != NULL) {
       uip_ds6_nbr_t *nbr;
       nbr = uip_ds6_nbr_lookup(&preferred_parent->addr);
       if(nbr != NULL) {
-        rimeaddr_copy(&parent, (rimeaddr_t *)&nbr->ipaddr.u8[8]);
+        /* Use parts of the IPv6 address as the parent address, in reversed byte order. */
+        parent.u8[RIMEADDR_SIZE - 1] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 2];
+        parent.u8[RIMEADDR_SIZE - 2] = nbr->ipaddr.u8[sizeof(uip_ipaddr_t) - 1];
         parent_etx = neighbor_info_get_metric((rimeaddr_t *) &nbr->lladdr) / 2;
       }
     }
     rtmetric = dag->rank;
-    beacon_interval = (uint16_t) ((2L << dag->dio_intcurrent) / 1000);
+    beacon_interval = (uint16_t) ((2L << dag->instance->dio_intcurrent) / 1000);
     num_neighbors = RPL_PARENT_COUNT(dag);
   } else {
     rtmetric = 0;

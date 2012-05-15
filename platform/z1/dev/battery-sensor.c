@@ -35,10 +35,15 @@
  * Updated : $Date: 2010/08/24 16:26:38 $
  *           $Revision: 1.1 $
  */
-
+#include "contiki.h"
 #include "dev/battery-sensor.h"
 #include "dev/sky-sensors.h"
-#include <io.h>
+
+/* Configure ADC12_2 to sample channel 11 (voltage) and use */
+/* the Vref+ as reference (SREF_1) since it is a stable reference */
+#define INPUT_CHANNEL   (1 << INCH_11)
+#define INPUT_REFERENCE SREF_1
+#define BATTERY_MEM     ADC12MEM11
 
 const struct sensors_sensor battery_sensor;
 static uint8_t active;

@@ -26,16 +26,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: CollectServer.java,v 1.5 2010/12/07 22:46:13 adamdunkels Exp $
- *
  * -----------------------------------------------------------------
  *
  * CollectServer
  *
  * Authors : Joakim Eriksson, Niclas Finne
  * Created : 3 jul 2008
- * Updated : $Date: 2010/12/07 22:46:13 $
- *           $Revision: 1.5 $
  */
 
 package se.sics.contiki.collect;
@@ -364,6 +360,44 @@ public class CollectServer implements SerialConnectionListener {
             axis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
           }
           protected double getSensorDataValue(SensorData data) {
+            return data.getValue(SensorData.RTMETRIC);
+          }
+        },
+        new AggregatedTimeChartPanel<boolean[]>(this, NETWORK, "Avg Routing Metric (Over Time)", "Time",
+                "Average Routing Metric") {
+            private int nodeCount;
+          {
+            ValueAxis axis = chart.getXYPlot().getRangeAxis();
+            ((NumberAxis)axis).setAutoRangeIncludesZero(true);
+            axis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+          }
+          @Override
+          protected boolean[] createState(Node node) {
+            return new boolean[1];
+          }
+          @Override
+          protected void clearState(Map<Node,boolean[]> map) {
+            nodeCount = 0;
+            for(boolean[] value : map.values()) {
+              value[0] = false;
+            }
+          }
+          @Override
+          protected String getTitle(int selectedCount, int dataCount, int duplicateCount) {
+            return "Average Routing Metric (" + dataCount + " packets from " + nodeCount + " node"
+                + (nodeCount > 1 ? "s" : "") + ')';
+          }
+          @Override
+          protected int getTotalDataValue(int value) {
+            // Return average value
+            return nodeCount > 0 ? (value / nodeCount) : value;
+          }
+          @Override
+          protected int getSensorDataValue(SensorData data, boolean[] nodeState) {
+            if (!nodeState[0]) {
+              nodeCount++;
+              nodeState[0] = true;
+            }
             return data.getValue(SensorData.RTMETRIC);
           }
         },
@@ -1440,13 +1474,27 @@ public class CollectServer implements SerialConnectionListener {
     boolean resetSensorLog = false;
     boolean useSensorLog = true;
     boolean useSerialOutput = true;
+    String host = null;
     String command = null;
     String logFileToLoad = null;
     String comPort = null;
+    int port = -1;
     for(int i = 0, n = args.length; i < n; i++) {
       String arg = args[i];
       if (arg.length() == 2 && arg.charAt(0) == '-') {
         switch (arg.charAt(1)) {
+        case 'a':
+            if (i + 1 < n) {
+                host = args[++i];
+                int pIndex = host.indexOf(':');
+                if (pIndex > 0) {
+                    port = Integer.parseInt(host.substring(pIndex + 1));
+                    host = host.substring(0, pIndex);
+                }
+              } else {
+                usage(arg);
+              }
+              break;
         case 'c':
           if (i + 1 < n) {
             command = args[++i];
@@ -1454,6 +1502,13 @@ public class CollectServer implements SerialConnectionListener {
             usage(arg);
           }
           break;
+        case 'p':
+            if (i + 1 < n) {
+              port = Integer.parseInt(args[++i]);
+            } else {
+              usage(arg);
+            }
+            break;
         case 'r':
           resetSensorLog = true;
           break;
@@ -1485,7 +1540,14 @@ public class CollectServer implements SerialConnectionListener {
 
     CollectServer server = new CollectServer();
     SerialConnection serialConnection;
-    if (command == null) {
+    if (host != null) {
+        if (port <= 0) {
+            port = 60001;
+        }
+        serialConnection = new TCPClientConnection(server, host, port);
+    } else if (port > 0) {
+      serialConnection = new UDPConnection(server, port);
+    } else if (command == null) {
       serialConnection = new SerialDumpConnection(server);
     } else if (command == STDIN_COMMAND) {
       serialConnection = new StdinConnection(server);
@@ -1516,11 +1578,13 @@ public class CollectServer implements SerialConnectionListener {
     if (arg != null) {
       System.err.println("Unknown argument '" + arg + '\'');
     }
-    System.err.println("Usage: java CollectServer [-n] [-i] [-r] [-f [file]] [-c command] [COMPORT]");
+    System.err.println("Usage: java CollectServer [-n] [-i] [-r] [-f [file]] [-a host:port] [-p port] [-c command] [COMPORT]");
     System.err.println("       -n : Do not read or save sensor data log");
     System.err.println("       -r : Clear any existing sensor data log at startup");
     System.err.println("       -i : Do not allow serial output");
     System.err.println("       -f : Read serial data from standard in");
+    System.err.println("       -a : Connect to specified host:port");
+    System.err.println("       -p : Read data from specified UDP port");
     System.err.println("       -c : Use specified command for serial data input/output");
     System.err.println("   COMPORT: The serial port to connect to");
     System.exit(arg != null ? 1 : 0);

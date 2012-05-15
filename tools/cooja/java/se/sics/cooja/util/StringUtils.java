@@ -30,12 +30,13 @@
 package se.sics.cooja.util;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Some utility methods for generating hex dumps.
@@ -81,6 +82,33 @@ public class StringUtils {
     return hexDump(data, 5, 4);
   }
 
+  public static byte[] fromHex(String[] data) {
+    StringBuilder sb = new StringBuilder();
+    for (String s: data) {
+      sb.append(s);
+    }
+    return fromHex(sb.toString());
+  }
+  
+  /**
+   * This method is compatible with the output from {@link #toHex(byte)}.
+   * 
+   * @param data Hexadecimal data
+   * @return Binary data
+   * @see #toHex(byte[], int)
+   */
+  public static byte[] fromHex(String data) {
+    data = data.replace(" ", "");
+    if (data.length() % 2 != 0) {
+      throw new RuntimeException("Bad hex string: " + data);
+    }
+    byte[] bin = new byte[data.length()/2];
+    for (int i=0; i < bin.length; i++) {
+      bin[i] = (byte) (0xff&Integer.parseInt(data.substring(i*2, i*2+2), 16));
+    }
+    return bin;
+  }
+  
   public static String hexDump(byte[] data, int groupsPerLine, int bytesPerGroup) {
     if (bytesPerGroup <= 0) {
       throw new IllegalArgumentException("0 bytes per group");
@@ -139,13 +167,20 @@ public class StringUtils {
     }
   }
 
-  public static String loadFromFile(File scriptFile) {
-    if (scriptFile == null) {
+  public static String loadFromFile(File file) {
+    if (file == null) {
       return null;
     }
+    StringBuilder sb = new StringBuilder();
+    InputStreamReader reader = null;
+    
     try {
-      FileReader reader = new FileReader(scriptFile);
-      StringBuilder sb = new StringBuilder();
+      if (file.getName().endsWith(".gz")) {
+        reader = new InputStreamReader(new GZIPInputStream(new FileInputStream(file)));
+      } else {
+        reader = new InputStreamReader(new FileInputStream(file));
+      }
+
       char[] buf = new char[4096];
       int read;
       while ((read = reader.read(buf)) > 0) {
@@ -155,6 +190,18 @@ public class StringUtils {
       reader.close();
       return sb.toString();
     } catch (IOException e) {
+      e.printStackTrace();
+      
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch (IOException e1) {
+        }
+      }
+      
+      if (sb != null && sb.length() > 0) {
+        return sb.toString();
+      }
       return null;
     }
   }

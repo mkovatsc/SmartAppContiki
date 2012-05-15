@@ -41,28 +41,18 @@
 #ifndef __I2CMASTER_H__
 #define __I2CMASTER_H__
 
-#include <stdio.h>
-#include <signal.h>
-#include <io.h>
-#include <contiki.h>
-#include <dev/spi.h>
-#include <dev/leds.h>
+#include "contiki.h"
 
 void i2c_enable(void);
 
-void i2c_receiveinit(u8_t slave_address);
-u8_t i2c_receive_n(u8_t byte_ctr, u8_t *rx_buf);
+void i2c_receiveinit(uint8_t slave_address);
+uint8_t i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf);
 
-void i2c_transmitinit(u8_t slave_address);
-void i2c_transmit_n(u8_t byte_ctr, u8_t *tx_buf);
+void i2c_transmitinit(uint8_t slave_address);
+void i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf);
 
-u8_t i2c_busy(void);
+uint8_t i2c_busy(void);
 
-//XXX Temporary place for defines that are lacking in mspgcc4's gpio.h
-#ifndef P5SEL2_
-  #define P5SEL2_             0x0045  /* Port 5 Selection 2*/
-  sfrb(P5SEL2, P5SEL2_);
-#endif
 //XXX Should these defines be in the contiki-conf.h to make it more platform-independent?
 #define I2C_PxDIR   P5DIR
 #define I2C_PxIN    P5IN
@@ -90,6 +80,7 @@ u8_t i2c_busy(void);
 
 
 #if 0
+#include <stdio.h>
 #define PRINTFDEBUG(...) printf(__VA_ARGS__)
 #else
 #define PRINTFDEBUG(...)

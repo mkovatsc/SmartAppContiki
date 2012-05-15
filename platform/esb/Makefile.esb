@@ -17,13 +17,23 @@ endif
 CONTIKI_TARGET_SOURCEFILES += $(SENSORS) $(ESB) \
         contiki-esb-default-init-lowlevel.c \
         contiki-esb-default-init-apps.c \
-	rs232.c rs232-putchar.c fader.c $(CONTIKI_TARGET_MAIN)
+	rs232.c rs232-putchar.c fader.c
 
 ifdef WITH_CODEPROP
   CONTIKI_TARGET_DIRS += ../../apps/codeprop
   CONTIKI_TARGET_SOURCEFILES += codeprop-tmp.c
   WITH_UIP=1
 endif
+
+ifdef GCC
+CFLAGS+=-Os -g
+endif
+
+ifdef IAR
+CFLAGS += -D__MSP430F149__=1 -e --vla -Ohz --multiplier=16s --core=430 --double=32
+CFLAGSNO = --dlib_config "$(IAR_PATH)/LIB/DLIB/dl430fn.h" $(CFLAGSWERROR)
+endif
+
 
 ifdef WITH_UIP
   ifndef WITH_SLIP
@@ -43,6 +53,11 @@ include $(CONTIKI)/platform/$(TARGET)/apps/Makefile.apps
 MCU=msp430x149
 include $(CONTIKI)/cpu/msp430/Makefile.msp430
 
+ifdef IAR
+LDFLAGSNO += -B -xm "$(IAR_PATH)/lib/dlib/dl430fn.r43" -f "$(IAR_PATH)/config/lnk430f149.xcl" -l contiki-$(TARGET).map -s __program_start -D_STACK_SIZE=80 -D_DATA16_HEAP_SIZE=80 -D_DATA20_HEAP_SIZE=80
+LDFLAGS += $(LDFLAGSNO) -Felf -yn
+endif # IAR
+
 contiki-$(TARGET).a: ${addprefix $(OBJECTDIR)/,symbols.o}
 #	$(AR) rcf $@ $^
 
@@ -58,23 +73,15 @@ send:	$(CONTIKI)/tools/codeprop.c
 
 ### System dependent Makefile
 
-ifndef WINDIR
-  ifdef OS
-    ifneq (,$(findstring Windows,$(OS)))
-      WINDIR := Windows
-    endif
-  endif
-endif
-
-ifeq (${HOSTTYPE},FreeBSD)
+ifeq ($(HOST_OS),FreeBSD)
   # settings for FreeBSD
   -include $(CONTIKI)/platform/$(TARGET)/buildscripts/Makefile.freebsd
 else
-ifndef WINDIR
-  # settings for unix
-  -include $(CONTIKI)/platform/$(TARGET)/buildscripts/Makefile.unix
-else
-  # settings for windows
-  -include $(CONTIKI)/platform/$(TARGET)/buildscripts/Makefile.win
-endif
+  ifeq ($(HOST_OS),Windows)
+    # settings for Windows
+    -include $(CONTIKI)/platform/$(TARGET)/buildscripts/Makefile.win
+  else
+    # settings for an arbitary unix-like platform
+    -include $(CONTIKI)/platform/$(TARGET)/buildscripts/Makefile.unix
+  endif
 endif

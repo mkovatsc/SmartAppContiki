@@ -31,8 +31,6 @@
  * @(#)$Id: contiki-esb-main.c,v 1.19 2010/06/21 15:15:12 nifi Exp $
  */
 
-#include <io.h>
-#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -307,8 +305,6 @@ main(void)
       watchdog_start();
     }
   }
-
-  return 0;
 }
 /*---------------------------------------------------------------------------*/
 /* char *arg_alloc(char size) {return NULL;} */

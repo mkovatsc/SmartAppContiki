@@ -94,14 +94,14 @@ static struct uip_fw_netif meshif =
 static uint8_t is_gateway;
 #endif /* WITH_UIP */
 
-#ifndef WITH_UIP6
-#define WITH_UIP6 0
+#ifndef UIP_CONF_IPV6
+#define UIP_CONF_IPV6 0
 #endif
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/uip.h"
 #include "net/uip-ds6.h"
 #define PRINT6ADDR(addr) printf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 PROCINIT(&etimer_process,&sensors_process);
 
@@ -251,7 +251,7 @@ contiki_init()
   }
 #endif /* WITH_UIP */
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
   /* IPv6 CONFIGURATION */
   {
     int i;
@@ -294,7 +294,7 @@ contiki_init()
              ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
     }
   }
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
   /* Start serial process */
   serial_line_init();

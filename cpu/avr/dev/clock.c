@@ -6,13 +6,31 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+/*
+  CLOCK_SECOND is the number of ticks per second.
+  It is defined through CONF_CLOCK_SECOND in the contiki-conf.h for each platform.
+  The usual AVR defaults are 128 or 125 ticks per second, counting a prescaled CPU clock
+  using the 8 bit timer0.
+  
+  As clock_time_t is an unsigned 16 bit data type, intervals up to 512 or 524 seconds
+  can be measured with ~8 millisecond precision. 
+  For longer intervals a 32 bit global is incremented every second. 
+ 
+  clock-avr.h contains the specific setup code for each mcu.
+
+*/
+
+/* count is a 16 bit tick counter that wraps every ~10 minutes, returned by clock_time() */
 static volatile clock_time_t count;
+/* scount is the 8 bit counter that counts ticks modulo CLOCK_SECONDS */
 static volatile uint8_t scount;
+/* seconds is the number of seconds since startup, returned by clock_seconds() */
 volatile unsigned long seconds;
+/* sleepseconds is the number of seconds sleeping since startup, available globally */
 long sleepseconds;
 
 /* Set RADIOSTATS to monitor radio on time (must also be set in the radio driver) */
-#if RF230BB && WEBSERVER
+#if RF230BB && AVR_WEBSERVER
 #define RADIOSTATS 1
 #endif
 
@@ -22,29 +40,17 @@ volatile unsigned long radioontime;
 extern uint8_t RF230_receive_on;
 #endif
 
-/* Set RADIOCALIBRATE for periodic calibration of the PLL during extended radio on time.
- * The data sheet suggests every 5 minutes if the temperature is fluctuating.
- * Using an eight bit counter gives 256 second calibrations.
+/* Set RADIO_CONF_CALIBRATE_INTERVAL for periodic calibration of the PLL during extended radio on time.
+ * The RF230 data sheet suggests every 5 minutes if the temperature is fluctuating.
+ * At present the specified interval is ignored, and an 8 bit counter gives 256 second intervals.
  * Actual calibration is done by the driver on the next transmit request.
  */
-#if RADIOCALIBRATE
+#if RADIO_CONF_CALIBRATE_INTERVAL
 extern volatile uint8_t rf230_calibrate;
 static uint8_t calibrate_interval;
 #endif
 
-/*
-  CLOCK_SECOND is the number of ticks per second.
-  It is defined through CONF_CLOCK_SECOND in the contiki-conf.h for each platform.
-  The usual AVR default is ~125 ticks per second, counting a prescaler the CPU clock
-  using the 8 bit timer0.
-  
-  As clock_time_t is an unsigned 16 bit data type, intervals up to 524 seconds
-  can be measured with 8 millisecond precision. 
-  For longer intervals a 32 bit global is incremented every second. 
- 
-  clock-avr.h contains the specific setup code for each mcu.
-
-*/
+#if 0
 /*---------------------------------------------------------------------------*/
 /* This routine can be called to add seconds to the clock after a sleep
  * of an integral number of seconds.
@@ -52,27 +58,93 @@ static uint8_t calibrate_interval;
 void clock_adjust_seconds(uint8_t howmany) {
    seconds += howmany;
    sleepseconds +=howmany;
+   count += howmany * CLOCK_SECOND;
 #if RADIOSTATS
   if (RF230_receive_on) radioontime += howmany;
 #endif
+}
+#endif
+
+/*---------------------------------------------------------------------------*/
+/* This routine can be called to add ticks to the clock after a sleep.
+ * Leap ticks or seconds can (rarely) be introduced if the ISR is not blocked.
+ */
+void clock_adjust_ticks(uint16_t howmany) {
+// uint8_t sreg = SREG;cli();
+   count  += howmany;
+   howmany+= scount;
+   while(howmany >= CLOCK_SECOND) {
+      howmany -= CLOCK_SECOND;
+      seconds++;
+      sleepseconds++;
+#if RADIOSTATS
+      if (RF230_receive_on) radioontime += 1;
+#endif
+   }
+   scount = howmany;
+// SREG=sreg;
 }
 /*---------------------------------------------------------------------------*/
 //SIGNAL(SIG_OUTPUT_COMPARE0)
 ISR(AVR_OUTPUT_COMPARE_INT)
 {
   count++;
-  if(++scount == CLOCK_SECOND) {
+  if(++scount >= CLOCK_SECOND) {
     scount = 0;
     seconds++;
   }
-#if RADIOCALIBRATE
+
+#if F_CPU == 0x800000 && USE_32K_CRYSTAL
+/* Special routine to phase lock CPU to 32768 watch crystal.
+   We are interrupting 128 times per second.
+   If RTIMER_ARCH_SECOND is a multiple of 128 we can use the residual modulo
+   128 to determine whether the clock is too fast or too slow.
+   E.g. for 8192 the phase should be constant modulo 0x40
+   OSCCAL is started in the lower range at 90, allowed to stabilize, then
+   rapidly raised or lowered based on the phase comparison.
+   It gives less phase noise to do this every tick and doesn't seem to hurt anything.
+*/
+#include "rtimer-arch.h"
+{
+volatile static uint8_t lockcount;
+volatile static int16_t last_phase;
+volatile static uint8_t osccalhigh,osccallow;
+    if (seconds < 60) { //give a minute to stabilize
+      if(++lockcount >= 8192UL*128/RTIMER_ARCH_SECOND) {
+        lockcount=0;
+        rtimer_phase = TCNT3 & 0x0fff;
+        if (seconds < 2) OSCCAL=100;
+        if (last_phase > rtimer_phase) osccalhigh=++OSCCAL; else osccallow=--OSCCAL;
+        last_phase = rtimer_phase;
+      }
+    } else {
+#if TICK_MODULO
+    static uint8_t lock_clock;
+    if (++lock_clock>=TICK_MODULO) {
+      lock_clock=0;
+#endif
+      uint8_t error = (TCNT3 - last_phase) & 0x3f;
+      if (error == 0) {
+      } else if (error<32) {
+        OSCCAL=osccallow-1;
+      } else {
+        OSCCAL=osccalhigh+1;
+      }
+#if TICK_MODULO
+    }
+#endif
+    }
+}
+#endif
+
+#if RADIO_CONF_CALIBRATE_INTERVAL
    if (++calibrate_interval==0) {
     rf230_calibrate=1;
   }
 #endif
 #if RADIOSTATS
   if (RF230_receive_on) {
-    if (++rcount == CLOCK_SECOND) {
+    if (++rcount >= CLOCK_SECOND) {
       rcount=0;
       radioontime++;
     }
@@ -123,6 +195,7 @@ clock_time(void)
   } while(tmp != count);
   return tmp;
 }
+#if 0
 /*---------------------------------------------------------------------------*/
 /**
  * Delay the CPU for a multiple of TODO
@@ -139,7 +212,7 @@ clock_delay(unsigned int i)
 
 /*---------------------------------------------------------------------------*/
 /**
- * Wait for a multiple of 1 / 125 sec = 0.008 ms.
+ * Wait for a number of clock ticks.
  *
  */
 void
@@ -154,8 +227,9 @@ clock_wait(int i)
 void
 clock_set_seconds(unsigned long sec)
 {
-    // TODO
+    seconds = sec;
 }
+#endif
 
 unsigned long
 clock_seconds(void)
@@ -166,8 +240,15 @@ clock_seconds(void)
   } while(tmp != seconds);
   return tmp;
 }
-
+#ifdef HANDLE_UNSUPPORTED_INTERRUPTS
+/* Ignore unsupported interrupts, optionally hang for debugging */
+/* BADISR is a gcc weak symbol that matches any undefined interrupt */
+ISR(BADISR_vect) {
+//static volatile uint8_t x;while (1) x++;
+}
+#endif
 #ifdef HANG_ON_UNKNOWN_INTERRUPT
+/* Hang on any unsupported interrupt */
 /* Useful for diagnosing unknown interrupts that reset the mcu.
  * Currently set up for 12mega128rfa1.
  * For other mcus, enable all and then disable the conflicts.

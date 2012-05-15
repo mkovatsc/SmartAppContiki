@@ -49,11 +49,11 @@
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 #include "net/sicslowpan.h"
 #include "net/uip-ds6.h"
 #include "net/mac/sicslowmac.h"
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #include "net/rime.h"
 
@@ -70,7 +70,7 @@
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
-#define PRINT6ADDR(addr) PRINTF(" %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((u8_t *)addr)[0], ((u8_t *)addr)[1], ((u8_t *)addr)[2], ((u8_t *)addr)[3], ((u8_t *)addr)[4], ((u8_t *)addr)[5], ((u8_t *)addr)[6], ((u8_t *)addr)[7], ((u8_t *)addr)[8], ((u8_t *)addr)[9], ((u8_t *)addr)[10], ((u8_t *)addr)[11], ((u8_t *)addr)[12], ((u8_t *)addr)[13], ((u8_t *)addr)[14], ((u8_t *)addr)[15])
+#define PRINT6ADDR(addr) PRINTF(" %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
 #define PRINTLLADDR(lladdr) PRINTF(" %02x:%02x:%02x:%02x:%02x:%02x ",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
 #else
 #define PRINTF(...)
@@ -196,7 +196,7 @@ init_lowlevel(void)
 	trim_xtal();
 	
 	/* uart init */
-	uart_init(INC, MOD, SAMP);
+	uart_init(BRINC, BRMOD, SAMP);
 	
 	default_vreg_init();
 
@@ -361,7 +361,7 @@ main(void)
 	printf("%02X\n", addr.u8[i]);
 
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, &addr.u8, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -414,7 +414,7 @@ main(void)
   }
 
   
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -425,7 +425,7 @@ main(void)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #if PROFILE_CONF_ON
   profile_init();

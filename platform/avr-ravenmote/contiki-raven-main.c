@@ -39,6 +39,9 @@
  *         Simon Barner <barner@in.tum.de>
  *         David Kopf <dak664@embarqmail.com>
  */
+#ifndef APP_BAUD_RATE
+#define APP_BAUD_RATE USART_BAUD_57600
+#endif /* APP_BAUD_RATE */
 
 #define DEBUG 0
 #if DEBUG
@@ -99,10 +102,6 @@ uint16_t rtime;
 struct rtimer rt;
 void rtimercycle(void) {rtimerflag=1;}
 #endif /* TESTRTIMER */
-
-#ifndef BAUD_RATE
-#define BAUD_RATE USART_BAUD_19200
-#endif
 
 /*-------------------------------------------------------------------------*/
 /*----------------------Configuration of the .elf file---------------------*/
@@ -178,11 +177,11 @@ get_panid_from_eeprom(void) {
 #if JACKDAW_CONF_USE_SETTINGS
 	uint16_t x = settings_get_uint16(SETTINGS_KEY_PAN_ID, 0);
 	if(!x)
-		x = IEEE802154_PANID;
+		x = IEEE802154_CONF_PANID;
 	return x;
 #else
 	// TODO: Writeme!
-	return IEEE802154_PANID;
+	return IEEE802154_CONF_PANID;
 #endif
 }
 
@@ -207,7 +206,7 @@ static void initialize(void) {
   clock_init();
 
   /* Use rs232 port for serial out (tx, rx, gnd are the three pads behind jackdaw leds */
-  rs232_init(RS232_PORT_0, BAUD_RATE,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_0, APP_BAUD_RATE, USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
   /* Redirect stdout to second port */
   rs232_redirect_stdout(RS232_PORT_0);
 

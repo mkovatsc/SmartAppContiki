@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, Swedish Institute of Computer Science.
+ * Copyright (c) 2011, Matthias Kovatsch and other contributors.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,13 @@
  * SUCH DAMAGE.
  *
  * This file is part of the Contiki operating system.
- *
+ */
+
+/**
+ * \file
+ *      Jackdaw sensor mote for the Plogg power outlet
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
 /*---------------------------------------------------------------------------*/

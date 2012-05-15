@@ -41,9 +41,9 @@
 #define COOJA 1
 
 #if WITH_UIP
-#if WITH_UIP6
-#error WITH_UIP && WITH_IP6: Bad configuration
-#endif /* WITH_UIP6 */
+#if UIP_CONF_IPV6
+#error WITH_UIP && UIP_CONF_IPV6: Bad configuration
+#endif /* UIP_CONF_IPV6 */
 #endif /* WITH_UIP */
 
 #ifdef NETSTACK_CONF_H
@@ -56,7 +56,7 @@
 #else /* NETSTACK_CONF_H */
 
 /* Default network config */
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK uip_driver
@@ -66,7 +66,7 @@
 #define UIP_CONF_IPV6 1
 #define UIP_CONF_IP_FORWARD           0
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
 #if WITH_UIP
 
@@ -87,7 +87,7 @@
 /*#define NETSTACK_CONF_FRAMER framer_nullmac*/
 
 #endif /* WITH_UIP */
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #endif /* NETSTACK_CONF_H */
 
@@ -105,11 +105,13 @@
 #define CCIF
 #define CLIF
 
+/* These names are deprecated, use C99 names. */
 #include <inttypes.h>
 typedef uint8_t u8_t;
 typedef uint16_t u16_t;
 typedef uint32_t u32_t;
 typedef int32_t s32_t;
+
 typedef unsigned short uip_stats_t;
 
 #define CLOCK_CONF_SECOND 1000L

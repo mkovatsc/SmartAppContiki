@@ -25,22 +25,52 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY 
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
- *
- * @(#)$Id: msp430def.h,v 1.5 2010/03/19 14:50:07 joxe Exp $
  */
 
 #ifndef MSP430DEF_H
 #define MSP430DEF_H
 
+#ifdef __IAR_SYSTEMS_ICC__
+#include <intrinsics.h>
+#include <in430.h>
+#include <msp430.h>
+#define dint() __disable_interrupt()
+#define eint() __enable_interrupt()
+#define __MSP430__ 1
+#define CC_CONF_INLINE
+
+#else /* __IAR_SYSTEMS_ICC__ */
+
+#ifdef __MSPGCC__
+#include <msp430.h>
+#include <legacymsp430.h>
+#else /* __MSPGCC__ */
+#include <io.h>
+#include <signal.h>
+#if !defined(MSP430_MEMCPY_WORKAROUND) && (__GNUC__ < 4)
+#define MSP430_MEMCPY_WORKAROUND 1
+#endif
+#endif /* __MSPGCC__ */
+
+#define CC_CONF_INLINE inline
+
+#endif /* __IAR_SYSTEMS_ICC__ */
+
+#ifndef BV
+#define BV(x) (1 << x)
+#endif
+
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #else
+#ifndef uint8_t
 typedef unsigned char   uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long  uint32_t;
 typedef   signed char    int8_t;
 typedef          short  int16_t;
 typedef          long   int32_t;
+#endif
 #endif /* !HAVE_STDINT_H */
 
 /* These names are deprecated, use C99 names. */
@@ -65,12 +95,12 @@ void msp430_sync_dco(void);
 void   *sbrk(int);
 
 typedef int spl_t;
-void    splx_(spl_t);
+/* void    splx_(spl_t); */
 spl_t   splhigh_(void);
 
 #define splhigh() splhigh_()
 #ifdef __IAR_SYSTEMS_ICC__
-#define splx(sr) sr = __get_SR_register()
+#define splx(sr) __bis_SR_register(sr)
 #else
 #define splx(sr) __asm__ __volatile__("bis %0, r2" : : "r" (sr))
 #endif
@@ -83,27 +113,27 @@ spl_t   splhigh_(void);
 void *w_memcpy(void *out, const void *in, size_t n);
 #define memcpy(dest, src, count) w_memcpy(dest, src, count)
 
-/* #define memcpy(dest, src, count) do {                    \ */
-/*   if(count == 2) {                                       \ */
-/*     *((uint8_t *)dest) = *((uint8_t *)src);              \ */
-/*     *((uint8_t *)dest + 1) = *((uint8_t *)src + 1);      \ */
-/*   } else {                                               \ */
-/*     memcpy(dest, src, count);                            \ */
-/*   }                                                      \ */
-/* } while(0) */
-
 void *w_memset(void *out, int value, size_t n);
 #define memset(dest, value, count) w_memset(dest, value, count)
 
-/* #define memset(dest, value, count) do {                  \ */
-/*   if(count == 2) {                                       \ */
-/*     *((uint8_t *)dest) = (uint8_t)value;                 \ */
-/*     *((uint8_t *)dest + 1) = (uint8_t)value;             \ */
-/*   } else {                                               \ */
-/*     memset(dest, value, count);                          \ */
-/*   }                                                      \ */
-/* } while(0) */
 #endif /* memcpy */
 #endif /* __GNUC__ &&  __MSP430__ && MSP430_MEMCPY_WORKAROUND */
+
+
+/* Moved from the msp430.h file with other msp430 related defines */
+
+#ifdef F_CPU
+#define MSP430_CPU_SPEED F_CPU
+#else
+#define MSP430_CPU_SPEED 2457600UL
+#endif
+
+#define MSP430_REQUIRE_CPUON 0
+#define MSP430_REQUIRE_LPM1 1
+#define MSP430_REQUIRE_LPM2 2
+#define MSP430_REQUIRE_LPM3 3
+
+void msp430_add_lpm_req(int req);
+void msp430_remove_lpm_req(int req);
 
 #endif /* MSP430DEF_H */

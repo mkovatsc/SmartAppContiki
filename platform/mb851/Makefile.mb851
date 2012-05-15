@@ -8,10 +8,6 @@ ifndef CONTIKI_TARGET_MAIN
 CONTIKI_TARGET_MAIN = contiki-main.c #contiki-init-net.c
 endif
 
-ifdef UIP_CONF_IPV6
-CFLAGS += -DWITH_UIP6=1
-endif
-
 CONTIKI_TARGET_SOURCEFILES += $(ARCH) $(CONTIKI_TARGET_MAIN)
 
 MCU=STM32W108
@@ -19,13 +15,11 @@ include $(CONTIKI)/cpu/stm32w108/Makefile.stm32w108
 
 SERIALDUMP = $(CONTIKI)/tools/stm32w/serialdump-linux
 
-ifdef OS
-  ifneq (,$(findstring Windows,$(OS)))
-    SERIALDUMP = $(CONTIKI)/tools/stm32w/serialdump-windows
-  endif
+ifeq ($(HOST_OS),Windows)
+  SERIALDUMP = $(CONTIKI)/tools/stm32w/serialdump-windows
 endif
 
 
 
 login:
-	$(SERIALDUMP) -b115200 -d10000 $(DEV)
+	$(SERIALDUMP) -b115200 -d10000 $(PORT)

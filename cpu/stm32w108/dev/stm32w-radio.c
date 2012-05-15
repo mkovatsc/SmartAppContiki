@@ -199,6 +199,7 @@ const struct radio_driver stm32w_radio_driver =
     stm32w_radio_transmit,
     stm32w_radio_send,
     stm32w_radio_read,
+    stm32w_radio_set_channel,
     stm32w_radio_channel_clear,
     stm32w_radio_receiving_packet,
     stm32w_radio_pending_packet,
@@ -227,12 +228,9 @@ static int stm32w_radio_init(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
-int stm32w_radio_set_channel(u8_t channel)
+void stm32w_radio_set_channel(unsigned short channel)
 {
-  if (ST_RadioSetChannel(channel) == ST_SUCCESS)
-    return 0;
-  else
-    return 1;
+  ST_RadioSetChannel(channel);
 }
 /*---------------------------------------------------------------------------*/
 static int wait_for_tx(void){
@@ -300,7 +298,7 @@ static int stm32w_radio_transmit(unsigned short payload_len)
       PRINTF("stm32w: sending %d bytes\r\n", payload_len);
         
 #if DEBUG > 1
-      for(u8_t c=1; c <= stm32w_txbuf[0]-2; c++){
+      for(uint8_t c=1; c <= stm32w_txbuf[0]-2; c++){
         PRINTF("%x:",stm32w_txbuf[c]);
       }
       PRINTF("\r\n");
@@ -395,7 +393,11 @@ static int stm32w_radio_on(void)
   
   return 1;
 }
-
+/*---------------------------------------------------------------------------*/
+int stm32w_radio_is_on(void)
+{
+  return onoroff == ON;
+}
 /*---------------------------------------------------------------------------*/
 
 
@@ -499,7 +501,7 @@ PROCESS_THREAD(stm32w_radio_process, ev, data)
     PRINTF("stm32w_radio_process: calling receiver callback\r\n");
     
 #if DEBUG > 1
-    for(u8_t c=1; c <= RCVD_PACKET_LEN; c++){
+    for(uint8_t c=1; c <= RCVD_PACKET_LEN; c++){
       PRINTF("%x",stm32w_rxbuf[c]);
     }
     PRINTF("\r\n");
@@ -512,7 +514,7 @@ PROCESS_THREAD(stm32w_radio_process, ev, data)
       NETSTACK_RDC.input();
     }
     if(!RXBUFS_EMPTY()){
-      // Some data packet still in rx buffer (this appens because process_poll doesn't queue requests),
+      // Some data packet still in rx buffer (this happens because process_poll doesn't queue requests),
       // so stm32w_radio_process need to be called again.
       process_poll(&stm32w_radio_process);
     }

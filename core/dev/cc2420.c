@@ -40,12 +40,6 @@
 
 #if defined(__AVR__)
 #include <avr/io.h>
-#elif defined(__MSP430__)
-#ifdef __IAR_SYSTEMS_ICC__
-#include <io430.h>
-#else
-#include <io.h>
-#endif
 #endif
 
 #include "dev/leds.h"
@@ -155,7 +149,7 @@ const struct radio_driver cc2420_driver =
     cc2420_transmit,
     cc2420_send,
     cc2420_read,
-    /* cc2420_set_channel, */
+    cc2420_set_channel,
     /* detected_energy, */
     cc2420_cca,
     cc2420_receiving_packet,
@@ -295,11 +289,11 @@ cc2420_init(void)
 
   /* Turn on voltage regulator and reset. */
   SET_VREG_ACTIVE();
-  //clock_delay(250); OK
+  clock_delay(250);
   SET_RESET_ACTIVE();
   clock_delay(127);
   SET_RESET_INACTIVE();
-  //clock_delay(125); OK
+  clock_delay(125);
 
 
   /* Turn on the crystal oscillator. */
@@ -543,8 +537,8 @@ cc2420_get_channel(void)
   return channel;
 }
 /*---------------------------------------------------------------------------*/
-int
-cc2420_set_channel(int c)
+void
+cc2420_set_channel(unsigned short c)
 {
   uint16_t f;
 
@@ -573,7 +567,6 @@ cc2420_set_channel(int c)
   }
 
   RELEASE_LOCK();
-  return 1;
 }
 /*---------------------------------------------------------------------------*/
 void

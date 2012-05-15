@@ -8,11 +8,13 @@
 #include "static-routing.h"
 #endif
 
-#include "rest-engine.h"
+#include "erbium.h"
 #if WITH_COAP==3
-#include "coap-03-rest-engine.h"
+#include "er-coap-03-engine.h"
 #elif WITH_COAP==6
-#include "coap-06-rest-engine.h"
+#include "er-coap-06-engine.h"
+#elif WITH_COAP==7
+#include "er-coap-07-engine.h"
 #endif
 
 #ifndef CONTIKI_TARGET_MINIMAL_NET

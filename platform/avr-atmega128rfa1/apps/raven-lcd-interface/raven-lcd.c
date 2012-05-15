@@ -76,17 +76,17 @@
 #include <avr/sleep.h>
 #include <dev/watchdog.h>
 
-static u8_t count = 0;
-static u8_t seqno;
+static uint8_t count = 0;
+static uint8_t seqno;
 uip_ipaddr_t dest_addr;
 
 #define MAX_CMD_LEN 20
 static struct{
-    u8_t frame[MAX_CMD_LEN];
-    u8_t ndx;
-    u8_t len;
-    u8_t cmd;
-    u8_t done;
+    uint8_t frame[MAX_CMD_LEN];
+    uint8_t ndx;
+    uint8_t len;
+    uint8_t cmd;
+    uint8_t done;
 } cmd;
 
 #define UIP_IP_BUF                ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
@@ -101,7 +101,11 @@ void rs232_send(uint8_t port, unsigned char c);
 void
 raven_ping6(void)
 {
-#define PING_GOOGLE 0
+#if UIP_CONF_IPV6_RPL||1
+/* No default router, so pick on someone else */
+#define PING_GOOGLE 1
+seqno++;
+#endif
 
     UIP_IP_BUF->vtc = 0x60;
     UIP_IP_BUF->tcflow = 1;
@@ -134,8 +138,8 @@ raven_ping6(void)
      
     
     uip_len = UIP_ICMPH_LEN + UIP_ICMP6_ECHO_REQUEST_LEN + UIP_IPH_LEN + PING6_DATALEN;
-    UIP_IP_BUF->len[0] = (u8_t)((uip_len - 40) >> 8);
-    UIP_IP_BUF->len[1] = (u8_t)((uip_len - 40) & 0x00FF);
+    UIP_IP_BUF->len[0] = (uint8_t)((uip_len - 40) >> 8);
+    UIP_IP_BUF->len[1] = (uint8_t)((uip_len - 40) & 0x00FF);
     
     UIP_ICMP_BUF->icmpchksum = 0;
     UIP_ICMP_BUF->icmpchksum = ~uip_icmp6chksum();
@@ -220,8 +224,8 @@ void micro_sleep(uint8_t howlong)
        sleep_mode();                            // Sleep
 
        /* Adjust clock.c for the time spent sleeping */
-       extern void clock_adjust_seconds(uint8_t howmany);
-       clock_adjust_seconds(howlong);
+       extern void clock_adjust_ticks(uint16_t howmany);
+       clock_adjust_ticks(howlong * CLOCK_SECOND);
 
 //     if (TIMSK2&(1<<OCIE2A)) break;           // Exit sleep if not awakened by TIMER2
        PRINTF(".");
@@ -258,13 +262,13 @@ ISR(TIMER2_COMPA_vect)
 #endif /* !AVR_CONF_USE32KCRYSTAL */
 
 #if DEBUGSERIAL
-u8_t serialcount;
+uint8_t serialcount;
 char dbuf[30];
 #endif 
 
 /*---------------------------------------------------------------------------*/
 extern uint16_t ledtimer;
-static u8_t
+static uint8_t
 raven_gui_loop(process_event_t ev, process_data_t data)
 {
     uint8_t i,activeconnections,radio_state;
@@ -291,7 +295,9 @@ raven_gui_loop(process_event_t ev, process_data_t data)
     case ICMP6_ECHO_REQUEST:
         /* We have received a ping request over the air. Tell the 3290 */
  //       send_frame(REPORT_PING_BEEP, 0, 0);
+#if RF230BB_CONF_LEDONPORTE1
           PORTE|=(1<<PE1);ledtimer=1000; //turn on led, set counter for turnoff
+#endif
         break;
     case ICMP6_ECHO_REPLY:
         /* We have received a ping reply over the air.  Send frame back to 3290 */

@@ -7,14 +7,15 @@ ARCH=spi.c ds2411.c xmem.c i2c.c node-id.c sensors.c cfs-coffee.c \
 
 CONTIKI_TARGET_DIRS = . dev apps net
 ifndef CONTIKI_TARGET_MAIN
-CONTIKI_TARGET_MAIN = contiki-sky-main.c
+	CONTIKI_TARGET_MAIN = contiki-sky-main.c
 endif
 
-ifdef UIP_CONF_IPV6
-CFLAGS += -DWITH_UIP6=1
+ifdef IAR
+CFLAGS += -D__MSP430F1611__=1 -e --vla -Ohz --multiplier=16s --core=430 --double=32
+CFLAGSNO = --dlib_config "$(IAR_PATH)/LIB/DLIB/dl430fn.h" $(CFLAGSWERROR)
 endif
 
-CONTIKI_TARGET_SOURCEFILES += $(ARCH) $(UIPDRIVERS) $(CONTIKI_TARGET_MAIN)
+CONTIKI_TARGET_SOURCEFILES += $(ARCH) $(UIPDRIVERS)
 
 MCU=msp430x1611
 include $(CONTIKI)/cpu/msp430/Makefile.msp430
@@ -23,33 +24,36 @@ contiki-$(TARGET).a: ${addprefix $(OBJECTDIR)/,symbols.o}
 #	$(AR) rcf $@ $^
 
 
+ifdef IAR
+LDFLAGSNO += -B -xm "$(IAR_PATH)/lib/dlib/dl430fn.r43" -f "$(IAR_PATH)/config/lnk430f1611.xcl" -l contiki-$(TARGET).map -s __program_start -D_STACK_SIZE=80 -D_DATA16_HEAP_SIZE=80 -D_DATA20_HEAP_SIZE=80
+LDFLAGS += $(LDFLAGSNO) -Felf -yn
+endif # IAR
+
 NUMPAR=20
 IHEXFILE=tmpimage.ihex
 
 # Check if we are running under Windows
-ifdef OS
-  ifneq (,$(findstring Windows,$(OS)))
-    USBDEVPREFIX=/dev/com
-    SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-windows
-    MOTELIST = $(CONTIKI)/tools/sky/motelist-windows
-    TMOTE_BSL_FILE = tmote-bsl
-    TMOTE_BSL=$(if $(wildcard $(CONTIKI)/tools/sky/$(TMOTE_BSL_FILE).exe),1,0)
-    ifeq ($(TMOTE_BSL), 1)
-      NUMPAR = 1
-      BSL =  $(CONTIKI)/tools/sky/$(TMOTE_BSL_FILE)
-      MOTES = $(shell $(MOTELIST) | grep COM | \
-         cut -f 4 -d \  )
-    else
-      BSL = $(CONTIKI)/tools/sky/msp430-bsl-windows --telosb
-      BSL_FILETYPE = -I
-      MOTES = $(shell $(MOTELIST) | grep COM | \
-         cut -f 4 -d \  | \
-         perl -ne 'print $$1 - 1 . " " if(/COM(\d+)/);')
-    endif
-    CMOTES = $(shell $(MOTELIST) | grep COM | \
+ifeq ($(HOST_OS),Windows)
+  USBDEVPREFIX=/dev/com
+  SERIALDUMP = $(CONTIKI)/tools/sky/serialdump-windows
+  MOTELIST = $(CONTIKI)/tools/sky/motelist-windows
+  TMOTE_BSL_FILE = tmote-bsl
+  TMOTE_BSL=$(if $(wildcard $(CONTIKI)/tools/sky/$(TMOTE_BSL_FILE).exe),1,0)
+  ifeq ($(TMOTE_BSL), 1)
+    NUMPAR = 1
+    BSL =  $(CONTIKI)/tools/sky/$(TMOTE_BSL_FILE)
+    MOTES = $(shell $(MOTELIST) | grep COM | \
+       cut -f 4 -d \  )
+  else
+    BSL = $(CONTIKI)/tools/sky/msp430-bsl-windows --telosb
+    BSL_FILETYPE = -I
+    MOTES = $(shell $(MOTELIST) | grep COM | \
        cut -f 4 -d \  | \
-       perl -ne 'print $$1 . " " if(/COM(\d+)/);')
+       perl -ne 'print $$1 - 1 . " " if(/COM(\d+)/);')
   endif
+  CMOTES = $(shell $(MOTELIST) | grep COM | \
+     cut -f 4 -d \  | \
+     perl -ne 'print $$1 . " " if(/COM(\d+)/);')
 endif
 
 # If we are not running under Windows, we assume Linux
@@ -72,6 +76,8 @@ ifndef MOTELIST
      perl -ne 'print $$1 . " " if(m-(/dev/\w+)-);')
   CMOTES=$(MOTES)
 endif
+
+motelist: sky-motelist
 
 sky-motelist:
 	$(MOTELIST)

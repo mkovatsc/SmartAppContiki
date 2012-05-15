@@ -47,7 +47,7 @@
 
 #include "platform-conf.h"
 
-#if WITH_UIP6
+#if UIP_CONF_IPV6
 
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
@@ -56,11 +56,11 @@
 #define NETSTACK_CONF_FRAMER  framer_802154
 
 #define CC2420_CONF_AUTOACK              1
-#define MAC_CONF_CHANNEL_CHECK_RATE      8
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
 #define CXMAC_CONF_ANNOUNCEMENTS         0
 
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 
 /* Network setup for non-IPv6 (rime). */
 
@@ -70,7 +70,7 @@
 #define NETSTACK_CONF_FRAMER  framer_802154
 
 #define CC2420_CONF_AUTOACK              1
-#define MAC_CONF_CHANNEL_CHECK_RATE      8
+#define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE     8
 
 #define COLLECT_CONF_ANNOUNCEMENTS       1
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 1
@@ -81,7 +81,7 @@
 
 #define COLLECT_NEIGHBOR_CONF_MAX_NEIGHBORS      32
 
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
@@ -102,7 +102,7 @@
 #define PROCESS_CONF_NUMEVENTS 8
 #define PROCESS_CONF_STATS 1
 
-#ifdef WITH_UIP6
+#if UIP_CONF_IPV6
 
 #define RIMEADDR_CONF_SIZE              8
 
@@ -144,14 +144,14 @@
 #endif /* SICSLOWPAN_CONF_FRAG */
 #define SICSLOWPAN_CONF_CONVENTIONAL_MAC	1
 #define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS       2
-#else /* WITH_UIP6 */
+#else /* UIP_CONF_IPV6 */
 #define UIP_CONF_IP_FORWARD      1
 #define UIP_CONF_BUFFER_SIZE     128
-#endif /* WITH_UIP6 */
+#endif /* UIP_CONF_IPV6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH 1
 
-#if !WITH_UIP && !WITH_UIP6
+#if !WITH_UIP && !UIP_CONF_IPV6
 #define QUEUEBUF_CONF_NUM          8
 #else
 #define QUEUEBUF_CONF_NUM          4
