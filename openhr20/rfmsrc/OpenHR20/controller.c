@@ -50,7 +50,7 @@ uint8_t CTL_temp_wanted_last=0xff;   // desired temperature value used for last 
 uint8_t CTL_temp_auto=0;   // actual desired temperature by timer
 uint8_t CTL_valve_wanted=0;
 
-enum mode CTL_mode_auto = timers;   // actual desired temperature by timer
+enum mode CTL_mode_auto = auto_timers;   // actual desired temperature by timer
 uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
 #if (HW_WINDOW_DETECTION)
 	static uint8_t window_timer=AVERAGE_LEN+1;
@@ -138,9 +138,18 @@ void CTL_update(bool minute_ch) {
     if ( minute_ch || (CTL_temp_auto==0) ) {
         // minutes changed or we need return to timers
         uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
+	uint8_t border = RTC_ActualTimerTemperature(true);
+	if (border){
+		if(CTL_mode_auto >= 2){
+			CTL_mode_auto=auto_timers;
+		}
+		else{
+			CTL_mode_auto=manual_timers;
+		}
+	}
         if (t!=0) {
             CTL_temp_auto=t;
-            if (CTL_mode_auto==timers) {
+            if (CTL_mode_auto==manual_timers || CTL_mode_auto==auto_timers) {
                 CTL_temp_wanted=CTL_temp_auto;
                 if ((PID_force_update<0)&&(CTL_temp_wanted!=CTL_temp_wanted_last)) {
                     PID_force_update=0;
@@ -156,15 +165,16 @@ void CTL_update(bool minute_ch) {
 		  }
 		}
 	#endif
-
-    CTL_window_detection();
+    if (!(CTL_mode_auto >=2 )){
+	    CTL_window_detection();
+    }
     if (PID_update_timeout>0) PID_update_timeout--;
     if (PID_force_update>0) { 
 		PID_force_update--;
 	} else if ((PID_update_timeout == 0)||(PID_force_update==0)) {
         uint8_t temp;
-        if ((CTL_temp_wanted<TEMP_MIN) || mode_window()) {
-            temp = TEMP_MIN;  // frost protection to TEMP_MIN
+        if (((CTL_temp_wanted<TEMP_MIN) || mode_window()) ) {
+            temp = TEMP_MIN;	// frost protection to TEMP_MIN 
         } else {
             temp = CTL_temp_wanted;
         }
@@ -173,14 +183,14 @@ void CTL_update(bool minute_ch) {
 			CTL_temp_wanted_last=temp;
 			goto UPDATE_NOW; // optimize
 		}
-		if (CTL_mode_auto==valve){
+		if (CTL_mode_auto==auto_valve){
 			goto UPDATE_NOW;
 		}
         if ((PID_update_timeout == 0)) {
 			UPDATE_NOW:
             PID_update_timeout = (config.PID_interval * 5); // new PID pooling
 			uint8_t new_valve;
-			if (CTL_mode_auto==valve){
+			if (CTL_mode_auto==auto_valve){
 				new_valve=CTL_valve_wanted;
 			}
 			else{
@@ -215,22 +225,24 @@ void CTL_update(bool minute_ch) {
         PID_force_update = -1; // invalid value = not used
     }
     // batt error detection
+    // TODO: send Battery warning???
     if (bat_average) {
-		if (bat_average < 20*(uint16_t)config.bat_low_thld) {
-    	    CTL_error |=  CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING;
-	    } else {
-	        if (bat_average < 20*(uint16_t)config.bat_warning_thld) {
-	            CTL_error |=  CTL_ERR_BATT_WARNING;
-				#if (BATT_ERROR_REVERSIBLE)
-	            	CTL_error &= ~CTL_ERR_BATT_LOW;
-				#endif
-	        } else {
-				#if (BATT_ERROR_REVERSIBLE)
-	            	CTL_error &= ~(CTL_ERR_BATT_WARNING|CTL_ERR_BATT_LOW);
-				#endif
-	        }
-	    }
+	if (bat_average < 20*(uint16_t)config.bat_low_thld) {
+   		CTL_error |=  CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING;
 	}
+	else {
+		if (bat_average < 20*(uint16_t)config.bat_warning_thld) {
+	        	CTL_error |=  CTL_ERR_BATT_WARNING;
+			#if (BATT_ERROR_REVERSIBLE)
+	            	CTL_error &= ~CTL_ERR_BATT_LOW;
+			#endif
+	        } else {
+			#if (BATT_ERROR_REVERSIBLE)
+	            	CTL_error &= ~(CTL_ERR_BATT_WARNING|CTL_ERR_BATT_LOW);
+			#endif
+	        }
+	}
+    }
 }
 
 /*!
@@ -269,31 +281,66 @@ void CTL_valve_change_inc (int8_t ch) {
 }
 
 static uint8_t menu_temp_rewoke;
+static uint8_t target_temp_rewoke;
+static uint8_t target_valve_rewoke;
+static uint8_t mode_auto_rewoke;
+
 /*!
  *******************************************************************************
  *  Change controller mode
  *
  ******************************************************************************/
 void CTL_change_mode(int8_t m) {
-    if (m == CTL_CHANGE_MODE) {
-        // change
-  		menu_temp_rewoke=CTL_temp_auto;
-        CTL_mode_auto=(CTL_mode_auto==valve)?manual:++CTL_mode_auto;
-        PID_force_update = 9;
-    } else if (m == CTL_CHANGE_MODE_REWOKE) {
-        //rewoke
-  		CTL_temp_auto=menu_temp_rewoke;
-        CTL_mode_auto=(CTL_mode_auto==valve)?manual:++CTL_mode_auto;
-        PID_force_update = 9;
-    } else {
-        if (m >= 0) CTL_mode_auto=m;
-        PID_force_update = 9;
-    }
-    if ( (CTL_mode_auto == timers) && (m != CTL_CHANGE_MODE_REWOKE)) {
-    	CTL_temp_wanted=(CTL_temp_auto=RTC_ActualTimerTemperature(false));
-    	// CTL_temp_auto=0;  //refresh wanted temperature in next step
-    }
-    CTL_mode_window = 0;
+
+  	if (m == CTL_CHANGE_AUTO) {
+        	// Save vars for rewoke
+		menu_temp_rewoke=CTL_temp_auto;	
+		target_temp_rewoke=CTL_temp_wanted;
+		target_valve_rewoke=CTL_valve_wanted;
+		mode_auto_rewoke=CTL_mode_auto;
+		
+		if (CTL_mode_auto >=2){ 	
+			//Was in auto, go into manual mode
+			CTL_mode_auto = manual_timers;
+		}
+		else{
+			//Was in manual mode, go into auto
+			CTL_mode_auto = auto_timers;
+		}
+        	PID_force_update = 9;
+
+	} else if ((m == CTL_CHANGE_MINOR_MODE)) {   
+        	// Save vars for rewoke
+		menu_temp_rewoke=CTL_temp_auto;	
+		target_temp_rewoke=CTL_temp_wanted;
+		target_valve_rewoke=CTL_valve_wanted;
+		mode_auto_rewoke=CTL_mode_auto;
+		
+		if(!(CTL_mode_auto >= 2)){
+			CTL_mode_auto=CTL_mode_auto ^ 1;
+		}
+        	PID_force_update = 9;
+	
+		// CTL_CHANGE_MINOR_MODE triggers nothing in auto mode, so not handled here
+
+	}else if( m == CTL_CHANGE_MODE_REWOKE){
+	
+		CTL_temp_auto=menu_temp_rewoke;
+		CTL_temp_wanted=target_temp_rewoke;
+		CTL_valve_wanted=target_valve_rewoke;
+		CTL_mode_auto=mode_auto_rewoke;
+		
+        	PID_force_update = 9;
+
+   	} else {				//direct set, from uart;
+        	if (m >= 0) CTL_mode_auto=m;
+        	PID_force_update = 9;
+    	}
+    	if ( ((CTL_mode_auto == manual_timers) || (CTL_mode_auto== auto_timers)) && (m != CTL_CHANGE_MODE_REWOKE)) { //If set to timers, set correct target temp
+    		CTL_temp_wanted=(CTL_temp_auto=RTC_ActualTimerTemperature(false));
+    		// CTL_temp_auto=0;  //refresh wanted temperature in next step
+    	}	
+ 	CTL_mode_window = 0;
 }
 
 //! Summation of errors, used for integrate calculations

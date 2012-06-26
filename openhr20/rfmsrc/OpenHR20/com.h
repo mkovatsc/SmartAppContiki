@@ -43,7 +43,7 @@ void COM_init(void);
 
 void COM_print_debug(uint8_t type);
 
-void COM_commad_parse (void);
+void COM_command_parse (void);
 #if RFM==1
     void COM_wireless_command_parse (uint8_t * rfm_framebuf, uint8_t rfm_framepos);
 #endif
@@ -67,3 +67,5 @@ void COM_debug_print_temperature(uint16_t t);
 void COM_putchar(char c);
 void COM_flush (void);
 void COM_printStr16 (const char * s, uint16_t x);
+
+void COM_send_wheel_tick(int8_t tick);

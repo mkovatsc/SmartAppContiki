@@ -38,11 +38,13 @@ extern uint8_t CTL_valve_wanted; //!< wanted valve (just valid in the valve mode
 extern uint8_t CTL_temp_wanted_last;   // desired temperatur value used for last PID control
 extern uint8_t CTL_temp_auto;
 
-enum mode {manual=0, timers=1, valve=2};
+enum mode {manual_target=0, manual_timers=1, auto_target=2, auto_valve=3, auto_timers=4};
+
 extern enum mode CTL_mode_auto;
 extern int8_t PID_force_update;      // signed value, val<0 means disable force updates
 extern uint8_t CTL_error;
 extern uint8_t CTL_mode_window;
+
 
 #define mode_window() (CTL_mode_window!=0)
 
@@ -59,9 +61,11 @@ void CTL_temp_change_inc (int8_t ch);
 void CTL_valve_change_inc (int8_t ch);
 
 
-#define CTL_CHANGE_MODE        -1
-#define CTL_CHANGE_MODE_REWOKE -2
-#define CTL_CLOSE_WINDOW_FORCE -3
+#define CTL_CHANGE_AUTO        		-1
+#define CTL_CHANGE_MINOR_MODE  		-2
+#define CTL_CHANGE_MODE_REWOKE		-3
+#define CTL_CLOSE_WINDOW_FORCE 		-4
+
 void CTL_change_mode(int8_t dif);
 
 #define DEFINE_INTEGRATOR_BLOCK 6

@@ -53,7 +53,7 @@
 
 
 #define TX_BUFF_SIZE 128
-#define RX_BUFF_SIZE 32
+#define RX_BUFF_SIZE 64
 
 #define ENABLE_LOCAL_COMMANDS 1
 
@@ -64,6 +64,8 @@ static uint8_t tx_buff_in=0;
 static uint8_t tx_buff_out=0;
 static uint8_t rx_buff_in=0;
 static uint8_t rx_buff_out=0;
+
+
 
 /*!
  *******************************************************************************
@@ -104,6 +106,7 @@ static volatile uint8_t COM_requests;
  ******************************************************************************/
 void COM_rx_char_isr(char c) {
 	if (c!='\0') {  // ascii based protocol, \0 char is not alloweed, ignore it
+
  		if (c=='\r') c='\n';  // mask diffrence between operating systems
 		rx_buff[rx_buff_in++]=c;
 		rx_buff_in%=RX_BUFF_SIZE;
@@ -111,6 +114,7 @@ void COM_rx_char_isr(char c) {
 			rx_buff_out++;
 			rx_buff_out%=RX_BUFF_SIZE;
 		}
+		
 		if (c=='\n') {
 			task |= TASK_COM;
 			COM_requests++;
@@ -172,6 +176,28 @@ static void print_decXX(uint8_t i) {
 	COM_putchar(i%10+'0');
 }
 
+
+/*!
+ *******************************************************************************
+ *  \brief helper function print 3 digit dec number
+ *
+ *  \note only unsigned numbers
+ ******************************************************************************/
+static void print_decXXX(uint8_t i) {
+	if (i>=100) {
+		COM_putchar(i/100+'0');
+		i%=100;
+	}
+	else{
+		COM_putchar('0');
+	}
+	COM_putchar(i/10+'0');
+	COM_putchar(i%10+'0');
+}
+
+
+
+
 /*!
  *******************************************************************************
  *  \brief helper function print 4 digit dec number
@@ -183,9 +209,11 @@ static void print_decXXXX(uint16_t i) {
 	print_decXX(i%100);
 }
 
+
+
 /*!
  *******************************************************************************
- *  \brief helper function print 2 digit dec number
+ *  \brief helper function print 2 digit hex number
  *
  *  \note only unsigned numbers
  ******************************************************************************/
@@ -204,9 +232,10 @@ static void print_hexXX(uint8_t i) {
 	}	
 }
 
+
 /*!
  *******************************************************************************
- *  \brief helper function print 4 digit dec number
+ *  \brief helper function print 4 digit hex number
  *
  *  \note
  ******************************************************************************/
@@ -266,6 +295,22 @@ void COM_init(void) {
 
 /*!
  *******************************************************************************
+ *  \brief Print Wheel Ticks *
+ *  \note
+ ******************************************************************************/
+void COM_send_wheel_tick(int8_t t){
+	COM_putchar('E');
+	COM_putchar('W');
+	uint8_t ticks = (uint8_t) t+128;
+	print_decXXX(ticks);
+	COM_putchar('\n');
+	COM_flush();
+}
+
+
+
+/*!
+ *******************************************************************************
  *  \brief Print debug line
  *
  *  \note
@@ -287,16 +332,24 @@ void COM_print_debug(uint8_t type) {
 	print_decXX(RTC_GetSecond());
 	COM_putchar(' ');
 	switch(CTL_mode_auto){
-		case manual:
+		case manual_target:
 			COM_putchar('M');
+			COM_putchar('T');
 			break;
-		case timers:
+		case manual_timers:
+			COM_putchar('M');
+			COM_putchar('P');
+			break;
+		case auto_target:
 			COM_putchar('A');
+			COM_putchar('T');
 			break;
-		case valve:
+		case auto_valve:
+			COM_putchar('A');
 			COM_putchar('V');
 			break;
 		default:
+			COM_putchar('-');
 			COM_putchar('-');
 	}
 	print_s_p(PSTR(" V: "));
@@ -437,7 +490,7 @@ static void print_idx(char t, uint8_t i) {
  * 	\note	Lxx\n - Lock keys, and return lock status (00=unlock, 01=lock, 02=status only)
  *	
  ******************************************************************************/
-void COM_commad_parse (void) {
+void COM_command_parse (void) {
 	char c;
 	while (COM_requests) {
         switch(c=COM_getchar()) {
@@ -453,7 +506,7 @@ void COM_commad_parse (void) {
 		case 'T':
 			{
 				if (COM_hex_parse(1*2)!='\0') { break; }
-                print_idx(c,com_hex[0]);
+             			print_idx(c,com_hex[0]);
   				print_hexXXXX(watch(com_hex[0]));
 			}
 			break;
@@ -468,10 +521,10 @@ void COM_commad_parse (void) {
   					eeprom_config_save(com_hex[0]);
   				}
 			}
-            print_idx(c,com_hex[0]);
+            		print_idx(c,com_hex[0]);
 			if (com_hex[0]==0xff) {
 			     print_hexXX(EE_LAYOUT);
-            } else {
+		            } else {
 			     print_hexXX(config_raw[com_hex[0]]);
 			}
 			break;
@@ -482,16 +535,16 @@ void COM_commad_parse (void) {
 			} else {
 				if (COM_hex_parse(3*2)!='\0') { break; }
   				RTC_DowTimerSet(
-                    com_hex[0]>>4, 
-                    com_hex[0]&0xf, 
-                    (((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]), 
-                    (com_hex[1])>>4);
+		                com_hex[0]>>4, 
+        			com_hex[0]&0xf, 
+	                	(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]), 
+        		        (com_hex[1])>>4);
 				CTL_update_temp_auto();
 				menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
 			}
-            print_idx(c,com_hex[0]);
+		        print_idx(c,com_hex[0]);
 			print_hexXXXX(eeprom_timers_read_raw(
-                timers_get_raw_index((com_hex[0]>>4),(com_hex[0]&0xf))));
+                	timers_get_raw_index((com_hex[0]>>4),(com_hex[0]&0xf))));
 			break;
 		case 'Y':
 			if (COM_hex_parse(3*2)!='\0') { break; }
@@ -507,36 +560,39 @@ void COM_commad_parse (void) {
 			COM_print_debug(1);
 			c='\0';
 			break;
-		case 'B':
+		case 'B':  //RESET
 			{
-				if (COM_hex_parse(2*2)!='\0') { break; }
-  				if ((com_hex[0]==0x13) && (com_hex[1]==0x24)) {
-                      cli();
-                      wdt_enable(WDTO_15MS); //wd on,15ms
-                      while(1); //loop till reset
+			if (COM_hex_parse(2*2)!='\0') { break; }
+  			if ((com_hex[0]==0x13) && (com_hex[1]==0x24)) {
+				cli();
+		                wdt_enable(WDTO_15MS); //wd on,15ms
+                		while(1); //loop till reset
     			}
 			}
 			break;
-        case 'M':
-            if (COM_hex_parse(1*2)!='\0') { break; }
-			if (com_hex[0]>=0 && com_hex[0]<=2)
-            	CTL_change_mode(com_hex[0]);
-            COM_print_debug(1);
-            break;
-        case 'A':
-            if (COM_hex_parse(1*2)!='\0') { break; }
-            if (com_hex[0]<TEMP_MIN-1) { break; }
-            if (com_hex[0]>TEMP_MAX+1) { break; }
-			if (CTL_mode_auto==manual)
-            	CTL_set_temp(com_hex[0]);
-            COM_print_debug(1);
-			c='\0';
-            break;
-        case 'L':
-            if (COM_hex_parse(1*2)!='\0') { break; }
-            if (com_hex[0]<=1) menu_locked=com_hex[0];
-            print_hexXX(menu_locked);
-            break;
+	        case 'M':
+        		if (COM_hex_parse(1*2)!='\0') { break; }
+			if (com_hex[0]>=0 && com_hex[0]<=3){
+		            	CTL_change_mode(com_hex[0]);
+            			COM_print_debug(1);
+				c='\0';
+			        break;
+			}
+	       case 'A':
+            		if (COM_hex_parse(1*2)!='\0') { break; }
+            		if (com_hex[0]<TEMP_MIN-1) { break; }
+            		if (com_hex[0]>TEMP_MAX+1) { break; }
+			if (CTL_mode_auto==manual_target){
+			     	CTL_set_temp(com_hex[0]);
+				COM_print_debug(1);
+				c='\0';
+			        break;
+			}
+     		case 'L':
+        		if (COM_hex_parse(1*2)!='\0') { break; }
+		        if (com_hex[0]<=1) menu_locked=com_hex[0];
+		        print_hexXX(menu_locked);
+            		break;
 		case 'E':
 			if (COM_hex_parse(1*2)!='\0') { break; }
 			if (com_hex[0]>config.valve_max) {
@@ -552,25 +608,41 @@ void COM_commad_parse (void) {
 			c='\0';
 			break;
 #endif
-		//case '\n':
-		//case '\0':
+		case '\n':
+		case '\0':
 		default:
 			c='\0';
 			break;
 		}
-		if (c!='\0') COM_putchar('\n');
-		COM_flush();
-		#if (RFM==1)
-		  rfm_start_tx();
-		#endif
+	if (c!='\0') COM_putchar('\n');
+	COM_flush();
+	#if (RFM==1)
+	  rfm_start_tx();
+	#endif
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #if RFM==1
 static void COM_wireless_word(uint16_t w) {
     wireless_putchar(w>>8);
     wireless_putchar(w&0xff); 
 }
+
 
 /*!
  *******************************************************************************

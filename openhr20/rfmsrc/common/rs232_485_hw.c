@@ -62,7 +62,8 @@ ISR(USART_RXC_vect)
 {
 	#ifdef _AVR_IOM169P_H_
 		COM_rx_char_isr(UDR0);	// Add char to input buffer
-		UCSR0B &= ~(_BV(RXEN0)|_BV(RXCIE0)); // disable receive
+		//UCSR0B &= ~(_BV(RXEN0)|_BV(RXCIE0)); // disable receive
+		UCSR0B &= ~(_BV(RXCIE0)); // disable receive
 	#elif defined(_AVR_IOM169_H_) || defined(_AVR_IOM16_H_) || defined(_AVR_IOM32_H_)
 		COM_rx_char_isr(UDR);	// Add char to input buffer
 		#if !defined(MASTER_CONFIG_H)
@@ -148,7 +149,7 @@ void RS_Init(void)
 	
 	// Baudrate
 	//long ubrr_val = ((F_CPU)/(baud*8L)-1);
-	uint16_t ubrr_val = ((F_CPU)/(COM_BAUD_RATE*8L)-1);
+	uint16_t ubrr_val = ((F_CPU)/(COM_BAUD_RATE*8L)-4);
  
 	#ifdef _AVR_IOM169P_H_
 		UCSR0A = _BV(U2X0);

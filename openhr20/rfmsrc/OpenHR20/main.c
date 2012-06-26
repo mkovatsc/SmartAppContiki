@@ -128,207 +128,196 @@ int __attribute__ ((noreturn)) main(void)
     ***************************************************************************/
     for (;;){
 		// go to sleep with ADC conversion start
-		asm volatile ("cli");
-        if (
-          ! task &&
-          ((ASSR & (_BV(OCR2UB)|_BV(TCN2UB)|_BV(TCR2UB))) == 0) // ATmega169 datasheet chapter 17.8.1
-            ) {
+	asm volatile ("cli");
+        if (! task && ((ASSR & (_BV(OCR2UB)|_BV(TCN2UB)|_BV(TCR2UB))) == 0)) {  // ATmega169 datasheet chapter 17.8.1
   			// nothing to do, go to sleep
-            if(timer0_need_clock() || RS_need_clock()) {
-			    SMCR = (0<<SM1)|(0<<SM0)|(1<<SE); // Idle mode
-            } else {
+        	if(timer0_need_clock() || RS_need_clock()) {
+			SMCR = (0<<SM1)|(0<<SM0)|(1<<SE); // Idle mode
+		}
+		else {
     			if (sleep_with_ADC) {
     				SMCR = (0<<SM1)|(1<<SM0)|(1<<SE); // ADC noise reduction mode
-				} else {
+			}
+			else {
 				    SMCR = (1<<SM1)|(1<<SM0)|(1<<SE); // Power-save mode
-                }
-            }
+               		}
+            	}
 
-			if (sleep_with_ADC) {
-				sleep_with_ADC=false;
-				// start conversions
-		        ADCSRA |= (1<<ADSC);
-			}
-
-			DEBUG_BEFORE_SLEEP();
-			asm volatile ("sei");	//  sequence from ATMEL datasheet chapter 6.8.
-			asm volatile ("sleep");
-			asm volatile ("nop");
-			DEBUG_AFTER_SLEEP();
-			SMCR = (1<<SM1)|(1<<SM0)|(0<<SE); // Power-save mode
-		} else {
-			asm volatile ("sei");
+		if (sleep_with_ADC) {
+			sleep_with_ADC=false;
+			// start conversions
+			ADCSRA |= (1<<ADSC);
 		}
 
-		#if RFM
-		  // RFM12
-		  if (task & TASK_RFM) {
-			task &= ~TASK_RFM;
+		DEBUG_BEFORE_SLEEP();
+		asm volatile ("sei");	//  sequence from ATMEL datasheet chapter 6.8.
+		asm volatile ("sleep");
+		asm volatile ("nop");
+		DEBUG_AFTER_SLEEP();
+		SMCR = (1<<SM1)|(1<<SM0)|(0<<SE); // Power-save mode
+	}
+	else {
+		asm volatile ("sei");
+	}
 
-			if (rfm_mode == rfmmode_tx_done)
-			{
-                wirelessSendDone();
-			}
-  			else if ((rfm_mode == rfmmode_rx) || (rfm_mode == rfmmode_rx_owf))
-  			{
-  			    wirelessReceivePacket();
-  			}
-			continue; // on most case we have only 1 task, improve time to sleep
+	#if RFM
+	// RFM12
+	if (task & TASK_RFM) {
+		task &= ~TASK_RFM;
+
+		if (rfm_mode == rfmmode_tx_done){
+	                wirelessSendDone();
 		}
-		#endif
+  		else if ((rfm_mode == rfmmode_rx) || (rfm_mode == rfmmode_rx_owf)){
+  		    wirelessReceivePacket();
+  		}
+		continue; // on most case we have only 1 task, improve time to sleep
+	}
+	#endif
 
         // update LCD task
-		if (task & TASK_LCD) {
-			task&=~TASK_LCD;
-			task_lcd_update();
-			continue; // on most case we have only 1 task, improve time to sleep
-		}
+	if (task & TASK_LCD) {
+		task&=~TASK_LCD;
+		task_lcd_update();
+		continue; // on most case we have only 1 task, improve time to sleep
+	}
 
-		if (task & TASK_ADC) {
-			task&=~TASK_ADC;
-			if (!task_ADC()) {
-                // ADC is done
-            }
-			continue; // on most case we have only 1 task, improve time to sleep
-		}
+	if (task & TASK_ADC) {
+		task&=~TASK_ADC;
+		if (!task_ADC()) {
+                	//ADC is done
+        	}
+		continue; // on most case we have only 1 task, improve time to sleep
+	}
 
         // communication
-		if (task & TASK_COM) {
-			task&=~TASK_COM;
-			COM_commad_parse();
-			continue; // on most case we have only 1 task, improve time to sleep
-		}
+	if (task & TASK_COM) {
+		task&=~TASK_COM;
+		COM_command_parse();
+		continue; // on most case we have only 1 task, improve time to sleep
+	}
 
         // motor stop
         if (task & TASK_MOTOR_STOP) {
-            task&=~TASK_MOTOR_STOP;
-            MOTOR_timer_stop();
-			continue; // on most case we have only 1 task, improve time to sleep
+        	task&=~TASK_MOTOR_STOP;
+            	MOTOR_timer_stop();
+		continue; // on most case we have only 1 task, improve time to sleep
         }
 
-		//! check keyboard and set keyboards events
-		if (task & TASK_KB) {
-			task&=~TASK_KB;
-			task_keyboard();
-		}
+	//! check keyboard and set keyboards events
+	if (task & TASK_KB) {
+		task&=~TASK_KB;
+		task_keyboard();
+	}
 
-        if (task & TASK_RTC) {
-            task&=~TASK_RTC;
-			#if (HW_WINDOW_DETECTION)
-				PORTE |= _BV(PE2); // enable pull-up
-			#endif
-            if (RTC_timer_done&_BV(RTC_TIMER_RTC))
-            {
-                RTC_AddOneSecond();
-            }
-            if (RTC_timer_done&(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)))
-            {
-                cli(); RTC_timer_done&=~(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)); sei();
-                #if (DEBUG_PRINT_RTC_TICKS)
-                    COM_putchar('*');
-                    COM_flush();
-                #endif
-                bool minute=(RTC_GetSecond()==0);
-                CTL_update(minute);
-                if (minute) {
-                    if (((CTL_error &  (CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING)) == 0)
-    			        && (RTC_GetDayOfWeek()==6)
-    				    && (RTC_GetHour()==10)
-    				    && (RTC_GetMinute()==0)) {
-                        // every saturday 10:00AM
-                        // TODO: improve this code!
-                        // valve protection / CyCL
-                        MOTOR_updateCalibration(0);
-                    }
-					#if (! HW_WINDOW_DETECTION)
-                    	if (CTL_mode_window!=0) {
-                        	CTL_mode_window--;
-                        	if (CTL_mode_window==0) {
-                           		PID_force_update = 0;
-                        	}
-                    	}
-					#endif
-                    #if RFM
-                        wirelesTimeSyncCheck();
-                    #endif
-                }
-                #if RFM
-    				if ((config.RFM_devaddr!=0)
-    				    && (time_sync_tmo>1)
-                        && (
-                            ((RTC_GetSecond() == config.RFM_devaddr) && (wireless_buf_ptr)) ||
-                            (
-                                (
-                                    (RTC_GetSecond()>30) &&
-                                    (
-                                        (RTC_GetSecond()&1)?
-                                        (wl_force_addr1==config.RFM_devaddr):
-                                        (wl_force_addr2==config.RFM_devaddr)
-                                    )
-                                ) || (
-                                    (wl_force_addr1==0xff) &&
-                                    (RTC_GetSecond()%30 == config.RFM_devaddr) &&
-                                    ((wl_force_flags>>config.RFM_devaddr)&1)
-                                )
-                            )
-                        )) // collission protection: every HR20 shall send when the second counter is equal to it's own address.
-    				{
-                        wirelessTimerCase = WL_TIMER_FIRST;
-                        RTC_timer_set(RTC_TIMER_RFM, WLTIME_START);
-    				}
-    				if ((config.RFM_devaddr!=0)
-    				    && (time_sync_tmo>1)
-                        && ((RTC_GetSecond() == 59) || (RTC_GetSecond() == 29)))
-                    {
-						#if (WL_SKIP_SYNC)
-							if (wl_skip_sync!=0) {
-								wl_skip_sync--;
-							} else
-						#endif
-							{
-								wirelessTimerCase = WL_TIMER_SYNC;
+	if (task & TASK_RTC) {
+        	task&=~TASK_RTC;
+		#if (HW_WINDOW_DETECTION)
+			PORTE |= _BV(PE2); // enable pull-up
+		#endif
+           	if (RTC_timer_done&_BV(RTC_TIMER_RTC))
+           	{
+                	RTC_AddOneSecond();
+			wheel_tick_time++;
+			if (((wheel_tick_time == 2)) && wheel_tick_counter){
+				COM_send_wheel_tick(wheel_tick_counter);
+				wheel_tick_counter=0;
+			}
+            	}
+            	if (RTC_timer_done&(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)))
+            	{
+                	cli();
+			RTC_timer_done&=~(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)); 
+			sei();
+                	#if (DEBUG_PRINT_RTC_TICKS)
+                		COM_putchar('*');
+                    		COM_flush();
+                	#endif
+                	bool minute=(RTC_GetSecond()==0);
+                	CTL_update(minute);
+                	if (minute) {
+                		if (((CTL_error &  (CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING)) == 0) && (RTC_GetDayOfWeek()==6)
+	    				    && (RTC_GetHour()==10) && (RTC_GetMinute()==0)) {
+	        	                // every saturday 10:00AM
+        		                // TODO openHR: improve this code!
+                	        // valve protection / CyCL
+                	        MOTOR_updateCalibration(0);
+                		}
+				#if (! HW_WINDOW_DETECTION)
+                	    	if (CTL_mode_window!=0) {
+                        		CTL_mode_window--;
+                        		if (CTL_mode_window==0) {
+                           			PID_force_update = 0;
+                        		}
+                    		}
+				#endif
+                    		#if RFM
+                    		wirelesTimeSyncCheck();
+                    		#endif
+			}
+                	#if RFM
+    			if ((config.RFM_devaddr!=0) && (time_sync_tmo>1) && (
+					((RTC_GetSecond() == config.RFM_devaddr) && (wireless_buf_ptr)) ||
+                            		(((RTC_GetSecond()>30) && ((RTC_GetSecond()&1)?(wl_force_addr1==config.RFM_devaddr):(wl_force_addr2==config.RFM_devaddr))) ||
+					((wl_force_addr1==0xff) && (RTC_GetSecond()%30 == config.RFM_devaddr) && ((wl_force_flags>>config.RFM_devaddr)&1))))) // collission protection: every HR20 shall send when the second counter is equal to it's own address.
+    			{
+                        	wirelessTimerCase = WL_TIMER_FIRST;
+                        	RTC_timer_set(RTC_TIMER_RFM, WLTIME_START);
+    			}
+    			if ((config.RFM_devaddr!=0) && (time_sync_tmo>1) && ((RTC_GetSecond() == 59) || (RTC_GetSecond() == 29))) {
+				#if (WL_SKIP_SYNC)
+				if (wl_skip_sync!=0) {
+					wl_skip_sync--;
+				}
+				else
+				#endif
+				{
+					wirelessTimerCase = WL_TIMER_SYNC;
                         		RTC_timer_set(RTC_TIMER_RFM, WLTIME_SYNC);
-							}
-                    }
-                #endif
-                if (bat_average>0) {
-                  MOTOR_updateCalibration(mont_contact_pooling());
-                  MOTOR_Goto(valve_wanted);
-                }
-                task_keyboard_long_press_detect();
-                if ((MOTOR_Dir==stop) || (config.allow_ADC_during_motor)) start_task_ADC();
-                if (menu_auto_update_timeout>=0) {
-                    menu_auto_update_timeout--;
-                }
-                menu_view(false); // TODO: move it, it is wrong place
-                LCD_Update(); // TODO: move it, it is wrong place
-            }
-            #if RFM
-              if (RTC_timer_done&_BV(RTC_TIMER_RFM))
-              {
-                  cli(); RTC_timer_done&=~_BV(RTC_TIMER_RFM); sei();
-                  wirelessTimer();
-              }
-            #endif
-            // do not use continue here (menu_auto_update_timeout==0)
+				}
+                    	}
+                	#endif
+			if (bat_average>0) {
+				MOTOR_updateCalibration(mont_contact_pooling());
+				MOTOR_Goto(valve_wanted);
+                	}
+			task_keyboard_long_press_detect();
+			if ((MOTOR_Dir==stop) || (config.allow_ADC_during_motor)){
+				start_task_ADC();
+			}
+			if (menu_auto_update_timeout>=0) {
+				menu_auto_update_timeout--;
+	                }
+        	        menu_view(false); // TODO openHR: move it, it is wrong place
+        	        LCD_Update(); // TODO openHR: move it, it is wrong place
+        	}
+        	#if RFM
+              	if (RTC_timer_done&_BV(RTC_TIMER_RFM)){
+			cli(); 
+			RTC_timer_done&=~_BV(RTC_TIMER_RFM); 
+			sei();
+                  	wirelessTimer();
+		}
+	        #endif
+        	// do not use continue here (menu_auto_update_timeout==0)
         }
 
-		// menu state machine
-		if (kb_events || (menu_auto_update_timeout==0)) {
-           bool update = menu_controller(false);
-           if (update) {
-               menu_controller(true); // menu updated, call it again
-           }
-           menu_view(update); // TODO: move it, it is wrong place
-	       LCD_Update(); // TODO: move it, it is wrong place
-			continue; // on most case we have only 1 task, improve time to sleep
-		}
+	// menu state machine
+	if (kb_events || (menu_auto_update_timeout==0)) {
+        	bool update = menu_controller(false);
+        	if (update) {
+               		menu_controller(true); // menu updated, call it again
+           	}
+           	menu_view(update); // TODO openHR: move it, it is wrong place
+	   	LCD_Update(); // TODO openHR: move it, it is wrong place
+		continue; // on most case we have only 1 task, improve time to sleep
+	}
 
         // update motor PWM
         if (task & TASK_MOTOR_PULSE) {
-            task&=~TASK_MOTOR_PULSE;
-            MOTOR_updateCalibration(mont_contact_pooling());
-            MOTOR_timer_pulse();
+        	task&=~TASK_MOTOR_PULSE;
+		MOTOR_updateCalibration(mont_contact_pooling());
+		MOTOR_timer_pulse();
         }
     } //End Main loop
 }

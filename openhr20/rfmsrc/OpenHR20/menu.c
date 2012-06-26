@@ -54,6 +54,8 @@ static uint8_t service_idx=CONFIG_RAW_SIZE;
  * \note val<0 means no autoupdate 
  ******************************************************************************/
 int8_t menu_auto_update_timeout = 2;
+int8_t wheel_tick_counter = 0;
+uint8_t wheel_tick_time = 0;
 
 typedef enum {
     // startup
@@ -262,33 +264,56 @@ bool menu_controller(bool new_state) {
                     }
             } else { // not locked
 				if ((menu_state == menu_home) || (menu_state == menu_home_no_alter)) {
-					if (wheel != 0) {
-						if (CTL_mode_auto==manual)
+					if (wheel != 0) {   //Handle wheel changes 
+						if (CTL_mode_auto >= 2){
+							wheel_tick_counter = (wheel_tick_counter==-128)?-127:wheel_tick_counter;
+							wheel_tick_counter = (wheel_tick_counter==127)?126:wheel_tick_counter;
+							wheel_tick_counter += wheel;
+							wheel_tick_time = 0;
+								
+						}
+						else if (CTL_mode_auto==manual_target){
 							CTL_temp_change_inc(wheel);
-						else if (CTL_mode_auto==valve)
-							CTL_valve_change_inc(wheel);
+						}
+						else if (CTL_mode_auto==manual_timers){
+							CTL_change_mode(manual_target);
+							CTL_temp_change_inc(wheel);
+						}
 						menu_state = menu_home_no_alter;
 						ret=true; 
 					} 			 
 					if ( kb_events & KB_EVENT_AUTO ) {
-						CTL_change_mode(CTL_CHANGE_MODE); // change mode
+						CTL_change_mode(CTL_CHANGE_AUTO); // change mode
 						menu_state=menu_home_no_alter;
 						ret=true; 
-					} else if ( kb_events & KB_EVENT_AUTO_REWOKE ) {
+					} 
+					else if ( kb_events & KB_EVENT_AUTO_REWOKE ) {
+						CTL_change_mode(CTL_CHANGE_MODE_REWOKE); // change mode
+						menu_state=menu_home_no_alter;
+						ret=true; 
+					
+					}
+					else if ( kb_events & KB_EVENT_PROG ) {
+						CTL_change_mode(CTL_CHANGE_MINOR_MODE); // change mode
+						menu_state=menu_home_no_alter;
+						ret=true; 
+					}
+					else if ( kb_events & KB_EVENT_PROG_REWOKE ) {
 						CTL_change_mode(CTL_CHANGE_MODE_REWOKE); // change mode
 						menu_state=menu_home_no_alter;
 						ret=true; 
 					}
-				} else {
+				} 
+				else {
 					if ( kb_events & (
-                        KB_EVENT_WHEEL_PLUS  | KB_EVENT_WHEEL_MINUS | KB_EVENT_PROG
-                        | KB_EVENT_AUTO | KB_EVENT_PROG_REWOKE | KB_EVENT_C_REWOKE | KB_EVENT_AUTO_REWOKE
-                        | KB_EVENT_PROG_LONG | KB_EVENT_C_LONG | KB_EVENT_AUTO_LONG )) {
+			                        KB_EVENT_WHEEL_PLUS  | KB_EVENT_WHEEL_MINUS | KB_EVENT_PROG
+                			        | KB_EVENT_AUTO | KB_EVENT_PROG_REWOKE | KB_EVENT_C_REWOKE | KB_EVENT_AUTO_REWOKE
+                        			| KB_EVENT_PROG_LONG | KB_EVENT_C_LONG | KB_EVENT_AUTO_LONG )) {
 							menu_state = menu_home;
 							ret = true;
 					}
 				}
-                // TODO ....  
+                // TODO openHR ....  
             }
         } 
         break;
@@ -545,30 +570,54 @@ void menu_view(bool update) {
         // do not use break at this position / optimization
     case menu_home_no_alter: // wanted temp
         if (update) clr_show1(LCD_SEG_BAR24);
-		if (CTL_mode_auto == valve){
-			LCD_PrintChar(LCD_CHAR_NULL, 3, LCD_MODE_ON);
-        	LCD_PrintDec3(CTL_valve_wanted, 0 ,LCD_MODE_ON);
-			LCD_SetSeg(LCD_SEG_COL1, LCD_MODE_OFF);
-		}
-		else{
+	if ( wheel_tick_counter < -12){
+		LCD_PrintStringID(LCD_STRING_4xminus,LCD_MODE_ON);
+	}
+	else if (wheel_tick_counter < 0){
+		LCD_PrintStringID(LCD_STRING_BigMinus,LCD_MODE_ON);
+	}
+	else if (wheel_tick_counter > 12){
+		LCD_PrintStringID(LCD_STRING_PlusPlus,LCD_MODE_ON);
+	}
+	else if (wheel_tick_counter > 0){
+		LCD_PrintStringID(LCD_STRING_Plus,LCD_MODE_ON);
+	}
+	else{
         	LCD_PrintTemp(CTL_temp_wanted,LCD_MODE_ON);
-		}
+	}
+
+/*	Not used: Target Valve value	
+	if (CTL_mode_auto == auto_valve){
+		LCD_PrintChar(LCD_CHAR_NULL, 3, LCD_MODE_ON);
+       		LCD_PrintDec3(CTL_valve_wanted, 0 ,LCD_MODE_ON);
+		LCD_SetSeg(LCD_SEG_COL1, LCD_MODE_OFF);
+	}
+*/
         //! \note hourbar status calculation is complex we don't want calculate it every view, use chache
         MENU_COMMON_STATUS:
-        LCD_SetSeg(LCD_SEG_AUTO, (CTL_test_auto()?LCD_MODE_ON:LCD_MODE_OFF));
-        LCD_SetSeg(LCD_SEG_MANU, (CTL_mode_auto?LCD_MODE_OFF:LCD_MODE_ON));
+        //LCD_SetSeg(LCD_SEG_AUTO, (CTL_test_auto()?LCD_MODE_ON:LCD_MODE_OFF));
+        //LCD_SetSeg(LCD_SEG_MANU, (CTL_mode_auto?LCD_MODE_OFF:LCD_MODE_ON));
 		switch(CTL_mode_auto){
-			case timers:
-				LCD_SetSeg(LCD_SEG_AUTO, LCD_MODE_ON);
-				LCD_SetSeg(LCD_SEG_MANU, LCD_MODE_OFF);
-				break;
-			case manual:
+			case manual_timers:
 				LCD_SetSeg(LCD_SEG_AUTO, LCD_MODE_OFF);
 				LCD_SetSeg(LCD_SEG_MANU, LCD_MODE_ON);
+				LCD_SetSeg(LCD_SEG_PROG, LCD_MODE_ON);
 				break;
-			case valve:
+			case manual_target:
 				LCD_SetSeg(LCD_SEG_AUTO, LCD_MODE_OFF);
+				LCD_SetSeg(LCD_SEG_MANU, LCD_MODE_ON);
+				LCD_SetSeg(LCD_SEG_PROG, LCD_MODE_OFF);
+				break;
+			case auto_timers:
+				LCD_SetSeg(LCD_SEG_AUTO, LCD_MODE_ON);
 				LCD_SetSeg(LCD_SEG_MANU, LCD_MODE_OFF);
+				LCD_SetSeg(LCD_SEG_PROG, LCD_MODE_ON);
+				break;
+			case auto_target:
+			case auto_valve:
+				LCD_SetSeg(LCD_SEG_AUTO, LCD_MODE_ON);
+				LCD_SetSeg(LCD_SEG_MANU, LCD_MODE_OFF);
+				LCD_SetSeg(LCD_SEG_PROG, LCD_MODE_OFF);
 				break;
 		}
 
@@ -643,9 +692,3 @@ void menu_view(bool update) {
         break;                   
     }                                          
 }
-
-/*!
- * \note Switch used in this file can generate false warning on some AvrGCC versions
- *       we can ignore it
- *       details:  http://osdir.com/ml/hardware.avr.libc.devel/2006-11/msg00005.html
- */

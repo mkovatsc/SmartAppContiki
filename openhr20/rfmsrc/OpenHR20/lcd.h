@@ -126,6 +126,9 @@ void task_lcd_update(void);
 #define LCD_CHAR_y      39  //!< char "y"
 #define LCD_CHAR_S       5  //!< char "5" = "S"
 
+#define LCD_CHAR_LP	42  //!< char "-|"
+#define LCD_CHAR_RP 	43  //!< char "|-"
+
 #define LCD_CHAR_NULL  32  //!< space
 
 /*! \verbatim
@@ -294,16 +297,19 @@ void task_lcd_update(void);
 // LCD Strings:
 //***************************
 
-#define LCD_STRING_bloc         8
-#define LCD_STRING_4xminus      9
-#define LCD_STRING_minusCminus 10
-#define LCD_STRING_Err         11
-#define LCD_STRING_OFF         12
-#define LCD_STRING_On          13
-#define LCD_STRING_OPEn        14
-#define LCD_STRING_BAtt        15
-#define LCD_STRING_E2          16
-#define LCD_STRING_E3          17
-#define LCD_STRING_E4          18
-#define LCD_STRING_EEPr        19
+#define LCD_STRING_bloc    	8
+#define LCD_STRING_4xminus 	9
+#define LCD_STRING_minusCminus 	10
+#define LCD_STRING_Err  	11
+#define LCD_STRING_OFF		12
+#define LCD_STRING_On 		13
+#define LCD_STRING_OPEn 	14
+#define LCD_STRING_BAtt 	15
+#define LCD_STRING_E2   	16
+#define LCD_STRING_E3   	17
+#define LCD_STRING_E4		18
+#define LCD_STRING_EEPr 	19
+#define LCD_STRING_Plus		20
+#define LCD_STRING_PlusPlus 	21
+#define LCD_STRING_BigMinus 	22
 

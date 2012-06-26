@@ -34,6 +34,8 @@
 #pragma once
 
 extern int8_t menu_auto_update_timeout;
+extern int8_t wheel_tick_counter;
+extern uint8_t wheel_tick_time;
 bool menu_controller(bool new_state); 
 void menu_view(bool update);
 

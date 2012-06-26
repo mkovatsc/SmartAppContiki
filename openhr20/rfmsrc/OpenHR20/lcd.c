@@ -106,13 +106,14 @@ uint8_t LCD_CharTablePrgMem[] PROGMEM =
     0x33, //33    *        *    *   *        ******            *             *
     0x27, //34   1010000  1010100  0010000  1011100  0000000  0110011  0100111
 
-    0x38, //35   35:0x38  36:0x58  37:0x3e  38:0x78  39:0x6e
-    0x58, //36    *                 *    *   *        *    *
-    0x3e, //37    *                 *    *   *        *    *
-    0x78, //38    *        ******   *    *   ******   ******
-    0x6e  //39    *        *        *    *   *             *
-          //40    ******   ******   ******   ******   ******
-          //41   0111000  1011000  0111110  1111000  1101110
+    0x38, //35   35:0x38  36:0x58  37:0x3e  38:0x78  39:0x6e  40:0x46  41:0x70
+    0x58, //36    *                 *    *   *        *    *        *   *
+    0x3e, //37    *                 *    *   *        *    *        *   *
+    0x78, //38    *        ******   *    *   ******   ******   ******   ******
+    0x6e, //39    *        *        *    *   *             *        *   *
+    0x46, //40    ******   ******   ******   ******   ******        *   *
+    0x70  //41   0111000  1011000  0111110  1111000  1101110  1000110  1110000
+
 };
 
 #if LANG==LANG_uni
@@ -139,6 +140,9 @@ uint8_t LCD_CharTablePrgMem[] PROGMEM =
       {32,14, 3,32},    //!<  " E3 "    LCD_STRING_E3
       {32,14, 4,32},    //!<  " E4 "    LCD_STRING_E4
       {14,14,18,28},    //!<  "EEPr"    LCD_STRING_EEPr
+      {32,32,40,41},    //!<  "   +"    LCD_STRING_Plus
+      {40,41,40,41},    //!<  "+ +" 	LCD_STRING_PlusPlus
+      {32,32,22,22},	//!<  "  --"	LCD_STRING_BigMinus
   };
 #elif LANG==LANG_de
   // Look-up chars table for LCD strings (german)
@@ -164,6 +168,9 @@ uint8_t LCD_CharTablePrgMem[] PROGMEM =
       {32,14, 3,32},    //!<  " E3 "    LCD_STRING_E3
       {32,14, 4,32},    //!<  " E4 "    LCD_STRING_E4
       {14,14,18,28},    //!<  "EEPr"    LCD_STRING_EEPr
+      {32,32,40,41},    //!<  "   +"    LCD_STRING_Plus
+      {40,42,40,41},    //!<  "+ +" 	LCD_STRING_PlusPlus
+      {32,32,22,22},	//!<  "  --"	LCD_STRING_BigMinus
   };
 #elif LANG==LANG_cs
   // Look-up chars table for LCD strings (czech)
@@ -189,6 +196,9 @@ uint8_t LCD_CharTablePrgMem[] PROGMEM =
       {32,14, 3,32},    //!<  " E3 "    LCD_STRING_E3
       {32,14, 4,32},    //!<  " E4 "    LCD_STRING_E4
       {14,14,18,28},    //!<  "EEPr"    LCD_STRING_EEPr
+      {32,32,40,41},    //!<  "   +"    LCD_STRING_Plus
+      {40,41,40,41},    //!<  "+ +" 	LCD_STRING_PlusPlus
+      {32,32,22,22},	//!<  "  --"	LCD_STRING_BigMinus
   };
 #endif
 
@@ -831,7 +841,7 @@ static void LCD_calc_used_bitplanes(uint8_t mode) {
 
     for (i=0; i<LCD_REGISTER_COUNT; i++){
 		#if LCD_BITPLANES != 2
-			#error optimized for 2 bitplanes // TODO?
+			#error optimized for 2 bitplanes // TODO openHR?
 		#endif
 		if (LCD_Data[0][i] != LCD_Data[1][i]) {
 			LCD_used_bitplanes=2;
