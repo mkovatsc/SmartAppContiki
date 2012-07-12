@@ -45,6 +45,9 @@ extern int8_t PID_force_update;      // signed value, val<0 means disable force 
 extern uint8_t CTL_error;
 extern uint8_t CTL_mode_window;
 
+extern uint8_t CTL_mode_changed;
+extern uint8_t CTL_mode_changed_timer;
+
 
 #define mode_window() (CTL_mode_window!=0)
 

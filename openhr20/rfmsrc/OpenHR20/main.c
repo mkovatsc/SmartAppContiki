@@ -219,9 +219,14 @@ int __attribute__ ((noreturn)) main(void)
            	{
                 	RTC_AddOneSecond();
 			wheel_tick_time++;
+			CTL_mode_changed_timer++;
 			if (((wheel_tick_time == 2)) && wheel_tick_counter){
-				COM_send_wheel_tick(wheel_tick_counter);
+				COM_send_wheel_event(wheel_tick_counter);
 				wheel_tick_counter=0;
+			}
+			if (CTL_mode_changed && (CTL_mode_changed_timer==7)){
+				COM_send_mode_event(CTL_mode_auto);
+				CTL_mode_changed=0;
 			}
             	}
             	if (RTC_timer_done&(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)))

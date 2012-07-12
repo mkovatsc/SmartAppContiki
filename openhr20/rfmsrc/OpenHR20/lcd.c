@@ -551,6 +551,7 @@ void LCD_PrintTempInt(int16_t temp, uint8_t mode)
 
     // Print C on last segment
     LCD_PrintChar(LCD_CHAR_C, 0, mode);
+    LCD_SetSeg(LCD_SEG_COL1, mode);
 }
 
 /*!

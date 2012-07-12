@@ -278,6 +278,8 @@ bool menu_controller(bool new_state) {
 						else if (CTL_mode_auto==manual_timers){
 							CTL_change_mode(manual_target);
 							CTL_temp_change_inc(wheel);
+							CTL_mode_changed=1;
+							CTL_mode_changed_timer=0;
 						}
 						menu_state = menu_home_no_alter;
 						ret=true; 
@@ -569,21 +571,26 @@ void menu_view(bool update) {
         } 
         // do not use break at this position / optimization
     case menu_home_no_alter: // wanted temp
-        if (update) clr_show1(LCD_SEG_BAR24);
-	if ( wheel_tick_counter < -12){
-		LCD_PrintStringID(LCD_STRING_4xminus,LCD_MODE_ON);
+       	if (update) clr_show1(LCD_SEG_BAR24);
+   	if (CTL_mode_auto >= 2){
+		if ( wheel_tick_counter < -12){
+			LCD_PrintStringID(LCD_STRING_4xminus,LCD_MODE_ON);
+		}
+		else if (wheel_tick_counter < 0){
+			LCD_PrintStringID(LCD_STRING_BigMinus,LCD_MODE_ON);
+		}
+		else if (wheel_tick_counter > 12){
+			LCD_PrintStringID(LCD_STRING_PlusPlus,LCD_MODE_ON);
+		}
+		else if (wheel_tick_counter > 0){
+			LCD_PrintStringID(LCD_STRING_Plus,LCD_MODE_ON);
+		}
+		else{
+			LCD_PrintTempInt(temp_average,LCD_MODE_ON);
+		}
 	}
-	else if (wheel_tick_counter < 0){
-		LCD_PrintStringID(LCD_STRING_BigMinus,LCD_MODE_ON);
-	}
-	else if (wheel_tick_counter > 12){
-		LCD_PrintStringID(LCD_STRING_PlusPlus,LCD_MODE_ON);
-	}
-	else if (wheel_tick_counter > 0){
-		LCD_PrintStringID(LCD_STRING_Plus,LCD_MODE_ON);
-	}
-	else{
-        	LCD_PrintTemp(CTL_temp_wanted,LCD_MODE_ON);
+	else {
+		LCD_PrintTemp(CTL_temp_wanted,LCD_MODE_ON);
 	}
 
 /*	Not used: Target Valve value	
@@ -621,12 +628,19 @@ void menu_view(bool update) {
 				break;
 		}
 
-        LCD_HourBarBitmap(hourbar_buff);
-       break;
+	       LCD_HourBarBitmap(hourbar_buff);
+	       break;
+
     case menu_home2: // real temperature
-        if (update) clr_show1(LCD_SEG_COL1);           // decimal point
-        LCD_PrintTempInt(temp_average,LCD_MODE_ON);
-        break;
+   	if (CTL_mode_auto >= 2){
+		menu_state++;
+	}
+	else {
+        	if (update) clr_show1(LCD_SEG_COL1);           // decimal point
+        	LCD_PrintTempInt(temp_average,LCD_MODE_ON);
+        	break;
+	}
+
     case menu_home3: // valve pos
         if (update) LCD_AllSegments(LCD_MODE_OFF);
         // LCD_PrintDec3(MOTOR_GetPosPercent(), 1 ,LCD_MODE_ON);

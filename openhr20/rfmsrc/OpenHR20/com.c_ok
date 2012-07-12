@@ -179,19 +179,6 @@ static void print_decXX(uint8_t i) {
 
 /*!
  *******************************************************************************
- *  \brief helper function print 1 digit dec number
- *
- *  \note only unsigned numbers
- ******************************************************************************/
-static void print_digit(uint8_t i) {
-	COM_putchar(i%10+'0');
-}
-
-
-
-
-/*!
- *******************************************************************************
  *  \brief helper function print 3 digit dec number
  *
  *  \note only unsigned numbers
@@ -658,144 +645,130 @@ void COM_command_parse (void) {
 			{
 				char sub = COM_getchar();
 				COM_putchar(c);
-				switch (sub) {
-					case 'M': 
-					{
-						COM_putchar(sub);
-	        				if (COM_hex_parse(1*2)!='\0'){ 
-							COM_putchar('0');
-							break; 
-						}
-						if (com_hex[0]>=0 && com_hex[0]<=4){
-				        	    	CTL_change_mode(com_hex[0]);
-							COM_putchar('1');
-						        break;
-						}
-						else {
-							COM_putchar('0');
-							break;
-						}	
-						break;
+
+				if (sub=='M'){
+					COM_putchar(sub);
+	        			if (COM_hex_parse(1*2)!='\0'){ 
+						COM_putchar('0');
+						break; 
 					}
-					case 'Y':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						RTC_SetDate(com_hex[2],com_hex[1],com_hex[0]);
+					if (com_hex[0]>=0 && com_hex[0]<=4){
+				            	CTL_change_mode(com_hex[0]);
 						COM_putchar('1');
-						break;
-					
+					        break;
 					}
-					case 'H':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						RTC_SetHour(com_hex[0]);
-						RTC_SetMinute(com_hex[1]);
-						RTC_SetSecond(com_hex[2]);
+					else {
+						COM_putchar('0');
+						break;
+					}	
+				}
+				else if(sub=='Y'){
+					COM_putchar(sub);
+					if (COM_hex_parse(3*2)!='\0') { 
+						COM_putchar('0');
+						break; 
+					}
+					RTC_SetDate(com_hex[2],com_hex[1],com_hex[0]);
+					COM_putchar('1');
+					break;
+				}
+				else if(sub=='H'){
+					COM_putchar(sub);
+					if (COM_hex_parse(3*2)!='\0') { 
+						COM_putchar('0');
+						break; 
+					}
+					RTC_SetHour(com_hex[0]);
+					RTC_SetMinute(com_hex[1]);
+					RTC_SetSecond(com_hex[2]);
+					COM_putchar('1');
+					break;
+				}
+				else if(sub=='C'){
+					COM_putchar(sub);
+					if (COM_hex_parse(2*2)!='\0') { 
+						COM_putchar('0');
+						break; }
+  					if (com_hex[0]<CONFIG_RAW_SIZE) {
+  						config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
+  						eeprom_config_save(com_hex[0]);
 						COM_putchar('1');
+  					}
+					else{
+						COM_putchar('0');
+					}
+				}
+            			else if (sub=='T'){
+					COM_putchar(sub);
+					if (COM_hex_parse(1*2)!='\0') { 
+						COM_putchar('0');
 						break;
 					}
-					case 'C':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(2*2)!='\0') { 
-							COM_putchar('0');
-							break; }
-  						if (com_hex[0]<CONFIG_RAW_SIZE) {
-  							config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
-  							eeprom_config_save(com_hex[0]);
-							COM_putchar('1');
-  						}
-						else{
-							COM_putchar('0');
-						}
+	            			if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
+						COM_putchar('0');
 						break;
 					}
-					case 'T':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break;
-						}
-	            				if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
-							COM_putchar('0');
-							break;
-						}
-						CTL_change_mode(auto_target);
-			     			CTL_set_temp(com_hex[0]);
-						COM_putchar('1');
-			        		break;
-					}
-					case 'V':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break;
-						}
-				        	CTL_change_mode(auto_valve);
-						if (com_hex[0]>config.valve_max) {
-							CTL_valve_wanted=config.valve_max;
-						}
-						else if (com_hex[0]<config.valve_min) {
-							CTL_valve_wanted=config.valve_min;
-						}
-						else{
-							CTL_valve_wanted=com_hex[0];
-						}
-						PID_force_update = 0;
-						COM_putchar('1');
+			        	
+					CTL_change_mode(auto_target);
+			     		CTL_set_temp(com_hex[0]);
+					COM_putchar('1');
+			        	break;
+				}
+				else if (sub=='V'){
+					COM_putchar(sub);
+					if (COM_hex_parse(1*2)!='\0') { 
+						COM_putchar('0');
 						break;
 					}
-					case 'P':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(2*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-  						if (com_hex[0]>0 && com_hex[0]<5) {
-  							config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
-  							eeprom_config_save(com_hex[0]);
-							CTL_update_temp_auto();
-							COM_putchar('1');
-  						}
-						else{
-							COM_putchar('0');
-						}
-						break;
+				        CTL_change_mode(auto_valve);
+					if (com_hex[0]>config.valve_max) {
+						CTL_valve_wanted=config.valve_max;
 					}
-					case 'S':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') {
-							COM_putchar('0');
-							break; 
-						}
-	  					RTC_DowTimerSet(
-			        	        	com_hex[0]>>4, 
-        						com_hex[0]&0xf, 
-	                				(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
-							(com_hex[1])>>4);
+					else if (com_hex[0]<config.valve_min) {
+						CTL_valve_wanted=config.valve_min;
+					}
+					else{
+						CTL_valve_wanted=com_hex[0];
+					}
+					PID_force_update = 0;
+					COM_putchar('1');
+					break;
+				}
+				else if(sub=='P'){
+					COM_putchar(sub);
+					if (COM_hex_parse(2*2)!='\0') { 
+						COM_putchar('0');
+						break; 
+					}
+  					if (com_hex[0]>0 && com_hex[0]<5) {
+  						config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
+  						eeprom_config_save(com_hex[0]);
 						CTL_update_temp_auto();
-						menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
 						COM_putchar('1');
-						COM_putchar(':');
-						print_digit(com_hex[0]>>4);
-						break;
+  					}
+					else{
+						COM_putchar('0');
 					}
-					default:
+				}
+				else if(sub=='S'){
+					COM_putchar(sub);
+					if (COM_hex_parse(3*2)!='\0') {
 						COM_putchar('0');
-						COM_putchar('0');
-						break;
+						break; 
+					}
+	  				RTC_DowTimerSet(
+			        	        com_hex[0]>>4, 
+        					com_hex[0]&0xf, 
+	                			(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
+						(com_hex[1])>>4);
+					CTL_update_temp_auto();
+					menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
+					COM_putchar('1');
+				}
+				else {
+					COM_putchar('0');
+					COM_putchar('0');
+					break;
 				}
 				break;
 					
@@ -806,135 +779,104 @@ void COM_command_parse (void) {
 				char sub = COM_getchar();
 				
 				COM_putchar(c);
-				switch (sub) {
-					case 'M':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(CTL_mode_auto);
-						break;
-					}
-					case 'Y':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(RTC_GetDay());
-						COM_putchar('.');
-						print_decXX(RTC_GetMonth());
-						COM_putchar('.');
-						print_decXX(RTC_GetYearYY());
-						break;
-					}
-					case 'H':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(RTC_GetHour());
-						COM_putchar(':');
-						print_decXX(RTC_GetMinute());
-						COM_putchar(':');
-						print_decXX(RTC_GetSecond());
+	
+				if (sub=='M'){
+					COM_putchar(sub);
+					COM_putchar('1');
+					COM_putchar(':');
+					print_decXX(CTL_mode_auto);
+					break;
+				}
+				else if(sub=='Y'){
+					COM_putchar(sub);
+					COM_putchar('1');
+					COM_putchar(':');
+					print_decXX(RTC_GetDay());
+					COM_putchar('.');
+					print_decXX(RTC_GetMonth());
+					COM_putchar('.');
+					print_decXX(RTC_GetYearYY());
+					break;
+				}
+				else if(sub=='H'){
+					COM_putchar(sub);
+					COM_putchar('1');
+					COM_putchar(':');
+					print_decXX(RTC_GetHour());
+					COM_putchar(':');
+					print_decXX(RTC_GetMinute());
+					COM_putchar(':');
+					print_decXX(RTC_GetSecond());
+					break; 
+				}
+				else if(sub=='C'){
+					COM_putchar(sub);
+					if (COM_hex_parse(1*2)!='\0') { 
+						COM_putchar('0');
 						break; 
 					}
-					case 'C':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						COM_putchar('1');
-						COM_putchar(':');
-						print_idx('E',com_hex[0]);
-						if (com_hex[0]==0xff) {
-							print_hexXX(EE_LAYOUT);
-		        			}
-						else {
-							print_hexXX(config_raw[com_hex[0]]);
-						}
-						break;
-					} 
-					case 'B':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(bat_average);
+					COM_putchar('1');
+					COM_putchar(':');
+					print_idx('E',com_hex[0]);
+					if (com_hex[0]==0xff) {
+						print_hexXX(EE_LAYOUT);
+		        		}
+					else {
+						print_hexXX(config_raw[com_hex[0]]);
 					}
-					case 'T':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(calc_temp(CTL_temp_wanted_last));
-					}
-					case 'V':	
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXX(valve_wanted);
-					}
-					case 'I':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(temp_average);
-					}
-					case 'P':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						COM_putchar('F');
-						print_hexXX(config_raw[1]);
-						COM_putchar(',');
-						COM_putchar('E');
-						print_hexXX(config_raw[2]);
-						COM_putchar(',');
-						COM_putchar('C');
-						print_hexXX(config_raw[3]);
-						COM_putchar(',');
-						COM_putchar('S');
-						print_hexXX(config_raw[4]);
-					}
-					case 'S':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1)!='\0') { 
-							COM_putchar('0');
-							
-							break;
-						}
-						if ( (com_hex[0]>>4) < 0 || (com_hex[0]>>4) >= 8) {
-							COM_putchar('0');
-							break;
-						}
-						COM_putchar('1');
-						COM_putchar(':');
-						print_digit(com_hex[0]>>4);
-						int i;
-						for (i=0;i<RTC_TIMERS_PER_DOW;i++){
-							COM_putchar(',');
-							print_hexXXXX(eeprom_timers_read_raw(
-	        		       				timers_get_raw_index((com_hex[0]>>4),i)));
-						}
-						break;
 
-					}
-					default:
-					{
-						COM_putchar('0');
-						COM_putchar('0');
-						break;
-					}
+				} 
+				else if (sub=='B'){
+					COM_putchar(sub);
+					COM_putchar('1');	
+					COM_putchar(':');	
+					print_decXXXX(bat_average);
 				}
+				else if (sub=='T'){
+					COM_putchar(sub);
+					COM_putchar('1');	
+					COM_putchar(':');	
+					print_decXXXX(calc_temp(CTL_temp_wanted_last));
+				}	
+				else if (sub=='V'){
+					COM_putchar(sub);
+					COM_putchar('1');	
+					COM_putchar(':');	
+					print_decXX(valve_wanted);
+				}
+				else if (sub=='I'){
+					COM_putchar(sub);
+					COM_putchar('1');	
+					COM_putchar(':');	
+					print_decXXXX(temp_average);
+				}
+				else if(sub=='P'){
+					COM_putchar(sub);
+					COM_putchar('1');
+					COM_putchar(':');
+					COM_putchar('F');
+					print_hexXX(config_raw[1]);
+					COM_putchar(',');
+					COM_putchar('E');
+					print_hexXX(config_raw[2]);
+					COM_putchar(',');
+					COM_putchar('C');
+					print_hexXX(config_raw[3]);
+					COM_putchar(',');
+					COM_putchar('S');
+					print_hexXX(config_raw[4]);
+				} 
+
+				else {
+					COM_putchar('0');
+					COM_putchar('0');
+					break;
+				}
+	
 				break;
+					
 			}
+
 /*	       case 'A':
 			{
 				char sub = COM_getchar();

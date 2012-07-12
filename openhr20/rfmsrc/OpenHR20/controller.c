@@ -50,6 +50,9 @@ uint8_t CTL_temp_wanted_last=0xff;   // desired temperature value used for last 
 uint8_t CTL_temp_auto=0;   // actual desired temperature by timer
 uint8_t CTL_valve_wanted=0;
 
+uint8_t CTL_mode_changed=0;
+uint8_t CTL_mode_changed_timer=0;
+
 enum mode CTL_mode_auto = auto_timers;   // actual desired temperature by timer
 uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
 #if (HW_WINDOW_DETECTION)
@@ -131,64 +134,69 @@ static void CTL_window_detection(void) {
  *
  ******************************************************************************/
 void CTL_update(bool minute_ch) {
-#if (HW_WINDOW_DETECTION)
-	PORTE |= _BV(PE2); // enable pull-up
-#endif
+	#if (HW_WINDOW_DETECTION)
+		PORTE |= _BV(PE2); // enable pull-up
+	#endif
 
-    if ( minute_ch || (CTL_temp_auto==0) ) {
-        // minutes changed or we need return to timers
-        uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
-	uint8_t border = RTC_ActualTimerTemperature(true);
-	if (border){
-		if(CTL_mode_auto >= 2){
-			CTL_mode_auto=auto_timers;
+	if ( minute_ch || (CTL_temp_auto==0) ) {
+        	// minutes changed or we need return to timers
+        	uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
+		uint8_t border = RTC_ActualTimerTemperature(true);
+		if (border){
+			if(CTL_mode_auto >= 2){
+				CTL_mode_auto=auto_timers;
+			}
+			else{
+				CTL_mode_auto=manual_timers;
+			}
+			CTL_mode_changed= 1;
+			CTL_mode_changed_timer=0;
 		}
-		else{
-			CTL_mode_auto=manual_timers;
+        	if (t!=0) {
+        		CTL_temp_auto=t;
+        		if (CTL_mode_auto==manual_timers || CTL_mode_auto==auto_timers) {
+                		CTL_temp_wanted=CTL_temp_auto;
+                		if ((PID_force_update<0)&&(CTL_temp_wanted!=CTL_temp_wanted_last)) {
+                			PID_force_update=0;
+      				}
+			}		
 		}
 	}
-        if (t!=0) {
-            CTL_temp_auto=t;
-            if (CTL_mode_auto==manual_timers || CTL_mode_auto==auto_timers) {
-                CTL_temp_wanted=CTL_temp_auto;
-                if ((PID_force_update<0)&&(CTL_temp_wanted!=CTL_temp_wanted_last)) {
-                    PID_force_update=0;
-                }
-            }
-        }
-    }
 	#if BOOST_CONTROLER_AFTER_CHANGE
 		if ( minute_ch && (PID_boost_timeout>0)) {
-		PID_boost_timeout--;
-		  if (PID_boost_timeout==0) {
-		  PID_force_update = 0;
-		  }
+			PID_boost_timeout--;
+			if (PID_boost_timeout==0) {
+				PID_force_update = 0;
+			}
 		}
 	#endif
-    if (!(CTL_mode_auto >=2 )){
-	    CTL_window_detection();
-    }
-    if (PID_update_timeout>0) PID_update_timeout--;
-    if (PID_force_update>0) { 
+	if (!(CTL_mode_auto >=2 )){
+		CTL_window_detection();
+	}
+	if (PID_update_timeout>0) {
+		PID_update_timeout--;
+	}
+	if (PID_force_update>0) { 
 		PID_force_update--;
-	} else if ((PID_update_timeout == 0)||(PID_force_update==0)) {
-        uint8_t temp;
-        if (((CTL_temp_wanted<TEMP_MIN) || mode_window()) ) {
-            temp = TEMP_MIN;	// frost protection to TEMP_MIN 
-        } else {
-            temp = CTL_temp_wanted;
-        }
-        bool updateNow=(temp!=CTL_temp_wanted_last);
-        if (updateNow) {
+	}
+	else if ((PID_update_timeout == 0)||(PID_force_update==0)) {
+	        uint8_t temp;
+        	if (((CTL_temp_wanted<TEMP_MIN) || mode_window()) ) {
+        		temp = TEMP_MIN;	// frost protection to TEMP_MIN 
+        	} else {
+        		temp = CTL_temp_wanted;
+        	}
+        	bool updateNow=(temp!=CTL_temp_wanted_last);
+	        if (updateNow) {
 			CTL_temp_wanted_last=temp;
 			goto UPDATE_NOW; // optimize
 		}
 		if (CTL_mode_auto==auto_valve){
 			goto UPDATE_NOW;
 		}
-        if ((PID_update_timeout == 0)) {
+        	if ((PID_update_timeout == 0)) {
 			UPDATE_NOW:
-            PID_update_timeout = (config.PID_interval * 5); // new PID pooling
+        		PID_update_timeout = (config.PID_interval * 5); // new PID pooling
 			uint8_t new_valve;
 			if (CTL_mode_auto==auto_valve){
 				new_valve=CTL_valve_wanted;
@@ -196,7 +204,8 @@ void CTL_update(bool minute_ch) {
 			else{
 				if (temp>TEMP_MAX) {
 					new_valve = config.valve_max;
-				} else {
+				} 
+				else {
 					new_valve = pid_Controller(calc_temp(temp),temp_average,valveHistory[0],updateNow);
 				}
 				CTL_valve_wanted = new_valve;
@@ -209,40 +218,40 @@ void CTL_update(bool minute_ch) {
 						CTL_integratorBlock=DEFINE_INTEGRATOR_BLOCK;       //block Integrator if valve moves
 					}
 				#endif
-
 				for(i=VALVE_HISTORY_LEN-1; i>0; i--) {
 					if (updateNow || (new_valve <= config.valve_max) || (new_valve >= config.valve_min)) {
 						// condition inside loop is stupid, but produce shorter code
 						valveHistory[i]=new_valve;
-					} else  {
+					} 
+					else  {
 						valveHistory[i]=valveHistory[i-1];
 					}
 				}
 				valveHistory[0]=new_valve;
 			}
-        }
-        //COM_print_debug(0);
-        PID_force_update = -1; // invalid value = not used
-    }
-    // batt error detection
-    // TODO: send Battery warning???
-    if (bat_average) {
-	if (bat_average < 20*(uint16_t)config.bat_low_thld) {
-   		CTL_error |=  CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING;
+        	}
+        	//COM_print_debug(0);
+        	PID_force_update = -1; // invalid value = not used
 	}
-	else {
-		if (bat_average < 20*(uint16_t)config.bat_warning_thld) {
-	        	CTL_error |=  CTL_ERR_BATT_WARNING;
-			#if (BATT_ERROR_REVERSIBLE)
-	            	CTL_error &= ~CTL_ERR_BATT_LOW;
-			#endif
-	        } else {
-			#if (BATT_ERROR_REVERSIBLE)
-	            	CTL_error &= ~(CTL_ERR_BATT_WARNING|CTL_ERR_BATT_LOW);
-			#endif
-	        }
+	// batt error detection
+	// TODO: send Battery warning???
+	if (bat_average) {
+		if (bat_average < 20*(uint16_t)config.bat_low_thld) {
+   			CTL_error |=  CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING;
+		}
+		else {
+			if (bat_average < 20*(uint16_t)config.bat_warning_thld) {
+	        		CTL_error |=  CTL_ERR_BATT_WARNING;
+				#if (BATT_ERROR_REVERSIBLE)
+	            			CTL_error &= ~CTL_ERR_BATT_LOW;
+				#endif
+	        	} else {
+				#if (BATT_ERROR_REVERSIBLE)
+	            		CTL_error &= ~(CTL_ERR_BATT_WARNING|CTL_ERR_BATT_LOW);
+				#endif
+			}
+		}
 	}
-    }
 }
 
 /*!
@@ -308,6 +317,8 @@ void CTL_change_mode(int8_t m) {
 			CTL_mode_auto = auto_timers;
 		}
         	PID_force_update = 9;
+		CTL_mode_changed= 1;
+		CTL_mode_changed_timer=0;
 
 	} else if ((m == CTL_CHANGE_MINOR_MODE)) {   
         	// Save vars for rewoke
@@ -317,11 +328,14 @@ void CTL_change_mode(int8_t m) {
 		mode_auto_rewoke=CTL_mode_auto;
 		
 		if(!(CTL_mode_auto >= 2)){
-			CTL_mode_auto=CTL_mode_auto ^ 1;
+			CTL_mode_auto=CTL_mode_auto ^ 1;	
+			CTL_mode_changed= 1;
+			CTL_mode_changed_timer=0;
 		}
         	PID_force_update = 9;
+
 	
-		// CTL_CHANGE_MINOR_MODE triggers nothing in auto mode, so not handled here
+		// CTL_CHANGE_MINOR_MODE triggers nothing in auto mode, nothing to do
 
 	}else if( m == CTL_CHANGE_MODE_REWOKE){
 	
@@ -331,6 +345,8 @@ void CTL_change_mode(int8_t m) {
 		CTL_mode_auto=mode_auto_rewoke;
 		
         	PID_force_update = 9;
+		CTL_mode_changed= 0;
+		CTL_mode_changed_timer=0;
 
    	} else {				//direct set, from uart;
         	if (m >= 0) CTL_mode_auto=m;

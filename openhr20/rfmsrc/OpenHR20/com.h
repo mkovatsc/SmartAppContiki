@@ -68,4 +68,5 @@ void COM_putchar(char c);
 void COM_flush (void);
 void COM_printStr16 (const char * s, uint16_t x);
 
-void COM_send_wheel_tick(int8_t tick);
+void COM_send_wheel_event(int8_t t);
+void COM_send_mode_event(int8_t m);

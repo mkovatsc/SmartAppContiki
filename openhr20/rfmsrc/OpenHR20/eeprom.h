@@ -156,7 +156,7 @@ uint8_t EEPROM ee_layout    = EE_LAYOUT; //!< EEPROM layout version
 
 /* eeprom address 0x004 */
 uint16_t EEPROM ee_timers[8][RTC_TIMERS_PER_DOW] = { //128bytes 
-    // TODO add default timers, now it is empty
+    // TODO openHR add default timers, now it is empty
     /*! ee_timers value means:
      *          value & 0x0fff  = time in minutes from midnight
      *          value & 0x3000  = 0x0000 - temperature 0  - frost protection
@@ -238,7 +238,7 @@ uint8_t EEPROM ee_config[][4] ={  // must be alligned to 4 bytes
   /* 20 */  {614-549,614-549,      16,      255},   //!< value for 10C => 614 temperature calibration table
   /* 21 */  {675-614,675-614,      16,      255},   //!< value for 05C => 675 temperature calibration table
 #endif
-  /* 22 */  {0,           0,        0,        1},   //!< timer_mode; =0 only one program, =1 programs for weekdays 
+  /* 22 */  {1,           1,        0,        1},   //!< timer_mode; =0 only one program, =1 programs for weekdays 
   /* 23 */  {120,       120,       80,      160},   //!< bat_warning_thld; treshold for battery warning [unit 0.02V]=[unit 0.01V per cell]
   /* 24 */  {100,       100,       80,      160},   //!< bat_low_thld; treshold for battery low [unit 0.02V]=[unit 0.01V per cell]
   /* 25 */  {1,           1,        0,        1},   //!< allow_ADC_during_motor
@@ -247,8 +247,8 @@ uint8_t EEPROM ee_config[][4] ={  // must be alligned to 4 bytes
   /* 27 */  {5,           5,        0,      240},   //!< window_open_detection_delay [sec] max 4 minutes
   /* 28 */  {5,           5,        0,      240},   //!< window_close_detection_delay [sec] max 4 minutes
 #else
-  /* 26 */  {50,         50,        7,      255},   //!< window_open_detection_diff; reshold for window open/close detection unit is 0.01C
-  /* 27 */  {50,         50,        7,      255},   //!< window_close_detection_diff; reshold for window open/close detection unit is 0.01C
+  /* 26 */  {100,         100,        7,      255},   //!< window_open_detection_diff; reshold for window open/close detection unit is 0.01C
+  /* 27 */  {75,         75,        7,      255},   //!< window_close_detection_diff; reshold for window open/close detection unit is 0.01C
   /* 28 */  {8,           8,  1, AVGS_BUFFER_LEN},  //!< window_open_detection_time unit 15sec = 1/4min
   /* 29 */  {8,           8,  1, AVGS_BUFFER_LEN},  //!< window_close_detection_time unit 15sec = 1/4min
   /* 2a */  {90,         90,        2,      255},   //!< window_open_timeout

@@ -230,23 +230,23 @@ static int16_t dummy_adc=0;
  ******************************************************************************/
 bool task_ADC(void) {
 	switch (state_ADC) {
-	case 1: //step 1
-	    // set ADC control and status register
-    	ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS0)|(1<<ADIE); // prescaler=32
-		// ADC conversion from 1 (battery is done)
-		// first conversion put to trash
-		// start new with same configuration;
-		break;
-	case 3: //step 3
-		{	
+		case 1: //step 1
+		    	// set ADC control and status register
+    			ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS0)|(1<<ADIE); // prescaler=32
+			// ADC conversion from 1 (battery is done)
+			// first conversion put to trash
+			// start new with same configuration;
+			break;
+		case 3: //step 3
+			{	
 			int16_t ad = ADCW;
-            if ((ad>dummy_adc+ADC_TOLERANCE)||(ad<dummy_adc-ADC_TOLERANCE)) { 
-                // adc noise protection, repeat measure
-                REPEAT_ADC:
-                dummy_adc=ad;
+        		if ((ad>dummy_adc+ADC_TOLERANCE)||(ad<dummy_adc-ADC_TOLERANCE)) { 
+                		// adc noise protection, repeat measure
+                		REPEAT_ADC:
+                		dummy_adc=ad;
 				sleep_with_ADC=true;
-                return true;
-            }
+                		return true;
+            		}
 			#if DEBUG_BATT_ADC
 				COM_printStr16(PSTR("batAD x"),ad);
 			#endif
@@ -255,35 +255,35 @@ bool task_ADC(void) {
 			// activate voltage divider
 			ADC_ACT_TEMP_P |= (1<<ADC_ACT_TEMP);
 			ADMUX = ADC_TEMP_MUX | (1<<REFS0);
-		}
-		break;
-	case 2: //step 2
-	case 4: //step 4
-        dummy_adc = ADCW;
-	    break;
-	case 5: //step 5
-        {
-            int16_t ad = ADCW;
-            if ((ad>dummy_adc+ADC_TOLERANCE)||(ad<dummy_adc-ADC_TOLERANCE)) { 
-                // adc noise protection, repeat measure
-                goto REPEAT_ADC; // optimization
-            }
-            int16_t t = ADC_Convert_To_Degree(ad);
-            update_ring(TEMP_RING_TYPE,t);
-            #if DEBUG_PRINT_MEASURE
-                COM_debug_print_temperature(t);
-            #endif
-            shift_ring();
-        }
-        // do not use break here
-	default:
-		// deactivate voltage divider
-    	ADC_ACT_TEMP_P &= ~(1<<ADC_ACT_TEMP);
-	    // set ADC control and status register / disable ADC
-	    ADCSRA = (0<<ADEN)|(1<<ADPS2)|(1<<ADPS0)|(1<<ADIE); 
-		// power down ADC
-		power_down_ADC();
-		return false;
+			}
+			break;
+		case 2: //step 2
+		case 4: //step 4
+        		dummy_adc = ADCW;
+			break;
+		case 5: //step 5
+        		{
+            		int16_t ad = ADCW;
+            		if ((ad>dummy_adc+ADC_TOLERANCE)||(ad<dummy_adc-ADC_TOLERANCE)) { 
+                		// adc noise protection, repeat measure
+                		goto REPEAT_ADC; // optimization
+            		}
+            		int16_t t = ADC_Convert_To_Degree(ad);
+            		update_ring(TEMP_RING_TYPE,t);
+            		#if DEBUG_PRINT_MEASURE
+                		COM_debug_print_temperature(t);
+            		#endif
+            		shift_ring();
+        		}
+		        // do not use break here
+		default:
+			// deactivate voltage divider
+		    	ADC_ACT_TEMP_P &= ~(1<<ADC_ACT_TEMP);
+			// set ADC control and status register / disable ADC
+			ADCSRA = (0<<ADEN)|(1<<ADPS2)|(1<<ADPS0)|(1<<ADIE); 
+			// power down ADC
+			power_down_ADC();
+			return false;
 	}
 	state_ADC++;
 	sleep_with_ADC=true;
