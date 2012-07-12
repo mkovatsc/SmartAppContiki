@@ -53,6 +53,8 @@ uint8_t CTL_valve_wanted=0;
 uint8_t CTL_mode_changed=0;
 uint8_t CTL_mode_changed_timer=0;
 
+uint16_t CTL_temp_threshold = 10;
+
 enum mode CTL_mode_auto = auto_timers;   // actual desired temperature by timer
 uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
 #if (HW_WINDOW_DETECTION)

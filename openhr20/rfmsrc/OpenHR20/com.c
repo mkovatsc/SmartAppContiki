@@ -340,6 +340,22 @@ void COM_send_mode_event(int8_t m){
 
 /*!
  *******************************************************************************
+ *  \brief Event Mode Change *
+ *  \note
+ ******************************************************************************/
+void COM_send_temperature_event(uint16_t t){
+	COM_putchar('E');
+	COM_putchar('T');
+	COM_putchar(':');
+	print_decXXXX(t);
+	COM_putchar('\n');
+	COM_flush();
+}
+
+
+
+/*!
+ *******************************************************************************
  *  \brief Print OK *
  *  \note
  ******************************************************************************/
@@ -792,6 +808,21 @@ void COM_command_parse (void) {
 						print_digit(com_hex[0]>>4);
 						break;
 					}
+					case 'D':
+					{
+						COM_putchar(sub);
+						if (COM_hex_parse(1*2)!='\0') { 
+							COM_putchar('0');
+							break;
+						}
+						if (com_hex[0] == 0){
+							COM_putchar('0');
+							break;
+						}
+						CTL_temp_threshold= ((uint16_t) com_hex[0]);
+						COM_putchar('1');
+						break;
+					}	
 					default:
 						COM_putchar('0');
 						COM_putchar('0');
@@ -1033,12 +1064,6 @@ void COM_command_parse (void) {
 	#endif
 	}
 }
-
-
-
-
-
-
 
 
 

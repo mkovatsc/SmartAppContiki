@@ -38,6 +38,8 @@ extern uint8_t CTL_valve_wanted; //!< wanted valve (just valid in the valve mode
 extern uint8_t CTL_temp_wanted_last;   // desired temperatur value used for last PID control
 extern uint8_t CTL_temp_auto;
 
+extern uint16_t CTL_temp_threshold;
+
 enum mode {manual_target=0, manual_timers=1, auto_target=2, auto_valve=3, auto_timers=4};
 
 extern enum mode CTL_mode_auto;

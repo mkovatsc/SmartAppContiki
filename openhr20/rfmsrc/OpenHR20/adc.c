@@ -49,6 +49,7 @@
 #include "../common/rtc.h"
 #include "eeprom.h"
 #include "com.h"
+#include "controller.h"
 
 // typedefs
 
@@ -70,6 +71,8 @@ static int16_t ring_buf[2][AVERAGE_LEN];
 	int16_t ring_buf_temp_avgs [AVGS_BUFFER_LEN];
 	uint8_t ring_buf_temp_avgs_pos;
 #endif
+
+uint16_t last_reading=0;
 
 static uint8_t ring_pos=0;
 static uint8_t ring_used=0; 
@@ -270,6 +273,16 @@ bool task_ADC(void) {
             		}
             		int16_t t = ADC_Convert_To_Degree(ad);
             		update_ring(TEMP_RING_TYPE,t);
+			if ( ((t > last_reading + CTL_temp_threshold) || (t < last_reading - CTL_temp_threshold)) ) 
+			
+
+//			if ( ((t > temp_average + CTL_temp_threshold) || (t < temp_average - CTL_temp_threshold)) && temp_average!=0 
+//					&& ((t > last_reading + CTL_temp_threshold) || (t < last_reading - CTL_temp_threshold)) ) 
+			{
+				COM_send_temperature_event(t);
+				last_reading = t;
+			}
+				
             		#if DEBUG_PRINT_MEASURE
                 		COM_debug_print_temperature(t);
             		#endif
