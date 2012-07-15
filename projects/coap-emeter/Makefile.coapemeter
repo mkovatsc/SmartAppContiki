@@ -1,0 +1,63 @@
+all: coapemeter
+
+# variable for root Makefile.include
+CONTIKI = ../..
+
+UIP_CONF_IPV6=1
+
+WITH_COAP=7
+
+# radio configuration
+CFLAGS += -DRF_CHANNEL=21
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+# must be CFLAGS not variable
+CFLAGS += -DUIP_CONF_IPV6_RPL=1
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+
+# set the baud rate
+CFLAGS += -DAPP_BAUD_RATE=USART_BAUD_9600
+
+#used to be able to use pow
+TARGET_LIBFILES += -lm
+
+#used to be able to use sscanf
+LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
+
+#extmem
+#LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
+
+#add smlparser and shared functions to project files
+PROJECT_SOURCEFILES += smlparser.c shared.c
+
+# REST framework, requires WITH_COAP
+ifeq ($(WITH_COAP), 7)
+${info INFO: compiling with CoAP-07}
+CFLAGS += -DWITH_COAP=7
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-07
+else ifeq ($(WITH_COAP), 6)
+${info INFO: compiling with CoAP-06}
+CFLAGS += -DWITH_COAP=6
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-06
+else ifeq ($(WITH_COAP), 3)
+${info INFO: compiling with CoAP-03}
+CFLAGS += -DWITH_COAP=3
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-03
+else
+${info INFO: compiling with HTTP}
+CFLAGS += -DWITH_HTTP
+CFLAGS += -DREST=http_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=1
+APPS += rest-http-engine
+endif
+
+APPS += erbium
+
+include $(CONTIKI)/Makefile.include

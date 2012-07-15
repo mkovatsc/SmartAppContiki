@@ -1,0 +1,24 @@
+{
+                          "measurement":
+                          {
+                          "powerAllPhases": 0,
+                          "powerL1":0,
+                          "powerL2":0,
+                          "powerL3":0,
+                          "currentNeutral":0,
+                          "currentL1":0,
+                          "currentL2":0,
+                          "currentL3":0,
+                          "voltageL1":0,
+                          "voltageL2":0,
+                          "voltageL3":0,
+                          "phaseAngleVoltageL2L1":0,
+                          "phaseAngleVoltageL3L1":0,
+                          "phaseAngleCurrentVoltageL1":0,
+                          "phaseAngleCurrentVoltageL2":0,
+                          "phaseAngleCurrentVoltageL3":0,
+                          "createdOn": 0,
+                          "smartMeterId": 1,
+                          "smartMeterToken": 12398742134
+                          }
+}
