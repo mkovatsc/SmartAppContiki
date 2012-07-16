@@ -1911,7 +1911,7 @@ int32_t send_sml_message_get_proc_parameter_request(int64_t obis_key)
     
     sml_request_file_finalize(&send_buffer, &group_id);
     //TODO
-    //sml_send(&send_buffer);
+    sml_send(&send_buffer);
     return 0;
 }
 
