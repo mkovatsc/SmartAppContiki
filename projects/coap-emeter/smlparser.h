@@ -9,7 +9,7 @@
 #define COPY                                            0
 #define IGNORE                                          1
 
-#define MAX_READ_LENGTH                                 4096
+#define MAX_READ_LENGTH                                 1024
 #define MC_SML_BUFFER_LEN                               256
 
 #define CLIENT_ID_LENGTH                                8
@@ -122,7 +122,7 @@ typedef struct
 typedef enum {
     STATE_READY, STATE_SML_FILE, STATE_ERROR, STATE_SML_MESSAGE, STATE_SML_GET_NEXT_LENGTH, STATE_SML_OCTET_STRING_PARSE, STATE_SML_MESSAGE_OPEN_RESPONSE, 
     STATE_SML_NUMBER_PARSE, STATE_SML_MESSAGE_CLOSE_RESPONSE, STATE_SML_MESSAGE_GET_LIST_RESPONSE, STATE_SML_TIME_PARSE,
-    STATE_SML_LIST_ENTRY_PARSE, STATE_SML_STATUS_PARSE, STATE_SML_VALUE_PARSE, STATE_SML_LIST_ENTRY_LOOP
+    STATE_SML_LIST_ENTRY_PARSE, STATE_SML_STATUS_PARSE, STATE_SML_VALUE_PARSE, STATE_SML_LIST_ENTRY_LOOP, STATE_BOTTOM
 } parser_state;
 
 typedef struct

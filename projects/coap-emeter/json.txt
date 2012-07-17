@@ -22,3 +22,4 @@
                           "smartMeterToken": 12398742134
                           }
 }
+http://sense.sics.se/streams/willist/test/

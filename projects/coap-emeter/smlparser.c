@@ -323,18 +323,7 @@ void update_property(unsigned char *obj_name, int32_t obj_name_length, uint8_t s
         default:
         {
             #if DEBUG
-            int32_t index=0;
-            int32_t j;
-            char h_buf[64];
-            memset(h_buf,0,64);
-            sprintf(h_buf,"EID: 0x");
-            index += strlen(h_buf);
-            for(j=0;j<obj_name_length && index < 62;j++)
-            {
-                sprintf(h_buf+index, "%02X", obj_name[j]);
-                index += 2;
-            }
-            printf("%s\n",h_buf);
+                printf("EOBIS\n");
             #endif
             break;
         }
@@ -344,7 +333,7 @@ void update_property(unsigned char *obj_name, int32_t obj_name_length, uint8_t s
 int16_t init_pps()
 { 
     pps.stack_pointer = 1;
-    pps.stack[0].state = STATE_ERROR;
+    pps.stack[0].state = STATE_BOTTOM;
     pps.stack[0].step = 0;
     pps.stack[1].state = STATE_READY;
     pps.stack[1].step = 0;
@@ -490,14 +479,16 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                     break;
                 }
                 default:
+		{
                     reset_read_state();
                     break;
+		}
             }
             break;
         }
         case STATE_SML_FILE:
         {
-            switch(ps_get_state())
+            switch(ps_get_step())
             {
                 case 0:
                 {
@@ -549,7 +540,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 6)
                     {
-                        sml_error = 1;
+                        sml_error = 2;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -593,7 +584,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        sml_error = 3;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -604,7 +595,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 2)
                     {
-                        sml_error = 1;
+                        sml_error = 4;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -645,7 +636,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                             #if DEBUG
                                 printf("ETAG\n");
                             #endif
-                            sml_error = 1;
+                            sml_error = 5;
                             ps_return(SML_MESSAGE_END);
                             break;
                         }
@@ -688,7 +679,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        sml_error = 6;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -699,7 +690,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 6)
                     {
-                        sml_error = 1;
+                        sml_error = 7;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -783,7 +774,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        sml_error = 8;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -794,7 +785,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 1)
                     {
-                        sml_error = 1;
+                        sml_error = 9;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -823,7 +814,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        sml_error = 10;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -834,7 +825,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 7)
                     {
-                        sml_error = 1;
+                        sml_error = 11;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -898,7 +889,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                     }
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        sml_error = 12;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1012,7 +1003,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                      if(sml_get_next_type(byte) != SML_TYPE_LIST)
                      {
-                         sml_error = 1;
+                         sml_error = 13;
                          ps_return(SML_MESSAGE_END);
                          break;
                      }
@@ -1023,7 +1014,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 7)
                     {
-                        sml_error = 1;
+                        sml_error = 14;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1165,7 +1156,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                         }
                         default:
                         {
-                            sml_error = 1;
+                            sml_error = 15;
                             ps_return(SML_MESSAGE_END);
                             break;
                         }
@@ -1217,7 +1208,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                         }
                         default:
                         {
-                            sml_error = 1;
+                            sml_error = 16;
                             ps_return(SML_MESSAGE_END);
                             break;
                         }
@@ -1252,7 +1243,8 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_LIST)
                     {
-                        sml_error = 1;
+                        printf("0x%X\n", byte);
+                        sml_error = 17;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1263,7 +1255,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length != 2)
                     {
-                        sml_error = 1;
+                        sml_error = 18;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1314,7 +1306,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_get_next_type(byte) != SML_TYPE_OCTET_STRING)
                     {
-                        sml_error = 1;
+                        sml_error = 19;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1325,7 +1317,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if(sml_length < 0 || sml_length > MAX_OCTET_STRING_DATA_LENGTH)
                     {
-                        sml_error = 1;
+                        sml_error = 20;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1366,7 +1358,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                     
                     if(sml_get_next_type(byte) != sml_type) 
                     {
-                        sml_error = 1;
+                        sml_error = 21;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1382,7 +1374,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
                 {
                     if (sml_length < 0 || sml_length > sml_max_size) 
                     {
-                        sml_error = 1;
+                        sml_error = 22;
                         ps_return(SML_MESSAGE_END);
                         break;
                     }
@@ -1455,7 +1447,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
         case STATE_ERROR:
         {
             #if DEBUG
-                printf("ERROR\n");
+                printf("ERROR: %d i: %d\n",sml_error, r_info.i);
             #endif
             break;
         }
@@ -1464,7 +1456,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
             #if DEBUG
                 printf("ESTATE\n");
             #endif
-            break;
+	    break;
         }
     }
     return 0;
@@ -1560,12 +1552,8 @@ int16_t sml_read(unsigned char byte)
         }
         if(r_info.done)
         {
-            if(r_info.i > 0)
-            {
-                return 0;
-            }
             reset_read_state();
-            return 1;
+            return 0;
         }
     }
     else
@@ -1911,7 +1899,7 @@ int32_t send_sml_message_get_proc_parameter_request(int64_t obis_key)
     
     sml_request_file_finalize(&send_buffer, &group_id);
     //TODO
-    sml_send(&send_buffer);
+    //sml_send(&send_buffer);
     return 0;
 }
 

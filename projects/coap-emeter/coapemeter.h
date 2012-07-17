@@ -23,7 +23,7 @@
 //eMeter settings
 #define SMART_METER_ID                          1
 #define SMART_METER_TOKEN                       "d0f77dd665b39dfafa681d89a0f9d24d" /* md5 hash of MAC address 00212EFFFF0003E1 */
-#define EMETER_PUSH_INTERVAL                    3
+#define EMETER_PUSH_INTERVAL                    4
 //#define EMETER_SERVER_URL                     "http://webofenergy.inf.ethz.ch:8080/webofenergy/rest/measurement"
 #define EMETER_SERVER_URL                       "http://sense.sics.se/streams/willist/test/"
 

@@ -620,7 +620,7 @@ int16_t meter_l3_phase_periodic_handler(resource_t *r)
 }
 
 #if DEBUG
-PERIODIC_RESOURCE(meter_status, METHOD_GET, "meter/status", RESOURCE_TITLE, 0.5*CLOCK_SECOND);
+PERIODIC_RESOURCE(meter_status, METHOD_GET, "meter/status", RESOURCE_TITLE, PERIODIC_RESOURCE_INTERVAL*CLOCK_SECOND);
 void meter_status_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
@@ -642,7 +642,7 @@ void client_chunk_handler(void *response)
     uint8_t *chunk;
 
     int len = coap_get_payload(response, &chunk);
-    printf("|%.*s", len, (char*)chunk);
+    printf("%.*s\n", len, (char*)chunk);
 }
 
 /*-------------------------------------------------------------process definitions-------------------------------------------------------------*/
@@ -727,45 +727,45 @@ PROCESS_THREAD(coap_process, ev, data)
         PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_TIMER);
         
         // send post to eMeter system
-        char data[REST_MAX_CHUNK_SIZE];
+        static char data[REST_MAX_CHUNK_SIZE];
         //char time_str[32];
-        uint32_t length;
-        uint8_t block_num = 0;
+        static uint32_t length;
+        static uint8_t block_num = 0;
         
-        int32_t val_Z_pAP = 0;
-        uint32_t val_R_pAP = 0;
-        int32_t val_Z_pL1 = 0;
-        uint32_t val_R_pL1 = 0;
-        int32_t val_Z_pL2 = 0;
-        uint32_t val_R_pL2 = 0;
-        int32_t val_Z_pL3 = 0;
-        uint32_t val_R_pL3 = 0;
-        int32_t val_Z_cN = 0;
-        uint32_t val_R_cN = 0;
-        int32_t val_Z_cL1 = 0;
-        uint32_t val_R_cL1 = 0;
-        int32_t val_Z_cL2 = 0;
-        uint32_t val_R_cL2 = 0;
-        int32_t val_Z_cL3 = 0;
-        uint32_t val_R_cL3 = 0;
-        int32_t val_Z_vL1 = 0;
-        uint32_t val_R_vL1 = 0;
-        int32_t val_Z_vL2 = 0;
-        uint32_t val_R_vL2 = 0;
-        int32_t val_Z_vL3 = 0;
-        uint32_t val_R_vL3 = 0;
-        int32_t val_Z_pAVL2L1 = 0;
-        uint32_t val_R_pAVL2L1 = 0;
-        int32_t val_Z_pAVL3L1 = 0;
-        uint32_t val_R_pAVL3L1 = 0;
-        int32_t val_Z_pACVL1 = 0;
-        uint32_t val_R_pACVL1 = 0;
-        int32_t val_Z_pACVL2 = 0;
-        uint32_t val_R_pACVL2 = 0;
-        int32_t val_Z_pACVL3 = 0;
-        uint32_t val_R_pACVL3 = 0;
+        static int32_t val_Z_pAP = 0;
+        static uint32_t val_R_pAP = 0;
+        static int32_t val_Z_pL1 = 0;
+        static uint32_t val_R_pL1 = 0;
+        static int32_t val_Z_pL2 = 0;
+        static uint32_t val_R_pL2 = 0;
+        static int32_t val_Z_pL3 = 0;
+        static uint32_t val_R_pL3 = 0;
+        static int32_t val_Z_cN = 0;
+        static uint32_t val_R_cN = 0;
+        static int32_t val_Z_cL1 = 0;
+        static uint32_t val_R_cL1 = 0;
+        static int32_t val_Z_cL2 = 0;
+        static uint32_t val_R_cL2 = 0;
+        static int32_t val_Z_cL3 = 0;
+        static uint32_t val_R_cL3 = 0;
+        static int32_t val_Z_vL1 = 0;
+        static uint32_t val_R_vL1 = 0;
+        static int32_t val_Z_vL2 = 0;
+        static uint32_t val_R_vL2 = 0;
+        static int32_t val_Z_vL3 = 0;
+        static uint32_t val_R_vL3 = 0;
+        static int32_t val_Z_pAVL2L1 = 0;
+        static uint32_t val_R_pAVL2L1 = 0;
+        static int32_t val_Z_pAVL3L1 = 0;
+        static uint32_t val_R_pAVL3L1 = 0;
+        static int32_t val_Z_pACVL1 = 0;
+        static uint32_t val_R_pACVL1 = 0;
+        static int32_t val_Z_pACVL2 = 0;
+        static uint32_t val_R_pACVL2 = 0;
+        static int32_t val_Z_pACVL3 = 0;
+        static uint32_t val_R_pACVL3 = 0;
         
-        uint64_t val_time = 0;
+        static uint64_t val_time = 0;
         
         double_to_2ints(smart_meter_state.current_active_power.property_value, &val_Z_pAP, &val_R_pAP);
         double_to_2ints(smart_meter_state.active_power_l1.property_value, &val_Z_pL1, &val_R_pL1);
@@ -781,7 +781,7 @@ PROCESS_THREAD(coap_process, ev, data)
         //ctime(get_oldest_timestamp(),time_str,32);
         val_time = get_oldest_timestamp();
  
-        memset(data,0,REST_MAX_CHUNK_SIZE);
+        memset(data,' ',REST_MAX_CHUNK_SIZE-1);
         length = snprintf(data, REST_MAX_CHUNK_SIZE,
                           "{"
                           "\"measurement\":"
@@ -789,12 +789,13 @@ PROCESS_THREAD(coap_process, ev, data)
                           "\"powerAllPhases\":%ld.%lu,"
                           "\"powerL1\":%ld.%lu,"
                           "\"powerL2\":%ld.%lu,"
-                          "\"powerL3\":%ld.%lu}}"
+                          "\"powerL3\":%ld.%lu, "
                           ,val_Z_pAP, val_R_pAP
                           ,val_Z_pL1, val_R_pL1
                           ,val_Z_pL2, val_R_pL2
                           ,val_Z_pL3, val_R_pL3);
-        if(length > REST_MAX_CHUNK_SIZE)
+        data[REST_MAX_CHUNK_SIZE-1] = '\0';
+        if(length >= REST_MAX_CHUNK_SIZE)
         {
             #if DEBUG
                 printf("ECOAP");
@@ -802,16 +803,17 @@ PROCESS_THREAD(coap_process, ev, data)
         }
         else
         {
+            data[length] = ' ';
 	    coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
-            coap_set_payload(request, (uint8_t *)data, strlen(data));
+            coap_set_payload(request, (uint8_t *)data, REST_MAX_CHUNK_SIZE);
 	    coap_set_header_uri_path(request, "rd");
-            coap_set_header_block2(request, block_num++, 0, REST_MAX_CHUNK_SIZE);
-	    coap_set_header_content_type(request, APPLICATION_JSON);
 	    coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
-        }
-	continue;
-        memset(data,0,REST_MAX_CHUNK_SIZE);
+            coap_set_header_content_type(request, APPLICATION_JSON);
+            coap_set_header_block2(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
+	    COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
+	}
+	
+        memset(data,' ',REST_MAX_CHUNK_SIZE-1);
         length = snprintf(data, REST_MAX_CHUNK_SIZE,  
                           "\"currentNeutral\":%ld.%lu,"
                           "\"currentL1\":%ld.%lu,"
@@ -821,7 +823,8 @@ PROCESS_THREAD(coap_process, ev, data)
                           ,val_Z_cL1, val_R_cL1
                           ,val_Z_cL2, val_R_cL2
                           ,val_Z_cL3, val_R_cL3);
-        if(length > REST_MAX_CHUNK_SIZE)
+        data[REST_MAX_CHUNK_SIZE-1] = '\0';
+        if(length >= REST_MAX_CHUNK_SIZE)
         {
             #if DEBUG
                 printf("ECOAP");
@@ -829,13 +832,17 @@ PROCESS_THREAD(coap_process, ev, data)
         }
         else
         {
+            data[length] = ' ';
+            coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
             coap_set_payload(request, (uint8_t *)data, REST_MAX_CHUNK_SIZE);
+            coap_set_header_uri_path(request, "rd");
+            coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
+            coap_set_header_content_type(request, APPLICATION_JSON);
             coap_set_header_block2(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-	    coap_set_header_content_type(request, APPLICATION_JSON);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
+            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
        
-        memset(data,0,REST_MAX_CHUNK_SIZE);
+        memset(data,' ',REST_MAX_CHUNK_SIZE-1);
         length = snprintf(data, REST_MAX_CHUNK_SIZE,
                           "\"voltageL1\":%ld.%lu,"
                           "\"voltageL2\":%ld.%lu,"
@@ -845,7 +852,8 @@ PROCESS_THREAD(coap_process, ev, data)
                           ,val_Z_vL2, val_R_vL2
                           ,val_Z_vL3, val_R_vL3
                           ,val_Z_pAVL2L1, val_R_pAVL2L1);
-        if(length > REST_MAX_CHUNK_SIZE)
+        data[REST_MAX_CHUNK_SIZE-1] = '\0';
+        if(length >= REST_MAX_CHUNK_SIZE)
         {
             #if DEBUG
                 printf("ECOAP");
@@ -853,13 +861,17 @@ PROCESS_THREAD(coap_process, ev, data)
         }
         else
         {
+            data[length] = ' ';
+            coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
             coap_set_payload(request, (uint8_t *)data, REST_MAX_CHUNK_SIZE);
+            coap_set_header_uri_path(request, "rd");
+            coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
+            coap_set_header_content_type(request, APPLICATION_JSON);
             coap_set_header_block2(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-	    coap_set_header_content_type(request, APPLICATION_JSON);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
+            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
-        memset(data,0,REST_MAX_CHUNK_SIZE);
+        memset(data,' ',REST_MAX_CHUNK_SIZE-1);
         length = snprintf(data, REST_MAX_CHUNK_SIZE,
                           "\"phaseAngleVoltageL3L1\":%ld.%lu,"
                           "\"phaseAngleCurrentVoltageL1\":%ld.%lu,"
@@ -869,7 +881,8 @@ PROCESS_THREAD(coap_process, ev, data)
                           ,val_Z_pACVL1, val_R_pACVL1
                           ,val_Z_pACVL2, val_R_pACVL2
                           ,val_Z_pACVL3, val_R_pACVL3);
-        if(length > REST_MAX_CHUNK_SIZE)
+        data[REST_MAX_CHUNK_SIZE-1] = '\0';
+        if(length >= REST_MAX_CHUNK_SIZE)
         {
             #if DEBUG
                 printf("ECOAP");
@@ -877,10 +890,14 @@ PROCESS_THREAD(coap_process, ev, data)
         }
         else
         {
+            data[length] = ' ';
+            coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
             coap_set_payload(request, (uint8_t *)data, REST_MAX_CHUNK_SIZE);
+            coap_set_header_uri_path(request, "rd");
+            coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
+            coap_set_header_content_type(request, APPLICATION_JSON);
             coap_set_header_block2(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-	    coap_set_header_content_type(request, APPLICATION_JSON);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
+            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
         memset(data,0,REST_MAX_CHUNK_SIZE);
@@ -894,7 +911,7 @@ PROCESS_THREAD(coap_process, ev, data)
                           ,(uint32_t) (val_time & ((uint32_t) -1))
                           ,SMART_METER_ID
                           ,SMART_METER_TOKEN);
-        if(length > REST_MAX_CHUNK_SIZE)
+        if(length >= REST_MAX_CHUNK_SIZE)
         {
             #if DEBUG
                 printf("ECOAP");
@@ -902,11 +919,15 @@ PROCESS_THREAD(coap_process, ev, data)
         }
         else
         {
+            coap_init_message(request, COAP_TYPE_CON, COAP_POST, 0);
             coap_set_payload(request, (uint8_t *)data, strlen(data));
+            coap_set_header_uri_path(request, "rd");
+            coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
+            coap_set_header_content_type(request, APPLICATION_JSON);
             coap_set_header_block2(request, block_num++, 0, REST_MAX_CHUNK_SIZE);
-	    coap_set_header_content_type(request, APPLICATION_JSON);
             COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
         }  
+        block_num = 0;
     }
     PROCESS_END();
 }
