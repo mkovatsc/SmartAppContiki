@@ -32,6 +32,8 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
+//#define EUI64_ADDRESS   {0x00,0x50,0xC2,0xff,0xff,0x18,0x8d,0x2d}
+
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
 #define COAP_MAX_OPEN_TRANSACTIONS 6
