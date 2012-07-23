@@ -35,7 +35,7 @@
 #define RESOURCE_TITLE                          "SCA"
 
 // sml parser settings
-#define SML_PARSER_UPDATE_INTERVAL              3
+#define SML_PARSER_UPDATE_INTERVAL              4
 
 // system processes
 PROCESS(sml_process, "psml");

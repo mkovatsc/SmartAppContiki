@@ -157,13 +157,6 @@ void update_octet_string_of_key_property(key_property *p, unsigned char *data, i
     p->last_update = seconds;
 }
 
-#if DEBUG
-void update_status_message(char *msg)
-{
-    update_octet_string_of_property(&smart_meter_state.status_message, (unsigned char *)msg, strlen(msg), 0);
-}
-#endif
-
 void update_values_of_property(double_property *p, double val, unit u, int64_t seconds)
 {
     p->property_value = val;
@@ -353,7 +346,7 @@ int16_t ps_call(parser_state s, unsigned char byte)
     else
     {
         #if DEBUG
-        printf("ESS\n");
+            printf("ESS\n");
         #endif
         return 1;
     }
@@ -370,7 +363,7 @@ int16_t ps_return(unsigned char byte)
     else
     {
         #if DEBUG
-        printf("ESP\n");
+            printf("ESP\n");
         #endif
         return 1;
     }
@@ -1447,7 +1440,7 @@ int16_t handle_received_byte(unsigned char byte, int32_t skip)
         case STATE_ERROR:
         {
             #if DEBUG
-                printf("ERROR: %d i: %d\n",sml_error, r_info.i);
+                printf("ERROR: %d i: %ld\n",sml_error, r_info.i);
             #endif
             break;
         }
@@ -1559,7 +1552,7 @@ int16_t sml_read(unsigned char byte)
     else
     {
         #if DEBUG
-        printf("ESML\n");
+            printf("ESML\n");
         #endif
         reset_read_state();
         return 1;
@@ -1839,7 +1832,7 @@ void sml_message_write(sml_buffer *buf, unsigned char *transaction_id, uint8_t g
             //             break;
         default:
             #if DEBUG
-            printf("ENIY\n");
+                printf("ENIY\n");
             #endif
             break;
     }
@@ -1905,6 +1898,7 @@ int32_t send_sml_message_get_proc_parameter_request(int64_t obis_key)
 
 void parser_send_requests()
 {
+    //TODO
     send_sml_message_get_proc_parameter_request(CURRENT_L1);  
 }
 
@@ -1926,10 +1920,10 @@ void setup_parser()
     }
     parser_client_id.len = CLIENT_ID_LENGTH;
     #ifdef _EHZ363ZA_
-    smart_meter_password.data[0] = 0;
-    smart_meter_password.data[1] = 0;
-    smart_meter_password.data[2] = 0;
-    smart_meter_password.data[3] = 0;
-    smart_meter_password.len = 4;
+        smart_meter_password.data[0] = 0;
+        smart_meter_password.data[1] = 0;
+        smart_meter_password.data[2] = 0;
+        smart_meter_password.data[3] = 0;
+        smart_meter_password.len = 4;
     #endif    
 }

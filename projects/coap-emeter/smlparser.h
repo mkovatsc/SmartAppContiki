@@ -9,7 +9,7 @@
 #define COPY                                            0
 #define IGNORE                                          1
 
-#define MAX_READ_LENGTH                                 1024
+#define MAX_READ_LENGTH                                 1024 // dynamic
 #define MC_SML_BUFFER_LEN                               256
 
 #define CLIENT_ID_LENGTH                                8
@@ -49,7 +49,6 @@
 #define SML_PROC_PAR_VALUE_TAG_TUPEL_ENTRY              0x03
 #define SML_PROC_PAR_VALUE_TAG_TIME                     0x04
 
-#define SML_ATTENTION_NUMBER_UNPARSEABLE                0x8181C7C7FE08
 
 #define SML_TYPE_NUMBER_8                               sizeof(uint8_t)
 #define SML_TYPE_NUMBER_16                              sizeof(uint16_t)
@@ -59,10 +58,6 @@
 #define SML_BIG_ENDIAN                                  1
 #define SML_LITTLE_ENDIAN                               0
 
-#define sml_uint8_t_parse(buf,np,ignore)                sml_number_parse(buf, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_8,np,ignore)
-#define sml_uint16_t_parse(buf,np,ignore)               sml_number_parse(buf, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_16,np,ignore)
-#define sml_uint32_t_parse(buf,np,ignore)               sml_number_parse(buf, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_32,np,ignore)
-#define sml_int8_t_parse(buf,np,ignore)                 sml_number_parse(buf, SML_TYPE_INTEGER, SML_TYPE_NUMBER_8,np,ignore)
 #define sml_uint8_t_write(buf,n)                        sml_number_write(buf, n, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_8)
 #define sml_uint16_t_write(buf,n)                       sml_number_write(buf, n, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_16)
 #define sml_uint32_t_write(buf,n)                       sml_number_write(buf, n, SML_TYPE_UNSIGNED, SML_TYPE_NUMBER_32)
@@ -202,10 +197,6 @@ typedef struct
     unsigned_char_property product_identification;
     unsigned_char_property product_single_identification;
     key_property public_key;
-    
-    #if DEBUG
-        unsigned_char_property status_message;
-    #endif
         
     double_property energy_value_total;
     double_property energy_value1;
