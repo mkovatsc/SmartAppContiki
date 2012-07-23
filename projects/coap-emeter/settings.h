@@ -9,9 +9,9 @@
 
 // time settings
 #define DEFAULT_TIME
-#define TIME_SEC     15
-#define TIME_MIN     19
-#define TIME_HOUR    6
+#define TIME_SEC     10
+#define TIME_MIN     20
+#define TIME_HOUR    7
 #define TIME_DAY     15
 #define TIME_MONTH   6
 #define TIME_YEAR    2012
