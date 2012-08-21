@@ -33,7 +33,7 @@
 #define __PROJECT_RPL_WEB_CONF_H__
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    340 // original: 220
+#define UIP_CONF_BUFFER_SIZE    300 // original: 220
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
@@ -45,6 +45,10 @@
 #endif
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
+
+//energy saving option
+//#undef NETSTACK_CONF_RDC
+//#define NETSTACK_CONF_RDC     contikimac_driver
 
 // custom MAC address
 #undef EUI64_ADDRESS
