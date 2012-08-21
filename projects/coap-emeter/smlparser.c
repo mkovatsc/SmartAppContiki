@@ -1653,9 +1653,13 @@ void sml_number_write(sml_buffer *buf, void *np, unsigned char type, int32_t siz
 
 void sml_number_init(uint64_t number, unsigned char type, int32_t size, unsigned char *np) 
 {
-    memset(np, 0, size);
-    memcpy(np, &number, size);
-    return;
+   unsigned char* bytes = (unsigned char*)&number;
+   if (sml_number_endian() == SML_BIG_ENDIAN)
+   {
+     bytes += sizeof(uint64_t) - size;
+   }
+   memset(np, 0, size);
+   memcpy(np, bytes, size);
 }
 
 void sml_octet_string_init_from_int(unsigned char *str, int32_t int_size, unsigned char *bytes)
