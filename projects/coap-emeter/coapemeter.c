@@ -760,7 +760,8 @@ PROCESS_THREAD(coap_process, ev, data)
         double_to_2ints(smart_meter_state.voltage_l1.property_value, &val_Z_vL1, &val_R_vL1);
         double_to_2ints(smart_meter_state.voltage_l2.property_value, &val_Z_vL2, &val_R_vL2);
         double_to_2ints(smart_meter_state.voltage_l3.property_value, &val_Z_vL3, &val_R_vL3);
-        
+        double_to_2ints(smart_meter_state.current_l1.property_value + smart_meter_state.current_l2.property_value + smart_meter_state.current_l3.property_value, &val_Z_cN, &val_R_cN);
+	
         //ctime(get_oldest_timestamp(),time_str,32);
         val_time = get_oldest_timestamp();
         
