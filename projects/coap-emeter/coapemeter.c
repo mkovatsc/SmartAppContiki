@@ -24,7 +24,6 @@
 const static char default_format[13] = {'%','l','d','.','%','0',FIXED_POINT_PRECISION+48,'l','u',' ','%','s','\0'};
 
 static uint32_t alive_counter = 0;
-static uip_ipaddr_t server_ipaddr;
 
 #ifdef _EHZ363ZA_
 uint64_t get_oldest_timestamp()
@@ -653,6 +652,8 @@ PROCESS_THREAD(sml_process, ev, data)
 PROCESS_THREAD(coap_process, ev, data)
 {
     static struct etimer coap_etimer;
+    
+    static uip_ipaddr_t coap_http_proxy_server_ipaddr;
     static coap_packet_t request[1];
     static char json_data[REST_MAX_CHUNK_SIZE];
     static uint32_t length = 0;
@@ -740,7 +741,7 @@ PROCESS_THREAD(coap_process, ev, data)
     
     
     //initialize eMeter POST System
-    COAP_HTTP_PROXY_SET_IPV6(&server_ipaddr);
+    COAP_HTTP_PROXY_SET_IPV6(&coap_http_proxy_server_ipaddr);
     coap_receiver_init();
     while(1)
     {
@@ -794,7 +795,7 @@ PROCESS_THREAD(coap_process, ev, data)
             coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
             coap_set_header_block1(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
             coap_set_payload(request, (uint8_t *)json_data, REST_MAX_CHUNK_SIZE);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
+            COAP_BLOCKING_REQUEST(&coap_http_proxy_server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
         memset(json_data,' ',REST_MAX_CHUNK_SIZE);
@@ -822,7 +823,7 @@ PROCESS_THREAD(coap_process, ev, data)
             coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
             coap_set_payload(request, (uint8_t *)json_data, REST_MAX_CHUNK_SIZE);
             coap_set_header_block1(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
+            COAP_BLOCKING_REQUEST(&coap_http_proxy_server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
         memset(json_data,' ',REST_MAX_CHUNK_SIZE);
@@ -851,7 +852,7 @@ PROCESS_THREAD(coap_process, ev, data)
             coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
             coap_set_payload(request, (uint8_t *)json_data, REST_MAX_CHUNK_SIZE);
             coap_set_header_block1(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
+            COAP_BLOCKING_REQUEST(&coap_http_proxy_server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
         memset(json_data,' ',REST_MAX_CHUNK_SIZE);
@@ -879,7 +880,7 @@ PROCESS_THREAD(coap_process, ev, data)
             coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
             coap_set_payload(request, (uint8_t *)json_data, REST_MAX_CHUNK_SIZE);
             coap_set_header_block1(request, block_num++, 1, REST_MAX_CHUNK_SIZE);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
+            COAP_BLOCKING_REQUEST(&coap_http_proxy_server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler);
         }
         
         memset(json_data,0,REST_MAX_CHUNK_SIZE);
@@ -918,7 +919,7 @@ PROCESS_THREAD(coap_process, ev, data)
             coap_set_header_proxy_uri(request, EMETER_SERVER_URL);
             coap_set_payload(request, (uint8_t *)json_data, strlen((char*)json_data));
             coap_set_header_block1(request, block_num++, 0, REST_MAX_CHUNK_SIZE);
-            COAP_BLOCKING_REQUEST(&server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
+            COAP_BLOCKING_REQUEST(&coap_http_proxy_server_ipaddr, COAP_HTTP_PROXY_SERVER_PORT, request, client_chunk_handler); 
         }
         block_num = 0;
     }

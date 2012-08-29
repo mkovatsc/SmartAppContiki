@@ -22,5 +22,5 @@
                           "smartMeterToken": 12398742134
                           }
 }
-http://sense.sics.se/streams/willist/test/
-{"measurement":{"powerAllPhases":23.0,"powerL1":23.899,"powerL2":0.0,"powerL3":0.0,                                            
+
+http://sense.sics.se/streams/willist/test/                                 
