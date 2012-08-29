@@ -1,10 +1,10 @@
-CONTIKI_TARGET_DIRS = . apps net loader
+CONTIKI_TARGET_DIRS = . dev apps net loader 
 
 CONTIKI_CORE=contiki-main
 CONTIKI_TARGET_MAIN = ${CONTIKI_CORE}.o
-CONTIKI_TARGET_SOURCEFILES += contiki-main.c params.c adc.c
+CONTIKI_TARGET_SOURCEFILES += contiki-main.c params.c adc.c interrupttwi.c
 #Needed for slip
-CONTIKI_TARGET_SOURCEFILES += button-sensor.c sensors.c slip_uart0.c slip.c
+CONTIKI_TARGET_SOURCEFILES += sensors.c slip_uart0.c slip.c
 
 CONTIKIAVR=$(CONTIKI)/cpu/avr
 CONTIKIBOARD=.

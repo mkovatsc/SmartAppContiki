@@ -58,7 +58,7 @@ In this file we define only configuration parameters, for example what kind of c
 //#define LANG LANG_de
 //#define LANG LANG_cs
 
-#define BATT_ERROR_REVERSIBLE 0
+#define BATT_ERROR_REVERSIBLE 1 
 
 #define _STR(x) #x
 #define STR(x) _STR(x)

@@ -241,6 +241,7 @@ int __attribute__ ((noreturn)) main(void)
                 	bool minute=(RTC_GetSecond()==0);
                 	CTL_update(minute);
                 	if (minute) {
+				COM_send_error_event(CTL_error);
                 		if (((CTL_error &  (CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING)) == 0) && (RTC_GetDayOfWeek()==6)
 	    				    && (RTC_GetHour()==10) && (RTC_GetMinute()==0)) {
 	        	                // every saturday 10:00AM

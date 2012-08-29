@@ -236,7 +236,6 @@ void CTL_update(bool minute_ch) {
         	PID_force_update = -1; // invalid value = not used
 	}
 	// batt error detection
-	// TODO: send Battery warning???
 	if (bat_average) {
 		if (bat_average < 20*(uint16_t)config.bat_low_thld) {
    			CTL_error |=  CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING;

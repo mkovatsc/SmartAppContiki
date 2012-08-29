@@ -1,8 +1,8 @@
 #include "lib/sensors.h"
-#include "dev/reed-sensor.h"
+#include "dev/touch-sensor.h"
 #include <avr/interrupt.h>
 
-const struct sensors_sensor reed_sensor;
+const struct sensors_sensor touch_sensor;
 static int status(int type);
 
 static struct timer debouncetimer;
@@ -43,8 +43,8 @@ configure(int type, int c)
 				
 				DDRE &= ~_BV(PE7);
 				PORTE |= _BV(PE7);
-				EICRB &= ~_BV(ISC71);
 				EICRB  |= _BV(ISC70);
+				EICRB &= ~_BV(ISC71);
 				EIMSK |= _BV(INT7); 
 				enabled = 1;
 				timer_set(&debouncetimer, 0);
@@ -62,14 +62,13 @@ configure(int type, int c)
 
 ISR(INT7_vect)
 {
-	if(timer_expired(&debouncetimer)) {
+	if(timer_expired(&debouncetimer) && (PINE & _BV(PE7))) {
 		timer_set(&debouncetimer, CLOCK_SECOND / 4);
-		sensors_changed(&reed_sensor);
-		
+		sensors_changed(&touch_sensor);
 	}
 }
 
 
-SENSORS_SENSOR(reed_sensor, REED_SENSOR,
+SENSORS_SENSOR(touch_sensor, TOUCH_SENSOR,
 	       value, configure, status);
 

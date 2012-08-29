@@ -81,6 +81,7 @@ uint8_t debugflowsize,debugflow[DEBUGFLOWSIZE];
 #include "dev/serial-line.h"
 #include "dev/slip.h"
 
+
 #ifdef RAVEN_LCD_INTERFACE
 #include "raven-lcd.h"
 #endif
@@ -108,7 +109,7 @@ uint8_t debugflowsize,debugflow[DEBUGFLOWSIZE];
 
 #if PERIODICPRINTS
 #define PINGS 64
-#define ROUTES 600
+#define ROUTES 30
 #define STAMPS 60
 #define STACKMONITOR 1024
 uint32_t clocktime;
@@ -500,7 +501,7 @@ extern volatile unsigned long radioontime;
       clocktime+=1;
 #endif
 
-#if PINGS && UIP_CONF_IPV6
+#if PINGS && UIP_CONF_IPV6 && 0
 extern void raven_ping6(void); 
 if ((clocktime%PINGS)==1) {
   PRINTF("**Ping\n");

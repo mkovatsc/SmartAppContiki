@@ -353,6 +353,20 @@ void COM_send_temperature_event(uint16_t t){
 }
 
 
+/*!
+ *******************************************************************************
+ *  \brief Event Error *
+ *  \note
+ ******************************************************************************/
+void COM_send_error_event(uint8_t e){
+	COM_putchar('E');
+	COM_putchar('E');
+	COM_putchar(':');
+	print_hexXX(e);
+	COM_putchar('\n');
+	COM_flush();
+}
+
 
 /*!
  *******************************************************************************
@@ -819,7 +833,7 @@ void COM_command_parse (void) {
 							COM_putchar('0');
 							break;
 						}
-						CTL_temp_threshold= ((uint16_t) com_hex[0]);
+						CTL_temp_threshold= ((uint16_t) com_hex[0])*10;
 						COM_putchar('1');
 						break;
 					}	
@@ -957,6 +971,14 @@ void COM_command_parse (void) {
 						break;
 
 					}
+					case 'D':
+					{
+						COM_putchar(sub);
+						COM_putchar('1');
+						COM_putchar(':');
+						print_decXXXX(CTL_temp_threshold);
+						break;
+					}		
 					default:
 					{
 						COM_putchar('0');

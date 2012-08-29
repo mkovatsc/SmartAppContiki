@@ -204,7 +204,7 @@ unsigned long clock_seconds(void);
 /* If wait is too short the connection can be reset as a result of multiple fragment reassembly timeouts */
 #define UIP_CONF_WAIT_TIMEOUT     20
 
-#elif 1  /* Contiki-mac radio cycling */
+#elif 0  /* Contiki-mac radio cycling */
 //#define NETSTACK_CONF_MAC         nullmac_driver
 #define NETSTACK_CONF_MAC         csma_driver
 #define NETSTACK_CONF_RDC         contikimac_driver
@@ -220,7 +220,7 @@ unsigned long clock_seconds(void);
 #define SICSLOWPAN_CONF_MAXAGE    3
 #define NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE 8
 
-#elif 1  /* cx-mac radio cycling */
+#elif 0  /* cx-mac radio cycling */
 /* RF230 does clear-channel assessment in extended mode (autoretries>0) */
 #define RF230_CONF_AUTORETRIES    1
 #if RF230_CONF_AUTORETRIES

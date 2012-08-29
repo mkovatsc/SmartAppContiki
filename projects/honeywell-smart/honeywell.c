@@ -37,6 +37,9 @@
 #include <ctype.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
+
+#include "contiki.h"
+#include "contiki-net.h"
 #include "rs232.h"
 #include "ringbuf.h"
 #include "sys/clock.h"
@@ -44,6 +47,7 @@
 #include "net/uip-ds6.h"
 #include "net/rpl/rpl.h"
 
+#include "er-coap-07-engine.h"
 #include "er-coap-07.h"
 #include "er-coap-07-transactions.h"
 #include "er-coap-07-separate.h"
@@ -57,9 +61,16 @@
 #define TRUE 1
 #define FALSE 0
 
+#define BATT_LOW 	(1<<7)
+#define BATT_WARNING 	(1<<6)
+#define ERROR_MOTOR	(1<<3)
+#define ERROR_MONTAGE	(1<<2)
+
+#define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
 extern uip_ds6_route_t uip_ds6_routing_table[];
+
 
 /*------ PROCESSES ------------------------------------------------------------*/
 PROCESS(honeywell_process, "Honeywell comm");
@@ -88,26 +99,41 @@ static enum request_type request_state = idle;
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 
+/* EEPROM variables */
+uint16_t ee_error_ip[8] EEMEM;
+char ee_error_uri[50] EEMEM;
+char ee_identifier[50] EEMEM;
+
 
 /* events for observing/separate responses */
 static process_event_t changed_valve_event;
 static process_event_t changed_temp_event;
-static process_event_t changed_battery_event;
-
+////static process_event_t changed_battery_event;
 static process_event_t changed_wheel_event;
 static process_event_t changed_mode_event;
+
 static process_event_t get_date_response_event;
 static process_event_t get_time_response_event;
 static process_event_t get_battery_response_event;
 static process_event_t get_target_response_event;
+static process_event_t get_threshold_response_event;
 static process_event_t get_valve_response_event;
 //static process_event_t get_temperature_response_event;
 static process_event_t get_predefined_response_event;
 static process_event_t get_slots_response_event;
+
 static process_event_t set_response_event;
 
+static process_event_t error_event;
 
-static uint8_t poll_time = 15;
+static uint8_t poll_time = 30;
+
+static uint8_t error_active = 0;
+
+uint16_t error_ip[8];
+char error_uri[50];
+char identifier[50];
+
 
 //struct for the cache
 static struct {
@@ -130,6 +156,8 @@ static struct {
 	uint16_t comfort_temperature;
 	uint16_t supercomfort_temperature;
 
+	uint16_t threshold_temperature;
+
 	hw_timer_slot_t timers[8][8];
 
 	/* 0 : justOne
@@ -144,6 +172,7 @@ static struct {
 
 	clock_time_t last_temperature_reading;
 	clock_time_t last_target_reading;
+	clock_time_t last_threshold_reading;
 	clock_time_t last_valve_reading;
 	clock_time_t last_slots_reading[8];
 
@@ -235,6 +264,15 @@ static uint8_t separate_get_slots_active = 0;
 static application_separate_get_slots_store_t separate_get_slots_store[1];
 
 
+typedef struct application_separate_get_threshold_store {
+	coap_separate_t request_metadata;
+	uint8_t error;
+} application_separate_get_threshold_store_t;
+
+static uint8_t separate_get_threshold_active = 0;
+static application_separate_get_threshold_store_t separate_get_threshold_store[1];
+
+
 /*--HONEYWELL-PROCESS-IMPLEMENTATION-----------------------------------------*/
 static int uart_get_char(unsigned char c)
 {
@@ -258,25 +296,20 @@ static void parseD(char * data) {
 		poll_data.valve = valve_state;
 		poll_data.last_valve_reading = clock_time();
 
-		uint16_t is_temperature = atoi(&data[36]);
+/*		uint16_t is_temperature = atoi(&data[36]);
 		if(poll_data.is_temperature != is_temperature){
 			//send event to the coap process that the temperature changed to notify all the subscribers
 			process_post(&coap_process, changed_temp_event, NULL);
 		}
 		poll_data.is_temperature = is_temperature;
 		poll_data.last_temperature_reading = clock_time();
-
+*/
 		poll_data.target_temperature = atoi(&data[44]);
 		poll_data.last_target_reading = clock_time();
 
-		uint16_t battery_state = atoi(&data[52]);
-                if(poll_data.battery != battery_state){
-                        //send event to the coap process that the battery changed to notify all the subscribers
-                        process_post(&coap_process, changed_battery_event, NULL);
-                }
-                poll_data.battery = battery_state;
+                poll_data.battery = atoi(&data[52]);
 		poll_data.last_battery_reading = clock_time();
-
+		
 		switch(data[24]){
 			case 'M':
 				switch(data[25]){
@@ -328,7 +361,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
         changed_valve_event = process_alloc_event();
 	changed_temp_event = process_alloc_event();
-	changed_battery_event = process_alloc_event();
+//	changed_battery_event = process_alloc_event();
 
 	changed_wheel_event = process_alloc_event();
 	changed_mode_event = process_alloc_event();
@@ -337,29 +370,39 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	get_time_response_event = process_alloc_event();
 	get_battery_response_event = process_alloc_event();
 	get_target_response_event = process_alloc_event();
-	get_valve_response_event = process_alloc_event();
+	get_threshold_response_event = process_alloc_event();
+//	get_valve_response_event = process_alloc_event();
 //	get_temperature_response_event = process_alloc_event();
 	get_predefined_response_event = process_alloc_event();
 	get_slots_response_event = process_alloc_event();
 
-	
+	error_event = process_alloc_event();	
 	
 	poll_data.mode=4;
 	
+	eeprom_read_block(&error_uri, ee_error_uri, 50);
+	eeprom_read_block(&identifier, ee_identifier, 50);
 
+
+	int i;
+	for(i=0;i<8;i++){
+		error_ip[i] = eeprom_read_word(&ee_error_ip[i]);
+	}
 	// finish booting first
 	PROCESS_PAUSE();
-	etimer_set(&etimer, CLOCK_SECOND * 30);
+//	etimer_set(&etimer, CLOCK_SECOND * 30);
 	
 	request_state = idle;
 
 	while (1) {
 		PROCESS_WAIT_EVENT();
-		if(ev == PROCESS_EVENT_TIMER) {
+/*		if(ev == PROCESS_EVENT_TIMER) {
 			etimer_set(&etimer, CLOCK_SECOND * poll_time);
 			printf("D\n");
 
-		} else if (ev == PROCESS_EVENT_MSG) {
+		}
+*/ 
+		if (ev == PROCESS_EVENT_MSG) {
 			buf_pos = 0;
 			while ((rx=ringbuf_get(&uart_buf))!=-1) {
 				if (buf_pos<126 && (char)rx=='\n') {
@@ -398,6 +441,9 @@ PROCESS_THREAD(honeywell_process, ev, data)
 										printf_P(PSTR("GS%d\n"),day);
 										break;
 									}
+									case 'D':
+										printf_P(PSTR("GD\n"));
+										break;
 									default:
 										break;
 								}
@@ -472,7 +518,11 @@ PROCESS_THREAD(honeywell_process, ev, data)
 								case 'V':
 									//Valve
 									if(buf[2]=='1'){
-										poll_data.valve = atoi(&buf[4]);
+                								uint8_t valve_state = atoi(&buf[4]);
+									        if(poll_data.valve != valve_state){
+                        								process_post(&coap_process, changed_valve_event, NULL);
+                								}
+										poll_data.valve = valve_state;
 										separate_get_valve_store->error=FALSE;
 										poll_data.last_valve_reading = clock_time();
 									}
@@ -494,6 +544,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									process_post(&coap_process, get_temperature_response_event, NULL);
 									break;
 						*/		case 'P':
+									//Predefined Temperature
 									if(buf[2]=='1'){
 										int temp;
 										sscanf_P(&buf[5], PSTR("%x"), &temp);
@@ -517,6 +568,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									process_post(&coap_process, get_predefined_response_event, NULL);
 									break;
 								case 'S':
+									//Day Slots
 									if(buf[2]=='1'){
 										int day;
 										sscanf_P(&buf[4],PSTR("%d"), &day);
@@ -535,6 +587,19 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									}
 									process_post(&coap_process, get_slots_response_event, NULL);
 									break;	
+								case 'D':
+									//Temperature Threshold
+									if(buf[2]=='1'){
+										poll_data.threshold_temperature = atoi(&buf[4]);
+										separate_get_threshold_store->error=FALSE;
+										poll_data.last_threshold_reading = clock_time();
+									}
+									else {
+										separate_get_threshold_store->error=TRUE;
+									}
+									process_post(&coap_process, get_threshold_response_event, NULL);
+									break;
+
 								default:
 									//Unknown Response 
 									break;
@@ -576,6 +641,48 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									process_post(&coap_process, changed_temp_event, NULL);
 									poll_data.last_temperature_reading = clock_time();
 									break;
+								case 'E':
+									//ERROR MESSAGE
+								{
+									uint8_t code;
+									uint8_t change;
+									change = 0;	
+									sscanf_P(&buf[3], PSTR("%x"), &code);
+									if (code & BATT_LOW) {
+										if (!(error_active & BATT_LOW)){
+											error_active |= BATT_LOW;
+											change = 1;
+										}
+									}
+									if (code & BATT_WARNING) {
+										if (!(error_active & BATT_WARNING)){
+											error_active |= BATT_WARNING;
+											change = 1;
+										}
+									}
+									if (code & ERROR_MONTAGE) {
+										if (!(error_active & ERROR_MONTAGE)){
+											error_active |= ERROR_MONTAGE;
+											change = 1;
+										}
+									}
+									if (code & ERROR_MOTOR) {
+										if (!(error_active & ERROR_MOTOR)){
+											error_active |= ERROR_MOTOR;
+											change = 1;
+										}
+									}
+									if(!code){
+										if (error_active){
+											error_active = 0;
+											change = 1;
+										}
+									}
+									if (change) {
+										process_post(&coap_process, error_event, NULL);
+									}
+									break;
+								}		
 								default:
 									//Unkown Event
 									break;
@@ -910,7 +1017,7 @@ static void handle_temperature(int temperature, int index, void * request, void*
 	        }
         	else{
         		REST.set_response_status(response, REST.status.BAD_REQUEST);
-                	strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 155 sets the temperature to 15.5 deg"), preferred_size);
+                	strncpy_P((char*)buffer, PSTR("Payload format: ttt, e.g. 15.5 sets the temperature to 15.5 deg"), preferred_size);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, strlen((char*)buffer));
 			return;
@@ -987,7 +1094,7 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 
 /*--------- Temperature ---------------------------------------------------------*/
 
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temp", "title=\"Current temperature\";ct=0;rt=\"temperature:C\"");
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Current temperature\";ct=0;rt=\"temperature:C\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
@@ -1099,19 +1206,25 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	}
 }
 
+/*
 void battery_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
-	char content[6];
+	char content[10];
 
 	++event_i;
 
-  	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+  	coap_packet_t notification[1]; // This way the packet can be treated as pointer as usual.
   	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR("%u"), poll_data.battery));
-
+	if (error_active & BATT_LOW){
+	  	coap_set_payload(notification, content, snprintf_P(content, 9, PSTR("LOW")));
+	}
+	else if (error_active & BATT_WARNING) {
+	  	coap_set_payload(notification, content, snprintf_P(content, 9, PSTR("WARNING")));
+	}
 	REST.notify_subscribers(r, event_i, notification);
 
 }
+*/
 
 void battery_finalize_handler() {
 	if (separate_get_battery_active){
@@ -1269,6 +1382,132 @@ void target_finalize_handler() {
 
 
 
+/*--------- Threshold ---------------------------------------------------------*/
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";ct=0;rt=\"temperature:C\"");
+void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		if(poll_data.last_threshold_reading>clock_time()-5*CLOCK_SECOND){
+			snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.threshold_temperature/100, poll_data.threshold_temperature%100);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			printf_P(PSTR("GD\n"));
+		}
+		else {
+			if (!separate_get_threshold_active){
+				coap_separate_accept(request, &separate_get_threshold_store->request_metadata);
+				separate_get_threshold_active = 1;
+				printf_P(PSTR("GD\n"));
+			}
+			else {
+				coap_separate_reject();
+				printf_P(PSTR("GD\n"));
+			}
+		}
+		
+	}
+  	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+/*        	if(len != 3 && len != 2){
+        		success = 0;
+          	}
+          	else{
+          		int i;
+                	for(i=0; i<len; i++){
+                        	if (!isdigit(string[i])){
+                                	success = 0;
+                                	break;
+                          	}
+                  	}
+          	}
+*/
+		uint16_t value;
+		if(len == 2){
+			if (isdigit(string[0]) && isdigit(string[1])){
+				value = (atoi((char*) string)) * 10;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if (len == 3) {
+			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
+				value = (atoi((char*) string)) * 10;
+				value += atoi((char*) string+2);
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 4){
+			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
+				value = (atoi((char*) string) *10);
+				value += atoi((char*) string+3);
+			}
+			else {
+				success = 0;
+			}
+		}
+		else {
+			success = 0;
+		}
+	        if(success){
+			if (!separate_set_active){
+				coap_separate_accept(request, &separate_set_store->request_metadata);
+				separate_set_active = 1;
+                       		printf_P(PSTR("SD%02x\n"),value);
+			}
+			else {
+				coap_separate_reject();
+              		}
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+                	strncpy_P((char*)buffer, PSTR("Payload format: tt.t, e.g. 1.0 sets the threshold to 1.0 deg"), preferred_size);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
+	}
+}
+
+void threshold_finalize_handler() {
+	if (separate_get_threshold_active){
+		char buffer[10];
+		coap_transaction_t *transaction = NULL;
+		if ( (transaction = coap_new_transaction(separate_get_threshold_store->request_metadata.mid, &separate_get_threshold_store->request_metadata.addr, separate_get_threshold_store->request_metadata.port)) ){
+			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			if(separate_get_threshold_store->error){
+      				coap_separate_resume(response, &separate_get_threshold_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
+			}
+			else {
+      				coap_separate_resume(response, &separate_get_threshold_store->request_metadata, CONTENT_2_05);
+				snprintf_P(buffer, 10 , PSTR("%d.%02d"), poll_data.threshold_temperature/100, poll_data.threshold_temperature%100);
+				REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+				coap_set_payload(response, buffer, strlen(buffer));
+			}
+	
+			coap_set_header_block2(response, separate_get_threshold_store->request_metadata.block2_num, 0, separate_get_threshold_store->request_metadata.block2_size);
+	
+			transaction->packet_len = coap_serialize_message(response, transaction->packet);
+			coap_send_transaction(transaction);
+			separate_get_threshold_active = 0;
+		}
+		else {
+			separate_get_threshold_active = 0;
+      			/*
+		       * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
+		       */	
+		}
+	}
+}
+
+
+
 /*--------- Valve ---------------------------------------------------------*/
 EVENT_RESOURCE(valve, METHOD_GET | METHOD_PUT, "set/valve", "title=\"Valve opening\";ct=0;rt=\"state:percent\"");
 void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -1344,19 +1583,20 @@ void valve_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 }
 
 
+/*
 void valve_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[6];
 
 	++event_i;
 
-  	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+  	coap_packet_t notification[1]; // This way the packet can be treated as pointer as usual. 
   	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
   	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR("%u"), (poll_data.valve-30)*2));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
-
+*/
 
 void valve_finalize_handler() {
 	if (separate_get_valve_active){
@@ -1582,7 +1822,6 @@ wheel_event_handler(resource_t *r)
 
 	REST.notify_subscribers(r, event_counter, notification);
 }
-
 
 
 /*---- Date & Time -----------------------------------------------------*/
@@ -1831,6 +2070,183 @@ void set_finalize_handler() {
 }
 
 
+/*--------- Error Address ------------------------------------------------------------*/
+
+RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";ct=0;rt=\"ressource\"");
+void error_address_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		if(error_uri[0]=='/'){
+			snprintf_P((char*)buffer, preferred_size, PSTR("[%x:%x:%x:%x:%x:%x:%x:%x]%s"), error_ip[0],error_ip[1],error_ip[2],error_ip[3],error_ip[4],error_ip[5],error_ip[6],error_ip[7],error_uri);
+		}
+		else{
+			snprintf_P((char*)buffer, preferred_size, PSTR("[%x:%x:%x:%x:%x:%x:%x:%x]/%s"), error_ip[0],error_ip[1],error_ip[2],error_ip[3],error_ip[4],error_ip[5],error_ip[6],error_ip[7],error_uri);
+
+		}
+ 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+    		int success = 1;
+		const uint8_t * string = NULL;
+    		int len;
+
+		len = coap_get_payload(request, &string);
+		uint16_t ip[8];
+		char uri[50];
+		if (sscanf(string,"%*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %s", &ip[0],&ip[1],&ip[2],&ip[3],&ip[4],&ip[5],&ip[6],&ip[7],uri)==9){
+			int i;
+			for (i=0; i<8;i++){
+				error_ip[i]=ip[i];
+				eeprom_write_word(&ee_error_ip[i],ip[i]);
+				
+			}
+			strncpy(error_uri,uri,50);
+			eeprom_write_block(uri,ee_error_uri,50);
+		}
+		else{
+			success=0;
+		}
+		
+        	if(success){
+            		REST.set_response_status(response,CHANGED_2_04);
+            	}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+    	}
+  
+
+ 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+}
+
+
+
+
+/*--------- Node Identifier ------------------------------------------------------------*/
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), identifier);
+ 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+    		int success = 1;
+		const uint8_t * string = NULL;
+    		int len;
+
+		len = coap_get_payload(request, &string);
+		if (len > 3){
+			strncpy(identifier,string,50);
+			eeprom_write_block(identifier,ee_identifier,50);
+		}
+		else{
+			success=0;
+		}
+		
+        	if(success){
+            		REST.set_response_status(response,CHANGED_2_04);
+            	}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+    	}
+  
+
+ 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+}
+
+
+
+
+/*--------- Error ---------------------------------------------------------*/
+EVENT_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";ct=0;rt=\"error:string\"");
+void error_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+	if(!error_active) {
+	        snprintf_P((char *)buffer, preferred_size, PSTR("No errors"));
+	}
+	else {
+		int p=0;
+		if (error_active & ERROR_MOTOR) {
+			p+=snprintf_P((char *)buffer+p, 4, PSTR("E3\n"));
+		}
+		if (error_active & ERROR_MONTAGE) {
+			p += snprintf_P((char *)buffer+p, 4, PSTR("E2\n"));
+		}
+		if (error_active & BATT_LOW){
+			p += snprintf_P((char *)buffer+p, 15, PSTR("Battery empty\n"));
+		}
+		else if( error_active & BATT_WARNING) {
+			p += snprintf_P((char *)buffer+p, 15, PSTR("Battery low\n"));
+		
+		}
+	}
+
+  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+
+void error_event_handler(resource_t *r) {
+	static uint32_t event_i = 0;
+	char content[30];
+
+	++event_i;
+
+  	coap_packet_t notification[1]; 
+  	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+
+	if(!error_active) {
+       		snprintf_P(content, 30, PSTR("All errors fixed"));
+	}
+	else {
+		int p;
+		p=0;
+		if (error_active & ERROR_MOTOR) {
+			p+=snprintf_P(content+p, 4, PSTR("E3\n"));
+		}
+		if (error_active & ERROR_MONTAGE) {
+			p += snprintf_P(content+p, 4, PSTR("E2\n"));
+		}
+		if (error_active & BATT_LOW){
+			p += snprintf_P(content+p, 15, PSTR("Battery empty\n"));
+		}
+		else if( error_active & BATT_WARNING) {
+			p += snprintf_P(content+p, 15, PSTR("Battery low\n"));
+		}
+	}
+
+	coap_set_payload(notification, content, strlen(content));
+
+	REST.notify_subscribers(r, event_i, notification);
+
+}
+
+
+
+/*--------- ERROR MSG ACK Handle-------------------------------------*/
+
+void error_msg_response_handler(void *response){
+	
+	if (((coap_packet_t *) response)->code != CONTENT_2_05) {
+
+		printf("Error\n");
+	}
+	else {
+		printf("OK\n");
+	}
+	// TODO: resend on error
+//	printf("Answer\n");
+	
+}
+
+
 
 
 /*--------- COAP PROCESS ----------------------------------------------------------------*/
@@ -1847,12 +2263,18 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	rest_activate_resource(&resource_time);
 	rest_activate_event_resource(&resource_temperature);
-	rest_activate_event_resource(&resource_battery);
+	rest_activate_resource(&resource_battery);
 	rest_activate_resource(&resource_target);
-	rest_activate_resource(&resource_poll);
+	rest_activate_resource(&resource_threshold);
+//	rest_activate_resource(&resource_poll);
+	rest_activate_resource(&resource_error_address);
+	rest_activate_resource(&resource_identifier);
+	
 	rest_activate_event_resource(&resource_mode);
-	rest_activate_event_resource(&resource_valve);
+//	rest_activate_event_resource(&resource_valve);
+	rest_activate_resource(&resource_valve);
 	rest_activate_event_resource(&resource_wheel);
+	rest_activate_event_resource(&resource_error);
 
 	rest_activate_resource(&resource_frost);
 	rest_activate_resource(&resource_energy);
@@ -1870,15 +2292,17 @@ PROCESS_THREAD(coap_process, ev, data)
 	//call the temperature handler if the temperature changed
 	while(1){
 		PROCESS_WAIT_EVENT();
-		if (ev == changed_valve_event){
-			valve_event_handler(&resource_valve);
-		}
-		else if (ev == changed_temp_event){
+		if (ev == changed_temp_event){
 			temperature_event_handler(&resource_temperature);
+		}
+/*
+		else if (ev == changed_valve_event){
+			valve_event_handler(&resource_valve);
 		}
 		else if (ev == changed_battery_event){
 			battery_event_handler(&resource_battery);
 		}
+*/
 		else if (ev == changed_wheel_event){
 			wheel_event_handler(&resource_wheel);
 		}
@@ -1897,6 +2321,9 @@ PROCESS_THREAD(coap_process, ev, data)
 		else if (ev == get_target_response_event){
 			target_finalize_handler();
 		}
+		else if (ev == get_threshold_response_event){
+			threshold_finalize_handler();
+		}
 		else if (ev == get_valve_response_event){
 			valve_finalize_handler();
 		}
@@ -1913,6 +2340,43 @@ PROCESS_THREAD(coap_process, ev, data)
 		}
 		else if (ev == set_response_event){
 			set_finalize_handler();
+		}
+		else if (ev == error_event){
+			
+			error_event_handler(&resource_error);
+
+			uip_ip6addr_t error_server_ipaddr;
+			static coap_packet_t post[1];
+			uip_ip6addr(&error_server_ipaddr,error_ip[0],error_ip[1],error_ip[2],error_ip[3],error_ip[4],error_ip[5],error_ip[6],error_ip[7]);
+			coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
+
+			coap_set_header_uri_path(post,error_uri);
+			char buffer[80];
+
+			if(!error_active) {
+	              		snprintf_P(buffer, 80, PSTR("%s\n All errors fixed"), identifier);
+			}
+			else {
+				int p;
+				p = snprintf_P(buffer, 51, PSTR("%s\n"), identifier);
+				if (error_active & ERROR_MOTOR) {
+					p+=snprintf_P(buffer+p, 4, PSTR("E3\n"));
+				}
+				if (error_active & ERROR_MONTAGE) {
+					p += snprintf_P(buffer+p, 4, PSTR("E2\n"));
+
+				}
+				if (error_active & BATT_LOW){
+					p += snprintf_P(buffer+p, 15, PSTR("Battery empty\n"));
+				}
+				else if( error_active & BATT_WARNING) {
+					p += snprintf_P(buffer+p, 15, PSTR("Battery low\n"));
+				}
+			}
+			coap_set_payload(post, buffer, strlen(buffer));
+
+			COAP_BLOCKING_REQUEST(&error_server_ipaddr, REMOTE_PORT, post, error_msg_response_handler);
+
 		}
 	}
 

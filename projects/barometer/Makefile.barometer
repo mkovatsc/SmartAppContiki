@@ -1,4 +1,4 @@
-all: temp-sensor
+all: barometer
 
 CONTIKI = ../..
 
@@ -8,9 +8,9 @@ UIP_CONF_IPV6=1
 WITH_COAP=7
 
 # radio configuration --> project-conf.h
-#CFLAGS += -DRF_CHANNEL=16
+#CFLAGS += -DRF_CHANNEL=21
 #CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
-#CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2b}
+#CFLAGS += -DEUI64_ADDRESS={0x02,0x12,0x74,0x00,0x10,0x24,0x2f,0x1d}
 
 
 # must be CFLAGS not variable
@@ -19,7 +19,7 @@ CFLAGS += -DUIP_CONF_IPV6_RPL=1
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 # set the baud rate
-CFLAGS += -DAPP_BAUD_RATE=USART_BAUD_2400
+CFLAGS += -DAPP_BAUD_RATE=USART_BAUD_9600
 
 #used to be able to use sscanf
 LDFLAGS += -Wl,-u,vfscanf,-lscanf_min

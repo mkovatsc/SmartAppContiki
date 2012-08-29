@@ -70,12 +70,13 @@ static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 
 static int16_t temperature;
+static int16_t temperature_last;
 static process_event_t get_temperature_response_event;
 static process_event_t changed_temperature_event;
 clock_time_t last_temperature_reading;
 
 static int16_t threshold = 10;
-static uint8_t poll_time = 5;
+static uint8_t poll_time = 1;
 
 const uint16_t lookup[] PROGMEM = {-285,-54,84,172,238,291,336,375,410,442,471,498,523,547,569,590,611,630,649,667,684,701,718,733,749,764,779,793,808,821,835,849,862,875,888,900,913,925,938,950,962,974,986,998,1009,1021,1033,1044,1056,1067,1079,1090,1102,1113,1124,1136,1147,1158,1170,1181,1193,1204,1216,1227,1239};
 
@@ -88,7 +89,7 @@ static uint8_t separate_get_temperature_active = 0;
 static application_separate_get_temperature_store_t separate_get_temperature_store[1];
 
 
-/*--DERFNODE-PROCESS-IMPLEMENTATION-----------------------------------------*/
+/*--ADC-PROCESS-IMPLEMENTATION-----------------------------------------*/
 static int uart_get_char(unsigned char c)
 {
 	ringbuf_put(&uart_buf, c);
@@ -104,7 +105,7 @@ static void read_temperature(void){
 	int16_t new_temperature;
 	
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
-	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 1);
+	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
 	
 	adc_deinit();
 	/*--- Computation for real value, with 330 ohm resistor
@@ -112,37 +113,6 @@ static void read_temperature(void){
 	temp = 1 / (0.001129148 + (0.000234125 * temp) + (8.76741e-8 * temp * temp * temp) );
 	temp = temp-273.15;
 	------*/
-/*	Method without lookup table, inaccurate
-	if (reading < 21){
-		new_temperature = (25*reading-26*15-5*25)*10/15;
-	}
-	else if (reading < 34){
-		new_temperature = (9*reading-21*9)*10/12;
-	}
-	else if (reading <54){
-		new_temperature = (9*reading+10*19-34*9)*10/19;
-	}
-	else if (reading <82){
-		new_temperature = (9*reading+20*27-54*9)*10/27;
-	}
-	else if (reading <121){
-		new_temperature = (9*reading+30*38-82*9)*10/38;
-	}
-	else if (reading < 175){
-		new_temperature = (9*reading+40*53-121*9)*10/53;
-	}
-	else if (reading < 244){
-		new_temperature = (9*reading+50*68-175*9)*10/68;
-	}
-	else if (reading < 392){
-		new_temperature = (15*reading+60*147-244*15)*10/147;
-	}
-	else{
-		temp = (int32_t)reading;
-		temp = ((int32_t)48*temp+(int32_t)76*(int32_t)631-(int32_t)392*(int32_t)48)*(int32_t)10/(int32_t)631;
-		new_temperature = (int16_t) temp;
-	}
-*/	
 	int16_t delta = reading % 16;
 	int16_t low = pgm_read_word(&lookup[reading/16]);
 	int16_t high = pgm_read_word(&lookup[(reading/16)+1]);
@@ -152,8 +122,9 @@ static void read_temperature(void){
 	
 	printf_P(PSTR("Temp: %d.%01d\n"),new_temperature/10, new_temperature>0 ? new_temperature%10 : (-1*new_temperature)%10);
 
-	if (temperature - threshold > new_temperature || temperature + threshold < new_temperature){
-		temperature =  new_temperature;
+	temperature =  new_temperature;
+	if (temperature_last - threshold > new_temperature || temperature_last + threshold < new_temperature){
+		temperature_last =  new_temperature;
 		process_post(&coap_process, changed_temperature_event, NULL);
 	}
 	separate_get_temperature_store->error=FALSE;
@@ -348,7 +319,15 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
         	int success = 1;
         	int len = coap_get_payload(request, &string);
 		uint16_t value;
-		if(len == 2){
+		if(len == 1){
+			if (isdigit(string[0])){
+				value = (atoi((char*) string));
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 2){
 			if (isdigit(string[0]) && isdigit(string[1])){
 				value = (atoi((char*) string)) * 10;
 			}
