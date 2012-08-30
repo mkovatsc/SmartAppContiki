@@ -98,8 +98,9 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
 	// finish booting first
+
 	PROCESS_PAUSE();
-	
+
 	while (1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == PROCESS_EVENT_MSG) {
@@ -145,10 +146,8 @@ event_touch_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
 	static char content[15];
-	
 
 	++event_i;
-
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
 	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );

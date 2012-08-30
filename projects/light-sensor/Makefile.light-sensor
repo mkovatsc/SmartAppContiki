@@ -1,17 +1,17 @@
-all: touch-button
+all: light-sensor
 
 CONTIKI = ../..
-
-PROJECT_SOURCEFILES = touch-sensor.c
 
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
 WITH_COAP=7
 
-# radio configuration --> moved to project-conf.h
+# radio configuration -> project-conf.h
+#CFLAGS += -DRF_CHANNEL=21
 #CFLAGS += -DRF_CHANNEL=16
 #CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
 #CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2b}
 
 

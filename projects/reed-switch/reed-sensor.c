@@ -42,7 +42,7 @@ configure(int type, int c)
 			if(!status(SENSORS_ACTIVE)) {
 				
 				DDRE &= ~_BV(PE7);
-				PORTE |= _BV(PE7);
+				PORTE &= ~_BV(PE7);
 				EICRB &= ~_BV(ISC71);
 				EICRB  |= _BV(ISC70);
 				EIMSK |= _BV(INT7); 

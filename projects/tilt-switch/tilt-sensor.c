@@ -42,7 +42,7 @@ configure(int type, int c)
 			if(!status(SENSORS_ACTIVE)) {
 				
 				DDRE &= ~_BV(PE7);
-				PORTE |= _BV(PE7);
+				PORTE &= ~_BV(PE7);
 				EICRB  |= _BV(ISC70);
 				EICRB &= ~_BV(ISC71);
 				EIMSK |= _BV(INT7); 
@@ -63,12 +63,8 @@ configure(int type, int c)
 ISR(INT7_vect)
 {
 	if(timer_expired(&debouncetimer)) {
-		timer_set(&debouncetimer, CLOCK_SECOND / 4);
-		counter++;
-		if (counter > 8 ) {
-			sensors_changed(&tilt_sensor);
-			counter = 0;
-		}
+		timer_set(&debouncetimer, CLOCK_SECOND * 1);
+		sensors_changed(&tilt_sensor);
 	}
 }
 

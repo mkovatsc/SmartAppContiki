@@ -1,6 +1,7 @@
 #include "lib/sensors.h"
 #include "dev/touch-sensor.h"
 #include <avr/interrupt.h>
+#include <avr/io.h>
 
 const struct sensors_sensor touch_sensor;
 static int status(int type);
@@ -42,7 +43,7 @@ configure(int type, int c)
 			if(!status(SENSORS_ACTIVE)) {
 				
 				DDRE &= ~_BV(PE7);
-				PORTE |= _BV(PE7);
+				PORTE &= ~_BV(PE7);
 				EICRB  |= _BV(ISC70);
 				EICRB &= ~_BV(ISC71);
 				EIMSK |= _BV(INT7); 
@@ -63,7 +64,7 @@ configure(int type, int c)
 ISR(INT7_vect)
 {
 	if(timer_expired(&debouncetimer) && (PINE & _BV(PE7))) {
-		timer_set(&debouncetimer, CLOCK_SECOND / 4);
+		timer_set(&debouncetimer, CLOCK_SECOND / 2);
 		sensors_changed(&touch_sensor);
 	}
 }
