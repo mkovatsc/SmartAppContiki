@@ -58,9 +58,6 @@
 #define FALSE 0
 
 
-extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
-extern uip_ds6_route_t uip_ds6_routing_table[];
-
 /*--PROCESSES----------------------------------------------------------------*/
 PROCESS(rfnode_test_process, "rfNode_test");
 PROCESS(coap_process, "coap");
@@ -76,7 +73,7 @@ static process_event_t changed_temperature_event;
 clock_time_t last_temperature_reading;
 
 static int16_t threshold = 10;
-static uint8_t poll_time = 1;
+static uint8_t poll_time = 3;
 
 const uint16_t lookup[] PROGMEM = {-285,-54,84,172,238,291,336,375,410,442,471,498,523,547,569,590,611,630,649,667,684,701,718,733,749,764,779,793,808,821,835,849,862,875,888,900,913,925,938,950,962,974,986,998,1009,1021,1033,1044,1056,1067,1079,1090,1102,1113,1124,1136,1147,1158,1170,1181,1193,1204,1216,1227,1239};
 
@@ -105,13 +102,14 @@ static void read_temperature(void){
 	int16_t new_temperature;
 	
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
+
 	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
 	
 	adc_deinit();
-	/*--- Computation for real value, with 330 ohm resistor
-	double temp = log(330/(reading/3.3*1.6/1024)-330);
-	temp = 1 / (0.001129148 + (0.000234125 * temp) + (8.76741e-8 * temp * temp * temp) );
-	temp = temp-273.15;
+	/*--- Computation for real value, with 330 ohm resistor (Steinhart-Hart-Equation)
+	temp = log(330/(reading/3.3*1.6/1024)-330);
+	kelvin = 1 / (0.001129148 + (0.000234125 * temp) + (8.76741e-8 * temp * temp * temp) );
+	celsius = temp-273.15;
 	------*/
 	int16_t delta = reading % 16;
 	int16_t low = pgm_read_word(&lookup[reading/16]);
@@ -230,15 +228,10 @@ void temperature_finalize_handler() {
 		coap_transaction_t *transaction = NULL;
 		if ( (transaction = coap_new_transaction(separate_get_temperature_store->request_metadata.mid, &separate_get_temperature_store->request_metadata.addr, separate_get_temperature_store->request_metadata.port)) ){
 			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
-			if(separate_get_temperature_store->error){
-      				coap_separate_resume(response, &separate_get_temperature_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
-			}
-			else {
-      				coap_separate_resume(response, &separate_get_temperature_store->request_metadata, CONTENT_2_05);
-				snprintf_P(buffer, 9, PSTR(" %d.%01d\n"),temperature/10, temperature>0 ? temperature%10 : (-1*temperature)%10);
-				REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-				coap_set_payload(response, buffer, strlen(buffer));
-			}
+      			coap_separate_resume(response, &separate_get_temperature_store->request_metadata, CONTENT_2_05);
+			snprintf_P(buffer, 9, PSTR(" %d.%01d\n"),temperature/10, temperature>0 ? temperature%10 : (-1*temperature)%10);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			coap_set_payload(response, buffer, strlen(buffer));
 			coap_set_header_block2(response, separate_get_temperature_store->request_metadata.block2_num, 0, separate_get_temperature_store->request_metadata.block2_size);
 			transaction->packet_len = coap_serialize_message(response, transaction->packet);
 			coap_send_transaction(transaction);
