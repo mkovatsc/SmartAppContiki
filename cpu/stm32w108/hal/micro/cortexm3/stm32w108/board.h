@@ -227,7 +227,7 @@ extern BoardResourcesType const *boardDescription;
 
 /** @brief Return pointer to board description structure
  *
- *
+ * 
  * @return Pointer to board description structure
  */
 BoardResourcesType const *halBoardGetDescription(void);

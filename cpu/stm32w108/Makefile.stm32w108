@@ -1,6 +1,11 @@
 
 .SUFFIXES:
 
+define \n
+
+
+endef
+
 ifdef IAR
 ${info Using IAR...}
 #IAR_PATH =  C:/Program\ Files/IAR\ Systems/Embedded\ Workbench\ 5.4\ Evaluation
@@ -45,9 +50,9 @@ ifdef IAR
 TARGET_LIBFILES = $(CONTIKI_CPU)/simplemac/library/simplemac-library.a
 else
  ifdef PRINTF_FLOAT
- TARGET_LIBFILES = $(CONTIKI_CPU)/simplemac/library/simplemac-library.a $(CONTIKI_CPU)/hal/micro/cortexm3/e_stdio_thumb2.a 
+ TARGET_LIBFILES = $(CONTIKI_CPU)/simplemac/library/simplemac-library-gnu.a $(CONTIKI_CPU)/hal/micro/cortexm3/e_stdio_thumb2.a 
  else
- TARGET_LIBFILES = $(CONTIKI_CPU)/simplemac/library/simplemac-library.a $(CONTIKI_CPU)/hal/micro/cortexm3/e_stdio_intonly_thumb2.a
+ TARGET_LIBFILES = $(CONTIKI_CPU)/simplemac/library/simplemac-library-gnu.a $(CONTIKI_CPU)/lib/e_stdio_intonly_thumb2.a
  endif
 endif
 #									`$(CC) -print-file-name=thumb2/libc.a` `$(CC) -print-file-name=thumb2/libgcc.a`
@@ -74,7 +79,7 @@ AROPTS  = --create
 ASFLAGS = -s+ -w+ --cpu Cortex-M3 -L$(OBJECTDIR)
 LDFLAGS += --redirect _Printf=_PrintfSmall --redirect _Scanf=_ScanfSmall --map=contiki-$(TARGET).map
  ifndef COFFEE
-  LDFLAGS+= --config $(CONTIKI_CPU)/hal/micro/cortexm3/stm32w108/iar-cfg.icf
+  LDFLAGS+= --config $(CONTIKI_CPU)/iar-cfg.icf
  endif
 OBJOPTS = --bin
 
@@ -101,7 +106,7 @@ ASFLAGS = -mthumb -mcpu=cortex-m3 -c -g -Wall -Os -ffunction-sections \
 	    -mlittle-endian -fshort-enums -x assembler-with-cpp -Wa,-EL
 LDFLAGS += -mcpu=cortex-m3 \
 	    -mthumb  \
-	    -Wl,-T -Xlinker $(CONTIKI_CPU)/hal/micro/cortexm3/stm32w108/gnu.ld \
+	    -Wl,-T -Xlinker $(CONTIKI_CPU)/gnu.ld \
 	    -Wl,-static \
 			-u Default_Handler \
 	    -nostartfiles \
@@ -117,8 +122,6 @@ OBJOPTS = -O binary
 
 endif
 
-
-ifndef IAR
 
 ifdef COFFEE_ADDRESS
  COFFEE = 1
@@ -147,22 +150,25 @@ ifeq ($(COFFEE),1)
 
 else
  # Coffee starts at the end of the flash, before NVM section.
- COFFEE_ADDRESS = 0x801F400
+ COFFEE_ADDRESS = 0x801F800
 endif
+
+
+ifndef IAR
 
 LDFLAGS+= -Wl,--section-start=.coffee=$(COFFEE_ADDRESS)
 
 else #IAR
 
  ifeq ($(COFFEE),1)
-  LDFLAGS+= --config $(CONTIKI_CPU)/hal/micro/cortexm3/stm32w108/iar-cfg-coffee.icf
+  LDFLAGS+= --config $(CONTIKI_CPU)/iar-cfg-coffee.icf
  endif
  
 endif
 
 
 
-FLASHER = $(CONTIKI)/tools/stm32w/stm32w_flasher/stm32w_flasher
+FLASHER = sudo $(CONTIKI)/tools/stm32w/stm32w_flasher/stm32w_flasher
 
 # Check if we are running under Windows
 ifeq ($(HOST_OS),Windows)
@@ -223,16 +229,17 @@ CUSTOM_RULE_C_TO_CE = 1
 
 CUSTOM_RULE_LINK = 1
 
-.PHONY: symbols.c symbols.h
 ifdef CORE
 ifeq ($(wildcard $(CORE)),)
  ${error $(CORE) doesn't exist}
 endif
+.PHONY: symbols.c symbols.h
 symbols.c:
 	$(NM) $(CORE) | awk -f $(CONTIKI)/tools/mknmlist > symbols.c	
 else
 symbols.c symbols.h:
-	@$(CONTIKI)/tools/make-empty-symbols
+	cp ${CONTIKI}/tools/empty-symbols.c symbols.c
+	cp ${CONTIKI}/tools/empty-symbols.h symbols.h
 endif
 
 %.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(OBJECTDIR)/symbols.o
@@ -248,6 +255,19 @@ endif
 
 endif #IAR
 
+MOTELIST = $(CONTIKI)/tools/stm32w/motelist-linux
+
+MOTES = $(shell $(MOTELIST) 2>&- | grep USB | \
+     cut -f 4 -d \  | \
+     perl -ne 'print $$1 . " " if(m-(/dev/\w+)-);')
+
+motelist: stm-motelist
+
+stm-motelist:
+	$(MOTELIST)
+stm-motes:
+	@echo $(MOTES)
+
 $(OBJECTDIR)/%.o: %.s79
 	$(AS) $(ASFLAGS) -o $@ $<
 	
@@ -256,7 +276,33 @@ $(OBJECTDIR)/%.o: %.s
 	
 %.bin: %.$(TARGET)
 	$(OBJCOPY) $(OBJOPTS) $< $@ 
-	
-%.flash: %.bin
-	$(FLASHER) $(FLASHEROPTS) $<
-	
+
+# reset all stm32w devices sequentially, as stm32w_flasher cannot access different ports in parallel
+stm-reset:
+	$(foreach PORT, $(MOTES), $(FLASHER) -r -p $(PORT);$(\n))
+	@echo Done
+		
+ifdef MOTE
+%.upload: %.bin
+	$(FLASHER) $(FLASHEROPTS) $< -p $(word $(MOTE), $(MOTES))
+else # MOTE
+%.upload: %.bin
+	$(foreach PORT, $(MOTES), $(FLASHER) $(FLASHEROPTS) $< -p $(PORT);$(\n))
+endif # MOTE
+
+ifdef MOTE
+login:
+	$(SERIALDUMP) -b115200 -d10000 $(USBDEVPREFIX)$(word $(MOTE), $(MOTES))
+else
+login:
+	$(SERIALDUMP) -b115200 -d10000 $(USBDEVPREFIX)$(firstword $(MOTES))
+endif
+
+# a target that gives a user-friendly memory profile, taking into account the RAM
+# that is statically occupied by the stack as defined in cpu/stm32w108/gnu.ld
+RAM_SIZE = 8192
+FLASH_SIZE = 128*1024
+STACK_SIZE = 1280
+%.size: %.$(TARGET)
+	@size -A $< | egrep "data|bss" | awk '{s+=$$2} END {s=s+$(STACK_SIZE); f=$(RAM_SIZE)-s; printf "[RAM]   used %6d, free %6d\n",s,f;}'
+	@size -A $< | egrep "text|isr_vector" | awk '{s+=$$2} END {f=$(FLASH_SIZE)-s; printf "[Flash] used %6d, free %6d\n",s,f;}'

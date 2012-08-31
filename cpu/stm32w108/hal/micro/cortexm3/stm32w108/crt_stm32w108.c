@@ -3,8 +3,8 @@
 * Author             : MCD Tools Team
 * Date First Issued  : 05/14/2007
 * Description        : This file contains the vector table for STM32F10x.
-*                        After Reset the Cortex-M3 processor is in Thread mode,
-*                        priority is Privileged, and the Stack is set to Main.
+*                     	 After Reset the Cortex-M3 processor is in Thread mode,
+*                     	 priority is Privileged, and the Stack is set to Main.
 ********************************************************************************
 * History:
 * 05/14/2007: V0.2
@@ -28,14 +28,14 @@
 /* Exported types --------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 extern unsigned long _etext;
-extern unsigned long _sidata;           /* start address for the initialization values of the .data section. defined in linker script */
-extern unsigned long _sdata;            /* start address for the .data section. defined in linker script */
-extern unsigned long _edata;            /* end address for the .data section. defined in linker script */
+extern unsigned long _sidata;		/* start address for the initialization values of the .data section. defined in linker script */
+extern unsigned long _sdata;		/* start address for the .data section. defined in linker script */
+extern unsigned long _edata;		/* end address for the .data section. defined in linker script */
 
-extern unsigned long _sbss;                     /* start address for the .bss section. defined in linker script */
-extern unsigned long _ebss;                     /* end address for the .bss section. defined in linker script */
+extern unsigned long _sbss;			/* start address for the .bss section. defined in linker script */
+extern unsigned long _ebss;			/* end address for the .bss section. defined in linker script */
 
-extern unsigned long _estack;           /* init value for the stack pointer. defined in linker script */
+extern unsigned long _estack;		/* init value for the stack pointer. defined in linker script */
 
 #include "hal/micro/cortexm3/memmap.h"
 VAR_AT_SEGMENT(const HalFixedAddressTableType halFixedAddressTable, __FAT__);
@@ -85,10 +85,10 @@ void halDebugIsr() __attribute__ ((weak, alias("Default_Handler")));
 
 void __attribute__ ((weak)) Default_Handler()
 {
-        /* Hang here */
-        while(1)
-        {
-        }
+	/* Hang here */
+	while(1)
+	{
+	}
 }
 
 
@@ -156,8 +156,8 @@ static const int16u blOffset[] = {
 /*******************************************************************************
 * Function Name  : Reset_Handler
 * Description    : This is the code that gets called when the processor first starts execution
-*                      following a reset event.  Only the absolutely necessary set is performed,
-*                      after which the application supplied main() routine is called.
+*		       following a reset event.  Only the absolutely necessary set is performed,
+*		       after which the application supplied main() routine is called. 
 * Input          :
 * Output         :
 * Return         :
@@ -280,7 +280,7 @@ void Reset_Handler(void)
   if ((*((int32u *)RAM_BOTTOM) == IAP_BOOTLOADER_APP_SWITCH_SIGNATURE) && (*((int8u *)(RAM_BOTTOM+4)) == IAP_BOOTLOADER_MODE_UART)){
     int8u cut = *(volatile int8u *) 0x08040798;
     int16u offset = 0;
-    typedef void (*EntryPoint)(void);
+    typedef void (*EntryPoint)(void);     
     offset = (halFixedAddressTable.baseTable.version == 3) ? blOffset[cut - 2] : 0;
     *((int32u *)RAM_BOTTOM) = 0;
     if (offset) {
@@ -355,8 +355,8 @@ caddr_t _sbrk ( int incr )
 }
 #endif
 int _lseek (int file,
-        int ptr,
-        int dir)
+	int ptr,
+	int dir)
 {
   return 0;
 }
@@ -387,7 +387,7 @@ int _isatty (int fd)
   return 1;
   fd = fd;
 }
-int _getpid     (int n)
+int _getpid	(int n)
 {
    return -1;
 }

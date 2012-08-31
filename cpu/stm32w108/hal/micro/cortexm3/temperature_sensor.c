@@ -47,6 +47,6 @@ int32u temperatureSensor_GetValue(void)
     // 100 uVolts
     volts = halConvertValueToVolts(ADCvalue);
   
-    return ((18641 - (int32s)volts)*100)/1171;
+    return ((18641 - (int32s)volts)*100)/1171;  
 }/* end temperatureSensor_GetValue() */
 
