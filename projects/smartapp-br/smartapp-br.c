@@ -74,8 +74,27 @@ AUTOSTART_PROCESSES(&border_router_process);
 #include "webserver-nogui.h"
 AUTOSTART_PROCESSES(&border_router_process,&webserver_nogui_process);
 #else
-/* Use simple webserver with only one page */
+/* Use simple webserver with only one page for minimum footprint.
+ * Multiple connections can result in interleaved tcp segments since
+ * a single static buffer is used for all segments.
+ */
 #include "httpd-simple.h"
+/* The internal webserver can provide additional information if
+ * enough program flash is available.
+ */
+#define WEBSERVER_CONF_LOADTIME 0
+#define WEBSERVER_CONF_FILESTATS 0
+#define WEBSERVER_CONF_NEIGHBOR_STATUS 0
+/* Adding links requires a larger RAM buffer. To avoid static allocation
+ * the stack can be used for formatting; however tcp retransmissions
+ * and multiple connections can result in garbled segments.
+ * TODO:use PSOCk_GENERATOR_SEND and tcp state storage to fix this.
+ */
+#define WEBSERVER_CONF_ROUTE_LINKS 0
+#if WEBSERVER_CONF_ROUTE_LINKS
+#define BUF_USES_STACK 1
+#endif
+
 PROCESS(webserver_nogui_process, "Web server");
 PROCESS_THREAD(webserver_nogui_process, ev, data)
 {
@@ -94,11 +113,19 @@ AUTOSTART_PROCESSES(&border_router_process,&webserver_nogui_process);
 
 static const char *TOP = "<html><head><title>ContikiRPL</title></head><body>\n";
 static const char *BOTTOM = "</body></html>\n";
-static char buf[128];
+#if BUF_USES_STACK
+static char *bufptr, *bufend;
+#define ADD(...) do {                                                   \
+    bufptr += snprintf(bufptr, bufend - bufptr, __VA_ARGS__);      \
+  } while(0)
+#else
+static char buf[256];
 static int blen;
 #define ADD(...) do {                                                   \
     blen += snprintf(&buf[blen], sizeof(buf) - blen, __VA_ARGS__);      \
   } while(0)
+#endif
+
 /*---------------------------------------------------------------------------*/
 static void
 ipaddr_add(const uip_ipaddr_t *addr)
@@ -140,60 +167,130 @@ static
 PT_THREAD(generate_routes(struct httpd_state *s))
 {
   static int i;
+#if BUF_USES_STACK
+  char buf[256];
+#endif
+#if WEBSERVER_CONF_LOADTIME
+  static clock_time_t numticks;
+  numticks = clock_time();
+#endif
+
   PSOCK_BEGIN(&s->sout);
 
   SEND_STRING(&s->sout, TOP);
-
+#if BUF_USES_STACK
+  bufptr = buf;bufend=bufptr+sizeof(buf);
+#else
   blen = 0;
-
-  ADD("Server IPv6 addresses<pre>");
-  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
-    uint8_t state = uip_ds6_if.addr_list[i].state;
-    if(uip_ds6_if.addr_list[i].isused && (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
-      ipaddr_add(&uip_ds6_if.addr_list[i].ipaddr);
-      ADD("\n");
-      if(blen > sizeof(buf) - 45) {
-        SEND_STRING(&s->sout, buf);
-        blen = 0;
-      }
-    }
-  }
-
-  ADD("</pre>Neighbors<pre>");
+#endif
+  ADD("Neighbors<pre>");
   for(i = 0; i < UIP_DS6_NBR_NB; i++) {
     if(uip_ds6_nbr_cache[i].isused) {
+
+#if WEBSERVER_CONF_NEIGHBOR_STATUS
+#if BUF_USES_STACK
+{char* j=bufptr+25;
       ipaddr_add(&uip_ds6_nbr_cache[i].ipaddr);
+      while (bufptr < j) ADD(" ");
+      switch (uip_ds6_nbr_cache[i].state) {
+      case NBR_INCOMPLETE: ADD(" INCOMPLETE");break;
+      case NBR_REACHABLE: ADD(" REACHABLE");break;
+      case NBR_STALE: ADD(" STALE");break;      
+      case NBR_DELAY: ADD(" DELAY");break;
+      case NBR_PROBE: ADD(" NBR_PROBE");break;
+      }
+}
+#else
+{uint8_t j=blen+25;
+      ipaddr_add(&uip_ds6_nbr_cache[i].ipaddr);
+      while (blen < j) ADD(" ");
+      switch (uip_ds6_nbr_cache[i].state) {
+      case NBR_INCOMPLETE: ADD(" INCOMPLETE");break;
+      case NBR_REACHABLE: ADD(" REACHABLE");break;
+      case NBR_STALE: ADD(" STALE");break;      
+      case NBR_DELAY: ADD(" DELAY");break;
+      case NBR_PROBE: ADD(" NBR_PROBE");break;
+      }
+}
+#endif
+#else
+      ipaddr_add(&uip_ds6_nbr_cache[i].ipaddr);
+#endif
+
       ADD("\n");
+#if BUF_USES_STACK
+      if(bufptr > bufend - 45) {
+        SEND_STRING(&s->sout, buf);
+        bufptr = buf; bufend = bufptr + sizeof(buf);
+      }
+#else
       if(blen > sizeof(buf) - 45) {
         SEND_STRING(&s->sout, buf);
         blen = 0;
       }
+#endif
     }
   }
-
   ADD("</pre>Routes<pre>");
   SEND_STRING(&s->sout, buf);
+#if BUF_USES_STACK
+  bufptr = buf; bufend = bufptr + sizeof(buf);
+#else
   blen = 0;
+#endif
   for(i = 0; i < UIP_DS6_ROUTE_NB; i++) {
     if(uip_ds6_routing_table[i].isused) {
+#if BUF_USES_STACK
+#if WEBSERVER_CONF_ROUTE_LINKS
+      ADD("<a href=http://[");
       ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+      ADD("]/status.shtml>");
+      ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+      ADD("</a>");
+#else
+      ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+#endif
+#else
+#if WEBSERVER_CONF_ROUTE_LINKS
+      ADD("<a href=http://[");
+      ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+      ADD("]/status.shtml>");
+      SEND_STRING(&s->sout, buf); //TODO: why tunslip6 needs an output here, wpcapslip does not
+      blen = 0;
+      ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+      ADD("</a>");
+#else
+      ipaddr_add(&uip_ds6_routing_table[i].ipaddr);
+#endif
+#endif
       ADD("/%u (via ", uip_ds6_routing_table[i].length);
       ipaddr_add(&uip_ds6_routing_table[i].nexthop);
-      if(uip_ds6_routing_table[i].state.lifetime < 600) {
+      if(1 || (uip_ds6_routing_table[i].state.lifetime < 600)) {
         ADD(") %lus\n", uip_ds6_routing_table[i].state.lifetime);
       } else {
         ADD(")\n");
       }
       SEND_STRING(&s->sout, buf);
+#if BUF_USES_STACK
+      bufptr = buf; bufend = bufptr + sizeof(buf);
+#else
       blen = 0;
+#endif
     }
   }
   ADD("</pre>");
-//if(blen > 0) {
-    SEND_STRING(&s->sout, buf);
-// blen = 0;
-//}
 
+#if WEBSERVER_CONF_FILESTATS
+  static uint16_t numtimes;
+  ADD("<br><i>This page sent %u times</i>",++numtimes);
+#endif
+
+#if WEBSERVER_CONF_LOADTIME
+  numticks = clock_time() - numticks + 1;
+  ADD(" <i>(%u.%02u sec)</i>",numticks/CLOCK_SECOND,(100*(numticks%CLOCK_SECOND))/CLOCK_SECOND));
+#endif
+
+  SEND_STRING(&s->sout, buf);
   SEND_STRING(&s->sout, BOTTOM);
 
   PSOCK_END(&s->sout);
@@ -202,14 +299,8 @@ PT_THREAD(generate_routes(struct httpd_state *s))
 httpd_simple_script_t
 httpd_simple_get_script(const char *name)
 {
-  if (name[0]=='c')
-  {
-    return generate_channel;
-  }
-  else
-  {
-    return generate_routes;
-  }
+
+  return generate_routes;
 }
 
 #endif /* WEBSERVER */
@@ -261,7 +352,14 @@ PROCESS_THREAD(border_router_process, ev, data)
   rpl_dag_t *dag;
 
   PROCESS_BEGIN();
+
+/* While waiting for the prefix to be sent through the SLIP connection, the future
+ * border router can join an existing DAG as a parent or child, or acquire a default 
+ * router that will later take precedence over the SLIP fallback interface.
+ * Prevent that by turning the radio off until we are initialized as a DAG root.
+ */
   prefix_set = 0;
+  NETSTACK_MAC.off(0);
 
   PROCESS_PAUSE();
 
@@ -276,33 +374,26 @@ PROCESS_THREAD(border_router_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
   }
 
-  PRINTF("Creating RPL DAG\n");
-
-  dag = rpl_set_root((uip_ip6addr_t *)dag_id);
+  dag = rpl_set_root(RPL_DEFAULT_INSTANCE,(uip_ip6addr_t *)dag_id);
   if(dag != NULL) {
     rpl_set_prefix(dag, &prefix, 64);
-    PRINTF("created a new RPL DAG: ");
-    uip_debug_ipaddr_print(&prefix);
-    PRINTF("\n");
+    PRINTF("created a new RPL dag\n");
   }
-  else
-    {
-      PRINTF("dag==NULL\n");
-    }
 
+  /* Now turn the radio on, but disable radio duty cycling.
+   * Since we are the DAG root, reception delays would constrain mesh throughbut.
+   */
+  NETSTACK_MAC.off(1);
+  
 #if DEBUG || 1
   print_local_addresses();
 #endif
-
-  /* The border router runs with a 100% duty cycle in order to ensure high
-     packet reception rates. */
-  NETSTACK_MAC.off(1);
 
   while(1) {
     PROCESS_YIELD();
     if (ev == sensors_event && data == &button_sensor) {
       PRINTF("Initiating global repair\n");
-      rpl_repair_dag(rpl_get_dag(RPL_ANY_INSTANCE));
+      rpl_repair_root(RPL_DEFAULT_INSTANCE);
     }
   }
 

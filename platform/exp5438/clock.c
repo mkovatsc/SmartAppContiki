@@ -201,7 +201,7 @@ clock_delay(unsigned int i)
 /*---------------------------------------------------------------------------*/
 #ifdef __GNUC__
 void
-__delay_cycles(int c)
+__delay_cycles(unsigned long c)
 {
   c /= 4;
   asm("add #-1, r15");
@@ -214,7 +214,7 @@ __delay_cycles(int c)
  *
  */
 void
-clock_wait(int i)
+clock_wait(clock_time_t i)
 {
   clock_time_t start;
 

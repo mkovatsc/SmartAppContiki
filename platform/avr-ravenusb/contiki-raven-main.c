@@ -221,18 +221,18 @@ FUSES ={.low = 0xde, .high = 0x99, .extended = 0xff,};
 
 /* Save the default settings into program flash memory */
 const uint8_t default_mac_address[8] PROGMEM = {0x02, 0x12, 0x13, 0xff, 0xfe, 0x14, 0x15, 0x16};
-#ifdef RF_CHANNEL
-const uint8_t default_channel PROGMEM = RF_CHANNEL;
+#ifdef CHANNEL_802_15_4
+const uint8_t default_channel PROGMEM = CHANNEL_802_15_4;
 #else
 const uint8_t default_channel PROGMEM = 26;
 #endif
-#ifdef IEEE802154_CONF_PANID
-const uint16_t default_panid PROGMEM = IEEE802154_CONF_PANID;
+#ifdef IEEE802154_PANID
+const uint16_t default_panid PROGMEM = IEEE802154_PANID;
 #else
 const uint16_t default_panid PROGMEM = 0xABCD;
 #endif
 #ifdef IEEE802154_PANADDR
-const uint16_t default_panaddr PROGMEM = IEEE802154_CONF_PANID;
+const uint16_t default_panaddr PROGMEM = IEEE802154_PANID;
 #else
 const uint16_t default_panaddr PROGMEM = 0;
 #endif
@@ -246,14 +246,14 @@ const uint8_t default_txpower PROGMEM = 0;
 #include "rng.h"
 static void
 generate_new_eui64(uint8_t eui64[8]) {
-        eui64[0] = 0x02;
-        eui64[1] = rng_get_uint8();
-        eui64[2] = rng_get_uint8();
-        eui64[3] = 0xFF;
-        eui64[4] = 0xFE;
-        eui64[5] = rng_get_uint8();
-        eui64[6] = rng_get_uint8();
-        eui64[7] = rng_get_uint8();
+	eui64[0] = 0x02;
+	eui64[1] = rng_get_uint8();
+	eui64[2] = rng_get_uint8();
+	eui64[3] = 0xFF;
+	eui64[4] = 0xFE;
+	eui64[5] = rng_get_uint8();
+	eui64[6] = rng_get_uint8();
+	eui64[7] = rng_get_uint8();
 }
 #endif /* JACKDAW_CONF_RANDOM_MAC */
 
@@ -267,8 +267,8 @@ generate_new_eui64(uint8_t eui64[8]) {
  */
 
 uint8_t eemem_mac_address[8] EEMEM = {0x02, 0x12, 0x13, 0xff, 0xfe, 0x14, 0x15, 0x16};
-#ifdef RF_CHANNEL
-uint8_t eemem_channel[2] EEMEM = {RF_CHANNEL, ~RF_CHANNEL};
+#ifdef CHANNEL_802_15_4
+uint8_t eemem_channel[2] EEMEM = {CHANNEL_802_15_4, ~CHANNEL_802_15_4};
 #else
 uint8_t eemem_channel[2] EMEM = {26, ~26};
 #endif
@@ -305,7 +305,7 @@ static uint8_t get_channel_from_eeprom() {
     eeprom_write_byte(&eemem_txpower, pgm_read_byte_near(&default_txpower));
     x[0] = pgm_read_byte_near(&default_channel);
     x[1]= ~x[0];
-    eeprom_write_word((uint16_t *)&eemem_channel, *(uint16_t *)x);
+    eeprom_write_word((uint16_t *)&eemem_channel, *(uint16_t *)x);    
   }
   return x[0];
 }
@@ -523,7 +523,7 @@ uint16_t p=(uint16_t)&__bss_end;
 
 #if ANNOUNCE
   PRINTA("MAC address %x:%x:%x:%x:%x:%x:%x:%x\n\r",tmp_addr.u8[0],tmp_addr.u8[1],tmp_addr.u8[2],tmp_addr.u8[3],tmp_addr.u8[4],tmp_addr.u8[5],tmp_addr.u8[6],tmp_addr.u8[7]);
-  PRINTA("%s %s, channel %u",NETSTACK_MAC.name, NETSTACK_RDC.name,rf230_get_channel());
+  PRINTA("%s %s, channel %u, panid 0x%X",NETSTACK_MAC.name, NETSTACK_RDC.name, rf230_get_channel(), IEEE802154_PANID);
   if (NETSTACK_RDC.channel_check_interval) {
     unsigned short tmp;
     tmp=CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval == 0 ? 1:\

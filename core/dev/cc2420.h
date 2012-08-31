@@ -51,7 +51,7 @@ int cc2420_init(void);
 
 #define CC2420_MAX_PACKET_LEN      127
 
-void cc2420_set_channel(unsigned short channel);
+int cc2420_set_channel(int channel);
 int cc2420_get_channel(void);
 
 void cc2420_set_pan_addr(unsigned pan,

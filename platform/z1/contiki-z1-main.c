@@ -31,7 +31,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h>
+#include <stdarg.h> 
 
 #include "contiki.h"
 #include "dev/cc2420.h"
@@ -46,10 +46,11 @@
 #include "net/mac/frame802154.h"
 #include "dev/button-sensor.h"
 #include "dev/adxl345.h"
+#include "sys/clock.h"
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
 #include "net/uip-ds6.h"
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #include "net/rime.h"
 
@@ -105,7 +106,6 @@ static uint8_t is_gateway;
 #endif
 
 void init_platform(void);
-void clock_wait(int i);
 
 /*---------------------------------------------------------------------------*/
 #if 0
@@ -181,9 +181,9 @@ set_gateway(void)
   if(!is_gateway) {
     leds_on(LEDS_RED);
     printf("%d.%d: making myself the IP network gateway.\n\n",
-           rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
+	   rimeaddr_node_addr.u8[0], rimeaddr_node_addr.u8[1]);
     printf("IPv4 address of the gateway: %d.%d.%d.%d\n\n",
-           uip_ipaddr_to_quad(&uip_hostaddr));
+	   uip_ipaddr_to_quad(&uip_hostaddr));
     uip_over_mesh_set_gateway(&rimeaddr_node_addr);
     uip_over_mesh_make_announced_gateway();
     is_gateway = 1;
@@ -220,8 +220,8 @@ main(int argc, char **argv)
   node_id_restore();
 
   /* If no MAC address was burned, we use the node ID. */
-  if(node_mac[0] | node_mac[1] | node_mac[2] | node_mac[3] |
-     node_mac[4] | node_mac[5] | node_mac[6] | node_mac[7]) {
+  if(!(node_mac[0] | node_mac[1] | node_mac[2] | node_mac[3] |
+       node_mac[4] | node_mac[5] | node_mac[6] | node_mac[7])) {
     node_mac[0] = 0xc1;  /* Hardcoded for Z1 */
     node_mac[1] = 0x0c;  /* Hardcoded for Revision C */
     node_mac[2] = 0x00;  /* Hardcoded to arbitrary even number so that
@@ -268,7 +268,7 @@ main(int argc, char **argv)
 
   ctimer_init();
 
-  init_platform();
+  init_platform(); 
 
   set_rime_addr();
 
@@ -302,7 +302,7 @@ main(int argc, char **argv)
   }
 
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
   memcpy(&uip_lladdr.addr, node_mac, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -350,7 +350,7 @@ main(int argc, char **argv)
            ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
   }
 
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -361,9 +361,9 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
-#if !WITH_UIP && !UIP_CONF_IPV6
+#if !WITH_UIP && !WITH_UIP6
   uart0_set_input(serial_line_input_byte);
   serial_line_init();
 #endif
@@ -381,7 +381,7 @@ main(int argc, char **argv)
 
 #if WITH_UIP
   process_start(&tcpip_process, NULL);
-  process_start(&uip_fw_process, NULL); /* Start IP output */
+  process_start(&uip_fw_process, NULL);	/* Start IP output */
   process_start(&slip_process, NULL);
 
   slip_set_input_callback(set_gateway);
@@ -392,7 +392,7 @@ main(int argc, char **argv)
     uip_init();
 
     uip_ipaddr(&hostaddr, 172,16,
-               rimeaddr_node_addr.u8[0],rimeaddr_node_addr.u8[1]);
+	       rimeaddr_node_addr.u8[0],rimeaddr_node_addr.u8[1]);
     uip_ipaddr(&netmask, 255,255,0,0);
     uip_ipaddr_copy(&meshif.ipaddr, &hostaddr);
 
@@ -404,7 +404,7 @@ main(int argc, char **argv)
     uip_fw_default(&meshif);
     uip_over_mesh_init(UIP_OVER_MESH_CHANNEL);
     printf("uIP started with IP address %d.%d.%d.%d\n",
-           uip_ipaddr_to_quad(&hostaddr));
+	   uip_ipaddr_to_quad(&hostaddr));
   }
 #endif /* WITH_UIP */
 
@@ -439,18 +439,18 @@ main(int argc, char **argv)
     /*
      * Idle processing.
      */
-    int s = splhigh();          /* Disable interrupts. */
+    int s = splhigh();		/* Disable interrupts. */
     /* uart0_active is for avoiding LPM3 when still sending or receiving */
     if(process_nevents() != 0 || uart0_active()) {
-      splx(s);                  /* Re-enable interrupts. */
+      splx(s);			/* Re-enable interrupts. */
     } else {
       static unsigned long irq_energest = 0;
 
 #if DCOSYNCH_CONF_ENABLED
       /* before going down to sleep possibly do some management */
       if (timer_expired(&mgt_timer)) {
-        timer_reset(&mgt_timer);
-        msp430_sync_dco();
+	timer_reset(&mgt_timer);
+	msp430_sync_dco();
       }
 #endif
 
@@ -458,19 +458,19 @@ main(int argc, char **argv)
       ENERGEST_OFF(ENERGEST_TYPE_CPU);
       ENERGEST_ON(ENERGEST_TYPE_LPM);
       /* We only want to measure the processing done in IRQs when we
-         are asleep, so we discard the processing time done when we
-         were awake. */
+	 are asleep, so we discard the processing time done when we
+	 were awake. */
       energest_type_set(ENERGEST_TYPE_IRQ, irq_energest);
       watchdog_stop();
       _BIS_SR(GIE | SCG0 | SCG1 | CPUOFF); /* LPM3 sleep. This
-                                              statement will block
-                                              until the CPU is
-                                              woken up by an
-                                              interrupt that sets
-                                              the wake up flag. */
+					      statement will block
+					      until the CPU is
+					      woken up by an
+					      interrupt that sets
+					      the wake up flag. */
 
       /* We get the current processing time for interrupts that was
-         done during the LPM and store it for next time around.  */
+	 done during the LPM and store it for next time around.  */
       dint();
       irq_energest = energest_type_time(ENERGEST_TYPE_IRQ);
       eint();

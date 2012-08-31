@@ -73,6 +73,9 @@ CONTIKI_CPU=$(CONTIKI)/cpu/x86
 CFLAGSNO = $(EXTRA_CC_ARGS) -Wall -g -I/usr/local/include -DCLASSNAME=$(CLASSNAME)
 CFLAGS   = $(CFLAGSNO)
 
+ifdef UIP_CONF_IPV6
+  CFLAGS += -DWITH_UIP6=1
+endif
 ifdef WITH_UIP
   CFLAGS += -DWITH_UIP=1
 endif

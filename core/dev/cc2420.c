@@ -537,8 +537,8 @@ cc2420_get_channel(void)
   return channel;
 }
 /*---------------------------------------------------------------------------*/
-void
-cc2420_set_channel(unsigned short c)
+int
+cc2420_set_channel(int c)
 {
   uint16_t f;
 
@@ -567,6 +567,7 @@ cc2420_set_channel(unsigned short c)
   }
 
   RELEASE_LOCK();
+  return 1;
 }
 /*---------------------------------------------------------------------------*/
 void

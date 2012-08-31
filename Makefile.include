@@ -25,7 +25,6 @@ ifndef HOST_OS
   ifeq ($(OS),Windows_NT)
   ## TODO: detect more specific Windows set-ups,
   ## e.g. CygWin, MingW, VisualC, Watcom, Interix
-    $(warning Windows (NT) detected.)
     HOST_OS := Windows
   else
     HOST_OS := $(shell uname)
@@ -179,7 +178,7 @@ endef
  clean:
 	rm -f *~ *core core *.srec \
 	*.lst *.map \
-        *.cprg *.bin *.data contiki*.a *.firmware core-labels.S *.ihex *.ini *.hex *.elf \
+        *.cprg *.bin *.data contiki*.a *.firmware core-labels.S *.ihex *.ini \
         *.ce *.co $(CLEAN)
 	-rm -rf $(OBJECTDIR)
 
@@ -227,6 +226,12 @@ ifndef CUSTOM_RULE_LINK
 %.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a
 	$(LD) $(LDFLAGS) $(TARGET_STARTFILES) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -o $@
 endif
+
+%.ramprof: %.$(TARGET)
+	nm -S -td --size-sort $< | grep -i " [abdrw] " | cut -d' ' -f2,4
+
+%.flashprof: %.$(TARGET)
+	nm -S -td --size-sort $< | grep -i " [t] " | cut -d' ' -f2,4
 
 # Don't treat %.$(TARGET) as an intermediate file because it is
 # in fact the primary target.

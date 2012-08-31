@@ -63,8 +63,9 @@ init_usart(void)
   rs232_init(RS232_PORT_0, USART_BAUD_115200,
              USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
 
-#if WITH_UIP || UIP_CONF_IPV6
-  slip_arch_init(USART_BAUD_115200);
+#if WITH_UIP || WITH_UIP6
+ // slip_arch_init(USART_BAUD_115200);
+    rs232_redirect_stdout(RS232_PORT_0);
 #else
   rs232_redirect_stdout(RS232_PORT_0);
 #endif /* WITH_UIP */
@@ -103,7 +104,7 @@ main(void)
   ctimer_init();
 
   leds_on(LEDS_YELLOW);
-  
+
   init_net();
   
   printf_P(PSTR(CONTIKI_VERSION_STRING " started. Node id %u\n"), node_id);

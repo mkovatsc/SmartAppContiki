@@ -56,7 +56,6 @@
 
 #include <err.h>
 
-
 int channel = 0;
 int verbose = 1;
 const char *ipaddr;
@@ -154,32 +153,6 @@ is_sensible_string(const unsigned char *s, int len)
 }
 
 void
-send_prefix()
-{
-  struct in6_addr addr;
-  int i;
-  char *s = strchr(ipaddr, '/');
-  if(s != NULL) {
-    *s = '\0';
-  }
-  inet_pton(AF_INET6, ipaddr, &addr);
-  if(timestamp) stamptime();
-  fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
-         ipaddr,
-         addr.s6_addr[0], addr.s6_addr[1],
-         addr.s6_addr[2], addr.s6_addr[3],
-         addr.s6_addr[4], addr.s6_addr[5],
-         addr.s6_addr[6], addr.s6_addr[7]);
-  slip_send(slipfd, '!');
-  slip_send(slipfd, 'P');
-  for(i = 0; i < 8; i++) {
-    /* need to call the slip_send_char for stuffing */
-    slip_send_char(slipfd, addr.s6_addr[i]);
-  }
-  slip_send(slipfd, SLIP_END);
-}
-
-void
 send_channel()
 {
   slip_send(slipfd, '!');
@@ -258,8 +231,29 @@ serial_to_tun(FILE *inslip, int outfd)
       } else if(uip.inbuf[0] == '?') {
 	if(uip.inbuf[1] == 'P') {
           /* Prefix info requested */
-          send_prefix();
-
+          struct in6_addr addr;
+	  int i;
+	  char *s = strchr(ipaddr, '/');
+	  if(s != NULL) {
+	    *s = '\0';
+	  }
+          inet_pton(AF_INET6, ipaddr, &addr);
+          if(timestamp) stamptime();
+          fprintf(stderr,"*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+ //         printf("*** Address:%s => %02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+		 ipaddr, 
+		 addr.s6_addr[0], addr.s6_addr[1],
+		 addr.s6_addr[2], addr.s6_addr[3],
+		 addr.s6_addr[4], addr.s6_addr[5],
+		 addr.s6_addr[6], addr.s6_addr[7]);
+	  slip_send(slipfd, '!');
+	  slip_send(slipfd, 'P');
+	  for(i = 0; i < 8; i++) {
+	    /* need to call the slip_send_char for stuffing */
+	    slip_send_char(slipfd, addr.s6_addr[i]);
+	  }
+	  slip_send(slipfd, SLIP_END);
+	  
 	  channel = 1;
         }
 #define DEBUG_LINE_MARKER '\r'
@@ -569,6 +563,7 @@ tun_alloc(char *dev, int tap)
 void
 cleanup(void)
 {
+#ifndef __APPLE__
   if (timestamp) stamptime();
   ssystem("ifconfig %s down", tundev);
 #ifndef linux
@@ -580,6 +575,19 @@ cleanup(void)
 	  " | awk '{ if ($2 == \"%s\") print \"route delete -net \"$1; }'"
 	  " | sh",
 	  tundev);
+#else
+  {
+    char *  itfaddr = strdup(ipaddr);
+    char *  prefix = index(itfaddr, '/');
+    if (timestamp) stamptime();
+    ssystem("ifconfig %s inet6 %s remove", tundev, ipaddr);
+    if (timestamp) stamptime();
+    ssystem("ifconfig %s down", tundev);
+    if ( prefix != NULL ) *prefix = '\0';
+    ssystem("route delete -inet6 %s", itfaddr);
+    free(itfaddr);
+  }
+#endif
 }
 
 void
@@ -615,7 +623,7 @@ ifconf(const char *tundev, const char *ipaddr)
 {
 #ifdef linux
   if (timestamp) stamptime();
-  ssystem("ifconfig %s inet `hostname` up", tundev);
+  ssystem("ifconfig %s up", tundev);
   if (timestamp) stamptime();
   ssystem("ifconfig %s add %s", tundev, ipaddr);
 
@@ -665,10 +673,27 @@ ifconf(const char *tundev, const char *ipaddr)
     ssystem("ifconfig %s add %s/64", tundev, lladdr);
   }
 #endif /* link local */
-
+#elif defined(__APPLE__)
+  {
+	char * itfaddr = strdup(ipaddr);
+	char * prefix = index(itfaddr, '/');
+	if ( prefix != NULL ) {
+		*prefix = '\0';
+		prefix++;
+	} else {
+		prefix = "64";
+	}
+    if (timestamp) stamptime();
+    ssystem("ifconfig %s inet6 up", tundev );
+    if (timestamp) stamptime();
+    ssystem("ifconfig %s inet6 %s add", tundev, ipaddr );
+    if (timestamp) stamptime();
+    ssystem("sysctl -w net.inet6.ip6.forwarding=1");
+    free(itfaddr);
+  }
 #else
   if (timestamp) stamptime();
-  ssystem("ifconfig %s inet `hostname` %s up", tundev, ipaddr);
+  ssystem("ifconfig %s inet %s up", tundev, ipaddr);
   if (timestamp) stamptime();
   ssystem("sysctl -w net.inet.ip.forwarding=1");
 #endif /* !linux */
@@ -697,7 +722,7 @@ main(int argc, char **argv)
   prog = argv[0];
   setvbuf(stdout, NULL, _IOLBF, 0); /* Line buffered output. */
 
-  while((c = getopt(argc, argv, "c:B:H:D:Lhs:t:v::d::a:p:T")) != -1) {
+  while((c = getopt(argc, argv, "c:B:HLhs:t:v::d::a:p:T")) != -1) {
     switch(c) {
     case 'B':
       baudrate = atoi(optarg);
@@ -765,7 +790,11 @@ main(int argc, char **argv)
 fprintf(stderr,"usage:  %s [options] ipaddress\n", prog);
 fprintf(stderr,"example: tunslip6 -L -v2 -s ttyUSB1 aaaa::1/64\n");
 fprintf(stderr,"Options are:\n");
-fprintf(stderr," -B baudrate    9600,19200,38400,57600,115200 default),230400,460800,921600\n");
+#ifndef __APPLE__
+fprintf(stderr," -B baudrate    9600,19200,38400,57600,115200 (default),230400,460800,921600\n");
+#else
+fprintf(stderr," -B baudrate    9600,19200,38400,57600,115200 (default),230400\n");
+#endif
 fprintf(stderr," -H             Hardware CTS/RTS flow control (default disabled)\n");
 fprintf(stderr," -L             Log output format (adds time stamps)\n");
 fprintf(stderr," -s siodev      Serial device (default /dev/ttyUSB0)\n");
@@ -818,12 +847,14 @@ exit(1);
   case 230400:
     b_rate = B230400;
     break;
+#ifndef __APPLE__
   case 460800:
     b_rate = B460800;
     break;
   case 921600:
     b_rate = B921600;
     break;
+#endif
   default:
     err(1, "unknown baudrate %d", baudrate);
     break;

@@ -47,9 +47,7 @@
 #endif /* COAP_MAX_OBSERVERS */
 
 /* Interval in seconds in which NON notifies are changed to CON notifies to check client. */
-#ifndef COAP_OBSERVING_REFRESH_INTERVAL
-#define COAP_OBSERVING_REFRESH_INTERVAL  300 // 5mins
-#endif /* COAP_OBSERVING_REFRESH_INTERVAL */
+#define COAP_OBSERVING_REFRESH_INTERVAL  60
 
 #if COAP_MAX_OPEN_TRANSACTIONS<COAP_MAX_OBSERVERS
 #warning "COAP_MAX_OPEN_TRANSACTIONS smaller than COAP_MAX_OBSERVERS: cannot handle CON notifications"
@@ -77,7 +75,7 @@ int coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *to
 int coap_remove_observer_by_url(uip_ipaddr_t *addr, uint16_t port, const char *url);
 int coap_remove_observer_by_mid(uip_ipaddr_t *addr, uint16_t port, uint16_t mid);
 
-void coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, size_t payload_len);
+void coap_notify_observers(resource_t *resource, uint16_t obs_counter, void *notification);
 
 void coap_observe_handler(resource_t *resource, void *request, void *response);
 

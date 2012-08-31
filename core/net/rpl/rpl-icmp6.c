@@ -155,7 +155,7 @@ dis_input(void)
   PRINTF("\n");
 
   for(instance = &instance_table[0], end = instance + RPL_MAX_INSTANCES; instance < end; ++instance) {
-    if(instance->used == 1 ) {
+    if(instance->used == 1) {
 #if RPL_LEAF_ONLY
       if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
 #else /* !RPL_LEAF_ONLY */
@@ -177,7 +177,7 @@ dis_output(uip_ipaddr_t *addr)
   unsigned char *buffer;
   uip_ipaddr_t tmpaddr;
 
-  /* DAG Information Solicitation  - 2 bytes reserved */
+  /* DAG Information Solicitation  - 2 bytes reserved      */
   /*      0                   1                   2        */
   /*      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3  */
   /*     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
@@ -188,12 +188,14 @@ dis_output(uip_ipaddr_t *addr)
   buffer[0] = buffer[1] = 0;
 
   if(addr == NULL) {
-    PRINTF("RPL: Sending a DIS\n");
     uip_create_linklocal_rplnodes_mcast(&tmpaddr);
     addr = &tmpaddr;
-  } else {
-    PRINTF("RPL: Sending a unicast DIS\n");
   }
+
+  PRINTF("RPL: Sending a DIS to ");
+  PRINT6ADDR(addr);
+  PRINTF("\n");
+
   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIS, 2);
 }
 /*---------------------------------------------------------------------------*/
@@ -257,7 +259,7 @@ dio_input(void)
 
   PRINTF("RPL: Incoming DIO (id, ver, rank) = (%u,%u,%u)\n",
          (unsigned)dio.instance_id,
-         (unsigned)dio.version,
+         (unsigned)dio.version, 
          (unsigned)dio.rank);
 
   dio.grounded = buffer[i] & RPL_DIO_GROUNDED;
@@ -297,7 +299,7 @@ dio_input(void)
     case RPL_OPTION_DAG_METRIC_CONTAINER:
       if(len < 6) {
         PRINTF("RPL: Invalid DAG MC, len = %d\n", len);
-        RPL_STAT(rpl_stats.malformed_msgs++);
+	RPL_STAT(rpl_stats.malformed_msgs++);
         return;
       }
       dio.mc.type = buffer[i + 2];
@@ -311,12 +313,12 @@ dio_input(void)
         dio.mc.obj.etx = get16(buffer, i + 6);
 
         PRINTF("RPL: DAG MC: type %u, flags %u, aggr %u, prec %u, length %u, ETX %u\n",
-               (unsigned)dio.mc.type,
-               (unsigned)dio.mc.flags,
-               (unsigned)dio.mc.aggr,
-               (unsigned)dio.mc.prec,
-               (unsigned)dio.mc.length,
-               (unsigned)dio.mc.obj.etx);
+	       (unsigned)dio.mc.type,  
+	       (unsigned)dio.mc.flags, 
+	       (unsigned)dio.mc.aggr, 
+	       (unsigned)dio.mc.prec, 
+	       (unsigned)dio.mc.length, 
+	       (unsigned)dio.mc.obj.etx);
       } else if(dio.mc.type == RPL_DAG_MC_ENERGY) {
         dio.mc.obj.energy.flags = buffer[i + 6];
         dio.mc.obj.energy.energy_est = buffer[i + 7];
@@ -328,7 +330,7 @@ dio_input(void)
     case RPL_OPTION_ROUTE_INFO:
       if(len < 9) {
         PRINTF("RPL: Invalid destination prefix option, len = %d\n", len);
-        RPL_STAT(rpl_stats.malformed_msgs++);
+	RPL_STAT(rpl_stats.malformed_msgs++);
         return;
       }
 
@@ -344,15 +346,15 @@ dio_input(void)
                (dio.destination_prefix.length + 7) / 8);
       } else {
         PRINTF("RPL: Invalid route info option, len = %d\n", len);
-        RPL_STAT(rpl_stats.malformed_msgs++);
-        return;
+	RPL_STAT(rpl_stats.malformed_msgs++);
+	return;
       }
 
       break;
     case RPL_OPTION_DAG_CONF:
       if(len != 16) {
         PRINTF("RPL: Invalid DAG configuration option, len = %d\n", len);
-        RPL_STAT(rpl_stats.malformed_msgs++);
+	RPL_STAT(rpl_stats.malformed_msgs++);
         return;
       }
 
@@ -374,7 +376,7 @@ dio_input(void)
     case RPL_OPTION_PREFIX_INFO:
       if(len != 32) {
         PRINTF("RPL: DAG prefix info not ok, len != 32\n");
-        RPL_STAT(rpl_stats.malformed_msgs++);
+	RPL_STAT(rpl_stats.malformed_msgs++);
         return;
       }
       dio.prefix_info.length = buffer[i + 2];
@@ -388,7 +390,7 @@ dio_input(void)
       break;
     default:
       PRINTF("RPL: Unsupported suboption type in DIO: %u\n",
-        (unsigned)subopt_type);
+	(unsigned)subopt_type);
     }
   }
 
@@ -410,7 +412,8 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
 #endif /* !RPL_LEAF_ONLY */
 
 #if RPL_LEAF_ONLY
-  /* only respond to unicast DIS */
+  /* In leaf mode, we send DIO message only as unicasts in response to 
+     unicast DIS messages. */
   if(uc_addr == NULL) {
     return;
   }
@@ -471,7 +474,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
       buffer[pos++] = instance->mc.obj.energy.energy_est;
     } else {
       PRINTF("RPL: Unable to send DIO because of unhandled DAG MC type %u\n",
-        (unsigned)instance->mc.type);
+	(unsigned)instance->mc.type);
       return;
     }
   }
@@ -701,26 +704,17 @@ dao_output(rpl_parent_t *n, uint8_t lifetime)
   rpl_instance_t *instance;
   unsigned char *buffer;
   uint8_t prefixlen;
-  uip_ipaddr_t addr;
   uip_ipaddr_t prefix;
   int pos;
 
   /* Destination Advertisement Object */
+
   if(get_global_addr(&prefix) == 0) {
     PRINTF("RPL: No global address set for this node - suppressing DAO\n");
     return;
   }
 
-  if(n == NULL) {
-    dag = rpl_get_any_dag();
-    if(dag == NULL) {
-      PRINTF("RPL: Did not join a DAG before sending DAO\n");
-      return;
-    }
-  } else {
-    dag = n->dag;
-  }
-
+  dag = n->dag;
   instance = dag->instance;
 
 #ifdef RPL_DEBUG_DAO_OUTPUT
@@ -765,23 +759,13 @@ dao_output(rpl_parent_t *n, uint8_t lifetime)
   buffer[pos++] = 0; /* path seq - ignored */
   buffer[pos++] = lifetime;
 
-  if(n == NULL) {
-    uip_create_linklocal_rplnodes_mcast(&addr);
-  } else {
-    uip_ipaddr_copy(&addr, &n->addr);
-  }
-
   PRINTF("RPL: Sending DAO with prefix ");
   PRINT6ADDR(&prefix);
   PRINTF(" to ");
-  if(n != NULL) {
-    PRINT6ADDR(&n->addr);
-  } else {
-    PRINTF("multicast address");
-  }
+  PRINT6ADDR(&n->addr);
   PRINTF("\n");
 
-  uip_icmp6_send(&addr, ICMP6_RPL, RPL_CODE_DAO, pos);
+  uip_icmp6_send(&n->addr, ICMP6_RPL, RPL_CODE_DAO, pos);
 }
 /*---------------------------------------------------------------------------*/
 static void

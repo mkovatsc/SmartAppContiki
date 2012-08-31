@@ -53,9 +53,9 @@
 #include "dev/ds2401.h"
 #include "node-id.h"
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
 #include "net/uip-ds6.h"
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #if WITH_UIP
 #include "net/uip.h"
@@ -142,7 +142,7 @@ init_net(void)
   rf230_set_channel(RF_CHANNEL);
 
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
   memcpy(&uip_lladdr.addr, ds2401_id, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
   /* sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -189,7 +189,7 @@ init_net(void)
            ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
   }
 
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -200,7 +200,7 @@ init_net(void)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 
 #if WITH_UIP

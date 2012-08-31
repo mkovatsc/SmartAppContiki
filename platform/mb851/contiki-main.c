@@ -37,6 +37,7 @@
 *			Contiki main file.
 * \author
 *			Salvatore Pitrulli <salvopitru@users.sourceforge.net>
+*			Chi-Anh La <la@imag.fr>
 */
 /*---------------------------------------------------------------------------*/
 
@@ -67,6 +68,9 @@
 #include "net/rime/rime-udp.h"
 #include "net/uip.h"
 
+#if WITH_UIP6
+#include "net/uip-ds6.h"
+#endif /* WITH_UIP6 */
 
 #define DEBUG 1
 #if DEBUG
@@ -82,13 +86,17 @@
 
 
 #if UIP_CONF_IPV6
-PROCINIT(&etimer_process, &tcpip_process, &sensors_process);
+PROCINIT(&tcpip_process, &sensors_process);
 #else
-PROCINIT(&etimer_process, &sensors_process);
+PROCINIT(&sensors_process);
 #warning "No TCP/IP process!"
 #endif
 
-SENSORS(&button_sensor,&temperature_sensor,&acc_sensor);
+SENSORS(&button_sensor, &temperature_sensor, &acc_sensor);
+
+/* The default CCA threshold is set to -77, which is the same as the
+   default setting on the TI CC2420. */
+#define DEFAULT_RADIO_CCA_THRESHOLD -77
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -97,29 +105,26 @@ set_rime_addr(void)
   int i;
   union {
     uint8_t u8[8];
-  }eui64;
-  
-  //rimeaddr_t lladdr;
+  } eui64;
   
   int8u *stm32w_eui64 = ST_RadioGetEui64();
   {
-          int8u c;
-          for(c = 0; c < 8; c++) {      // Copy the EUI-64 to lladdr converting from Little-Endian to Big-Endian.
-                  eui64.u8[c] = stm32w_eui64[7 - c];
-          }
+    int8u c;
+    /* Copy the EUI-64 to lladdr converting from Little-Endian to
+       Big-Endian. */
+    for(c = 0; c < 8; c++) {
+      eui64.u8[c] = stm32w_eui64[7 - c];
+    }
   }
-  PRINTF("\n\rRadio EUI-64:");
-  PRINTLLADDR(eui64);
-  PRINTF("\n\r");
-  
+
 #if UIP_CONF_IPV6
   memcpy(&uip_lladdr.addr, &eui64, sizeof(uip_lladdr.addr));
 #endif
 
 #if UIP_CONF_IPV6
   rimeaddr_set_node_addr((rimeaddr_t *)&eui64);
-#else  
-  rimeaddr_set_node_addr((rimeaddr_t *)&eui64.u8[8-RIMEADDR_SIZE]);
+#else
+  rimeaddr_set_node_addr((rimeaddr_t *)&eui64.u8[8 - RIMEADDR_SIZE]);
 #endif
 
   printf("Rime started with address ");
@@ -127,7 +132,6 @@ set_rime_addr(void)
     printf("%d.", rimeaddr_node_addr.u8[i]);
   }
   printf("%d\n", rimeaddr_node_addr.u8[i]);
-  
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -142,7 +146,7 @@ main(void)
   
   uart1_init(115200);
   
-  // Led initialization
+  /* Led initialization */
   leds_init();
     
   INTERRUPTS_ON(); 
@@ -161,29 +165,74 @@ main(void)
   uart1_set_input(serial_line_input_byte);
   serial_line_init();
 #endif
-  
+  /* rtimer and ctimer should be initialized before radio duty cycling
+     layers */
+  rtimer_init();
+  /* etimer_process should be initialized before ctimer */
+  process_start(&etimer_process, NULL);  
+  ctimer_init();
+
   netstack_init();
-#if !UIP_CONF_IPV6
-  ST_RadioEnableAutoAck(FALSE); // Because frames are not 802.15.4 compatible. 
-  ST_RadioEnableAddressFiltering(FALSE);
-#endif
 
   set_rime_addr();
-  
-  ctimer_init();
-  rtimer_init();
-  
-  procinit_init();    
+
+  printf("%s %s, channel check rate %lu Hz\n",
+         NETSTACK_MAC.name, NETSTACK_RDC.name,
+         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
+                                  NETSTACK_RDC.channel_check_interval()));
+  printf("802.15.4 PAN ID 0x%x, EUI-%d:",
+      IEEE802154_CONF_PANID, UIP_CONF_LL_802154?64:16);
+  uip_debug_lladdr_print(&rimeaddr_node_addr);
+  printf(", radio channel %u\n", RF_CHANNEL);
+
+  procinit_init();
 
   energest_init();
   ENERGEST_ON(ENERGEST_TYPE_CPU);
+
+  /* Set the Clear Channel Assessment (CCA) threshold of the
+     radio. The CCA threshold is used both for sending packets and for
+     waking up ContikiMAC nodes. If the CCA threshold is too high,
+     ContikiMAC will not wake up from neighbor transmissions. If the
+     CCA threshold is too low, transmissions will be too restrictive
+     and no packets will be sent. DEFAULT_RADIO_CCA_THRESHOLD is
+     defined in this file. */
+  ST_RadioSetEdCcaThreshold(DEFAULT_RADIO_CCA_THRESHOLD);
   
   autostart_start(autostart_processes);
-  
+#if UIP_CONF_IPV6
+  printf("Tentative link-local IPv6 address ");
+  {
+    uip_ds6_addr_t *lladdr;
+    int i;
+    lladdr = uip_ds6_get_link_local(-1);
+    for(i = 0; i < 7; ++i) {
+      printf("%02x%02x:", lladdr->ipaddr.u8[i * 2],
+             lladdr->ipaddr.u8[i * 2 + 1]);
+    }
+    printf("%02x%02x\n", lladdr->ipaddr.u8[14], lladdr->ipaddr.u8[15]);
+  }
+
+
+  if(!UIP_CONF_IPV6_RPL) {
+    uip_ipaddr_t ipaddr;
+    int i;
+    uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+    uip_ds6_addr_add(&ipaddr, 0, ADDR_TENTATIVE);
+    printf("Tentative global IPv6 address ");
+    for(i = 0; i < 7; ++i) {
+      printf("%02x%02x:",
+             ipaddr.u8[i * 2], ipaddr.u8[i * 2 + 1]);
+    }
+    printf("%02x%02x\n",
+           ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
+  }
+#endif /* UIP_CONF_IPV6 */
   
   watchdog_start();
   
-  while(1){
+  while(1) {
     
     int r;    
     
@@ -196,12 +245,12 @@ main(void)
     
     
     ENERGEST_OFF(ENERGEST_TYPE_CPU);
-    //watchdog_stop();    
+    /* watchdog_stop(); */
     ENERGEST_ON(ENERGEST_TYPE_LPM);
     /* Go to idle mode. */
     halSleepWithOptions(SLEEPMODE_IDLE,0);
     /* We are awake. */
-    //watchdog_start();
+    /* watchdog_start(); */
     ENERGEST_OFF(ENERGEST_TYPE_LPM);
     ENERGEST_ON(ENERGEST_TYPE_CPU);  
     
@@ -256,11 +305,11 @@ void UsageFault_Handler(){
   errcode = 7; 
   //leds_on(LEDS_RED);
   //halReboot();
-}*/
+}
 
 void Default_Handler() 
 { 
   //errcode = 8; 
   leds_on(LEDS_RED);
   halReboot();
-}
+}*/

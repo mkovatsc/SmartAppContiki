@@ -66,7 +66,7 @@ off(void)
 static void
 null_set_channel(unsigned short ch)
 {
-
+  /* Dummy for a uniform API. */
 }
 /*---------------------------------------------------------------------------*/
 const struct radio_driver nullradio_driver =

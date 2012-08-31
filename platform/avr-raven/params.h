@@ -12,8 +12,6 @@
  *
  * Note the parameters in this file can be changed without forcing a complete rebuild.
  */
-#define WITH_NODE_ID 1 // for optional static routing
-
 //#define PARAMETER_STORAGE 0
 //#define PARAMETER_STORAGE 1 //+476
 //#define PARAMETER_STORAGE 2 //+2045
@@ -71,8 +69,8 @@ extern uint8_t eemem_domain_name[30];
 #else
 #define PARAMS_CHANNEL 26
 #endif
-#ifdef IEEE802154_CONF_PANID
-#define PARAMS_PANID IEEE802154_CONF_PANID
+#ifdef IEEE802154_PANID
+#define PARAMS_PANID IEEE802154_PANID
 #else
 #define PARAMS_PANID 0xABCD
 #endif

@@ -10,8 +10,8 @@ PROJECT_SOURCEFILES += slip-bridge.c
 UIP_CONF_IPV6=1
 
 # radio configuration
-CFLAGS += -DRF_CHANNEL=21
-CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
+CFLAGS += -DRF_CHANNEL=26
+#CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
 #CFLAGS += -DRF_CHANNEL=16
 #CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
@@ -39,7 +39,7 @@ SMALL=1
 #of the slip connection. Large MSS together with low baud rates without flow
 #control will overrun the transmit buffer when the style sheet is requested.
 
-WITH_WEBSERVER = 1
+WITH_WEBSERVER = 0
 
 ifeq ($(WITH_WEBSERVER),1)
 CFLAGS += -DWEBSERVER=1

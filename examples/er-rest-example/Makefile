@@ -1,28 +1,30 @@
-all: rest-server-example coap-client-example plugtest-server
+all: er-example-server er-example-client
+# Use this target explicitly if requried: er-plugtest-server
 
 CONTIKI=../..
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 # for static routing, if enabled
 ifneq ($(TARGET), minimal-net)
+ifneq ($(TARGET), native)
+ifneq ($(findstring avr,$(TARGET)), avr)
 PROJECT_SOURCEFILES += static-routing.c
+endif
+endif
 endif
 
 # variable for root Makefile.include
+WITH_UIP6=1
+# for some platforms
 UIP_CONF_IPV6=1
-
-# variable for this Makefile
-# configure CoAP implementation (3|7)
-WITH_COAP=7
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=21
-CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+CFLAGS += -DIEEE802154_CONF_PANID=0xCAFE
 
-# pass ADDR=0x## to make to configure the last byte of the address which will be stored in EEPROM
-ifneq ($(ADDR), )
-CFLAGS += -DRAVEN_ADDRESS_LAST_BYTE=$(ADDR)
-endif
+# variable for this Makefile
+# configure CoAP implementation (3|7) (er-coap-07 also supports CoAP draft 08)
+WITH_COAP=7
 
 # new variable since slip-radio
 ifneq ($(TARGET), minimal-net)
@@ -41,7 +43,7 @@ SMALL=1
 
 # REST framework, requires WITH_COAP
 ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-07}
+${info INFO: compiling with CoAP-08}
 CFLAGS += -DWITH_COAP=7
 CFLAGS += -DREST=coap_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=0
@@ -62,23 +64,21 @@ endif
 
 APPS += erbium
 
-
+# optional rules to get assembly
 #CUSTOM_RULE_C_TO_OBJECTDIR_O = 1
 #CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
 
 include $(CONTIKI)/Makefile.include
 
+# optional rules to get assembly
 #$(OBJECTDIR)/%.o: asmdir/%.S
 #	$(CC) $(CFLAGS) -MMD -c $< -o $@
 #	@$(FINALIZE_DEPENDENCY)
 #
 #asmdir/%.S: %.c
 #	$(CC) $(CFLAGS) -MMD -S $< -o $@
- 
- 
 
-
-
+# border router rules
 $(CONTIKI)/tools/tunslip6:	$(CONTIKI)/tools/tunslip6.c
 	(cd $(CONTIKI)/tools && $(MAKE) tunslip6)
 
@@ -87,9 +87,6 @@ connect-router:	$(CONTIKI)/tools/tunslip6
 
 connect-router-cooja:	$(CONTIKI)/tools/tunslip6
 	sudo $(CONTIKI)/tools/tunslip6 -a 127.0.0.1 aaaa::1/64
-
-connect-router-port:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -s /dev/ttyUSB$(PORT) aaaa::1/64
 
 tap0up:
 	sudo ip address add fdfd::1/64 dev tap0

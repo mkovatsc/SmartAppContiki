@@ -32,21 +32,19 @@
 #ifndef __PROJECT_ROUTER_CONF_H__
 #define __PROJECT_ROUTER_CONF_H__
 
-/* Enables DMA for the MSP430 to fix the problem of losing bytes with much traffic over SLIP. */
-#ifdef CONF_DEPLOY_BR
-#define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
-#endif
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nullrdc_driver
 
 #ifndef UIP_FALLBACK_INTERFACE
-#define UIP_FALLBACK_INTERFACE   rpl_interface
+#define UIP_FALLBACK_INTERFACE rpl_interface
 #endif
 
 #ifndef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM        4
+#define QUEUEBUF_CONF_NUM          4
 #endif
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE     240
+#define UIP_CONF_BUFFER_SIZE    140
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW

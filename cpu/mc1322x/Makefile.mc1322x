@@ -58,8 +58,8 @@ CFLAGSNO = -I. -I$(CONTIKI)/core -I$(CONTIKI_CPU) -I$(CONTIKI_CPU)/loader \
            -DWITH_ASCII -DMCK=$(MCK) \
            -Werror $(ARCH_FLAGS) -g 
 
-CFLAGS  += $(CFLAGSNO) -Os -DRUN_AS_SYSTEM -DROM_RUN -fno-strict-aliasing  -fno-common -ffixed-r8 -msoft-float -DTEXT_BASE=$(TEXT_BASE) -fno-builtin-printf -fno-builtin-sprintf -MMD
-LDFLAGS += -T $(LINKERSCRIPT) -nostartfiles -static -u_start -Wl,-Map=contiki-$(TARGET).map,-export-dynamic
+CFLAGS  += $(CFLAGSNO) -Os -DRUN_AS_SYSTEM -DROM_RUN -fno-strict-aliasing  -fno-common -ffixed-r8 -msoft-float -DTEXT_BASE=$(TEXT_BASE) -fno-builtin-printf -fno-builtin-sprintf -ffunction-sections -fdata-sections -MMD 
+LDFLAGS += -T $(LINKERSCRIPT) -nostartfiles -static -u_start -Wl,-Map=contiki-$(TARGET).map,-export-dynamic,--gc-sections
 AFLAGS := $(AFLAGS_DEBUG) -D__ASSEMBLY__ $(CPPFLAGS) -gstabs
 
 CDEPFLAGS = $(CFLAGS) -D __MAKING_DEPS__
@@ -72,8 +72,11 @@ CUSTOM_RULE_C_TO_O=yes
 CFLAGS += -I$(OBJECTDIR) -I$(CONTIKI_CPU)/board -DBOARD=$(TARGET)
 
 $(OBJECTDIR)/board.h: $(OBJECTDIR) 
-	# Always copy for CIFS mounts
-	cp -f $(CONTIKI_CPU)/board/$(TARGET).h $(OBJECTDIR)/board.h
+ifeq ($(HOST_OS),Windows)
+	ln -f $(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
+else
+	ln -sf ../$(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
+endif
 
 
 $(OBJECTDIR)/isr.o: $(CONTIKI_CPU)/src/isr.c

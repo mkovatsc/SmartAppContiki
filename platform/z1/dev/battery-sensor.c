@@ -26,14 +26,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: battery-sensor.c,v 1.1 2010/08/24 16:26:38 joxe Exp $
+ * $Id: battery-sensor.c,v 1.11 2010/08/25 19:30:52 nifi Exp $
  *
  * -----------------------------------------------------------------
  *
  * Author  : Adam Dunkels, Joakim Eriksson, Niclas Finne
  * Created : 2005-11-01
- * Updated : $Date: 2010/08/24 16:26:38 $
- *           $Revision: 1.1 $
+ * Updated : $Date: 2010/08/25 19:30:52 $
+ *           $Revision: 1.11 $
  */
 #include "contiki.h"
 #include "dev/battery-sensor.h"
@@ -46,57 +46,23 @@
 #define BATTERY_MEM     ADC12MEM11
 
 const struct sensors_sensor battery_sensor;
-static uint8_t active;
-/*---------------------------------------------------------------------------*/
-static void
-activate(void)
-{
-  /* Configure ADC12_2 to sample channel 11 (voltage) and use */
-  /* the Vref+ as reference (SREF_1) since it is a stable reference */
-  ADC12MCTL2 = (INCH_11 + SREF_1);
-
-  sky_sensors_activate(0x80);
-
-  active = 1;
-}
-/*---------------------------------------------------------------------------*/
-static void
-deactivate(void)
-{
-  sky_sensors_deactivate(0x80);
-  active = 0;
-}
 /*---------------------------------------------------------------------------*/
 static int
 value(int type)
 {
-  return ADC12MEM2/*battery_value*/;
+  return BATTERY_MEM;
 }
 /*---------------------------------------------------------------------------*/
 static int
 configure(int type, int c)
 {
-  switch(type) {
-  case SENSORS_ACTIVE:
-    if(c) {
-      activate();
-    } else {
-      deactivate();
-    }
-  }
-  return 0;
+  return sky_sensors_configure(INPUT_CHANNEL, INPUT_REFERENCE, type, c);
 }
 /*---------------------------------------------------------------------------*/
 static int
 status(int type)
 {
-  switch(type) {
-  case SENSORS_ACTIVE:
-  case SENSORS_READY:
-    return active;
-  }
-  return 0;
+  return sky_sensors_status(INPUT_CHANNEL, type);
 }
 /*---------------------------------------------------------------------------*/
-SENSORS_SENSOR(battery_sensor, BATTERY_SENSOR,
-	       value, configure, status);
+SENSORS_SENSOR(battery_sensor, BATTERY_SENSOR, value, configure, status);

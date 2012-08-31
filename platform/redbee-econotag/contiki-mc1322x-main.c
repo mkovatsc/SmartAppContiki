@@ -50,11 +50,11 @@
 #include "net/mac/frame802154.h"
 #include "lib/include/mc1322x.h"
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
 #include "net/sicslowpan.h"
 #include "net/uip-ds6.h"
 #include "net/mac/sicslowmac.h"
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #include "net/rime.h"
 
@@ -200,8 +200,7 @@ init_lowlevel(void)
 	
 	/* uart init */
 	uart_init(BRINC, BRMOD, SAMP);
-	printf("Booting...\n");
-
+	
 	default_vreg_init();
 
 	maca_init();
@@ -405,7 +404,7 @@ uint32_t p=(uint32_t)&__heap_end__-4;
 	printf("%02X\n", addr.u8[i]);
 
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
   memcpy(&uip_lladdr.addr, &addr.u8, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -417,12 +416,12 @@ uint32_t p=(uint32_t)&__heap_end__-4;
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid %04X\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%X\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL,
-         IEEE802154_CONF_PANID);
+         IEEE802154_PANID);
 
   process_start(&tcpip_process, NULL);
 
@@ -443,7 +442,7 @@ uint32_t p=(uint32_t)&__heap_end__-4;
     }
   }
   
-  if (1) {
+  if(1) {
     uip_ipaddr_t ipaddr;
     int i;
     uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
@@ -459,19 +458,18 @@ uint32_t p=(uint32_t)&__heap_end__-4;
   }
 
   
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%04X\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
-         RF_CHANNEL,
-         IEEE802154_CONF_PANID);
-#endif /* UIP_CONF_IPV6 */
+         RF_CHANNEL);
+#endif /* WITH_UIP6 */
 
   *MACA_MACPANID = 0xcdab; /* this is the hardcoded contiki pan, register is PACKET order */
   *MACA_MAC16ADDR = 0xffff; /* short addressing isn't used, set this to 0xffff for now */

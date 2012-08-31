@@ -108,7 +108,7 @@ public class TR1001Radio extends Radio implements USARTListener, CustomDataRadio
     IOUnit usart = this.mote.getCPU().getIOUnit("USART 0");
     if (usart != null && usart instanceof USART) {
       radioUSART = (USART) usart;
-      radioUSART.setUSARTListener(this);
+      radioUSART.addUSARTListener(this);
     } else {
       throw new RuntimeException("Bad TR1001 IO: " + usart);
     }
@@ -354,7 +354,7 @@ public class TR1001Radio extends Radio implements USARTListener, CustomDataRadio
     return mote;
   }
 
-  public boolean isReceiverOn() {
+  public boolean isRadioOn() {
     /* TODO Implement me */
     return true;
   }

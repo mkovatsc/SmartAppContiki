@@ -106,7 +106,7 @@ typedef unsigned long rtimer_clock_t;
 
 #define FLASH_BLANK_ADDR /* if defined then the generated rime address will flashed */
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
 #define NETSTACK_CONF_MAC     nullmac_driver 
@@ -120,7 +120,7 @@ typedef unsigned long rtimer_clock_t;
 #define CXMAC_CONF_ANNOUNCEMENTS         0
 #define XMAC_CONF_ANNOUNCEMENTS          0
 
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 /* Network setup for non-IPv6 (rime). */
 
 #define NETSTACK_CONF_NETWORK rime_driver
@@ -143,7 +143,7 @@ typedef unsigned long rtimer_clock_t;
 
 #define COLLECT_NEIGHBOR_CONF_MAX_NEIGHBORS      32
 
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #define QUEUEBUF_CONF_NUM          16
 
@@ -168,7 +168,7 @@ typedef unsigned long rtimer_clock_t;
 #define PROCESS_CONF_NUMEVENTS 8
 #define PROCESS_CONF_STATS 1
 
-#if UIP_CONF_IPV6
+#ifdef WITH_UIP6
 
 #define RIMEADDR_CONF_SIZE              8
 
@@ -208,10 +208,10 @@ typedef unsigned long rtimer_clock_t;
 #endif /* SICSLOWPAN_CONF_FRAG */
 #define SICSLOWPAN_CONF_CONVENTIONAL_MAC	1
 #define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS       2
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 #define UIP_CONF_IP_FORWARD      1
 #define UIP_CONF_BUFFER_SIZE     1300
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH 1
 

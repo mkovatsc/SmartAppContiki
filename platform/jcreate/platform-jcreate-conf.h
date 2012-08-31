@@ -47,6 +47,7 @@
 
 #define LEDS_CONF_ALL     255
 #define PLATFORM_HAS_LEDS   1
+#define PLATFORM_HAS_BUTTON 0
 
 /* CPU target speed in Hz */
 #define F_CPU 3900000uL /*2457600uL*/

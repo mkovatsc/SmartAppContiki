@@ -44,9 +44,9 @@
 #include "net/netstack.h"
 #include "net/mac/frame802154.h"
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
 #include "net/uip-ds6.h"
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #include "net/rime.h"
 
@@ -156,6 +156,7 @@ set_rime_addr(void)
   printf("%d\n", addr.u8[i]);
 }
 /*---------------------------------------------------------------------------*/
+#if !PROCESS_CONF_NO_PROCESS_NAMES
 static void
 print_processes(struct process * const processes[])
 {
@@ -167,6 +168,7 @@ print_processes(struct process * const processes[])
   }
   putchar('\n');
 }
+#endif /* !PROCESS_CONF_NO_PROCESS_NAMES */
 /*--------------------------------------------------------------------------*/
 #if WITH_UIP
 static void
@@ -202,9 +204,6 @@ main(int argc, char **argv)
 
 
   uart1_init(BAUD2UBR(115200)); /* Must come before first printf */
-#if WITH_UIP
-  slip_arch_init(BAUD2UBR(115200));
-#endif /* WITH_UIP */
 
   leds_on(LEDS_GREEN);
   ds2411_init();
@@ -251,6 +250,10 @@ main(int argc, char **argv)
 
   ctimer_init();
 
+#if WITH_UIP
+  slip_arch_init(BAUD2UBR(115200));
+#endif /* WITH_UIP */
+
   init_platform();
 
   set_rime_addr();
@@ -283,7 +286,7 @@ main(int argc, char **argv)
 	 ds2411_id[0], ds2411_id[1], ds2411_id[2], ds2411_id[3],
 	 ds2411_id[4], ds2411_id[5], ds2411_id[6], ds2411_id[7]);*/
 
-#if UIP_CONF_IPV6
+#if WITH_UIP6
   memcpy(&uip_lladdr.addr, ds2411_id, sizeof(uip_lladdr.addr));
   /* Setup nullmac-like MAC for 802.15.4 */
 /*   sicslowpan_init(sicslowmac_init(&cc2420_driver)); */
@@ -295,7 +298,7 @@ main(int argc, char **argv)
   NETSTACK_MAC.init();
   NETSTACK_NETWORK.init();
 
-  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%4X\n",
+  printf("%s %s, channel check rate %lu Hz, radio channel %u, panid 0x%X\n",
          NETSTACK_MAC.name, NETSTACK_RDC.name,
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
                          NETSTACK_RDC.channel_check_interval()),
@@ -331,7 +334,7 @@ main(int argc, char **argv)
            ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
   }
 
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 
   NETSTACK_RDC.init();
   NETSTACK_MAC.init();
@@ -342,9 +345,9 @@ main(int argc, char **argv)
          CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
                          NETSTACK_RDC.channel_check_interval()),
          RF_CHANNEL);
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
-#if !WITH_UIP && !UIP_CONF_IPV6
+#if !WITH_UIP && !WITH_UIP6
   uart1_set_input(serial_line_input_byte);
   serial_line_init();
 #endif
@@ -394,7 +397,11 @@ main(int argc, char **argv)
 
   watchdog_start();
 
+#if !PROCESS_CONF_NO_PROCESS_NAMES
   print_processes(autostart_processes);
+#else /* !PROCESS_CONF_NO_PROCESS_NAMES */
+  putchar('\n'); /* include putchar() */
+#endif /* !PROCESS_CONF_NO_PROCESS_NAMES */
   autostart_start(autostart_processes);
 
   /*

@@ -128,8 +128,8 @@ init_lowlevel(void)
   memcpy(&uip_lladdr.addr, &addr.u8, 8);
 #endif  
   rf230_set_pan_addr(IEEE802154_PANID, 0, (uint8_t *)&addr.u8);
-#ifdef RF_CHANNEL
-  rf230_set_channel(RF_CHANNEL);
+#ifdef CHANNEL_802_15_4
+  rf230_set_channel(CHANNEL_802_15_4);
 #else
   rf230_set_channel(26);
 #endif

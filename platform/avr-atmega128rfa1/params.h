@@ -12,8 +12,6 @@
  *
  * Note the parameters in this file can be changed without forcing a complete rebuild.
  */
-#define WITH_NODE_ID 1
-
 #define CONTIKI_CONF_RANDOM_MAC 0        //adds 78 bytes
 #define CONTIKI_CONF_SETTINGS_MANAGER 0  //adds 1696 bytes
 
@@ -54,13 +52,13 @@ extern uint8_t eemem_domain_name[30];
 #else
 #define PARAMS_NODEID 0
 #endif
-#ifdef RF_CHANNEL
-#define PARAMS_CHANNEL RF_CHANNEL
+#ifdef CHANNEL_802_15_4
+#define PARAMS_CHANNEL CHANNEL_802_15_4
 #else
 #define PARAMS_CHANNEL 26
 #endif
-#ifdef IEEE802154_CONF_PANID
-#define PARAMS_PANID IEEE802154_CONF_PANID
+#ifdef IEEE802154_PANID
+#define PARAMS_PANID IEEE802154_PANID
 #else
 #define PARAMS_PANID 0xABCD
 #endif

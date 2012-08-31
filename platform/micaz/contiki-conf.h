@@ -47,12 +47,17 @@
 
 #include "platform-conf.h"
 
-#if UIP_CONF_IPV6
 
+#if UIP_CONF_IPV6
+#define WITH_UIP6 1
+#endif
+#if WITH_UIP6
 /* Network setup for IPv6 */
 #define NETSTACK_CONF_NETWORK sicslowpan_driver
-#define NETSTACK_CONF_MAC     csma_driver
-#define NETSTACK_CONF_RDC     nullrdc_driver
+//#define NETSTACK_CONF_MAC     csma_driver
+#define NETSTACK_CONF_MAC     nullmac_driver
+//#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RDC     sicslowmac_driver
 #define NETSTACK_CONF_FRAMER  framer_802154
 
 #define CC2420_CONF_AUTOACK              1
@@ -60,12 +65,13 @@
 #define RIME_CONF_NO_POLITE_ANNOUCEMENTS 0
 #define CXMAC_CONF_ANNOUNCEMENTS         0
 
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 
 /* Network setup for non-IPv6 (rime). */
 
 #define NETSTACK_CONF_NETWORK rime_driver
 #define NETSTACK_CONF_MAC     csma_driver
+#define NETSTACK_CONF_MAC     nullmac_driver
 #define NETSTACK_CONF_RDC     cxmac_driver
 #define NETSTACK_CONF_FRAMER  framer_802154
 
@@ -81,7 +87,7 @@
 
 #define COLLECT_NEIGHBOR_CONF_MAX_NEIGHBORS      32
 
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #define PACKETBUF_CONF_ATTRS_INLINE 1
 
@@ -102,15 +108,15 @@
 #define PROCESS_CONF_NUMEVENTS 8
 #define PROCESS_CONF_STATS 1
 
-#if UIP_CONF_IPV6
+#ifdef WITH_UIP6
 
 #define RIMEADDR_CONF_SIZE              8
 
 #define UIP_CONF_LL_802154              1
 #define UIP_CONF_LLH_LEN                0
 
-#define UIP_CONF_ROUTER                 1
-#define UIP_CONF_IPV6_RPL               1
+#define UIP_CONF_ROUTER                 0
+#define UIP_CONF_IPV6_RPL               0
 
 /* configure number of neighbors and routes */
 #define UIP_CONF_DS6_NBR_NBU     5
@@ -144,14 +150,14 @@
 #endif /* SICSLOWPAN_CONF_FRAG */
 #define SICSLOWPAN_CONF_CONVENTIONAL_MAC	1
 #define SICSLOWPAN_CONF_MAX_ADDR_CONTEXTS       2
-#else /* UIP_CONF_IPV6 */
+#else /* WITH_UIP6 */
 #define UIP_CONF_IP_FORWARD      1
 #define UIP_CONF_BUFFER_SIZE     128
-#endif /* UIP_CONF_IPV6 */
+#endif /* WITH_UIP6 */
 
 #define UIP_CONF_ICMP_DEST_UNREACH 1
 
-#if !WITH_UIP && !UIP_CONF_IPV6
+#if !WITH_UIP && !WITH_UIP6
 #define QUEUEBUF_CONF_NUM          8
 #else
 #define QUEUEBUF_CONF_NUM          4
@@ -188,14 +194,7 @@
 
 #define UIP_CONF_TCP_SPLIT       0
 
-
-typedef unsigned short clock_time_t;
 typedef unsigned short uip_stats_t;
 typedef unsigned long off_t;
-
-void clock_delay(unsigned int us2);
-void clock_wait(int ms10);
-void clock_set_seconds(unsigned long s);
-unsigned long clock_seconds(void);
 
 #endif /* __CONTIKI_CONF_H__ */

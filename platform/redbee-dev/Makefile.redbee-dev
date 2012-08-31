@@ -13,4 +13,9 @@ CONTIKI_PLAT_DEFS =
 
 MCU=arm7tdmi-s
 
+ifdef UIP_CONF_IPV6
+CFLAGS += -DWITH_UIP6=1
+endif
+
 include $(CONTIKIMC1322X)/Makefile.mc1322x
+

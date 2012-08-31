@@ -1170,13 +1170,13 @@ rf230_get_channel(void)
 }
 /*---------------------------------------------------------------------------*/
 void
-rf230_set_channel(unsigned short c)
+rf230_set_channel(unsigned short ch)
 {
  /* Wait for any transmission to end. */
-  PRINTF("rf230: Set Channel %u\n",c);
+  PRINTF("rf230: Set Channel %u\n", ch);
   rf230_waitidle();
-  channel=c;
-  hal_subregister_write(SR_CHANNEL, c);
+  channel = ch;
+  hal_subregister_write(SR_CHANNEL, ch);
 }
 /*---------------------------------------------------------------------------*/
 void
