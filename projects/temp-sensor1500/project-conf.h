@@ -63,15 +63,14 @@
 #define WEBSERVER_CONF_CFS_CONNS 2
 #endif
 
-
 #undef RF_CHANNEL
-#define RF_CHANNEL 24
+#define RF_CHANNEL 21
 
 #undef IEEE802154_CONF_PANID
 #define IEEE802154_CONF_PANID 0xBEEF
 
 #undef EUI64_ADDRESS
-#define EUI64_ADDRESS {0x00,0x21,0x2e,0xff,0xff,0x00,0x03,0xe2}
+#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x34}
 
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */
