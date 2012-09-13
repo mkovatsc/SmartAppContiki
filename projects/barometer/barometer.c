@@ -88,7 +88,7 @@ static int32_t pressure;
 static int32_t pressure_last;
 static int32_t pressure_threshold = 100;
 
-static unsigned short poll_interval = 10;
+static unsigned short poll_interval = 3;
 
 clock_time_t last_reading;
 

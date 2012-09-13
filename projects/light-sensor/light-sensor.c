@@ -58,8 +58,6 @@
 #define FALSE 0
 
 
-extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
-extern uip_ds6_route_t uip_ds6_routing_table[];
 
 /*--PROCESSES----------------------------------------------------------------*/
 PROCESS(rfnode_test_process, "rfNode_test");
@@ -106,7 +104,12 @@ static void read_light(void){
 	
 	adc_deinit();
 	
-	light = (reading > 250);
+	if (reading > 300){
+		light = 1;
+	}
+	else{
+		light = 0;
+	}
 	
 	if (light_last != light){
 		process_post(&coap_process, changed_light_event, NULL);

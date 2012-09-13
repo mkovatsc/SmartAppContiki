@@ -152,7 +152,7 @@ event_reed_handler(resource_t *r)
 
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
-	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
 	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "closed" : "open"));
 
 	REST.notify_subscribers(r, event_i, notification);

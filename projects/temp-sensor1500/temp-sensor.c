@@ -72,10 +72,12 @@ static process_event_t get_temperature_response_event;
 static process_event_t changed_temperature_event;
 clock_time_t last_temperature_reading;
 
+static int16_t linear_correction = 100;
+static int16_t offset_correction = 0;
 static int16_t threshold = 5;
 static uint8_t poll_time = 3;
 
-const uint16_t lookup[] PROGMEM = {-702,-317,-201,-128,-74,-30,7,39,68,94,118,140,160,179,197,215,231,247,262,276,290,304,317,330,342,354,366,377,389,400,411,421,432,442,453,463,473,482,492,502,511,521,530,539,549,558,567,576,585,594,603,612,621,630,639,648,656,665,674,683,692,701,710,719,728};
+const uint16_t lookup[] PROGMEM = {-7422,-3169,-2009,-1280,-737,-300,70,393,679,939,1176,1395,1600,1792,1974,2146,2310,2467,2617,2762,2902,3037,3169,3296,3420,3541,3659,3775,3888,3999,4108,4215,4320,4423,4526,4626,4726,4824,4921,5018,5113,5207,5301,5394,5487,5578,5670,5760,5851,5941,6030,6120,6209,6298,6387,6476,6565,6653,6742,6831,6920,7010,7100,7189,7279};
 
 typedef struct application_separate_get_temperature_store {
 	coap_separate_t request_metadata;
@@ -98,7 +100,7 @@ static int uart_get_char(unsigned char c)
 
 static void read_temperature(void){
 	static int16_t reading;
-	int16_t new_temperature;
+	int16_t raw_temperature;
 	
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
 
@@ -113,11 +115,14 @@ static void read_temperature(void){
 	int16_t delta = reading % 16;
 	int16_t low = pgm_read_word(&lookup[reading/16]);
 	int16_t high = pgm_read_word(&lookup[(reading/16)+1]);
-	new_temperature=low+delta*(high-low)/16;
+	raw_temperature=low+delta*(high-low)/16;
+	int32_t corrected = (((int32_t) raw_temperature) * ((int32_t) linear_correction)/ 100 )+ offset_correction;
+
+	int16_t new_temperature = corrected;
 
 	last_temperature_reading =  clock_time();
 	
-	printf_P(PSTR("Temp: %d.%01d\n"),new_temperature/10, new_temperature>0 ? new_temperature%10 : (-1*new_temperature)%10);
+	printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
 
 	temperature =  new_temperature;
 	if (temperature_last - threshold > new_temperature || temperature_last + threshold < new_temperature){
@@ -189,7 +194,7 @@ EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperat
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if(last_temperature_reading > clock_time()-5*CLOCK_SECOND){
-		snprintf_P((char*)buffer, preferred_size, PSTR(" %d.%01d\n"),temperature/10, temperature>0 ? temperature%10 : (-1*temperature)%10);
+		snprintf_P((char*)buffer, preferred_size, PSTR(" %d.%02d\n"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
@@ -214,7 +219,7 @@ void temperature_event_handler(resource_t *r) {
 
   	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
   	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR(" %d.%01d\n"),temperature/10, temperature>0 ? temperature%10 : (-1*temperature)%10));
+  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR(" %d.%02d\n"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
 
 	REST.notify_subscribers(r, event_i, notification);
 
@@ -227,7 +232,7 @@ void temperature_finalize_handler() {
 		if ( (transaction = coap_new_transaction(separate_get_temperature_store->request_metadata.mid, &separate_get_temperature_store->request_metadata.addr, separate_get_temperature_store->request_metadata.port)) ){
 			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
       			coap_separate_resume(response, &separate_get_temperature_store->request_metadata, CONTENT_2_05);
-			snprintf_P(buffer, 9, PSTR(" %d.%01d\n"),temperature/10, temperature>0 ? temperature%10 : (-1*temperature)%10);
+			snprintf_P(buffer, 9, PSTR(" %d.%02d\n"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			coap_set_payload(response, buffer, strlen(buffer));
 			coap_set_header_block2(response, separate_get_temperature_store->request_metadata.block2_num, 0, separate_get_temperature_store->request_metadata.block2_size);
@@ -301,7 +306,7 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 {
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%01d"), threshold/10, threshold%10);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%01d"), threshold/100, (threshold%10)/10);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
@@ -312,7 +317,7 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		uint16_t value;
 		if(len == 1){
 			if (isdigit(string[0])){
-				value = (atoi((char*) string));
+				value = (atoi((char*) string))*100;
 			}
 			else {
 				success = 0;
@@ -320,7 +325,7 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		else if(len == 2){
 			if (isdigit(string[0]) && isdigit(string[1])){
-				value = (atoi((char*) string)) * 10;
+				value = (atoi((char*) string)) * 100;
 			}
 			else {
 				success = 0;
@@ -328,8 +333,8 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		else if (len == 3) {
 			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
-				value = (atoi((char*) string)) * 10;
-				value += atoi((char*) string+2);
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+2)*10;
 			}
 			else {
 				success = 0;
@@ -337,8 +342,8 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 		}
 		else if(len == 4){
 			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
-				value = (atoi((char*) string) *10);
-				value += atoi((char*) string+3);
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+3)*10;
 			}
 			else {
 				success = 0;
@@ -364,6 +369,206 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 }
 
 
+/*---------------------- Correction Linear Factor ----------------------------------------*/
+RESOURCE(linear, METHOD_GET | METHOD_PUT, "config/linear", "title=\"Linear Correction Factor\";ct=0;rt=\"number\"");
+void linear_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), linear_correction/100, (linear_correction%100));
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+		uint16_t value;
+		if(len == 1){
+			if (isdigit(string[0])){
+				value = (atoi((char*) string))*100;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 2){
+			if (isdigit(string[0]) && isdigit(string[1])){
+				value = (atoi((char*) string)) * 100;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if (len == 3) {
+			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+2)*10;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 4){
+			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+3)*10;
+			}
+			else if (isdigit(string[0]) && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+2);
+		
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 5){
+			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+3);
+			}
+			else {
+				success = 0;
+			}
+		}
+		else {
+			success = 0;
+		}
+	        if(success){
+			linear_correction=value;
+        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
+	}
+}
+
+
+/*--------------------- Correction Offset ------------------------------------------------*/
+RESOURCE(offset, METHOD_GET | METHOD_PUT, "config/offset", "title=\"Offset Correction\";ct=0;rt=\"number\"");
+void offset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), offset_correction/100, offset_correction>0 ? offset_correction%100 : (-1*offset_correction)%100);
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+		uint16_t value;
+		if(len == 1){
+			if (isdigit(string[0])){
+				value = (atoi((char*) string))*100;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 2){
+			if (isdigit(string[0]) && isdigit(string[1])){
+				value = (atoi((char*) string)) * 100;
+			}
+			if (string[0]=='-' && isdigit(string[1])){
+				value = (atoi((char*) string)) * 100;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if (len == 3) {
+			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+2)*10;
+			}
+			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2])){
+				value = (atoi((char*) string) *100);
+			}
+			else if (string[0] == '-' && isdigit(string[2]) && string[1]=='.'){
+				value = atoi((char*) string+2)*-10;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 4){
+			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+3)*10;
+			}
+			else if (isdigit(string[0]) && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+2);
+			}
+			else if (string[0] == '-' && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
+				value = atoi((char*) string+2)*-1;
+			}
+			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
+				value = (atoi((char*) string+1) *100);
+				value += atoi((char*) string+3) * 10;
+				value *= -1;
+			}
+			else {
+				success = 0;
+			}
+		}
+		else if(len == 5){
+			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
+				value = (atoi((char*) string) *100);
+				value += atoi((char*) string+3);
+			}
+			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
+				value = (atoi((char*) string+1) *100);
+				value += atoi((char*) string+3);
+				value *= -1;
+			}
+			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2]) && isdigit(string[4]) && string[3]=='.'){
+				value = (atoi((char*) string+1) *100);
+				value += atoi((char*) string+4)*10;
+				value *= -1;
+
+			}
+			else {
+				success = 0;
+			}
+		}
+		else  if(len == 6){
+			if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2]) && isdigit(string[4]) && isdigit(string[5]) && string[3]=='.'){
+				value = (atoi((char*) string+1) *100);
+				value += atoi((char*) string+4);
+				value *= -1;
+			}
+			else {
+				success=0;
+			}
+		}
+		else {
+			success = 0;
+		}
+	        if(success){
+			offset_correction=value;
+        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
+	}
+}
+
 
 
 PROCESS_THREAD(coap_process, ev, data)
@@ -375,6 +580,8 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_event_resource(&resource_temperature);	
 	rest_activate_resource(&resource_threshold);
 	rest_activate_resource(&resource_poll);
+	rest_activate_resource(&resource_linear);
+	rest_activate_resource(&resource_offset);
 
 	//activate the resources
 
