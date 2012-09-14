@@ -67,9 +67,9 @@ PROCESS(coap_process, "coap");
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 
-static int8_t light;
-static int8_t light_last;
-static int16_t threshold;
+static int16_t light;
+static int16_t light_last;
+static int16_t threshold = 50;
 static process_event_t get_light_response_event;
 static process_event_t changed_light_event;
 clock_time_t last_light_reading;
@@ -104,21 +104,16 @@ static void read_light(void){
 	
 	adc_deinit();
 	
-	if (reading > 300){
-		light = 1;
-	}
-	else{
-		light = 0;
-	}
+	light = reading;
 	
-	if (light_last != light){
+	if (light_last < light - threshold || light_last > light + threshold){
 		process_post(&coap_process, changed_light_event, NULL);
 		light_last = light;
 	}
 
 	last_light_reading =  clock_time();
 	
-	printf_P(PSTR("ADC: %d\n"),reading);
+	printf_P(PSTR("ADC: %d\n"),light);
 
 	process_post(&coap_process, get_light_response_event, NULL);
 
@@ -181,11 +176,11 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 /*--CoAP - Process---------------------------------------------------------*/
 
-EVENT_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";ct=0;rt=\"state:finite\"");
+EVENT_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";ct=0;rt=\"number\"");
 void light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if(last_light_reading > clock_time()-5*CLOCK_SECOND){
-		snprintf_P((char*)buffer, preferred_size, PSTR("%s"),light ? "on" : "off");
+		snprintf_P((char*)buffer, preferred_size, PSTR("%i"), light);
   		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
@@ -210,7 +205,7 @@ void light_event_handler(resource_t *r) {
 
   	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
   	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR("%s"),light ? "on" : "off"));
+  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR("%i"),light));
 
 	REST.notify_subscribers(r, event_i, notification);
 
@@ -223,7 +218,7 @@ void light_finalize_handler() {
 		if ( (transaction = coap_new_transaction(separate_get_light_store->request_metadata.mid, &separate_get_light_store->request_metadata.addr, separate_get_light_store->request_metadata.port)) ){
 			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
       			coap_separate_resume(response, &separate_get_light_store->request_metadata, CONTENT_2_05);
-			snprintf_P(buffer, 9, PSTR("%s"), light ? "on" : "off");
+			snprintf_P(buffer, 9, PSTR("%i"), light);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			coap_set_payload(response, buffer, strlen(buffer));
 			coap_set_header_block2(response, separate_get_light_store->request_metadata.block2_num, 0, separate_get_light_store->request_metadata.block2_size);
@@ -237,6 +232,46 @@ void light_finalize_handler() {
 		       * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
 		       */
 		}
+	}
+}
+
+
+/*--------- Threshold ---------------------------------------------------------*/
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold\";ct=0;rt=\"number\"");
+void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%i"), threshold);
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+		uint16_t value;
+		int i;
+		for (i=0; i<len; i++){
+			if(!isdigit(string[i])){
+				success = 0;
+				break;
+			}
+		}
+		value = (atoi((char*) string));
+
+	        if(success && len>0){
+			threshold=value;
+        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
 	}
 }
 
@@ -298,6 +333,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	rest_init_engine();
 	rest_activate_event_resource(&resource_light);	
+	rest_activate_event_resource(&resource_threshold);	
 	rest_activate_resource(&resource_poll);
 
 	//activate the resources
