@@ -32,6 +32,8 @@
 
 /*---------------------------------------------------------------------------*/
 /* ADC PIN = PF2 = ADC2 */
+/* Uses 330 Ohm Resistor as Voltage Divider  */
+/*---------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <string.h>
@@ -66,6 +68,9 @@ PROCESS(coap_process, "coap");
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
+
+char ee_identifier[50] EEMEM;
+char identifier[50];
 
 static int16_t light;
 static int16_t light_last;
@@ -324,6 +329,45 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
   REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
+/*--------- Node Identifier ------------------------------------------------------------*/
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), identifier);
+ 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+    		int success = 1;
+		const uint8_t * string = NULL;
+    		int len;
+
+		len = coap_get_payload(request, &string);
+		if (len > 3){
+			strncpy(identifier,string,50);
+			eeprom_write_block(identifier,ee_identifier,50);
+		}
+		else{
+			success=0;
+		}
+		
+        	if(success){
+            		REST.set_response_status(response,CHANGED_2_04);
+            	}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+    	}
+  
+
+ 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+}
+
+
+
+
 
 
 PROCESS_THREAD(coap_process, ev, data)
@@ -332,9 +376,14 @@ PROCESS_THREAD(coap_process, ev, data)
   
 
 	rest_init_engine();
+
+	eeprom_read_block(&identifier, ee_identifier, 50);
+
 	rest_activate_event_resource(&resource_light);	
 	rest_activate_event_resource(&resource_threshold);	
 	rest_activate_resource(&resource_poll);
+	rest_activate_resource(&resource_identifier);
+
 
 	//activate the resources
 

@@ -71,6 +71,8 @@ static unsigned char uart_buf_data[128] = {0};
 static uint32_t rfid_tag;
 static process_event_t rfid_event;
 
+char ee_identifier[50] EEMEM;
+char identifier[50];
 
 
 /*-----RFID_UART-PROCESS-IMPLEMENTATION-----------------------------------------*/
@@ -182,25 +184,67 @@ rfid_event_handler(resource_t *r)
 }
 
 
+/*--------- Node Identifier ------------------------------------------------------------*/
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), identifier);
+ 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+    		int success = 1;
+		const uint8_t * string = NULL;
+    		int len;
+
+		len = coap_get_payload(request, &string);
+		if (len > 3){
+			strncpy(identifier,string,50);
+			eeprom_write_block(identifier,ee_identifier,50);
+		}
+		else{
+			success=0;
+		}
+		
+        	if(success){
+            		REST.set_response_status(response,CHANGED_2_04);
+            	}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+    	}
+  
+
+ 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+}
+
+
+
 
 PROCESS_THREAD(coap_process, ev, data)
 {
-  PROCESS_BEGIN();
+
+	PROCESS_BEGIN();
   
-  rest_init_engine();
+	rest_init_engine();
 
-  rest_activate_event_resource(&resource_rfid);
 
-  while(1) {
-    PROCESS_WAIT_EVENT();
+	eeprom_read_block(&identifier, ee_identifier, 50);
+	rest_activate_event_resource(&resource_rfid);
+	rest_activate_resource(&resource_identifier);
+
+	while(1) {
+		PROCESS_WAIT_EVENT();
 	
-    if (ev == rfid_event) {
-	rfid_event_handler(&resource_rfid);
+		if (ev == rfid_event) {
+			rfid_event_handler(&resource_rfid);
 
-    }
-  }
+		}	
+	}
 
-  PROCESS_END();
+	PROCESS_END();
 }
 
 /*---------------------------------------------------------------------------*/

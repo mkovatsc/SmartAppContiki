@@ -79,6 +79,9 @@ static uint8_t poll_time = 3;
 
 const uint16_t lookup[] PROGMEM = {-7422,-3169,-2009,-1280,-737,-300,70,393,679,939,1176,1395,1600,1792,1974,2146,2310,2467,2617,2762,2902,3037,3169,3296,3420,3541,3659,3775,3888,3999,4108,4215,4320,4423,4526,4626,4726,4824,4921,5018,5113,5207,5301,5394,5487,5578,5670,5760,5851,5941,6030,6120,6209,6298,6387,6476,6565,6653,6742,6831,6920,7010,7100,7189,7279};
 
+char ee_identifier[50] EEMEM;
+char identifier[50];
+
 typedef struct application_separate_get_temperature_store {
 	coap_separate_t request_metadata;
 } application_separate_get_temperature_store_t;
@@ -570,6 +573,44 @@ void offset_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 }
 
 
+/*--------- Node Identifier ------------------------------------------------------------*/
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), identifier);
+ 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+    		int success = 1;
+		const uint8_t * string = NULL;
+    		int len;
+
+		len = coap_get_payload(request, &string);
+		if (len > 3){
+			strncpy(identifier,string,50);
+			eeprom_write_block(identifier,ee_identifier,50);
+		}
+		else{
+			success=0;
+		}
+		
+        	if(success){
+            		REST.set_response_status(response,CHANGED_2_04);
+            	}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+    	}
+  
+
+ 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+}
+
+
+
 
 PROCESS_THREAD(coap_process, ev, data)
 {
@@ -577,11 +618,15 @@ PROCESS_THREAD(coap_process, ev, data)
   
 
 	rest_init_engine();
+
+	eeprom_read_block(&identifier, ee_identifier, 50);
+
 	rest_activate_event_resource(&resource_temperature);	
 	rest_activate_resource(&resource_threshold);
 	rest_activate_resource(&resource_poll);
 	rest_activate_resource(&resource_linear);
 	rest_activate_resource(&resource_offset);
+	rest_activate_resource(&resource_identifier);
 
 	//activate the resources
 
