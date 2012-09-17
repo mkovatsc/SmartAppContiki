@@ -33,7 +33,7 @@
 #define __PROJECT_RPL_WEB_CONF_H__
 
 #ifndef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    300 // original: 220
+#define UIP_CONF_BUFFER_SIZE    340 // original: 220
 #endif
 
 #ifndef UIP_CONF_RECEIVE_WINDOW
