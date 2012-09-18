@@ -48,7 +48,7 @@
 #include "er-coap-07.h"
 #include "er-coap-07-transactions.h"
 
-#include "dev/touch-sensor.h"
+#include "dev/motion-sensor.h"
 
 
 //adds the debug resource that can be used to output the debug buffer
@@ -63,18 +63,18 @@
 
 #define VERSION "0.7.1"
 
-extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
-extern uip_ds6_route_t uip_ds6_routing_table[];
 
 /*--PROCESSES----------------------------------------------------------------*/
 PROCESS(rfnode_test_process, "rfNode_test");
 PROCESS(coap_process, "coap");
 
-SENSORS(&touch_sensor);
+SENSORS(&motion_sensor);
 
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
+static uint8_t duration = 5;
+static uint8_t event_number = 8;
 
 char ee_identifier[50] EEMEM;
 char identifier[50];
@@ -101,10 +101,12 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
+	DDRE &= ~_BV(PE7);
+	PORTE &= ~_BV(PE7);
+
 	// finish booting first
-
 	PROCESS_PAUSE();
-
+	
 	while (1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == PROCESS_EVENT_MSG) {
@@ -132,33 +134,116 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-EVENT_RESOURCE(touch, METHOD_GET, "sensors/touch", "title=\"Touch Button\";ct=0;rt=\"state:finite\"");
+EVENT_RESOURCE(motion, METHOD_GET, "sensors/motion", "title=\"Motion Sensor\";ct=0;rt=\"state:finite\"");
 
 void
-touch_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+motion_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	int state = touch_sensor.value(0);
-	const char *msg = state ? "touch" : "non";
+	int state = motion_sensor.value(0);
+	const char *msg = state ? "clear" : "movement";
 	printf("%s\n",msg);
 	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
 
 }
 
 void
-event_touch_handler(resource_t *r)
+event_motion_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
-	static char content[15];
+	static char content[10];
+	
 
 	++event_i;
+	int state = motion_sensor.value(0);
+
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
-	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "touch"));
+	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "clear" : "movement"));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
+
+
+/*--------- Number of events ---------------------------------------------------------*/
+RESOURCE(trigger, METHOD_GET | METHOD_PUT, "config/triggerNumber", "title=\"Number of Events\";ct=0;rt=\"number\"");
+void trigger_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%u"), event_number);
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+		uint8_t value = 0;
+		int i;
+		for (i=0; i<len; i++){
+			if(!isdigit(string[i])){
+				success = 0;
+				break;
+			}
+		}
+		value = (atoi((char*) string));
+
+		if(success && value > 0){
+			event_number=value;
+        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
+	}
+}
+
+/*--------- Duration ---------------------------------------------------------*/
+RESOURCE(duration, METHOD_GET | METHOD_PUT, "config/duration", "title=\"Time Interval\";ct=0;rt=\"time: s\"");
+void duration_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%u"), duration);
+		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else {
+        	const uint8_t * string = NULL;
+        	int success = 1;
+        	int len = coap_get_payload(request, &string);
+		uint8_t value = 0;
+		int i;
+		for (i=0; i<len; i++){
+			if(!isdigit(string[i])){
+				success = 0;
+				break;
+			}
+		}
+		value = (atoi((char*) string));
+
+		if(success && value > 0){
+			duration=value;
+        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	
+	        }
+        	else{
+        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+			REST.set_response_payload(response, buffer, strlen((char*)buffer));
+			return;
+        	}
+	}
+}
+
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
@@ -197,6 +282,7 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 }
 
+
 /*-------------------- Version ---------------------------------------------------------------------------*/
 RESOURCE(version, METHOD_GET | METHOD_PUT, "debug/version", "title=\"Version Number\";ct=0;rt=\"number\"");
 void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -208,37 +294,43 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 
 
+
 PROCESS_THREAD(coap_process, ev, data)
 {
 	PROCESS_BEGIN();
   
- 	static struct etimer etimer;
+ 	static struct etimer interval;
 	rest_init_engine();
-	SENSORS_ACTIVATE(touch_sensor);
+	SENSORS_ACTIVATE(motion_sensor);
 	printf("Sensors activated\n");
-
+	static uint8_t counter = 0;
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
-	  
-	rest_activate_event_resource(&resource_touch);
+
 	rest_activate_resource(&resource_identifier);
 	rest_activate_resource(&resource_version);
+	rest_activate_event_resource(&resource_motion);
+	rest_activate_resource(&resource_trigger);
+	rest_activate_resource(&resource_duration);
 
-
-	etimer_set(&etimer, CLOCK_SECOND * 5);
-
+	//etimer_set(&etimer, CLOCK_SECOND * 5);
 	while(1) {
 		PROCESS_WAIT_EVENT();
-		if (ev == sensors_event && data == &touch_sensor) {
-			event_touch_handler(&resource_touch);
+		if (ev == PROCESS_EVENT_TIMER){
+			if (counter >= event_number-1){ //only fire event if multiple movements detected in short period
+				event_motion_handler(&resource_motion);
+			}
+
 		}
-/*	 	else if (ev == PROCESS_EVENT_TIMER){
-			int state = touch_sensor.value(0);
-			const char *msg = state ? "touched" : "released";
-			printf("%s\n",msg);
-  			etimer_set(&etimer, CLOCK_SECOND * 5);
+		else if (ev == sensors_event && data == &motion_sensor) {
+			if (etimer_expired(&interval)){
+				counter=0;
+				etimer_set(&interval, CLOCK_SECOND * duration);
+			}
+			else{
+				counter++;
+			}
 		}
-*/		
     
 	}
 

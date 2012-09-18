@@ -61,6 +61,8 @@
 #define TRUE 1
 #define FALSE 0
 
+#define VERSION "0.7.1"
+
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
 extern uip_ds6_route_t uip_ds6_routing_table[];
@@ -163,7 +165,7 @@ event_tilt_handler(resource_t *r)
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";ct=0;rt=\"string\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -199,6 +201,16 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 }
 
 
+/*-------------------- Version ---------------------------------------------------------------------------*/
+RESOURCE(version, METHOD_GET | METHOD_PUT, "debug/version", "title=\"Version Number\";ct=0;rt=\"number\"");
+void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+	snprintf_P((char*)buffer, preferred_size, PSTR("%s"), VERSION);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+
 
 
 
@@ -216,6 +228,7 @@ PROCESS_THREAD(coap_process, ev, data)
  
 	rest_activate_event_resource(&resource_tilt);
 	rest_activate_resource(&resource_identifier);
+	rest_activate_resource(&resource_version);
 
 	etimer_set(&etimer, CLOCK_SECOND * 5);
 	while(1) {

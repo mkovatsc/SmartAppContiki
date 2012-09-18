@@ -68,6 +68,9 @@
 
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
+#define VERSION "0.7.1"
+
+
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
 extern uip_ds6_route_t uip_ds6_routing_table[];
 
@@ -1817,7 +1820,7 @@ wheel_event_handler(resource_t *r)
 	event_counter++;
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
-	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
 	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%i", poll_data.wheel_event_value));
 
 	REST.notify_subscribers(r, event_counter, notification);
@@ -2125,7 +2128,7 @@ void error_address_handler(void* request, void* response, uint8_t *buffer, uint1
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";ct=0;rt=\"string\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -2200,7 +2203,7 @@ void error_event_handler(resource_t *r) {
 	++event_i;
 
   	coap_packet_t notification[1]; 
-  	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+  	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
 
 	if(!error_active) {
        		snprintf_P(content, 30, PSTR("All errors fixed"));
@@ -2227,6 +2230,18 @@ void error_event_handler(resource_t *r) {
 	REST.notify_subscribers(r, event_i, notification);
 
 }
+
+
+
+/*-------------------- Version ---------------------------------------------------------------------------*/
+RESOURCE(version, METHOD_GET | METHOD_PUT, "debug/version", "title=\"Version Number\";ct=0;rt=\"number\"");
+void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+	snprintf_P((char*)buffer, preferred_size, PSTR("%s"), VERSION);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
 
 
 
@@ -2269,6 +2284,7 @@ PROCESS_THREAD(coap_process, ev, data)
 //	rest_activate_resource(&resource_poll);
 	rest_activate_resource(&resource_error_address);
 	rest_activate_resource(&resource_identifier);
+	rest_activate_resource(&resource_version);
 	
 	rest_activate_event_resource(&resource_mode);
 //	rest_activate_event_resource(&resource_valve);

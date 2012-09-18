@@ -51,7 +51,7 @@
 #define DEBUG 1
 
 //sets the size of the request queue
-#define REQUEST_QUEUE_SIZE 3
+#define REQUEST_QUEUE_SIZE 1 
 
 #define MAX(a,b) ((a)<(b)?(b):(a))
 #define TRUE 1
@@ -270,15 +270,15 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	changed_temp_event = process_alloc_event();
 	changed_battery_event = process_alloc_event();
 
+
 	// finish booting first
 	PROCESS_PAUSE();
 
         // target temperature mode
-        enQueue(PSTR("M00\n"), TRUE, poll);
+//        enQueue(PSTR("M00\n"), TRUE, idle);
         // 22 degC
-        enQueue("A16\n", FALSE, poll);
-
-	etimer_set(&etimer, CLOCK_SECOND * poll_time);
+//        enQueue("A16\n", FALSE, idle);
+	etimer_set(&etimer, CLOCK_SECOND * 90);
 	
 	request_state = idle;
 
@@ -350,7 +350,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 					}
 					//we are done so we set back the request state do idle
 					request_state = idle;
-					//de queue another job if there is one in the queue
+					//dequeue another job if there is one in the queue
 					deQueue();
 					buf_pos = 0;
 					continue;
@@ -925,7 +925,7 @@ PROCESS_THREAD(coap_process, ev, data)
 {
   PROCESS_BEGIN();
 
-  rest_init_framework();
+  rest_init_engine();
 
   //activate the resources
 #if DEBUG

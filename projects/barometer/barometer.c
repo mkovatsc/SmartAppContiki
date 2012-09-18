@@ -66,6 +66,8 @@
 #define BAROMETER_ADDRESS 0x77
 #define OSS 1
 
+#define VERSION "0.7.1"
+
 
 /*--PROCESSES----------------------------------------------------------------*/
 PROCESS(barometer_process, "barometer");
@@ -184,6 +186,7 @@ static void do_reading(){
 	TWI_master_start_write(BAROMETER_ADDRESS,2);
 	while(TWI_busy);
 
+	// Wait for some microseconds
 	asm volatile (
 	    "    ldi  r18, 73"	"\n"
 	    "    ldi  r19, 185"	"\n"
@@ -206,6 +209,7 @@ static void do_reading(){
 	TWI_master_start_write(BAROMETER_ADDRESS,2);
 	while(TWI_busy);
 	
+	// Wait for some microseconds
 	asm volatile (
 	    "    ldi  r18, 2"	"\n"
 	    "    ldi  r19, 56"	"\n"
@@ -225,7 +229,7 @@ static void do_reading(){
 	up = ((((int32_t) msb) << 16) + (((int32_t) lsb) << 8) + ((int32_t) xlsb) )>> (8-OSS);
 //	printf("up: %li\n",up);
 
-/*
+/*	Values from Datasheet for Testing
 	ac1= 408;
 	ac2= -72;
 	ac3= -14383;
@@ -320,7 +324,7 @@ PROCESS_THREAD(barometer_process, ev, data)
 	get_barometer_parameters();
 
 
-	etimer_set(&etimer, CLOCK_SECOND * 10);
+	etimer_set(&etimer, CLOCK_SECOND * 20);
 
 	while (1) {
 		PROCESS_WAIT_EVENT();
@@ -627,7 +631,7 @@ void pressure_threshold_handler(void* request, void* response, uint8_t *buffer, 
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer/Name\";ct=0;rt=\"ressource\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";ct=0;rt=\"string\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -664,6 +668,16 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 
 
+/*-------------------- Version ---------------------------------------------------------------------------*/
+RESOURCE(version, METHOD_GET | METHOD_PUT, "debug/version", "title=\"Version Number\";ct=0;rt=\"number\"");
+void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+	snprintf_P((char*)buffer, preferred_size, PSTR("%s"), VERSION);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+
 
 
 
@@ -683,6 +697,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_event_resource(&resource_temperature);
 	rest_activate_event_resource(&resource_pressure);
 	rest_activate_resource(&resource_identifier);
+	rest_activate_resource(&resource_version);
 
 
 
