@@ -230,7 +230,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_identifier);
 	rest_activate_resource(&resource_version);
 
-	etimer_set(&etimer, CLOCK_SECOND * 5);
+//	etimer_set(&etimer, CLOCK_SECOND * 5);
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == sensors_event && data == &tilt_sensor) {

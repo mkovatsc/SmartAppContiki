@@ -141,7 +141,7 @@ motion_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	int state = motion_sensor.value(0);
-	const char *msg = state ? "clear" : "movement";
+	const char *msg = state ? "movement" : "clear";
 	printf("%s\n",msg);
 	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
 
@@ -155,12 +155,13 @@ event_motion_handler(resource_t *r)
 	
 
 	++event_i;
-	int state = motion_sensor.value(0);
+//	int state = motion_sensor.value(0);
 
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
 	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "clear" : "movement"));
+//	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "clear" : "movement"));
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", "movement"));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -304,6 +305,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	SENSORS_ACTIVATE(motion_sensor);
 	printf("Sensors activated\n");
 	static uint8_t counter = 0;
+	static uint8_t triggered = 1;
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
@@ -320,12 +322,15 @@ PROCESS_THREAD(coap_process, ev, data)
 			if (counter >= event_number-1){ //only fire event if multiple movements detected in short period
 				event_motion_handler(&resource_motion);
 			}
+			triggered = 1;
 
 		}
 		else if (ev == sensors_event && data == &motion_sensor) {
-			if (etimer_expired(&interval)){
+			if (triggered){
 				counter=0;
+				triggered = 0;
 				etimer_set(&interval, CLOCK_SECOND * duration);
+				
 			}
 			else{
 				counter++;
