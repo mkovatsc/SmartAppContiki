@@ -68,7 +68,7 @@
 
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
-#define VERSION "0.7.1"
+#define VERSION "0.7.2"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -111,15 +111,15 @@ char ee_identifier[50] EEMEM;
 /* events for observing/separate responses */
 static process_event_t changed_valve_event;
 static process_event_t changed_temp_event;
-////static process_event_t changed_battery_event;
+static process_event_t changed_battery_event;
 static process_event_t changed_wheel_event;
 static process_event_t changed_mode_event;
 
 static process_event_t get_date_response_event;
 static process_event_t get_time_response_event;
-static process_event_t get_battery_response_event;
+//static process_event_t get_battery_response_event;
 static process_event_t get_target_response_event;
-static process_event_t get_threshold_response_event;
+static process_event_t get_threshold_temp_response_event;
 static process_event_t get_valve_response_event;
 //static process_event_t get_temperature_response_event;
 static process_event_t get_predefined_response_event;
@@ -150,6 +150,7 @@ static struct {
 	uint16_t is_temperature;
 	uint16_t target_temperature;
 	uint16_t battery;
+	uint16_t last_battery;
 	uint8_t valve;
 	uint8_t mode;
 
@@ -160,6 +161,7 @@ static struct {
 	uint16_t supercomfort_temperature;
 
 	uint16_t threshold_temperature;
+	uint16_t threshold_battery;
 
 	hw_timer_slot_t timers[8][8];
 
@@ -209,7 +211,7 @@ typedef struct application_separate_get_time_store {
 static uint8_t separate_get_time_active = 0;
 static application_separate_get_time_store_t separate_get_time_store[1];
 
-
+/*
 typedef struct application_separate_get_battery_store {
 	coap_separate_t request_metadata;
 	uint8_t error;
@@ -217,7 +219,7 @@ typedef struct application_separate_get_battery_store {
 
 static uint8_t separate_get_battery_active = 0;
 static application_separate_get_battery_store_t separate_get_battery_store[1];
-
+*/
 
 typedef struct application_separate_get_target_store {
 	coap_separate_t request_metadata;
@@ -267,13 +269,13 @@ static uint8_t separate_get_slots_active = 0;
 static application_separate_get_slots_store_t separate_get_slots_store[1];
 
 
-typedef struct application_separate_get_threshold_store {
+typedef struct application_separate_get_threshold_temp_store {
 	coap_separate_t request_metadata;
 	uint8_t error;
-} application_separate_get_threshold_store_t;
+} application_separate_get_threshold_temp_store_t;
 
-static uint8_t separate_get_threshold_active = 0;
-static application_separate_get_threshold_store_t separate_get_threshold_store[1];
+static uint8_t separate_get_threshold_temp_active = 0;
+static application_separate_get_threshold_temp_store_t separate_get_threshold_temp_store[1];
 
 
 /*--HONEYWELL-PROCESS-IMPLEMENTATION-----------------------------------------*/
@@ -364,16 +366,16 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
         changed_valve_event = process_alloc_event();
 	changed_temp_event = process_alloc_event();
-//	changed_battery_event = process_alloc_event();
+	changed_battery_event = process_alloc_event();
 
 	changed_wheel_event = process_alloc_event();
 	changed_mode_event = process_alloc_event();
 	set_response_event = process_alloc_event();
 	get_date_response_event = process_alloc_event();
 	get_time_response_event = process_alloc_event();
-	get_battery_response_event = process_alloc_event();
+//	get_battery_response_event = process_alloc_event();
 	get_target_response_event = process_alloc_event();
-	get_threshold_response_event = process_alloc_event();
+	get_threshold_temp_response_event = process_alloc_event();
 //	get_valve_response_event = process_alloc_event();
 //	get_temperature_response_event = process_alloc_event();
 	get_predefined_response_event = process_alloc_event();
@@ -382,6 +384,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	error_event = process_alloc_event();	
 	
 	poll_data.mode=4;
+	poll_data.threshold_battery = 100;
 	
 	eeprom_read_block(&error_uri, ee_error_uri, 50);
 	eeprom_read_block(&identifier, ee_identifier, 50);
@@ -412,7 +415,6 @@ PROCESS_THREAD(honeywell_process, ev, data)
 					buf[buf_pos++] = '\n';
 					buf[buf_pos] = '\0';
 					
-					//TODO: handle unknown responses,
 					switch (buf[0]){
 						case 'D':
 							parseD(buf);
@@ -494,18 +496,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									}
 									process_post(&coap_process, get_time_response_event, NULL);
 									break;
-								case 'B':
-									//Batttery
-									if(buf[2]=='1'){
-										poll_data.battery = atoi(&buf[4]); 
-										separate_get_battery_store->error=FALSE;
-										poll_data.last_battery_reading = clock_time();
-									}
-									else {
-										separate_get_battery_store->error=TRUE;
-									}
-									process_post(&coap_process, get_battery_response_event, NULL);
-									break;
+
 								case 'T':
 									//Target
 									if(buf[2]=='1'){
@@ -545,6 +536,18 @@ PROCESS_THREAD(honeywell_process, ev, data)
 										separate_get_temperature_store->error=TRUE;
 									}
 									process_post(&coap_process, get_temperature_response_event, NULL);
+									break;
+								case 'B':
+									//Batttery
+									if(buf[2]=='1'){
+										poll_data.battery = atoi(&buf[4]); 
+										separate_get_battery_store->error=FALSE;
+										poll_data.last_battery_reading = clock_time();
+									}
+									else {
+										separate_get_battery_store->error=TRUE;
+									}
+									process_post(&coap_process, get_battery_response_event, NULL);
 									break;
 						*/		case 'P':
 									//Predefined Temperature
@@ -594,13 +597,13 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									//Temperature Threshold
 									if(buf[2]=='1'){
 										poll_data.threshold_temperature = atoi(&buf[4]);
-										separate_get_threshold_store->error=FALSE;
+										separate_get_threshold_temp_store->error=FALSE;
 										poll_data.last_threshold_reading = clock_time();
 									}
 									else {
-										separate_get_threshold_store->error=TRUE;
+										separate_get_threshold_temp_store->error=TRUE;
 									}
-									process_post(&coap_process, get_threshold_response_event, NULL);
+									process_post(&coap_process, get_threshold_temp_response_event, NULL);
 									break;
 
 								default:
@@ -644,6 +647,16 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									process_post(&coap_process, changed_temp_event, NULL);
 									poll_data.last_temperature_reading = clock_time();
 									break;
+								case 'B':
+									//Battery Value
+									poll_data.battery = atoi(&buf[3]);
+									if ((poll_data.last_battery + poll_data.threshold_battery < poll_data.battery) || (poll_data.last_battery - poll_data.threshold_battery > poll_data.battery )){
+										poll_data.last_battery = poll_data.last_battery;
+										process_post(&coap_process, changed_battery_event, NULL);
+									}
+									poll_data.last_battery_reading = clock_time();
+									break;
+
 								case 'E':
 									//ERROR MESSAGE
 								{
@@ -1187,6 +1200,32 @@ void temperature_finalize_handler() {
 */
 
 /*--------- Battery ---------------------------------------------------------*/
+
+EVENT_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";ct=0;rt=\"voltage:mV\"");
+void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.battery);
+  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+
+void battery_event_handler(resource_t *r) {
+	static uint32_t event_i = 0;
+	char content[10];
+
+	++event_i;
+
+  	coap_packet_t notification[1]; // This way the packet can be treated as pointer as usual.
+  	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
+  	coap_set_payload(notification, content, snprintf_P(content, 10, PSTR("%u"), poll_data.battery));
+
+ 	REST.notify_subscribers(r, event_i, notification);
+}
+
+
+
+/*Before Change to Event
 EVENT_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";ct=0;rt=\"voltage:mV\"");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -1209,7 +1248,7 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 	}
 }
 
-/*
+
 void battery_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
@@ -1227,14 +1266,14 @@ void battery_event_handler(resource_t *r) {
 	REST.notify_subscribers(r, event_i, notification);
 
 }
-*/
+
 
 void battery_finalize_handler() {
 	if (separate_get_battery_active){
 		char buffer[10];
 		coap_transaction_t *transaction = NULL;
 		if ( (transaction = coap_new_transaction(separate_get_battery_store->request_metadata.mid, &separate_get_battery_store->request_metadata.addr, separate_get_battery_store->request_metadata.port)) ){
-			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			coap_packet_t response[1]; // This way the packet can be treated as pointer as usual.
 			if(separate_get_battery_store->error){
       				coap_separate_resume(response, &separate_get_battery_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
@@ -1251,13 +1290,10 @@ void battery_finalize_handler() {
 		}
 		else {
 			separate_get_battery_active = 0;
-      			/*
-		       * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
-		       */
 		}
 	}
 }
-
+*/
 
 /*--------- Target ---------------------------------------------------------*/
 RESOURCE(target, METHOD_GET | METHOD_PUT, "set/target", "title=\"Target temperature\";ct=0;rt=\"temperature:C\"");
@@ -1385,9 +1421,9 @@ void target_finalize_handler() {
 
 
 
-/*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";ct=0;rt=\"temperature:C\"");
-void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+/*--------- Threshold Temperature---------------------------------------------------------*/
+RESOURCE(threshold_temp, METHOD_GET | METHOD_PUT, "config/threshold_temperature", "title=\"Temperature Threshold\";ct=0;rt=\"temperature:C\"");
+void threshold_temp_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
@@ -1398,9 +1434,9 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 			printf_P(PSTR("GD\n"));
 		}
 		else {
-			if (!separate_get_threshold_active){
-				coap_separate_accept(request, &separate_get_threshold_store->request_metadata);
-				separate_get_threshold_active = 1;
+			if (!separate_get_threshold_temp_active){
+				coap_separate_accept(request, &separate_get_threshold_temp_store->request_metadata);
+				separate_get_threshold_temp_active = 1;
 				printf_P(PSTR("GD\n"));
 			}
 			else {
@@ -1478,30 +1514,30 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 	}
 }
 
-void threshold_finalize_handler() {
-	if (separate_get_threshold_active){
+void threshold_temp_finalize_handler() {
+	if (separate_get_threshold_temp_active){
 		char buffer[10];
 		coap_transaction_t *transaction = NULL;
-		if ( (transaction = coap_new_transaction(separate_get_threshold_store->request_metadata.mid, &separate_get_threshold_store->request_metadata.addr, separate_get_threshold_store->request_metadata.port)) ){
+		if ( (transaction = coap_new_transaction(separate_get_threshold_temp_store->request_metadata.mid, &separate_get_threshold_temp_store->request_metadata.addr, separate_get_threshold_temp_store->request_metadata.port)) ){
 			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
-			if(separate_get_threshold_store->error){
-      				coap_separate_resume(response, &separate_get_threshold_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
+			if(separate_get_threshold_temp_store->error){
+      				coap_separate_resume(response, &separate_get_threshold_temp_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
 			else {
-      				coap_separate_resume(response, &separate_get_threshold_store->request_metadata, CONTENT_2_05);
+      				coap_separate_resume(response, &separate_get_threshold_temp_store->request_metadata, CONTENT_2_05);
 				snprintf_P(buffer, 10 , PSTR("%d.%02d"), poll_data.threshold_temperature/100, poll_data.threshold_temperature%100);
 				REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 				coap_set_payload(response, buffer, strlen(buffer));
 			}
 	
-			coap_set_header_block2(response, separate_get_threshold_store->request_metadata.block2_num, 0, separate_get_threshold_store->request_metadata.block2_size);
+			coap_set_header_block2(response, separate_get_threshold_temp_store->request_metadata.block2_num, 0, separate_get_threshold_temp_store->request_metadata.block2_size);
 	
 			transaction->packet_len = coap_serialize_message(response, transaction->packet);
 			coap_send_transaction(transaction);
-			separate_get_threshold_active = 0;
+			separate_get_threshold_temp_active = 0;
 		}
 		else {
-			separate_get_threshold_active = 0;
+			separate_get_threshold_temp_active = 0;
       			/*
 		       * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
 		       */	
@@ -1509,6 +1545,52 @@ void threshold_finalize_handler() {
 	}
 }
 
+/*---------------Threshold Battery ---------------------------------------------*/
+
+RESOURCE(threshold_batt, METHOD_GET | METHOD_PUT, "config/threshold_battery", "title=\"Battery Threshold\";ct=0;rt=\"voltage:mV\"");
+void threshold_batt_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  if (REST.get_method_type(request)==METHOD_GET)
+  {
+    snprintf_P((char*)buffer, preferred_size, PSTR("%ld"), poll_data.threshold_battery);
+  }
+  else
+  {
+    const uint8_t * string = NULL;
+    int success = 1;
+    int len = coap_get_payload(request, &string);
+    if(len == 0){
+            success = 0;
+    }
+    else
+      {
+            int i;
+            for(i=0; i<len; i++){
+                    if (!isdigit(string[i])){
+                            success = 0;
+                            break;
+                    }
+            }
+            if(success){
+                    uint16_t thresh = atoi((char*)string);
+                    if(thresh < 1000 && thresh > 0){
+                            poll_data.threshold_battery = thresh;
+                    }
+                    else{
+                            success = 0;
+                    }
+            }
+    }
+    if(!success){
+            REST.set_response_status(response, REST.status.BAD_REQUEST);
+    }
+    else{
+
+            REST.set_response_status(response, CHANGED_2_04);
+    }
+  }
+
+}
 
 
 /*--------- Valve ---------------------------------------------------------*/
@@ -2278,9 +2360,10 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	rest_activate_resource(&resource_time);
 	rest_activate_event_resource(&resource_temperature);
-	rest_activate_resource(&resource_battery);
+	rest_activate_event_resource(&resource_battery);
 	rest_activate_resource(&resource_target);
-	rest_activate_resource(&resource_threshold);
+	rest_activate_resource(&resource_threshold_temp);
+	rest_activate_resource(&resource_threshold_batt);
 //	rest_activate_resource(&resource_poll);
 	rest_activate_resource(&resource_error_address);
 	rest_activate_resource(&resource_identifier);
@@ -2315,10 +2398,11 @@ PROCESS_THREAD(coap_process, ev, data)
 		else if (ev == changed_valve_event){
 			valve_event_handler(&resource_valve);
 		}
+*/
 		else if (ev == changed_battery_event){
 			battery_event_handler(&resource_battery);
 		}
-*/
+
 		else if (ev == changed_wheel_event){
 			wheel_event_handler(&resource_wheel);
 		}
@@ -2331,14 +2415,15 @@ PROCESS_THREAD(coap_process, ev, data)
 		else if (ev == get_time_response_event){
 			time_finalize_handler();
 		}
-		else if (ev == get_battery_response_event){
+/*		else if (ev == get_battery_response_event){
 			battery_finalize_handler();
 		}
+*/
 		else if (ev == get_target_response_event){
 			target_finalize_handler();
 		}
-		else if (ev == get_threshold_response_event){
-			threshold_finalize_handler();
+		else if (ev == get_threshold_temp_response_event){
+			threshold_temp_finalize_handler();
 		}
 		else if (ev == get_valve_response_event){
 			valve_finalize_handler();

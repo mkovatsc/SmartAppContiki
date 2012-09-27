@@ -32,46 +32,39 @@
 #ifndef __PROJECT_RPL_WEB_CONF_H__
 #define __PROJECT_RPL_WEB_CONF_H__
 
-/* avr-ravenmote: 2 */
-#undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS 6
-#undef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS         6
+#define SICSLOWPAN_CONF_FRAG	1
 
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE     128
+/* Disabling RDC for demo purposes. Core updates often require more memory. */
+/* For projects, optimize memory and enable RDC again. */
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nullrdc_driver
 
-#undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    240
-/*
- * avr-ravenmote
-#define UIP_CONF_BUFFER_SIZE    224
- */
+/* Save some memory for the sky platform. */
+#undef UIP_CONF_DS6_NBR_NBU
+#define UIP_CONF_DS6_NBR_NBU     10
+#undef UIP_CONF_DS6_ROUTE_NBU
+#define UIP_CONF_DS6_ROUTE_NBU   10
 
-/* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
-#undef PERIODICPRINTS
-#define PERIODICPRINTS 0
-#undef RADIOSTATS
-#define RADIOSTATS 0
-
-
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
+/* Increase rpl-border-router IP-buffer when using 128. */
+#ifndef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE    64
 #endif
 
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
+/* Multiplies with chunk size, be aware of memory constraints. */
+#ifndef COAP_MAX_OPEN_TRANSACTIONS
+#define COAP_MAX_OPEN_TRANSACTIONS   3
 #endif
 
+/* Must be <= open transaction number. */
+#ifndef COAP_MAX_OBSERVERS
+#define COAP_MAX_OBSERVERS      COAP_MAX_OPEN_TRANSACTIONS-1
+#endif
+
+/* Reduce 802.15.4 frame queue to save RAM. */
+#undef QUEUEBUF_CONF_NUM
+#define QUEUEBUF_CONF_NUM               4
 
 #undef RF_CHANNEL
 #define RF_CHANNEL 21
-
-#undef IEEE802154_CONF_PANID
-#define IEEE802154_CONF_PANID 0xBEEF
-
-#undef EUI64_ADDRESS
-#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2f}
-
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

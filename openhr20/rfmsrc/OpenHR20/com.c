@@ -340,12 +340,26 @@ void COM_send_mode_event(int8_t m){
 
 /*!
  *******************************************************************************
- *  \brief Event Mode Change *
+ *  \brief Event Temperature Change *
  *  \note
  ******************************************************************************/
 void COM_send_temperature_event(uint16_t t){
 	COM_putchar('E');
 	COM_putchar('T');
+	COM_putchar(':');
+	print_decXXXX(t);
+	COM_putchar('\n');
+	COM_flush();
+}
+
+/*!
+ *******************************************************************************
+ *  \brief Send Battery Change *
+ *  \note
+ ******************************************************************************/
+void COM_send_battery_event(uint16_t t){
+	COM_putchar('E');
+	COM_putchar('B');
 	COM_putchar(':');
 	print_decXXXX(t);
 	COM_putchar('\n');

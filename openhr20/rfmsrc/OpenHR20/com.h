@@ -70,3 +70,5 @@ void COM_printStr16 (const char * s, uint16_t x);
 
 void COM_send_wheel_event(int8_t t);
 void COM_send_mode_event(int8_t m);
+void COM_send_battery_event(uint16_t b);
+void COM_send_temperature_event(uint16_t t);
