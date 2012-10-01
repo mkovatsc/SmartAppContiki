@@ -4,7 +4,6 @@
 #include <avr/io.h>
 
 const struct sensors_sensor touch_sensor;
-static int status(int type);
 
 static struct timer debouncetimer;
 

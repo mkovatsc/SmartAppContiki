@@ -61,7 +61,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.7.1"
+#define VERSION "0.7.2"
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
 extern uip_ds6_route_t uip_ds6_routing_table[];
@@ -75,6 +75,7 @@ SENSORS(&touch_sensor);
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
+static unsigned long touch_count;
 
 char ee_identifier[50] EEMEM;
 char identifier[50];
@@ -101,6 +102,7 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
+	touch_count = 0;
 	// finish booting first
 
 	PROCESS_PAUSE();
@@ -132,16 +134,14 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-EVENT_RESOURCE(touch, METHOD_GET, "sensors/touch", "title=\"Touch Button\";ct=0;rt=\"state:finite\"");
+EVENT_RESOURCE(touch, METHOD_GET, "sensors/touch", "title=\"Touch Button\";ct=0;rt=\"number\"");
 
 void
 touch_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	int state = touch_sensor.value(0);
-	const char *msg = state ? "touch" : "non";
-	printf("%s\n",msg);
-	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
+	snprintf_P((char*)buffer, preferred_size, PSTR("%lu"), touch_count);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 
 }
 
@@ -155,7 +155,7 @@ event_touch_handler(resource_t *r)
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "touch"));
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%lu", touch_count));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -230,6 +230,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == sensors_event && data == &touch_sensor) {
+			touch_count++;
 			event_touch_handler(&resource_touch);
 		}
 /*	 	else if (ev == PROCESS_EVENT_TIMER){

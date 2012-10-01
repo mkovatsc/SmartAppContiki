@@ -28,15 +28,19 @@
  *
  * This file is part of the Contiki operating system.
  *
- * @(#)$Id: touch-sensor.h,v 1.1 2007/03/15 21:42:09 adamdunkels Exp $
+ * @(#)$Id: radio-sensor.h,v 1.1 2007/03/15 21:27:09 adamdunkels Exp $
  */
-#ifndef __BUTTON_SENSOR_H__
-#define __BUTTON_SENSOR_H__
+#ifndef __RADIO_SENSOR_H__
+#define __RADIO_SENSOR_H__
 
 #include "lib/sensors.h"
 
-extern const struct sensors_sensor button_sensor;
+extern const struct sensors_sensor radio_sensor;
 
-#define BUTTON_SENSOR "Button"
+#define RADIO_SENSOR_RSSI  0
 
-#endif /* __BUTTON_SENSOR_H__ */
+#define RADIO_SENSOR "Radio"
+
+extern unsigned int radio_sensor_signal;
+
+#endif /* __RADIO_SENSOR_H__ */

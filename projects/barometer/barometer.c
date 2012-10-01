@@ -51,7 +51,7 @@
 #include "er-coap-07-transactions.h"
 #include "er-coap-07-separate.h"
 
-#include "interrupttwi.h"
+#include "dev/interrupttwi.h"
 
 //adds the debug resource that can be used to output the debug buffer
 #define DEBUG 1

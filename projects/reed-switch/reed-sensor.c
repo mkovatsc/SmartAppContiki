@@ -3,7 +3,6 @@
 #include <avr/interrupt.h>
 
 const struct sensors_sensor reed_sensor;
-static int status(int type);
 
 static struct timer debouncetimer;
 

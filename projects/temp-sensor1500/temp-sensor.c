@@ -51,7 +51,7 @@
 #include "er-coap-07-transactions.h"
 #include "er-coap-07-separate.h"
 
-#include "adc.h"
+#include "dev/adc.h"
 
 #define MAX(a,b) ((a)<(b)?(b):(a))
 #define TRUE 1
@@ -218,13 +218,13 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 
 void temperature_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
-	char content[6];
+	char content[10];
 
 	++event_i;
 
   	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
   	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-  	coap_set_payload(notification, content, snprintf_P(content, 6, PSTR(" %d.%02d\n"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
+  	coap_set_payload(notification, content, snprintf_P(content, 9, PSTR(" %d.%02d"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
 
 	REST.notify_subscribers(r, event_i, notification);
 
@@ -237,7 +237,7 @@ void temperature_finalize_handler() {
 		if ( (transaction = coap_new_transaction(separate_get_temperature_store->request_metadata.mid, &separate_get_temperature_store->request_metadata.addr, separate_get_temperature_store->request_metadata.port)) ){
 			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
       			coap_separate_resume(response, &separate_get_temperature_store->request_metadata, CONTENT_2_05);
-			snprintf_P(buffer, 9, PSTR(" %d.%02d\n"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
+			snprintf_P(buffer, 9, PSTR(" %d.%02d"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			coap_set_payload(response, buffer, strlen(buffer));
 			coap_set_header_block2(response, separate_get_temperature_store->request_metadata.block2_num, 0, separate_get_temperature_store->request_metadata.block2_size);

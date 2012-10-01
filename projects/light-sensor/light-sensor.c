@@ -53,7 +53,7 @@
 #include "er-coap-07-transactions.h"
 #include "er-coap-07-separate.h"
 
-#include "adc.h"
+#include "dev/adc.h"
 
 #define MAX(a,b) ((a)<(b)?(b):(a))
 #define TRUE 1

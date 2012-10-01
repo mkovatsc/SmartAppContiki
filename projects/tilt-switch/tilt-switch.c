@@ -76,6 +76,7 @@ SENSORS(&tilt_sensor);
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
+static unsigned long tilt_count;
 
 char ee_identifier[50] EEMEM;
 char identifier[50];
@@ -102,6 +103,7 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
 	rs232_set_input(RS232_PORT_0, uart_get_char);
+	tilt_count = 0;
 	// finish booting first
 	PROCESS_PAUSE();
 	
@@ -132,16 +134,14 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-EVENT_RESOURCE(tilt, METHOD_GET, "sensors/tilt-switch", "title=\"Reed Switch\";ct=0;rt=\"state:finite\"");
+EVENT_RESOURCE(tilt, METHOD_GET, "sensors/tilt-switch", "title=\"Reed Switch\";ct=0;rt=\"state:number\"");
 
 void
 tilt_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	int state = tilt_sensor.value(0);
-	const char *msg = state ? "normal" : "tilted";
-	printf("%s\n",msg);
-	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
+	snprintf_P((char*)buffer, preferred_size, PSTR("%lu"), tilt_count);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 
 }
 
@@ -149,7 +149,7 @@ void
 event_tilt_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
-	static char content[10];
+	static char content[15];
 	
 
 	++event_i;
@@ -158,7 +158,7 @@ event_tilt_handler(resource_t *r)
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "moved"));
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%lu", tilt_count));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -234,6 +234,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == sensors_event && data == &tilt_sensor) {
+			tilt_count++;
 			event_tilt_handler(&resource_tilt);
 		}
 	/* 	else if (ev == PROCESS_EVENT_TIMER){
