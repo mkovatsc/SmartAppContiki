@@ -107,14 +107,14 @@ static volatile uint8_t COM_requests;
 void COM_rx_char_isr(char c) {
 	if (c!='\0') {  // ascii based protocol, \0 char is not alloweed, ignore it
 
- 		if (c=='\r') c='\n';  // mask diffrence between operating systems
+		if (c=='\r') c='\n';  // mask diffrence between operating systems
 		rx_buff[rx_buff_in++]=c;
 		rx_buff_in%=RX_BUFF_SIZE;
 		if (rx_buff_in==rx_buff_out) { // buffer overloaded, drop oldest char 
 			rx_buff_out++;
 			rx_buff_out%=RX_BUFF_SIZE;
 		}
-		
+
 		if (c=='\n') {
 			task |= TASK_COM;
 			COM_requests++;
@@ -134,11 +134,11 @@ static char COM_getchar(void) {
 	if (rx_buff_in!=rx_buff_out) {
 		c=rx_buff[rx_buff_out++];
 		rx_buff_out%=RX_BUFF_SIZE;
-    	COM_requests--;
+		COM_requests--;
 	} else {
-    	COM_requests=0;
-        c='\0';
-    }
+		COM_requests=0;
+		c='\0';
+	}
 	sei();
 	return c;
 }
@@ -151,12 +151,12 @@ static char COM_getchar(void) {
  ******************************************************************************/
 void COM_flush (void) {
 	if (tx_buff_in!=tx_buff_out) {
-		#if (defined COM_RS232) || (defined COM_RS485)
-			RS_startSend();
-		#elif THERMOTRONIC	//UART for THERMOTRONIC not implemented
-		#else
-			#error "need todo"
-		#endif
+#if (defined COM_RS232) || (defined COM_RS485)
+		RS_startSend();
+#elif THERMOTRONIC	//UART for THERMOTRONIC not implemented
+#else
+#error "need todo"
+#endif
 	}
 }
 
@@ -266,8 +266,8 @@ static void print_hexXXXX(uint16_t i) {
 static void print_s_p(const char * s) {
 	char c;
 	for (c = pgm_read_byte(s); c; ++s, c = pgm_read_byte(s)) {
-      COM_putchar(c);
-   	}
+		COM_putchar(c);
+	}
 }
 
 /*!
@@ -278,14 +278,14 @@ static void print_s_p(const char * s) {
  ******************************************************************************/
 static void print_version(bool sync) {
 	const char * s = (PSTR(VERSION_STRING "\n"));
-    COM_putchar('V');
+	COM_putchar('V');
 	char c;
 	for (c = pgm_read_byte(s); c; ++s, c = pgm_read_byte(s)) {
-      COM_putchar(c);
-      #if RFM==1
-        if (sync) wireless_putchar(c);
-      #endif
-   	}
+		COM_putchar(c);
+#if RFM==1
+		if (sync) wireless_putchar(c);
+#endif
+	}
 	COM_flush();
 }
 
@@ -397,7 +397,7 @@ static void COM_send_ok(void){
 
 /*!
  *******************************************************************************
-*  \brief Print ERROR *
+ *  \brief Print ERROR *
  *  \note
  ******************************************************************************/
 static void COM_send_error(void){
@@ -418,8 +418,8 @@ static void COM_send_error(void){
  *  \note
  ******************************************************************************/
 void COM_print_debug(uint8_t type) {
-    print_s_p(PSTR("D: "));
-    print_hexXX(RTC_GetDayOfWeek()+0xd0);
+	print_s_p(PSTR("D: "));
+	print_hexXX(RTC_GetDayOfWeek()+0xd0);
 	COM_putchar(' ');
 	print_decXX(RTC_GetDay());
 	COM_putchar('.');
@@ -481,10 +481,10 @@ void COM_print_debug(uint8_t type) {
 	print_s_p(PSTR(" Ie: ")); //jr
 	print_hexXX(CTL_creditExpiration);
 #endif
-    if (CTL_error!=0) {
+	if (CTL_error!=0) {
 		print_s_p(PSTR(" E:"));
-        print_hexXX(CTL_error);
-    }                   
+		print_hexXX(CTL_error);
+	}                   
 	if (type>0) {
 		print_s_p(PSTR(" X"));
 	}
@@ -497,19 +497,19 @@ void COM_print_debug(uint8_t type) {
 	COM_putchar('\n');
 	COM_flush();
 #if (RFM==1)
-    bool sync = (type==2);
-    if (!sync) {
-        wireless_async=true;
-        wireless_putchar('D');
-    }
+	bool sync = (type==2);
+	if (!sync) {
+		wireless_async=true;
+		wireless_putchar('D');
+	}
 	wireless_putchar(
-           RTC_GetMinute() 
-        | (CTL_test_auto()?0x40:0)
-        | ((CTL_mode_auto)?0x80:0));
+			RTC_GetMinute() 
+			| (CTL_test_auto()?0x40:0)
+			| ((CTL_mode_auto)?0x80:0));
 	wireless_putchar(
-           RTC_GetSecond()
-        | ((mode_window())?0x40:0)
-        | ((menu_locked)?0x80:0));
+			RTC_GetSecond()
+			| ((mode_window())?0x40:0)
+			| ((menu_locked)?0x80:0));
 	wireless_putchar(CTL_error);
 	wireless_putchar(temp_average >> 8); // current temp
 	wireless_putchar(temp_average & 0xff);
@@ -520,15 +520,15 @@ void COM_print_debug(uint8_t type) {
 	wireless_async=false;
 	rfm_start_tx();
 #endif
-    
+
 }
 
 /*! 
-    \note dirty trick with shared array for \ref COM_hex_parse and \ref COM_commad_parse
-    code size optimalization
-*/
+	\note dirty trick with shared array for \ref COM_hex_parse and \ref COM_commad_parse
+	code size optimalization
+ */
 static uint8_t com_hex[3];
- 
+
 
 /*!
  *******************************************************************************
@@ -540,21 +540,21 @@ static uint8_t com_hex[3];
 static char COM_hex_parse (uint8_t n) {
 	uint8_t i;
 	for (i=0;i<n;i++) {
-    	uint8_t c = COM_getchar()-'0';
-    	if ( c>9 ) {  // chars < '0' overload var c
+		uint8_t c = COM_getchar()-'0';
+		if ( c>9 ) {  // chars < '0' overload var c
 			if ((c>=('a'-'0')) && (c<=('f'-'0'))) {
-    			c-= (('a'-'0')-10);
+				c-= (('a'-'0')-10);
 			} else return c+'0';
 		}
-    	if (i&1) {
-    	   com_hex[i>>1]+=c;
-        } else {
-    	   com_hex[i>>1]=(uint8_t)c<<4;
-        }
-    }
+		if (i&1) {
+			com_hex[i>>1]+=c;
+		} else {
+			com_hex[i>>1]=(uint8_t)c<<4;
+		}
+	}
 	{
 		char c;
-    	if ((c=COM_getchar())!='\n') return c;
+		if ((c=COM_getchar())!='\n') return c;
 	}
 	return '\0';
 }
@@ -565,11 +565,11 @@ static char COM_hex_parse (uint8_t n) {
  *
  ******************************************************************************/
 static void print_idx(char t, uint8_t i) {
-    COM_putchar(t);
-    COM_putchar('[');
-    print_hexXX(i);
-    COM_putchar(']');
-    COM_putchar('=');
+	COM_putchar(t);
+	COM_putchar('[');
+	print_hexXX(i);
+	COM_putchar(']');
+	COM_putchar('=');
 }
 
 
@@ -599,505 +599,529 @@ static void print_idx(char t, uint8_t i) {
 void COM_command_parse (void) {
 	char c;
 	while (COM_requests) {
-        switch(c=COM_getchar()) {
+		switch(c=COM_getchar()) {
 
-/* Unused in extended Version
-		case 'V':
-			if (COM_getchar()=='\n') print_version(false);
-			c='\0';
-			break;
-*/
+			/* Unused in extended Version
+				 case 'V':
+				 if (COM_getchar()=='\n') print_version(false);
+				 c='\0';
+				 break;
+			 */
 
 #if ENABLE_LOCAL_COMMANDS
-		case 'D':
-			if (COM_getchar()=='\n') COM_print_debug(1);
-			c='\0';
-			break;
-		case 'V':
-			//Watch Variable
-			{
-				if (COM_hex_parse(1*2)!='\0') { break; }
-             			print_idx(c,com_hex[0]);
-  				print_hexXXXX(watch(com_hex[0]));
-			}
-			break;
-		/*case 'C':
-			// Configuation:
-			// G: get
-			// S: set
-			{
+			case 'D':
+				if (COM_getchar()=='\n') COM_print_debug(1);
+				c='\0';
+				break;
+			case 'V':
+				//Watch Variable
+				{
+					if (COM_hex_parse(1*2)!='\0') { break; }
+					print_idx(c,com_hex[0]);
+					print_hexXXXX(watch(com_hex[0]));
+				}
+				break;
+				/*case 'C':
+				// Configuation:
+				// G: get
+				// S: set
+				{
 				char sub = COM_getchar();
-	
+
 				COM_putchar(c);
-	
+
 				if (sub=='G'){
-					COM_putchar(sub);
-					if (COM_hex_parse(1*2)!='\0') { 
-						COM_putchar('0');
-						break; 
-					}
-					COM_putchar('1');
-					COM_putchar(':');
-					print_idx('E',com_hex[0]);
-					if (com_hex[0]==0xff) {
-						print_hexXX(EE_LAYOUT);
-		        		}
-					else {
-						print_hexXX(config_raw[com_hex[0]]);
-					}
+				COM_putchar(sub);
+				if (COM_hex_parse(1*2)!='\0') { 
+				COM_putchar('0');
+				break; 
+				}
+				COM_putchar('1');
+				COM_putchar(':');
+				print_idx('E',com_hex[0]);
+				if (com_hex[0]==0xff) {
+				print_hexXX(EE_LAYOUT);
+				}
+				else {
+				print_hexXX(config_raw[com_hex[0]]);
+				}
 
 				} 
 				else if(sub=='S') {
-					COM_putchar(sub);
-					if (COM_hex_parse(2*2)!='\0') { 
-						COM_putchar('0');
-						break; }
-  					if (com_hex[0]<CONFIG_RAW_SIZE) {
-  						config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
-  						eeprom_config_save(com_hex[0]);
-						COM_putchar('1');
-  					}
-					else{
-						COM_putchar('0');
-					}
+				COM_putchar(sub);
+				if (COM_hex_parse(2*2)!='\0') { 
+				COM_putchar('0');
+				break; }
+				if (com_hex[0]<CONFIG_RAW_SIZE) {
+				config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
+				eeprom_config_save(com_hex[0]);
+				COM_putchar('1');
+				}
+				else{
+				COM_putchar('0');
+				}
 				}
 				else {	
-					COM_putchar('0');
-					break;
+				COM_putchar('0');
+				break;
 				}
 				break;
-			}*/
-		case 'R':
-		case 'W':
-			if (c=='R') {
-				if (COM_hex_parse(1*2)!='\0') { break; }
-			} else {
-				if (COM_hex_parse(3*2)!='\0') { break; }
-  				RTC_DowTimerSet(
-		        	        com_hex[0]>>4, 
-        				com_hex[0]&0xf, 
-	                		(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
-					(com_hex[1])>>4);
-				CTL_update_temp_auto();
-				menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
-			}
-		        print_idx(c,com_hex[0]);
-			print_hexXXXX(eeprom_timers_read_raw(
-	               		timers_get_raw_index((com_hex[0]>>4),(com_hex[0]&0xf))));
-			break;
-
-
-
-		case 'B':  //RESET
-			{
-				if (COM_hex_parse(2*2)!='\0') { break; }
-  				if ((com_hex[0]==0x13) && (com_hex[1]==0x24)) {
-					cli();
-		                	wdt_enable(WDTO_15MS); //wd on,15ms
-                			while(1); //loop till reset
-    				}
-			}
-			break;
-	        case 'S':
-			{
-				char sub = COM_getchar();
-				COM_putchar(c);
-				switch (sub) {
-					case 'M': 
-					{
-						COM_putchar(sub);
-	        				if (COM_hex_parse(1*2)!='\0'){ 
-							COM_putchar('0');
-							break; 
-						}
-						if (com_hex[0]>=0 && com_hex[0]<=4){
-				        	    	CTL_change_mode(com_hex[0]);
-							COM_putchar('1');
-						        break;
-						}
-						else {
-							COM_putchar('0');
-							break;
-						}	
-						break;
-					}
-					case 'Y':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						RTC_SetDate(com_hex[2],com_hex[1],com_hex[0]);
-						COM_putchar('1');
-						break;
-					
-					}
-					case 'H':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						RTC_SetHour(com_hex[0]);
-						RTC_SetMinute(com_hex[1]);
-						RTC_SetSecond(com_hex[2]);
-						COM_putchar('1');
-						break;
-					}
-					case 'C':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(2*2)!='\0') { 
-							COM_putchar('0');
-							break; }
-  						if (com_hex[0]<CONFIG_RAW_SIZE) {
-  							config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
-  							eeprom_config_save(com_hex[0]);
-							COM_putchar('1');
-  						}
-						else{
-							COM_putchar('0');
-						}
-						break;
-					}
-					case 'T':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break;
-						}
-	            				if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
-							COM_putchar('0');
-							break;
-						}
-						CTL_change_mode(auto_target);
-			     			CTL_set_temp(com_hex[0]);
-						COM_putchar('1');
-			        		break;
-					}
-					case 'V':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break;
-						}
-				        	CTL_change_mode(auto_valve);
-						if (com_hex[0]>config.valve_max) {
-							CTL_valve_wanted=config.valve_max;
-						}
-						else if (com_hex[0]<config.valve_min) {
-							CTL_valve_wanted=config.valve_min;
-						}
-						else{
-							CTL_valve_wanted=com_hex[0];
-						}
-						PID_force_update = 0;
-						COM_putchar('1');
-						break;
-					}
-					case 'P':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(2*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-  						if (com_hex[0]>0 && com_hex[0]<5) {
-  							config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
-  							eeprom_config_save(com_hex[0]);
-							CTL_update_temp_auto();
-							COM_putchar('1');
-  						}
-						else{
-							COM_putchar('0');
-						}
-						break;
-					}
-					case 'S':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(3*2)!='\0') {
-							COM_putchar('0');
-							break; 
-						}
-	  					RTC_DowTimerSet(
-			        	        	com_hex[0]>>4, 
-        						com_hex[0]&0xf, 
-	                				(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
+				}*/
+			case 'R':
+			case 'W':
+				if (c=='R') {
+					if (COM_hex_parse(1*2)!='\0') { break; }
+				} else {
+					if (COM_hex_parse(3*2)!='\0') { break; }
+					RTC_DowTimerSet(
+							com_hex[0]>>4, 
+							com_hex[0]&0xf, 
+							(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
 							(com_hex[1])>>4);
-						CTL_update_temp_auto();
-						menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_digit(com_hex[0]>>4);
-						break;
-					}
-					case 'D':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break;
-						}
-						if (com_hex[0] == 0){
-							COM_putchar('0');
-							break;
-						}
-						CTL_temp_threshold= ((uint16_t) com_hex[0])*10;
-						COM_putchar('1');
-						break;
-					}	
-					default:
-						COM_putchar('0');
-						COM_putchar('0');
-						break;
+					CTL_update_temp_auto();
+					menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
 				}
+				print_idx(c,com_hex[0]);
+				print_hexXXXX(eeprom_timers_read_raw(
+							timers_get_raw_index((com_hex[0]>>4),(com_hex[0]&0xf))));
 				break;
-					
-			}
 
-		case 'G':
-			{
-				char sub = COM_getchar();
-				
-				COM_putchar(c);
-				switch (sub) {
-					case 'M':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(CTL_mode_auto);
-						break;
-					}
-					case 'Y':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(RTC_GetDay());
-						COM_putchar('.');
-						print_decXX(RTC_GetMonth());
-						COM_putchar('.');
-						print_decXX(RTC_GetYearYY());
-						break;
-					}
-					case 'H':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXX(RTC_GetHour());
-						COM_putchar(':');
-						print_decXX(RTC_GetMinute());
-						COM_putchar(':');
-						print_decXX(RTC_GetSecond());
-						break; 
-					}
-					case 'C':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1*2)!='\0') { 
-							COM_putchar('0');
-							break; 
-						}
-						COM_putchar('1');
-						COM_putchar(':');
-						print_idx('E',com_hex[0]);
-						if (com_hex[0]==0xff) {
-							print_hexXX(EE_LAYOUT);
-		        			}
-						else {
-							print_hexXX(config_raw[com_hex[0]]);
-						}
-						break;
-					} 
-					case 'B':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(bat_average);
-					}
-					case 'T':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(calc_temp(CTL_temp_wanted_last));
-					}
-					case 'V':	
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXX(valve_wanted);
-					}
-					case 'I':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');	
-						COM_putchar(':');	
-						print_decXXXX(temp_average);
-					}
-					case 'P':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						COM_putchar('F');
-						print_hexXX(config_raw[1]);
-						COM_putchar(',');
-						COM_putchar('E');
-						print_hexXX(config_raw[2]);
-						COM_putchar(',');
-						COM_putchar('C');
-						print_hexXX(config_raw[3]);
-						COM_putchar(',');
-						COM_putchar('S');
-						print_hexXX(config_raw[4]);
-					}
-					case 'S':
-					{
-						COM_putchar(sub);
-						if (COM_hex_parse(1)!='\0') { 
-							COM_putchar('0');
-							
-							break;
-						}
-						if ( (com_hex[0]>>4) < 0 || (com_hex[0]>>4) >= 8) {
-							COM_putchar('0');
-							break;
-						}
-						COM_putchar('1');
-						COM_putchar(':');
-						print_digit(com_hex[0]>>4);
-						int i;
-						for (i=0;i<RTC_TIMERS_PER_DOW;i++){
-							COM_putchar(',');
-							print_hexXXXX(eeprom_timers_read_raw(
-	        		       				timers_get_raw_index((com_hex[0]>>4),i)));
-						}
-						break;
 
-					}
-					case 'D':
-					{
-						COM_putchar(sub);
-						COM_putchar('1');
-						COM_putchar(':');
-						print_decXXXX(CTL_temp_threshold);
-						break;
-					}		
-					default:
-					{
-						COM_putchar('0');
-						COM_putchar('0');
-						break;
+
+			case 'B':  //RESET
+				{
+					if (COM_hex_parse(2*2)!='\0') { break; }
+					if ((com_hex[0]==0x13) && (com_hex[1]==0x24)) {
+						cli();
+						wdt_enable(WDTO_15MS); //wd on,15ms
+						while(1); //loop till reset
 					}
 				}
 				break;
-			}
-/*	       case 'A':
-			{
-				char sub = COM_getchar();
+			case 'S':
+				{
+					char sub = COM_getchar();
+					COM_putchar(c);
+					switch (sub) {
+						case 'M': 
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0'){ 
+									COM_putchar('0');
+									break; 
+								}
+								if (com_hex[0]>=0 && com_hex[0]<=4){
+									CTL_change_mode(com_hex[0]);
+									COM_putchar('1');
+									break;
+								}
+								else {
+									COM_putchar('0');
+									break;
+								}	
+								break;
+							}
+						case 'Y':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(3*2)!='\0') { 
+									COM_putchar('0');
+									break; 
+								}
+								RTC_SetDate(com_hex[2],com_hex[1],com_hex[0]);
+								COM_putchar('1');
+								break;
 
-				COM_putchar(c);
+							}
+						case 'H':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(3*2)!='\0') { 
+									COM_putchar('0');
+									break; 
+								}
+								RTC_SetHour(com_hex[0]);
+								RTC_SetMinute(com_hex[1]);
+								RTC_SetSecond(com_hex[2]);
+								COM_putchar('1');
+								break;
+							}
+						case 'C':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(2*2)!='\0') { 
+									COM_putchar('0');
+									break; }
+								if (com_hex[0]<CONFIG_RAW_SIZE) {
+									config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
+									eeprom_config_save(com_hex[0]);
+									COM_putchar('1');
+								}
+								else{
+									COM_putchar('0');
+								}
+								break;
+							}
+						case 'T':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0') { 
+									COM_putchar('0');
+									break;
+								}
+								if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
+									COM_putchar('0');
+									break;
+								}
+								CTL_change_mode(auto_target);
+								CTL_set_temp(com_hex[0]);
+								COM_putchar('1');
+								break;
+							}
+						case 'V':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0') { 
+									COM_putchar('0');
+									break;
+								}
+								CTL_change_mode(auto_valve);
+								if (com_hex[0]>config.valve_max) {
+									CTL_valve_wanted=config.valve_max;
+								}
+								else if (com_hex[0]<config.valve_min) {
+									CTL_valve_wanted=config.valve_min;
+								}
+								else{
+									CTL_valve_wanted=com_hex[0];
+								}
+								PID_force_update = 0;
+								COM_putchar('1');
+								break;
+							}
+						case 'P':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(2*2)!='\0') { 
+									COM_putchar('0');
+									break; 
+								}
+								if (com_hex[0]>0 && com_hex[0]<5) {
+									config_raw[com_hex[0]]=(uint8_t)(com_hex[1]);
+									eeprom_config_save(com_hex[0]);
+									CTL_update_temp_auto();
+									COM_putchar('1');
+								}
+								else{
+									COM_putchar('0');
+								}
+								break;
+							}
+						case 'S':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(3*2)!='\0') {
+									COM_putchar('0');
+									break; 
+								}
+								RTC_DowTimerSet(
+										com_hex[0]>>4, 
+										com_hex[0]&0xf, 
+										(((uint16_t) (com_hex[1])&0xf)<<8)+(uint16_t)(com_hex[2]),
+										(com_hex[1])>>4);
+								CTL_update_temp_auto();
+								menu_update_hourbar((config.timer_mode==1)?RTC_GetDayOfWeek():0);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_digit(com_hex[0]>>4);
+								break;
+							}
+						case 'D':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0') { 
+									COM_putchar('0');
+									break;
+								}
+								if (com_hex[0] == 0){
+									COM_putchar('0');
+									break;
+								}
+								CTL_temp_threshold= ((int16_t) com_hex[0])*10;
+								COM_putchar('1');
+								break;
+							}	
+						case 'A':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0') { 
+									COM_putchar('0');
+									break;
+								}
+								if (com_hex[0] == 0){
+									COM_putchar('0');
+									break;
+								}
+								CTL_bat_threshold= ((int16_t) com_hex[0]);
+								COM_putchar('1');
+								break;
+							}	
 
-            			if (sub=='T'){
-					COM_putchar(sub);
-					if (COM_hex_parse(1*2)!='\0') { 
-						COM_putchar('0');
-						break;
+						default:
+							COM_putchar('0');
+							COM_putchar('0');
+							break;
 					}
-	            			if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
-						COM_putchar('0');
-						break;
-					}
-			        	
-					CTL_change_mode(auto_target);
-			     		CTL_set_temp(com_hex[0]);
-					COM_putchar('1');
-			        	break;
+					break;
+
 				}
-				else if (sub=='V'){
-					COM_putchar(sub);
-					if (COM_hex_parse(1*2)!='\0') { 
-						COM_putchar('0');
-						break;
+
+			case 'G':
+				{
+					char sub = COM_getchar();
+
+					COM_putchar(c);
+					switch (sub) {
+						case 'M':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_decXX(CTL_mode_auto);
+								break;
+							}
+						case 'Y':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_decXX(RTC_GetDay());
+								COM_putchar('.');
+								print_decXX(RTC_GetMonth());
+								COM_putchar('.');
+								print_decXX(RTC_GetYearYY());
+								break;
+							}
+						case 'H':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_decXX(RTC_GetHour());
+								COM_putchar(':');
+								print_decXX(RTC_GetMinute());
+								COM_putchar(':');
+								print_decXX(RTC_GetSecond());
+								break; 
+							}
+						case 'C':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1*2)!='\0') { 
+									COM_putchar('0');
+									break; 
+								}
+								COM_putchar('1');
+								COM_putchar(':');
+								print_idx('E',com_hex[0]);
+								if (com_hex[0]==0xff) {
+									print_hexXX(EE_LAYOUT);
+								}
+								else {
+									print_hexXX(config_raw[com_hex[0]]);
+								}
+								break;
+							} 
+						case 'B':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');	
+								COM_putchar(':');	
+								print_decXXXX(bat_average);
+							}
+						case 'T':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');	
+								COM_putchar(':');	
+								print_decXXXX(calc_temp(CTL_temp_wanted_last));
+							}
+						case 'V':	
+							{
+								COM_putchar(sub);
+								COM_putchar('1');	
+								COM_putchar(':');	
+								print_decXX(valve_wanted);
+							}
+						case 'I':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');	
+								COM_putchar(':');	
+								print_decXXXX(temp_average);
+							}
+						case 'P':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								COM_putchar('F');
+								print_hexXX(config_raw[1]);
+								COM_putchar(',');
+								COM_putchar('E');
+								print_hexXX(config_raw[2]);
+								COM_putchar(',');
+								COM_putchar('C');
+								print_hexXX(config_raw[3]);
+								COM_putchar(',');
+								COM_putchar('S');
+								print_hexXX(config_raw[4]);
+							}
+						case 'S':
+							{
+								COM_putchar(sub);
+								if (COM_hex_parse(1)!='\0') { 
+									COM_putchar('0');
+
+									break;
+								}
+								if ( (com_hex[0]>>4) < 0 || (com_hex[0]>>4) >= 8) {
+									COM_putchar('0');
+									break;
+								}
+								COM_putchar('1');
+								COM_putchar(':');
+								print_digit(com_hex[0]>>4);
+								int i;
+								for (i=0;i<RTC_TIMERS_PER_DOW;i++){
+									COM_putchar(',');
+									print_hexXXXX(eeprom_timers_read_raw(
+												timers_get_raw_index((com_hex[0]>>4),i)));
+								}
+								break;
+
+							}
+						case 'D':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_decXXXX(CTL_temp_threshold);
+								break;
+							}		
+						case 'A':
+							{
+								COM_putchar(sub);
+								COM_putchar('1');
+								COM_putchar(':');
+								print_decXXXX(CTL_bat_threshold);
+								break;
+							}		
+						default:
+							{
+								COM_putchar('0');
+								COM_putchar('0');
+								break;
+							}
 					}
-				        CTL_change_mode(auto_valve);
-					if (com_hex[0]>config.valve_max) {
-						CTL_valve_wanted=config.valve_max;
-					}
-					else if (com_hex[0]<config.valve_min) {
-						CTL_valve_wanted=config.valve_min;
-					}
-					else{
-						CTL_valve_wanted=com_hex[0];
-					}
-					PID_force_update = 0;
-					COM_putchar('1');
 					break;
 				}
-				else {
-					COM_putchar('0');
-					break;
-				}
+				/*	       case 'A':
+									 {
+									 char sub = COM_getchar();
+
+									 COM_putchar(c);
+
+									 if (sub=='T'){
+									 COM_putchar(sub);
+									 if (COM_hex_parse(1*2)!='\0') { 
+									 COM_putchar('0');
+									 break;
+									 }
+									 if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) { 
+									 COM_putchar('0');
+									 break;
+									 }
+
+									 CTL_change_mode(auto_target);
+									 CTL_set_temp(com_hex[0]);
+									 COM_putchar('1');
+									 break;
+									 }
+									 else if (sub=='V'){
+									 COM_putchar(sub);
+									 if (COM_hex_parse(1*2)!='\0') { 
+									 COM_putchar('0');
+									 break;
+									 }
+									 CTL_change_mode(auto_valve);
+									 if (com_hex[0]>config.valve_max) {
+									 CTL_valve_wanted=config.valve_max;
+									 }
+									 else if (com_hex[0]<config.valve_min) {
+									 CTL_valve_wanted=config.valve_min;
+									 }
+									 else{
+									 CTL_valve_wanted=com_hex[0];
+									 }
+									 PID_force_update = 0;
+									 COM_putchar('1');
+									 break;
+									 }
+									 else {
+									 COM_putchar('0');
+									 break;
+									 }
+									 break;
+
+									 }
+				 */
+			case 'L':
+				if (COM_hex_parse(1*2)!='\0') { break; }
+				if (com_hex[0]<=1) menu_locked=com_hex[0];
+				print_hexXX(menu_locked);
 				break;
+				/*	       case 'M':
+									 {
+									 char sub = COM_getchar();
 
-			}
-*/
-     		case 'L':
-        		if (COM_hex_parse(1*2)!='\0') { break; }
-		        if (com_hex[0]<=1) menu_locked=com_hex[0];
-		        print_hexXX(menu_locked);
-            		break;
-/*	       case 'M':
-			{
-				char sub = COM_getchar();
+									 COM_putchar(c);
 
-				COM_putchar(c);
+									 if (sub=='T'){
+									 COM_putchar(sub);
+									 if (COM_hex_parse(1*2)!='\0') {
+									 COM_putchar('0');
+									 break;
+									 }
+									 if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) {
+									 COM_putchar('0');
+									 break;
+									 }
+									 CTL_change_mode(manual_target);
+									 CTL_set_temp(com_hex[0]);
+									 COM_putchar('1');
+									 break;
+									 }
+									 else {
+									 COM_putchar('0');
+									 break;
+									 }
+									 break;
 
-            			if (sub=='T'){
-					COM_putchar(sub);
-					if (COM_hex_parse(1*2)!='\0') {
-						COM_putchar('0');
-						break;
-					}
-	            			if (com_hex[0]<TEMP_MIN-1 || com_hex[0]>TEMP_MAX+1) {
-						COM_putchar('0');
-						break;
-					}
-				        CTL_change_mode(manual_target);
-				     	CTL_set_temp(com_hex[0]);
-					COM_putchar('1');
-				        break;
-				}
-				else {
-					COM_putchar('0');
-					break;
-				}
-				break;
-
-			}
-*/
+									 }
+				 */
 #endif
-//		case '\n':
-//		case '\0':
-		default:
-			c='\0';
-			break;
+				//		case '\n':
+				//		case '\0':
+			default:
+				c='\0';
+				break;
 		}
-	if (c!='\0') COM_putchar('\n');
-	COM_flush();
-	#if (RFM==1)
-	  rfm_start_tx();
-	#endif
+		if (c!='\0') COM_putchar('\n');
+		COM_flush();
+#if (RFM==1)
+		rfm_start_tx();
+#endif
 	}
 }
 
@@ -1112,8 +1136,8 @@ void COM_command_parse (void) {
 
 #if RFM==1
 static void COM_wireless_word(uint16_t w) {
-    wireless_putchar(w>>8);
-    wireless_putchar(w&0xff); 
+	wireless_putchar(w>>8);
+	wireless_putchar(w&0xff); 
 }
 
 
@@ -1123,82 +1147,82 @@ static void COM_wireless_word(uint16_t w) {
  *******************************************************************************
  */ 
 void COM_wireless_command_parse (uint8_t * rfm_framebuf, uint8_t rfm_framepos) {
-    uint8_t pos=0;
-    while (rfm_framepos>pos) {
+	uint8_t pos=0;
+	while (rfm_framepos>pos) {
 		uint8_t c=rfm_framebuf[pos++];
 		wireless_putchar(c|0x80);
-        switch(c) {
-		case 'V':
-			print_version(true);
-			break;
-		case 'D':
-			COM_print_debug(2);
-			break;
-		case 'T':
-		    wireless_putchar(rfm_framebuf[pos]);
-  			COM_wireless_word(watch(rfm_framebuf[pos]));
-			pos++;
-            break;
-		case 'G':
-		case 'S':
-			if (c=='S') {
-  				if (rfm_framebuf[pos]<CONFIG_RAW_SIZE) {
-  					config_raw[rfm_framebuf[pos]]=(uint8_t)(rfm_framebuf[pos+1]);
-  					eeprom_config_save(rfm_framebuf[pos]);
-  				}
-			}
-		    wireless_putchar(rfm_framebuf[pos]);
-			if (rfm_framebuf[pos]==0xff) {
-			     wireless_putchar(EE_LAYOUT);
-            } else {
-			     wireless_putchar(config_raw[rfm_framebuf[pos]]);
-			}
-			if (c=='S') pos++;
-			pos++;
-			break;
-		case 'R':
-		case 'W':
-			if (c=='W') {
-  				RTC_DowTimerSet(
-                    rfm_framebuf[pos]>>4, 
-                    rfm_framebuf[pos]&0xf, 
-                    (((uint16_t) (rfm_framebuf[pos+1])&0xf)<<8)+(uint16_t)(rfm_framebuf[pos+2]), 
-                    (rfm_framebuf[pos+1])>>4);
-				CTL_update_temp_auto();
-			}
-		    wireless_putchar(rfm_framebuf[pos]);
-			COM_wireless_word(eeprom_timers_read_raw(
-                timers_get_raw_index((rfm_framebuf[pos]>>4),(rfm_framebuf[pos]&0xf))));
-			if (c=='W') pos+=2;
-			pos++;
-            break;
-		case 'B':
-			{
-  				if ((rfm_framebuf[pos]==0x13) && (rfm_framebuf[pos+1]==0x24)) {
-                      cli();
-                      wdt_enable(WDTO_15MS); //wd on,15ms
-                      while(1); //loop till reset
-    			}
-    			pos+=2;
-			}
-			break;
-        case 'M':
-            CTL_change_mode(rfm_framebuf[pos++]==1);
-            COM_print_debug(2);
-            break;
-        case 'A':
-            if (rfm_framebuf[pos]<TEMP_MIN-1) { break; }
-            if (rfm_framebuf[pos]>TEMP_MAX+1) { break; }
-            CTL_set_temp(rfm_framebuf[pos++]);
-            COM_print_debug(2);
-            break;
-        case 'L':
-            if (rfm_framebuf[pos]<=1) menu_locked=rfm_framebuf[pos];
-            wireless_putchar(menu_locked);
-            pos++;
-            break;
-		default:
-			break;
+		switch(c) {
+			case 'V':
+				print_version(true);
+				break;
+			case 'D':
+				COM_print_debug(2);
+				break;
+			case 'T':
+				wireless_putchar(rfm_framebuf[pos]);
+				COM_wireless_word(watch(rfm_framebuf[pos]));
+				pos++;
+				break;
+			case 'G':
+			case 'S':
+				if (c=='S') {
+					if (rfm_framebuf[pos]<CONFIG_RAW_SIZE) {
+						config_raw[rfm_framebuf[pos]]=(uint8_t)(rfm_framebuf[pos+1]);
+						eeprom_config_save(rfm_framebuf[pos]);
+					}
+				}
+				wireless_putchar(rfm_framebuf[pos]);
+				if (rfm_framebuf[pos]==0xff) {
+					wireless_putchar(EE_LAYOUT);
+				} else {
+					wireless_putchar(config_raw[rfm_framebuf[pos]]);
+				}
+				if (c=='S') pos++;
+				pos++;
+				break;
+			case 'R':
+			case 'W':
+				if (c=='W') {
+					RTC_DowTimerSet(
+							rfm_framebuf[pos]>>4, 
+							rfm_framebuf[pos]&0xf, 
+							(((uint16_t) (rfm_framebuf[pos+1])&0xf)<<8)+(uint16_t)(rfm_framebuf[pos+2]), 
+							(rfm_framebuf[pos+1])>>4);
+					CTL_update_temp_auto();
+				}
+				wireless_putchar(rfm_framebuf[pos]);
+				COM_wireless_word(eeprom_timers_read_raw(
+							timers_get_raw_index((rfm_framebuf[pos]>>4),(rfm_framebuf[pos]&0xf))));
+				if (c=='W') pos+=2;
+				pos++;
+				break;
+			case 'B':
+				{
+					if ((rfm_framebuf[pos]==0x13) && (rfm_framebuf[pos+1]==0x24)) {
+						cli();
+						wdt_enable(WDTO_15MS); //wd on,15ms
+						while(1); //loop till reset
+					}
+					pos+=2;
+				}
+				break;
+			case 'M':
+				CTL_change_mode(rfm_framebuf[pos++]==1);
+				COM_print_debug(2);
+				break;
+			case 'A':
+				if (rfm_framebuf[pos]<TEMP_MIN-1) { break; }
+				if (rfm_framebuf[pos]>TEMP_MAX+1) { break; }
+				CTL_set_temp(rfm_framebuf[pos++]);
+				COM_print_debug(2);
+				break;
+			case 'L':
+				if (rfm_framebuf[pos]<=1) menu_locked=rfm_framebuf[pos];
+				wireless_putchar(menu_locked);
+				pos++;
+				break;
+			default:
+				break;
 		}
 	}
 }
@@ -1206,27 +1230,27 @@ void COM_wireless_command_parse (uint8_t * rfm_framebuf, uint8_t rfm_framepos) {
 
 #if DEBUG_PRINT_MOTOR
 void COM_debug_print_motor(int8_t dir, uint16_t m, uint8_t pwm) {
-    if (dir>0) {
+	if (dir>0) {
 		COM_putchar('+');
 	} else if (dir<0) {
 		COM_putchar('-');
 	}
-    COM_putchar(' ');
+	COM_putchar(' ');
 	print_hexXXXX(m);
-    COM_putchar(' ');
+	COM_putchar(' ');
 	print_hexXX(pwm);
 
-    COM_putchar('\n');
-    COM_flush();
+	COM_putchar('\n');
+	COM_flush();
 }
 #endif
 
 #if DEBUG_PRINT_MEASURE
 void COM_debug_print_temperature(uint16_t t) {
-    print_s_p(PSTR("T: "));
-    print_decXXXX(t);
-    COM_putchar('\n');
-    COM_flush();
+	print_s_p(PSTR("T: "));
+	print_decXXXX(t);
+	COM_putchar('\n');
+	COM_flush();
 }
 #endif
 
@@ -1241,43 +1265,43 @@ void COM_debug_print_temperature(uint16_t t) {
 static uint16_t seq=0;
 void COM_dump_packet(uint8_t *d, uint8_t len, bool mac_ok) {
 	uint8_t type;
-    print_decXX((task & TASK_RTC)?RTC_GetSecond()+1:RTC_GetSecond());
+	print_decXX((task & TASK_RTC)?RTC_GetSecond()+1:RTC_GetSecond());
 	COM_putchar('.');
-    print_hexXX(RTC_s256);
-    if (mac_ok && (len>=(2+4))) {
-        print_s_p(PSTR(" PKT"));
-        len-=4; // mac is correct and not needed
-    } else {
-        print_s_p(PSTR(" ERR"));
-    }
-    print_hexXXXX(seq++);
-    COM_putchar(':');
-    bool dots=false;
-    if (len > 10) {
-      len=10; // debug output limitation
-      dots=true;
-    }
-    while ((len--)>0) {
-        COM_putchar(' ');
-        print_hexXX(*(d++));
-    }
-    if (dots) {
-      print_s_p(PSTR("..."));
-    }
-    COM_putchar('\n');
+	print_hexXX(RTC_s256);
+	if (mac_ok && (len>=(2+4))) {
+		print_s_p(PSTR(" PKT"));
+		len-=4; // mac is correct and not needed
+	} else {
+		print_s_p(PSTR(" ERR"));
+	}
+	print_hexXXXX(seq++);
+	COM_putchar(':');
+	bool dots=false;
+	if (len > 10) {
+		len=10; // debug output limitation
+		dots=true;
+	}
+	while ((len--)>0) {
+		COM_putchar(' ');
+		print_hexXX(*(d++));
+	}
+	if (dots) {
+		print_s_p(PSTR("..."));
+	}
+	COM_putchar('\n');
 	COM_flush();
 }
 #endif 
 
 #if DEBUG_PRINT_ADDITIONAL_TIMESTAMPS
 void COM_print_time(uint8_t c) {
-    print_decXX((task & TASK_RTC)?RTC_GetSecond()+1:RTC_GetSecond());
-	  COM_putchar('.');
-    print_hexXX(RTC_s256);
-    COM_putchar('-');
-    COM_putchar(c);
-    COM_putchar('\n');
-    COM_flush();
+	print_decXX((task & TASK_RTC)?RTC_GetSecond()+1:RTC_GetSecond());
+	COM_putchar('.');
+	print_hexXX(RTC_s256);
+	COM_putchar('-');
+	COM_putchar(c);
+	COM_putchar('\n');
+	COM_flush();
 }
 
 #endif

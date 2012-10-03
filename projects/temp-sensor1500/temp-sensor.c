@@ -127,7 +127,7 @@ static void read_temperature(void){
 
 	last_temperature_reading =  clock_time();
 	
-	printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
+//	printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
 
 	temperature =  new_temperature;
 	if (temperature_last - threshold > new_temperature || temperature_last + threshold < new_temperature){
