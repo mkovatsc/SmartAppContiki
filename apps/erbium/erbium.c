@@ -58,153 +58,191 @@ PROCESS_NAME(rest_manager_process);
 LIST(restful_services);
 LIST(restful_periodic_services);
 
+//fvn offset basis
+unsigned long well_known_core_etag = 2166136261;
 
-void
+// compute hash from scratch
+void compute_fnv_1_a_hash(void){
+
+	// fnv offset_basis for 32 bit
+	unsigned long hash = 2166136261;
+
+	// fnv prime for 32 bit
+	unsigned long prime = 16777619;
+
+	resource_t* resource = NULL;
+
+	for (resource = (resource_t*)list_head(rest_get_resources()); resource != NULL; resource = resource->next){
+
+		hash = hash ^ (long) ((int)resource & 0xff);
+		hash = hash * prime;
+
+		hash = hash ^ (long) ((int)resource>>8);
+		hash = hash * prime;
+	}
+	PRINTF("ETAG: %lu\n",hash);
+	well_known_core_etag = hash;
+}
+
+
+void update_fnv_1_a_hash(resource_t* res){
+
+	unsigned long hash = well_known_core_etag;
+
+	// fnv prime for 32 bit
+	unsigned long prime = 16777619;
+
+	hash = hash ^ (long) ((int)res & 0xff);
+	hash = hash * prime;
+
+	hash = hash ^ (long) ((int)res>>8);
+	hash = hash * prime;
+
+	PRINTF("ETAG: %lx\n",hash);
+	well_known_core_etag = hash;
+
+}
+
+unsigned long get_well_known_core_etag(void){
+	return well_known_core_etag;
+}
+
+	void
 rest_init_engine(void)
 {
-  list_init(restful_services);
+	list_init(restful_services);
 
-  REST.set_service_callback(rest_invoke_restful_service);
+	REST.set_service_callback(rest_invoke_restful_service);
 
-  /* Start the RESTful server implementation. */
-  REST.init();
+	/* Start the RESTful server implementation. */
+	REST.init();
 
-  /*Start rest manager process*/
-  process_start(&rest_manager_process, NULL);
+	/*Start rest manager process*/
+	process_start(&rest_manager_process, NULL);
 }
 
-void
+	void
 rest_activate_resource(resource_t* resource)
 {
-  PRINTF("Activating: %s", resource->url);
+	PRINTF("Activating: %s", resource->url);
 
-  if (!resource->pre_handler)
-  {
-    rest_set_pre_handler(resource, REST.default_pre_handler);
-  }
-  if (!resource->post_handler)
-  {
-    rest_set_post_handler(resource, REST.default_post_handler);
-  }
+	if (!resource->pre_handler)
+	{
+		rest_set_pre_handler(resource, REST.default_pre_handler);
+	}
+	if (!resource->post_handler)
+	{
+		rest_set_post_handler(resource, REST.default_post_handler);
+	}
 
-  list_add(restful_services, resource);
-}
-void
-rest_deactivate_resource(resource_t* resource)
-{
-  list_remove(restful_services, resource);
+	list_add(restful_services, resource);
+	update_fnv_1_a_hash(resource);
+
 }
 
-void
+	void
 rest_activate_periodic_resource(periodic_resource_t* periodic_resource)
 {
-  list_add(restful_periodic_services, periodic_resource);
-  rest_activate_resource(periodic_resource->resource);
+	list_add(restful_periodic_services, periodic_resource);
+	rest_activate_resource(periodic_resource->resource);
 
-  rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
-}
-void
-rest_deactivate_periodic_resource(periodic_resource_t* periodic_resource)
-{
-  list_remove(restful_periodic_services, periodic_resource);
-  etimer_stop(&periodic_resource->periodic_timer);
-  rest_deactivate_resource(periodic_resource->resource);
+	rest_set_post_handler(periodic_resource->resource, REST.subscription_handler);
 }
 
-void
+	void
 rest_activate_event_resource(resource_t* resource)
 {
-  rest_activate_resource(resource);
-  rest_set_post_handler(resource, REST.subscription_handler);
+	rest_activate_resource(resource);
+	rest_set_post_handler(resource, REST.subscription_handler);
 }
 
-list_t
+	list_t
 rest_get_resources(void)
 {
-  return restful_services;
+	return restful_services;
 }
 
 
-void*
+	void*
 rest_get_user_data(resource_t* resource)
 {
-  return resource->user_data;
+	return resource->user_data;
 }
 
-void
+	void
 rest_set_user_data(resource_t* resource, void* user_data)
 {
-  resource->user_data = user_data;
+	resource->user_data = user_data;
 }
 
-void
+	void
 rest_set_pre_handler(resource_t* resource, restful_pre_handler pre_handler)
 {
-  resource->pre_handler = pre_handler;
+	resource->pre_handler = pre_handler;
 }
 
-void
+	void
 rest_set_post_handler(resource_t* resource, restful_post_handler post_handler)
 {
-  resource->post_handler = post_handler;
+	resource->post_handler = post_handler;
 }
 
-void
+	void
 rest_set_special_flags(resource_t* resource, rest_resource_flags_t flags)
 {
-  resource->flags |= flags;
+	resource->flags |= flags;
 }
 
-int
+	int
 rest_invoke_restful_service(void* request, void* response, uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
 {
-  uint8_t found = 0;
-  uint8_t allowed = 0;
+	uint8_t found = 0;
+	uint8_t allowed = 0;
 
-  PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
+	PRINTF("rest_invoke_restful_service url /%.*s -->\n", url_len, url);
 
-  resource_t* resource = NULL;
-  const char *url = NULL;
+	resource_t* resource = NULL;
+	const char *url = NULL;
 
-  for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
-  {
-    /*if the web service handles that kind of requests and urls matches*/
-    if ((REST.get_url(request, &url)==strlen(resource->url) || (REST.get_url(request, &url)>strlen(resource->url) && (resource->flags & HAS_SUB_RESOURCES)))
-        && strncmp(resource->url, url, strlen(resource->url)) == 0)
-    {
-      found = 1;
-      rest_resource_flags_t method = REST.get_method_type(request);
+	for (resource = (resource_t*)list_head(restful_services); resource; resource = resource->next)
+	{
+		/*if the web service handles that kind of requests and urls matches*/
+		if ((REST.get_url(request, &url)==strlen(resource->url) || (REST.get_url(request, &url)>strlen(resource->url) && (resource->flags & HAS_SUB_RESOURCES)))
+				&& strncmp(resource->url, url, strlen(resource->url)) == 0)
+		{
+			found = 1;
+			rest_resource_flags_t method = REST.get_method_type(request);
 
-      PRINTF("method %u, resource->flags %u\n", (uint16_t)method, resource->flags);
+			PRINTF("method %u, resource->flags %u\n", (uint16_t)method, resource->flags);
 
-      if (resource->flags & method)
-      {
-        allowed = 1;
+			if (resource->flags & method)
+			{
+				allowed = 1;
 
-        /*call pre handler if it exists*/
-        if (!resource->pre_handler || resource->pre_handler(resource, request, response))
-        {
-          /* call handler function*/
-          resource->handler(request, response, buffer, buffer_size, offset);
+				/*call pre handler if it exists*/
+				if (!resource->pre_handler || resource->pre_handler(resource, request, response))
+				{
+					/* call handler function*/
+					resource->handler(request, response, buffer, buffer_size, offset);
 
-          /*call post handler if it exists*/
-          if (resource->post_handler)
-          {
-            resource->post_handler(resource, request, response);
-          }
-        }
-      } else {
-        REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
-      }
-      break;
-    }
-  }
+					/*call post handler if it exists*/
+					if (resource->post_handler)
+					{
+						resource->post_handler(resource, request, response);
+					}
+				}
+			} else {
+				REST.set_response_status(response, REST.status.METHOD_NOT_ALLOWED);
+			}
+			break;
+		}
+	}
 
-  if (!found) {
-    REST.set_response_status(response, REST.status.NOT_FOUND);
-  }
+	if (!found) {
+		REST.set_response_status(response, REST.status.NOT_FOUND);
+	}
 
-  return found & allowed;
+	return found & allowed;
 }
 /*-----------------------------------------------------------------------------------*/
 
@@ -212,37 +250,37 @@ PROCESS(rest_manager_process, "Rest Process");
 
 PROCESS_THREAD(rest_manager_process, ev, data)
 {
-  PROCESS_BEGIN();
+	PROCESS_BEGIN();
 
-  PROCESS_PAUSE();
+	PROCESS_PAUSE();
 
-  /* Initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
-  periodic_resource_t* periodic_resource = NULL;
-  for (periodic_resource = (periodic_resource_t*) list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
-    if (periodic_resource->period) {
-      PRINTF("Periodic: Set timer for %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
-      etimer_set(&periodic_resource->periodic_timer, periodic_resource->period);
-    }
-  }
+	/* Initialize the PERIODIC_RESOURCE timers, which will be handled by this process. */
+	periodic_resource_t* periodic_resource = NULL;
+	for (periodic_resource = (periodic_resource_t*) list_head(restful_periodic_services); periodic_resource; periodic_resource = periodic_resource->next) {
+		if (periodic_resource->period) {
+			PRINTF("Periodic: Set timer for %s to %lu\n", periodic_resource->resource->url, periodic_resource->period);
+			etimer_set(&periodic_resource->periodic_timer, periodic_resource->period);
+		}
+	}
 
-  while (1) {
-    PROCESS_WAIT_EVENT();
-    if (ev == PROCESS_EVENT_TIMER) {
-      for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
-        if (periodic_resource->period && etimer_expired(&periodic_resource->periodic_timer)) {
+	while (1) {
+		PROCESS_WAIT_EVENT();
+		if (ev == PROCESS_EVENT_TIMER) {
+			for (periodic_resource = (periodic_resource_t*)list_head(restful_periodic_services);periodic_resource;periodic_resource = periodic_resource->next) {
+				if (periodic_resource->period && etimer_expired(&periodic_resource->periodic_timer)) {
 
-          PRINTF("Periodic: etimer expired for /%s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
+					PRINTF("Periodic: etimer expired for /%s (period: %lu)\n", periodic_resource->resource->url, periodic_resource->period);
 
-          /* Call the periodic_handler function if it exists. */
-          if (periodic_resource->periodic_handler) {
-            (periodic_resource->periodic_handler)(periodic_resource->resource);
-          }
-          etimer_reset(&periodic_resource->periodic_timer);
-        }
-      }
-    }
-  }
+					/* Call the periodic_handler function if it exists. */
+					if (periodic_resource->periodic_handler) {
+						(periodic_resource->periodic_handler)(periodic_resource->resource);
+					}
+					etimer_reset(&periodic_resource->periodic_timer);
+				}
+			}
+		}
+	}
 
-  PROCESS_END();
+	PROCESS_END();
 }
 
