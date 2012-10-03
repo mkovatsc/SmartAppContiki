@@ -3,7 +3,6 @@
 #include <avr/interrupt.h>
 
 const struct sensors_sensor motion_sensor;
-static int status(int type);
 
 static struct timer debouncetimer;
 
@@ -60,7 +59,7 @@ configure(int type, int c)
 ISR(INT7_vect)
 {
 	if(timer_expired(&debouncetimer)) {
-		timer_set(&debouncetimer, CLOCK_SECOND/4);
+		timer_set(&debouncetimer, CLOCK_SECOND/8);
 		sensors_changed(&motion_sensor);
 	}
 }

@@ -30,6 +30,8 @@
  *
  */
 
+/* USE PIN E7 on the ATmega128rfa, for the interrupt and a 1500 Ohms Pull-Down Resistor  */
+
 /*---------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +63,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.7.1"
+#define VERSION "0.7.2"
 
 
 /*--PROCESSES----------------------------------------------------------------*/
@@ -73,11 +75,16 @@ SENSORS(&motion_sensor);
 /*---------------------------------------------------------------------------*/
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
-static uint8_t duration = 5;
+static uint8_t interval = 5;
 static uint8_t event_number = 8;
+static uint8_t last_state = 0;
+static unsigned long move_count = 0;
 
 char ee_identifier[50] EEMEM;
 char identifier[50];
+static unsigned long last_movement = 0;
+static unsigned long start_movement = 0;
+static unsigned long movement_duration = 0;
 
 
 /*--DERFNODE-PROCESS-IMPLEMENTATION-----------------------------------------*/
@@ -94,7 +101,7 @@ static int uart_get_char(unsigned char c)
 PROCESS_THREAD(rfnode_test_process, ev, data)
 {
 	PROCESS_BEGIN();
-	
+
 	int rx;
 	int buf_pos;
 	char buf[128];
@@ -106,7 +113,7 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 	// finish booting first
 	PROCESS_PAUSE();
-	
+
 	while (1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == PROCESS_EVENT_MSG) {
@@ -136,32 +143,29 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 EVENT_RESOURCE(motion, METHOD_GET, "sensors/motion", "title=\"Motion Sensor\";ct=0;rt=\"state:finite\"");
 
-void
+	void
 motion_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	int state = motion_sensor.value(0);
-	const char *msg = state ? "movement" : "clear";
-	printf("%s\n",msg);
-	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
+	snprintf_P((char*) buffer, preferred_size, PSTR("%lu"), move_count);
+	REST.set_response_payload(response, buffer, strlen((char*) buffer));
 
 }
 
-void
+	void
 event_motion_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
-	static char content[10];
-	
+	static char content[12];
+
 
 	++event_i;
-//	int state = motion_sensor.value(0);
+	//	int state = motion_sensor.value(0);
 
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
 	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
-//	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "clear" : "movement"));
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", "movement"));
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%lu", move_count));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -178,9 +182,9 @@ void trigger_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
 	else {
-        	const uint8_t * string = NULL;
-        	int success = 1;
-        	int len = coap_get_payload(request, &string);
+		const uint8_t * string = NULL;
+		int success = 1;
+		int len = coap_get_payload(request, &string);
 		uint8_t value = 0;
 		int i;
 		for (i=0; i<len; i++){
@@ -193,33 +197,33 @@ void trigger_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 		if(success && value > 0){
 			event_number=value;
-        		REST.set_response_status(response, REST.status.CHANGED);
+			REST.set_response_status(response, REST.status.CHANGED);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	
-	        }
-        	else{
-        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+
+		}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, strlen((char*)buffer));
 			return;
-        	}
+		}
 	}
 }
 
-/*--------- Duration ---------------------------------------------------------*/
-RESOURCE(duration, METHOD_GET | METHOD_PUT, "config/duration", "title=\"Time Interval\";ct=0;rt=\"time: s\"");
-void duration_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+/*--------- Event Interval ---------------------------------------------------------*/
+RESOURCE(interval, METHOD_GET | METHOD_PUT, "config/interval", "title=\"Time Interval\";ct=0;rt=\"time: s\"");
+void interval_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
-		snprintf_P((char*)buffer, preferred_size, PSTR("%u"), duration);
+		snprintf_P((char*)buffer, preferred_size, PSTR("%u"), interval);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
 	else {
-        	const uint8_t * string = NULL;
-        	int success = 1;
-        	int len = coap_get_payload(request, &string);
+		const uint8_t * string = NULL;
+		int success = 1;
+		int len = coap_get_payload(request, &string);
 		uint8_t value = 0;
 		int i;
 		for (i=0; i<len; i++){
@@ -231,21 +235,31 @@ void duration_handler(void* request, void* response, uint8_t *buffer, uint16_t p
 		value = (atoi((char*) string));
 
 		if(success && value > 0){
-			duration=value;
-        		REST.set_response_status(response, REST.status.CHANGED);
+			interval=value;
+			REST.set_response_status(response, REST.status.CHANGED);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	
-	        }
-        	else{
-        		REST.set_response_status(response, REST.status.BAD_REQUEST);
+
+		}
+		else{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, strlen((char*)buffer));
 			return;
-        	}
+		}
 	}
 }
 
+/*--------- Last Movement --------------------------------------------------------------*/
+RESOURCE(last, METHOD_GET, "sensor/last", "title=\"Last Movement Detected\";ct=0;rt=\"Time:s\"");
+void last_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	unsigned long now = clock_seconds();
+	snprintf_P((char*)buffer, preferred_size, PSTR("%lu"), (now-last_movement < interval) ? 0 : (now-last_movement));
+	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 
+
+}
 
 /*--------- Node Identifier ------------------------------------------------------------*/
 RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";ct=0;rt=\"string\"");
@@ -254,13 +268,13 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
 		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), identifier);
- 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
 	else
 	{
-    		int success = 1;
+		int success = 1;
 		const uint8_t * string = NULL;
-    		int len;
+		int len;
 
 		len = coap_get_payload(request, &string);
 		if (len > 3){
@@ -270,17 +284,17 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 		else{
 			success=0;
 		}
-		
-        	if(success){
-            		REST.set_response_status(response,CHANGED_2_04);
-            	}
+
+		if(success){
+			REST.set_response_status(response,CHANGED_2_04);
+		}
 		else{
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
-    	}
-  
+	}
 
- 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+
+	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 }
 
 
@@ -290,7 +304,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 {
 
 	snprintf_P((char*)buffer, preferred_size, PSTR("%s"), VERSION);
- 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 
@@ -299,13 +313,12 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 PROCESS_THREAD(coap_process, ev, data)
 {
 	PROCESS_BEGIN();
-  
- 	static struct etimer interval;
+
+	static struct etimer interval_timer;
 	rest_init_engine();
 	SENSORS_ACTIVATE(motion_sensor);
 	printf("Sensors activated\n");
-	static uint8_t counter = 0;
-	static uint8_t triggered = 1;
+	static uint8_t event_counter = 0;
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
@@ -313,30 +326,37 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_version);
 	rest_activate_event_resource(&resource_motion);
 	rest_activate_resource(&resource_trigger);
-	rest_activate_resource(&resource_duration);
+	rest_activate_resource(&resource_interval);
 
-	//etimer_set(&etimer, CLOCK_SECOND * 5);
+	etimer_set(&interval_timer, CLOCK_SECOND * interval);
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == PROCESS_EVENT_TIMER){
-			if (counter >= event_number-1){ //only fire event if multiple movements detected in short period
+			uint8_t current_state;
+			if (event_counter >= event_number-1){ //only fire event if multiple movements detected in short period
+				current_state = 1;
+				last_movement = clock_seconds();
+				movement_duration = last_movement - start_movement;
+			}
+			else{
+				start_movement = clock_seconds();
+				current_state = 0;
+				
+			}
+			if (last_state != current_state){
+				move_count++;
+				last_state = current_state;
 				event_motion_handler(&resource_motion);
 			}
-			triggered = 1;
+			event_counter = 0;
+			etimer_set(&interval_timer, CLOCK_SECOND * interval);
+
 
 		}
 		else if (ev == sensors_event && data == &motion_sensor) {
-			if (triggered){
-				counter=0;
-				triggered = 0;
-				etimer_set(&interval, CLOCK_SECOND * duration);
-				
-			}
-			else{
-				counter++;
-			}
+			event_counter++;
 		}
-    
+
 	}
 
 	PROCESS_END();
