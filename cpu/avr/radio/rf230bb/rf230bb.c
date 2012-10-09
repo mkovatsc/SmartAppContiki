@@ -248,6 +248,7 @@ const struct radio_driver rf230_driver =
     rf230_transmit,
     rf230_send,
     rf230_read,
+    rf230_set_channel,
     rf230_cca,
     rf230_receiving_packet,
     rf230_pending_packet,
@@ -1169,17 +1170,17 @@ rf230_get_channel(void)
 }
 /*---------------------------------------------------------------------------*/
 void
-rf230_set_channel(uint8_t c)
+rf230_set_channel(unsigned short ch)
 {
  /* Wait for any transmission to end. */
-  PRINTF("rf230: Set Channel %u\n",c);
+  PRINTF("rf230: Set Channel %u\n", ch);
   rf230_waitidle();
-  channel=c;
-  hal_subregister_write(SR_CHANNEL, c);
+  channel = ch;
+  hal_subregister_write(SR_CHANNEL, ch);
 }
 /*---------------------------------------------------------------------------*/
 void
-rf230_listen_channel(uint8_t c)
+rf230_listen_channel(unsigned short c)
 {
  /* Same as set channel but forces RX_ON state for sniffer or energy scan */
 //  PRINTF("rf230: Listen Channel %u\n",c);

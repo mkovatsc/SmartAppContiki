@@ -170,7 +170,9 @@ typedef unsigned long rtimer_clock_t;
 
 #define CONTIKIMAC_CONF_BROADCAST_RATE_LIMIT 0
 
+#ifndef IEEE802154_CONF_PANID
 #define IEEE802154_CONF_PANID       0xABCD
+#endif /* IEEE802154_CONF_PANID */
 
 #define PROFILE_CONF_ON 0
 #define ENERGEST_CONF_ON 0

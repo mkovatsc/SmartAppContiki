@@ -164,7 +164,7 @@ symbols.c: $(CORE)
 
 else
 %.$(TARGET): %-nosyms.$(TARGET)
-	ln -sf $< $@
+	cp $< $@
 endif
 
 empty-symbols.c:

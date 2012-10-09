@@ -63,6 +63,12 @@ off(void)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+static void
+null_set_channel(unsigned short ch)
+{
+  /* Dummy for a uniform API. */
+}
+/*---------------------------------------------------------------------------*/
 const struct radio_driver nullradio_driver =
   {
     init,
@@ -70,6 +76,7 @@ const struct radio_driver nullradio_driver =
     transmit,
     send,
     read,
+    null_set_channel,
     channel_clear,
     receiving_packet,
     pending_packet,

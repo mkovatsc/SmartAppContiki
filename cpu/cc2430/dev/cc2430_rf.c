@@ -176,14 +176,10 @@ flush_rx()
  /* channel freqdiv = (2048 + FSCTRL(9:0)) / 4
             freq = (2048 + FSCTRL(9:0)) MHz */
 
-int8_t
-cc2430_rf_channel_set(uint8_t channel)
+void
+cc2430_rf_channel_set(unsigned short channel)
 {
   uint16_t freq;
-
-  if((channel < 11) || (channel > 26)) {
-    return -1;
-  }
 
   cc2430_rf_command(ISSTOP);  /*make sure CSP is not running*/
   cc2430_rf_command(ISRFOFF);
@@ -198,8 +194,6 @@ cc2430_rf_channel_set(uint8_t channel)
   cc2430_rf_command(ISRXON);
 
   rf_channel = channel;
-
-  return (int8_t) channel;
 }
 /*---------------------------------------------------------------------------*/
 uint8_t
@@ -693,6 +687,7 @@ const struct radio_driver cc2430_rf_driver =
     transmit,
     send,
     read,
+
     channel_clear,
     receiving_packet,
     pending_packet,

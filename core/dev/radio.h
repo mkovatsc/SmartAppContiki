@@ -74,6 +74,9 @@ struct radio_driver {
   /** Read a received packet into a buffer. */
   int (* read)(void *buf, unsigned short buf_len);
 
+  /** Set the radio channel, e.g., 11-26 for 2.4GHz. */
+  void (* set_channel)(unsigned short ch);
+
   /** Perform a Clear-Channel Assessment (CCA) to find out if there is
       a packet in the air or not. */
   int (* channel_clear)(void);

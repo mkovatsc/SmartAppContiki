@@ -32,6 +32,9 @@
 #ifndef __PROJECT_ROUTER_CONF_H__
 #define __PROJECT_ROUTER_CONF_H__
 
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nullrdc_driver
+
 #ifndef UIP_FALLBACK_INTERFACE
 #define UIP_FALLBACK_INTERFACE rpl_interface
 #endif

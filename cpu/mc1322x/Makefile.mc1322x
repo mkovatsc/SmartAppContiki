@@ -73,9 +73,9 @@ CFLAGS += -I$(OBJECTDIR) -I$(CONTIKI_CPU)/board -DBOARD=$(TARGET)
 
 $(OBJECTDIR)/board.h: $(OBJECTDIR) 
 ifeq ($(HOST_OS),Windows)
-	ln -f $(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
+	cp $(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
 else
-	ln -sf ../$(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
+	cp $(CONTIKI_CPU)/board/board.h $(OBJECTDIR)/board.h
 endif
 
 
