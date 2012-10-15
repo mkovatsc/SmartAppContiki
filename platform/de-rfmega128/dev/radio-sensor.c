@@ -1,5 +1,5 @@
 #include "lib/sensors.h"
-#include "radio-sensor.h"
+#include "dev/radio-sensor.h"
 #include <avr/io.h>
 
 /*
@@ -35,7 +35,7 @@ value(int type)
 {
 	int read;
 	switch (type){
-		case RADIO_SENSOR_RSSI:
+		case RADIO_SENSOR_LAST_PACKET:
 		default:
 			read = PHY_RSSI & 0x1f;
 			return RSSI_BASE_VALUE + 3 * (read - 1);

@@ -35,9 +35,9 @@
 
 #include "lib/sensors.h"
 
-extern const struct sensors_sensor radio_sensor;
+#define RADIO_SENSOR_LAST_PACKET 1
 
-#define RADIO_SENSOR_RSSI  0
+extern const struct sensors_sensor radio_sensor;
 
 #define RADIO_SENSOR "Radio"
 

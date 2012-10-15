@@ -64,7 +64,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.7.1"
+#define VERSION "0.7.2"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -82,6 +82,7 @@ static unsigned char uart_buf_data[128] = {0};
 
 char ee_identifier[50] EEMEM;
 char identifier[50];
+static unsigned long event_count = 0;
 
 
 /*--DERFNODE-PROCESS-IMPLEMENTATION-----------------------------------------*/
@@ -135,16 +136,14 @@ PROCESS_THREAD(rfnode_test_process, ev, data)
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-EVENT_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";ct=0;rt=\"state:finite\"");
+EVENT_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";obs;rt=\"state:finite\"");
 
 void
 reed_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	int state = reed_sensor.value(0);
-	const char *msg = state ? "closed" : "open";
-	printf("%s\n",msg);
-	REST.set_response_payload(response, (uint8_t *)msg, strlen(msg));
+	snprintf_P((char*) buffer, preferred_size, PSTR("%lu"), event_count);
+	REST.set_response_payload(response, buffer, strlen((char*) buffer));
 
 }
 
@@ -152,16 +151,16 @@ void
 event_reed_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
-	static char content[10];
-	
+	static char content[12];
+
 
 	++event_i;
-	int state = reed_sensor.value(0);
+	//	int state = motion_sensor.value(0);
 
 
 	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
-	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%s", state ? "closed" : "open"));
+	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "%lu", event_count));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -236,6 +235,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == sensors_event && data == &reed_sensor) {
+			event_count++;
 			event_reed_handler(&resource_reed);
 		}
 	/* 	else if (ev == PROCESS_EVENT_TIMER){

@@ -1917,7 +1917,7 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 mode_event_handler(resource_t *r)
 {
 	static char content[20];
-	static uint16_t event_counter = 0;
+	static uint32_t event_counter = 0;
 
 	event_counter++;
 
@@ -1970,7 +1970,7 @@ wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 wheel_event_handler(resource_t *r)
 {
 	static char content[12];
-	static uint16_t event_counter = 0;
+	static uint32_t event_counter = 0;
 
 	event_counter++;
 
@@ -2448,6 +2448,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_event_resource(&resource_wheel);
 	rest_activate_event_resource(&resource_error);
 
+/*
 	rest_activate_resource(&resource_frost);
 	rest_activate_resource(&resource_energy);
 	rest_activate_resource(&resource_comfort);
@@ -2460,6 +2461,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_day5timer);
 	rest_activate_resource(&resource_day6timer);
 	rest_activate_resource(&resource_day7timer);
+*/
 
 	//call the temperature handler if the temperature changed
 	while(1){
