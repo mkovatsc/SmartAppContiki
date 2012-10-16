@@ -59,18 +59,24 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.7.2"
+#define VERSION "0.8.2"
 #define EPTYPE "SteelHead"
 
 
 /*--PROCESSES----------------------------------------------------------------*/
-PROCESS(rfnode_test_process, "rfNode_test");
 PROCESS(coap_process, "coap");
 SENSORS(&radio_sensor);
 
 /*---------------------------------------------------------------------------*/
-static struct ringbuf uart_buf;
-static unsigned char uart_buf_data[128] = {0};
+static uip_ip6addr_t rd_ipaddr;
+
+static struct etimer adc;
+static struct	etimer rdpost;
+static struct etimer rdput;
+static char * location;
+static char loc[40];
+static uint8_t registred = 0;
+static uint8_t putcount;
 
 static int16_t temperature;
 static int16_t temperature_last;
@@ -86,7 +92,7 @@ static uint8_t poll_time = 3;
 static int16_t rssi_value[5];
 static int16_t rssi_count=0;
 static int16_t rssi_position=0;
-#define RSSI_AVG (rssi_value[0]+rssi_value[1]+rssi_value[2]+rssi_value[3]+rssi_value[4])/rssi_count
+#define RSSI_AVG (rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2]+rssi_value[3]+rssi_value[4])/rssi_count:0
 
 const uint16_t lookup[] PROGMEM = {-7422,-3169,-2009,-1280,-737,-300,70,393,679,939,1176,1395,1600,1792,1974,2146,2310,2467,2617,2762,2902,3037,3169,3296,3420,3541,3659,3775,3888,3999,4108,4215,4320,4423,4526,4626,4726,4824,4921,5018,5113,5207,5301,5394,5487,5578,5670,5760,5851,5941,6030,6120,6209,6298,6387,6476,6565,6653,6742,6831,6920,7010,7100,7189,7279};
 
@@ -101,17 +107,7 @@ static uint8_t separate_get_temperature_active = 0;
 static application_separate_get_temperature_store_t separate_get_temperature_store[1];
 
 
-/*--ADC-PROCESS-IMPLEMENTATION-----------------------------------------*/
-static int uart_get_char(unsigned char c)
-{
-	ringbuf_put(&uart_buf, c);
-	if (c=='\n' || ringbuf_size(&uart_buf)==127) {
-		ringbuf_put(&uart_buf, '\0');
-		process_post(&rfnode_test_process, PROCESS_EVENT_MSG, NULL);
-	}
-	return 1;
-}
-
+/*--ADC-IMPLEMENTATION-----------------------------------------*/
 static void read_temperature(void){
 	static int16_t reading;
 	int16_t raw_temperature;
@@ -151,64 +147,10 @@ static void read_temperature(void){
 
 }
 
-PROCESS_THREAD(rfnode_test_process, ev, data)
-{
-	PROCESS_BEGIN();
-	
-	int rx;
-	int buf_pos;
-	char buf[128];
-	static struct etimer adc;
-
-
-	ringbuf_init(&uart_buf, uart_buf_data, sizeof(uart_buf_data));
-	rs232_set_input(RS232_PORT_0, uart_get_char);
-
-	get_temperature_response_event = process_alloc_event();
-	changed_temperature_event = process_alloc_event();
-
-
-	// finish booting first
-	PROCESS_PAUSE();
-
-	DDRF = 0;      //set all pins of port b as inputs
-	PORTF = 0;     //write data on port 
-	etimer_set(&adc, poll_time*CLOCK_SECOND);
-	
-	while (1) {
-		PROCESS_WAIT_EVENT();
-		if (ev == PROCESS_EVENT_MSG) {
-			buf_pos = 0;
-			while ((rx=ringbuf_get(&uart_buf))!=-1) {
-				if (buf_pos<126 && (char)rx=='\n') {
-					buf[buf_pos++] = '\n';
-					buf[buf_pos] = '\0';
-					buf_pos = 0;
-					continue;
-				} else {
-					buf[buf_pos++] = (char)rx;
-				}
-				if (buf_pos==127) {
-					buf[buf_pos] = 0;
-					buf_pos = 0;
-				}
-			} // while
-		} // events
-		else  if (ev == PROCESS_EVENT_TIMER && etimer_expired(&adc)) {
-			
-			read_temperature();			
-			etimer_set(&adc, CLOCK_SECOND * poll_time);
-		}
-	}
-	PROCESS_END();
-}
-
-
-
 /*--CoAP - Process---------------------------------------------------------*/
 
 /*--------- Temperature ---------------------------------------------------------*/
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature:C\"");
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if(last_temperature_reading > clock_time()-5*CLOCK_SECOND){
@@ -271,7 +213,7 @@ void temperature_finalize_handler() {
 
 /*--------- Poll Time ------------------------------------------------------------*/
 
-RESOURCE(poll, METHOD_GET | METHOD_PUT, "config/poll", "title=\"Polling interval\";rt=\"time:s\"");
+RESOURCE(poll, METHOD_GET | METHOD_PUT, "config/poll", "title=\"Polling interval\";rt=\"seconds\"");
 void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -319,7 +261,7 @@ void poll_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 
 /*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"temperature:C\"");
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"temperature\"");
 void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -652,7 +594,6 @@ void heartbeat_periodic_handler(resource_t *r){
 	++event_counter;
 	
 	int new = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-	printf("%i\n",new);
 	rssi_value[rssi_position]=new;
 	if(rssi_count<5){
 		rssi_count++;
@@ -669,30 +610,52 @@ void heartbeat_periodic_handler(resource_t *r){
 
 /*--------- RD MSG ACK Handle-------------------------------------*/
 
-void rd_response_handler(void *response){
+void rd_post_response_handler(void *response){
 
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
-		const char * location = NULL;	
 		coap_get_header_location_path(response, &location);
+		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
-		printf("%s\n",location);
+		registred=1;
+		putcount=30;
+		etimer_set(&rdput, 10*CLOCK_SECOND);
 	}
-	else {
-		printf("RD NOT ANSWERING\n");
+	else if (((coap_packet_t *) response)->code == BAD_REQUEST_4_00) {
+		printf("BAD REQUEST ANSWERING\n");
+	}
+	else{
+			etimer_set(&rdpost, CLOCK_SECOND *60);
 	}
 }
+
+void rd_put_response_handler(void *response){
+
+	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+		registred=0;
+		etimer_set(&rdpost, CLOCK_SECOND *10);
+	}
+	else{
+		printf("Updated Statsu at RD\n");
+		putcount=0;
+	}
+	
+}
+
 
 
 
 PROCESS_THREAD(coap_process, ev, data)
 {
 	PROCESS_BEGIN();
-  
 
-	static struct	etimer rdpost;
+	get_temperature_response_event = process_alloc_event();
+	changed_temperature_event = process_alloc_event();
 
 	rest_init_engine();
+
 	SENSORS_ACTIVATE(radio_sensor);
+
+	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
@@ -704,6 +667,13 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
+	get_temperature_response_event = process_alloc_event();
+	changed_temperature_event = process_alloc_event();
+
+	DDRF = 0;      //set all pins of port b as inputs
+	PORTF = 0;     //write data on port 
+
+	etimer_set(&adc, poll_time*CLOCK_SECOND);
 	etimer_set(&rdpost, 30*CLOCK_SECOND);
 
 
@@ -715,24 +685,44 @@ PROCESS_THREAD(coap_process, ev, data)
 		else if (ev == changed_temperature_event){
 			temperature_event_handler(&resource_temperature);	
 		}
-		else  if (ev == PROCESS_EVENT_TIMER && etimer_expired(&rdpost)) {
-			uip_ip6addr_t rd_ipaddr;
-			static coap_packet_t post[1];
-			uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
-			coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
+		else  if (ev == PROCESS_EVENT_TIMER){
+			if(etimer_expired(&adc)) {
+				read_temperature();			
+				etimer_set(&adc, CLOCK_SECOND * poll_time);
+			}
+			if (!registred &&etimer_expired(&rdpost)) {
+				static coap_packet_t post[1];
+				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
-			coap_set_header_uri_path(post,"/rd");
-			char query[80];
-			uint8_t addr[8]=EUI64_ADDRESS;
+				coap_set_header_uri_path(post,"/rd");
+				const char query[40];
+				uint8_t addr[8]=EUI64_ADDRESS;
 
+				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				coap_set_header_uri_query(&post,query); 	
 
-			sprintf(query,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=%s", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7], EPTYPE);
-			coap_set_header_uri_query(&post,query); 	
+				printf("send post\n");
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
 
-			printf("send post\n");
-			COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_response_handler);
+			}
+			if (etimer_expired(&rdput)) {
+				if(putcount < 30){
+					putcount++;
+					etimer_set(&rdput, 240*CLOCK_SECOND);
+					continue;
+				}
+				static coap_packet_t put[1];
+				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
-			etimer_set(&rdpost, CLOCK_SECOND *30);
+				coap_set_header_uri_path(put,loc);
+				const char query[40];
+
+				snprintf(query,39,"rt=\"%s\"",EPTYPE);
+				coap_set_header_uri_query(&put,query); 	
+
+				printf("send put\n");
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+			}
 		}
 	}
 	
@@ -740,5 +730,5 @@ PROCESS_THREAD(coap_process, ev, data)
 }
 
 /*---------------------------------------------------------------------------*/
-AUTOSTART_PROCESSES(&rfnode_test_process, &coap_process, &sensors_process);
+AUTOSTART_PROCESSES(&coap_process, &sensors_process);
 /*---------------------------------------------------------------------------*/

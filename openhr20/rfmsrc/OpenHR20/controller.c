@@ -56,7 +56,7 @@ uint8_t CTL_mode_changed_timer=0;
 int16_t CTL_temp_threshold = 10;
 int16_t CTL_bat_threshold = 100;
 
-enum mode CTL_mode_auto = auto_timers;   // actual desired temperature by timer
+enum mode CTL_mode_auto = auto_target;   // actual desired temperature by timer
 uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
 #if (HW_WINDOW_DETECTION)
 static uint8_t window_timer=AVERAGE_LEN+1;

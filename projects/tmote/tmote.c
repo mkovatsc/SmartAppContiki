@@ -36,13 +36,13 @@
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#define VERSION "0.7.1"
+#define VERSION "0.8.1"
+#define EPTYPE "Tmote-Sky"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "dev/eeprom.h"
 #include "contiki.h"
 #include "contiki-net.h"
 
@@ -51,42 +51,45 @@
 #include "static-routing.h"
 #endif
 
-#include "erbium.h"
 #include "er-coap-07.h"
+#include "er-coap-07-engine.h"
 #include "er-coap-07-separate.h"
 #include "er-coap-07-transactions.h"
 
-
+#include "dev/radio-sensor.h"
 #include "dev/sht11-sensor.h"
+
+static uip_ip6addr_t rd_ipaddr;
+
+static struct etimer sht;
+static struct	etimer rdpost;
+static struct etimer rdput;
+static char * location;
+static char loc[40];
+static uint8_t registred = 0;
+static uint8_t putcount;
+
+static int16_t rssi_value[3];
+static int16_t rssi_count=0;
+static int16_t rssi_position=0;
+static int16_t rssi_avg=0;
+
 static int16_t temperature=0;
 static int16_t temperature_last=0;
-static int16_t threshold = 5;
-static uint8_t poll_time=2;
+static int16_t threshold = 50;
+static uint8_t poll_time=3;
 
-char identifier[50];
+char identifier[30];
 
-
-#define DEBUG 0
-#if DEBUG
-#define PRINTF(...) printf(__VA_ARGS__)
-#define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
-#define PRINTLLADDR(lladdr) PRINTF("[%02x:%02x:%02x:%02x:%02x:%02x]",(lladdr)->addr[0], (lladdr)->addr[1], (lladdr)->addr[2], (lladdr)->addr[3],(lladdr)->addr[4], (lladdr)->addr[5])
-#else
-#define PRINTF(...)
-#define PRINT6ADDR(addr)
-#define PRINTLLADDR(addr)
-#endif
-
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";ct=0;rt=\"temperature:C\"");
+/*--------------------COAP Resources-----------------------------------------------------------*/
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-
 	snprintf((char*)buffer, preferred_size, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 
 }
-
 
 void temperature_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
@@ -94,9 +97,9 @@ void temperature_event_handler(resource_t *r) {
 
 	++event_i;
 
-  	coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
-  	coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
-  	coap_set_payload(notification, content, snprintf(content, 6, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
+  coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+  coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+  coap_set_payload(notification, content, snprintf(content, 6, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
 
 	REST.notify_subscribers(r, event_i, notification);
 
@@ -105,86 +108,39 @@ void temperature_event_handler(resource_t *r) {
 
 
 /*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";ct=0;rt=\"temperature:C\"");
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold\";rt=\"threshold\"");
 void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
-		snprintf((char*)buffer, preferred_size,"%d.%01d", threshold/10, threshold%10);
+		snprintf((char*)buffer, preferred_size,"%d.%02d", threshold/100, threshold%100);
 		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 	}
 	else {
-        	const uint8_t * string = NULL;
-        	int success = 1;
-        	int len = coap_get_payload(request, &string);
+		const uint8_t * string = NULL;
+    int success = 0;
+    int len = coap_get_payload(request, &string);
 		uint16_t value;
-		if(len == 1){
-			if (isdigit(string[0])){
-				value = (atoi((char*) string));
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 2){
-			if (isdigit(string[0]) && isdigit(string[1])){
-				value = (atoi((char*) string)) * 10;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if (len == 3) {
+		if (len == 3) {
 			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
-				value = (atoi((char*) string)) * 10;
-				value += atoi((char*) string+2);
-			}
-			else {
-				success = 0;
+				value = (atoi((char*) string)) * 100;
+				value += atoi((char*) string+2)*10;
+				success = 1;
 			}
 		}
-		else if(len == 4){
-			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
-				value = (atoi((char*) string) *10);
-				value += atoi((char*) string+3);
-			}
-			else {
-				success = 0;
-			}
-		}
-		else {
-			success = 0;
-		}
-	        if(success){
+	  if(success){
 			threshold=value;
-        		REST.set_response_status(response, REST.status.CHANGED);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	
-	        }
-        	else{
-        		REST.set_response_status(response, REST.status.BAD_REQUEST);
-                	strncpy((char*)buffer, "Payload format: tt.t, e.g. 1.0 sets the threshold to 1.0 deg", preferred_size);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-			REST.set_response_payload(response, buffer, strlen((char*)buffer));
-			return;
-        	}
+    	REST.set_response_status(response, REST.status.CHANGED);
+    }
+   	else{
+   		REST.set_response_status(response, REST.status.BAD_REQUEST);
+   	}
 	}
 }
 
-
-/*-------------------- Version ---------------------------------------------------------------------------*/
-RESOURCE(version, METHOD_GET | METHOD_PUT, "debug/version", "title=\"Version Number\";ct=0;rt=\"number\"");
-void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-
-	snprintf((char*)buffer, preferred_size, "%s", VERSION);
- 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
-}
-
-
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";ct=0;rt=\"string\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/id", "title=\"Id\";rt=\"string\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -194,32 +150,84 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	}
 	else
 	{
-    		int success = 1;
+   	int success = 1;
 		const uint8_t * string = NULL;
-    		int len;
+   	int len;
 
 		len = coap_get_payload(request, &string);
 		if (len > 3){
-			strncpy(identifier,string,50);
+			strncpy(identifier,string,30);
 		}
 		else{
 			success=0;
 		}
 		
-        	if(success){
-            		REST.set_response_status(response,CHANGED_2_04);
-            	}
+   	if(success){
+   		REST.set_response_status(response,CHANGED_2_04);
+   	}
 		else{
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
-    	}
-  
-
+ 	}
  	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 }
 
 
+/*------------------- HeartBeat --------------------------------------------------------------------------*/
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",30*CLOCK_SECOND);
+void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	snprintf((char*)buffer, preferred_size, "version:%s\nuptime:%lu\nrssi:%i",VERSION,clock_seconds(),rssi_avg);
+ 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
 
+void heartbeat_periodic_handler(resource_t *r){
+	static uint32_t event_counter=0;
+	static char	content[50];
+
+	++event_counter;
+	
+	rssi_value[rssi_position]= radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
+	if(rssi_count<3){
+		rssi_count++;
+	}
+	rssi_position = (rssi_position++) % 3;
+	
+	rssi_avg = (rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2])/rssi_count:0;
+	coap_packet_t notification[1];
+	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "version:%s\nuptime:%lu\nrssi:%i",VERSION,clock_seconds(),rssi_avg));
+
+	REST.notify_subscribers(r, event_counter, notification);
+
+}
+
+/*--------- RD MSG ACK Handle-------------------------------------*/
+
+void rd_post_response_handler(void *response){
+
+	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
+		coap_get_header_location_path(response, &location);
+		strcpy(loc,location);
+		registred=1;
+		putcount=30;
+		etimer_set(&rdput, 10*CLOCK_SECOND);
+	}
+	else if (((coap_packet_t *) response)->code != BAD_REQUEST_4_00) {
+			etimer_set(&rdpost, CLOCK_SECOND *60);
+	}
+}
+
+void rd_put_response_handler(void *response){
+
+	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+		registred=0;
+		etimer_set(&rdpost, CLOCK_SECOND *10);
+	}
+	else{
+		putcount=0;
+	}
+}
 
 
 PROCESS(tmote_temperature, "Tmote Sky Temperature Sensor");
@@ -229,18 +237,7 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 {
 	PROCESS_BEGIN();
 
-	PRINTF("Starting Erbium Example Server\n");
-
-	#ifdef RF_CHANNEL
-	PRINTF("RF channel: %u\n", RF_CHANNEL);
-	#endif
-	#ifdef IEEE802154_PANID
-	PRINTF("PAN ID: 0x%04X\n", IEEE802154_PANID);
-	#endif
-
-	PRINTF("uIP buffer: %u\n", UIP_BUFSIZE);
-	PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
-	PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
+	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
 
 	/* if static routes are used rather than RPL */
 	#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET) && !defined (CONTIKI_TARGET_NATIVE)
@@ -251,29 +248,62 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 	/* Initialize the REST engine. */
 	rest_init_engine();
 
-	static struct etimer etimer;
 	SENSORS_ACTIVATE(sht11_sensor);
-//	SENSORS_ACTIVATE(temperature_sensor);
+	SENSORS_ACTIVATE(radio_sensor);
+
 	rest_activate_event_resource(&resource_temperature);
 	rest_activate_resource(&resource_threshold);
-	rest_activate_resource(&resource_version);
 	rest_activate_resource(&resource_identifier);
-	etimer_set(&etimer, 10*CLOCK_SECOND);
-
-
+	rest_activate_periodic_resource(&periodic_resource_heartbeat);
+	
+	etimer_set(&rdpost, 30*CLOCK_SECOND);
+	etimer_set(&sht, 10*CLOCK_SECOND);
 
   /* Define application-specific events here. */
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == PROCESS_EVENT_TIMER){
-			temperature = -3960+sht11_sensor.value(SHT11_SENSOR_TEMP);
-//			temperature =	temperature_sensor.value(0)*10-15848;
-			if (temperature < temperature_last - threshold*10 || temperature > temperature_last + threshold*10){
-				temperature_last=temperature;
-				temperature_event_handler(&resource_temperature);	
+			if(etimer_expired(&sht)){
+				temperature = -3960+sht11_sensor.value(SHT11_SENSOR_TEMP);
+	//			temperature =	temperature_sensor.value(0)*10-15848;
+				if (temperature < temperature_last - threshold || temperature > temperature_last + threshold){
+					temperature_last=temperature;
+					temperature_event_handler(&resource_temperature);	
+				}
+				etimer_set(&sht, CLOCK_SECOND * poll_time);
+			}
+			if (!registred &&etimer_expired(&rdpost)) {
+				static coap_packet_t post[1];
+				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
+
+				coap_set_header_uri_path(post,"/rd");
+				const char query[40];
+				uint8_t addr[8];
+		    rimeaddr_copy((rimeaddr_t *)&addr, &rimeaddr_node_addr);
+
+				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				coap_set_header_uri_query(&post,query); 	
+
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
 
 			}
-		etimer_set(&etimer, CLOCK_SECOND * poll_time);
+			if (etimer_expired(&rdput)) {
+				if(putcount < 30){
+					putcount++;
+					etimer_set(&rdput, 240*CLOCK_SECOND);
+					continue;
+				}
+				static coap_packet_t put[1];
+				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
+
+				coap_set_header_uri_path(put,loc);
+				const char query[40];
+
+				snprintf(query,39,"rt=\"%s\"",EPTYPE);
+				coap_set_header_uri_query(&put,query); 	
+
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+			}
 		
 		}
 	} /* while (1) */
