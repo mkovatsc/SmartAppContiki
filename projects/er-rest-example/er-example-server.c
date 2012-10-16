@@ -44,18 +44,18 @@
 
 
 /* Define which resources to include to meet memory constraints. */
-#define REST_RES_HELLO 1
+#define REST_RES_HELLO 0
 #define REST_RES_MIRROR 0 /* causes largest code size */
-#define REST_RES_CHUNKS 1
-#define REST_RES_SEPARATE 1
-#define REST_RES_PUSHING 1
-#define REST_RES_EVENT 1
-#define REST_RES_SUB 1
+#define REST_RES_CHUNKS 0
+#define REST_RES_SEPARATE 0
+#define REST_RES_PUSHING 0
+#define REST_RES_EVENT 0
+#define REST_RES_SUB 0
 #define REST_RES_LEDS 1
 #define REST_RES_TOGGLE 1
-#define REST_RES_LIGHT 1
+#define REST_RES_LIGHT 0
 #define REST_RES_BATTERY 1
-#define REST_RES_RADIO 1
+#define REST_RES_RADIO 0
 
 #define REST_RES_DEBUG 1
 
@@ -621,11 +621,11 @@ leds_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 /******************************************************************************/
 #if REST_RES_TOGGLE
 /* A simple actuator example. Toggles the red led */
-RESOURCE(toggle, METHOD_GET | METHOD_PUT | METHOD_POST, "actuators/toggle", "title=\"Red LED\";rt=\"Control\"");
+RESOURCE(toggle, METHOD_POST, "actuators/toggle", "title=\"LED\";rt=\"Control\"");
 void
 toggle_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  leds_toggle(LEDS_RED);
+  leds_toggle(LEDS_ALL);
 }
 #endif
 #endif /* PLATFORM_HAS_LEDS */
@@ -770,7 +770,7 @@ radio_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 #endif
 
 
-#if defined (REST_RES_DEBUG)
+#if REST_RES_DEBUG
 
 #define snprintf_P      snprintf
 #define PSTR
@@ -928,7 +928,7 @@ void debug_nbr_handler(void * request, void* response, uint8_t *buffer, uint16_t
   }
 
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, strlen(buffer));
+  REST.set_response_payload(response, buffer, strlen((char *)buffer));
 }
 
 RESOURCE(debug_rts, METHOD_GET, "debug/routes", "title=\"RPL info\"; ct=53");
@@ -945,7 +945,7 @@ void debug_rts_handler(void * request, void* response, uint8_t *buffer, uint16_t
   }
 
   REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-  REST.set_response_payload(response, buffer, strlen(buffer));
+  REST.set_response_payload(response, buffer, strlen((char *)buffer));
 }
 #endif
 
@@ -1027,7 +1027,7 @@ PROCESS_THREAD(rest_server_example, ev, data)
   SENSORS_ACTIVATE(radio_sensor);
   rest_activate_resource(&resource_radio);
 #endif
-#if defined (REST_RES_DEBUG)
+#if REST_RES_DEBUG
   rest_activate_resource(&resource_debug_ver);
   rest_activate_resource(&resource_debug_ch);
   rest_activate_resource(&resource_debug_nbr);
