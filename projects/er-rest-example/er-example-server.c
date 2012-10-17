@@ -51,13 +51,14 @@
 #define REST_RES_PUSHING 0
 #define REST_RES_EVENT 0
 #define REST_RES_SUB 0
-#define REST_RES_LEDS 1
-#define REST_RES_TOGGLE 1
+#define REST_RES_LEDS 0
+#define REST_RES_TOGGLE 0
 #define REST_RES_LIGHT 0
+#define REST_RES_TEMP 1
 #define REST_RES_BATTERY 1
 #define REST_RES_RADIO 0
 
-#define REST_RES_DEBUG 1
+#define REST_RES_DEBUG 0
 
 
 
@@ -674,6 +675,46 @@ light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 #endif /* PLATFORM_HAS_LIGHT */
 
 /******************************************************************************/
+#if REST_RES_TEMP && defined (PLATFORM_HAS_SHT11)
+
+static int16_t temperature=0;
+static int16_t temperature_last=0;
+
+#define TEMP_THRESHOLD  50
+
+PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"ucum:cel\"", 30*CLOCK_SECOND);
+void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  snprintf((char*)buffer, preferred_size, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, buffer, strlen((char*)buffer));
+}
+
+void temperature_periodic_handler(resource_t *r)
+{
+  static uint32_t event_i = 0;
+  char content[6];
+
+  temperature = -3960+sht11_sensor.value(SHT11_SENSOR_TEMP);
+  // temperature = temperature_sensor.value(0)*10-15848;
+  if (temperature < temperature_last - TEMP_THRESHOLD || temperature > temperature_last + TEMP_THRESHOLD)
+  {
+    temperature_last = temperature;
+
+    ++event_i;
+
+    coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+    coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
+    coap_set_payload(notification, content, snprintf(content, 6, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
+
+    REST.notify_subscribers(r, event_i, notification);
+  }
+
+}
+#endif /* PLATFORM_HAS_SHT11 */
+
+
+/******************************************************************************/
 #if REST_RES_BATTERY && defined (PLATFORM_HAS_BATTERY)
 /* A simple getter example. Returns the reading from light sensor with a simple etag */
 RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery status\";rt=\"Battery\"");
@@ -1018,6 +1059,9 @@ PROCESS_THREAD(rest_server_example, ev, data)
 #if defined (PLATFORM_HAS_LIGHT) && REST_RES_LIGHT
   SENSORS_ACTIVATE(light_sensor);
   rest_activate_resource(&resource_light);
+#endif
+#if defined (PLATFORM_HAS_SHT11) && REST_RES_TEMP
+  rest_activate_periodic_resource(&periodic_resource_temperature);
 #endif
 #if defined (PLATFORM_HAS_BATTERY) && REST_RES_BATTERY
   SENSORS_ACTIVATE(battery_sensor);
