@@ -63,7 +63,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.8.3"
+#define VERSION "0.9.4"
 #define EPTYPE "Ball-in-a-Tube"
 
 
@@ -78,17 +78,17 @@ SENSORS(&tilt_sensor, &radio_sensor);
 /*---------------------------------------------------------------------------*/
 static uip_ip6addr_t rd_ipaddr;
 
-static struct	etimer rdpost;
-static struct etimer rdput;
+static struct etimer event_gen;
+static struct	stimer rdpost;
+static struct stimer rdput;
 static char * location;
 static char loc[40];
 static uint8_t registred = 0;
-static uint8_t putcount;
 
 static int16_t rssi_value[5];
 static int16_t rssi_count=0;
 static int16_t rssi_position=0;
-#define RSSI_AVG (rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2]+rssi_value[3]+rssi_value[4])/rssi_count:0
+static int16_t rssi_avg=0;
 
 static unsigned long tilt_count;
 
@@ -179,7 +179,7 @@ void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 {
 
 	
-	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),RSSI_AVG);
+	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),rssi_avg);
  	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
@@ -194,11 +194,14 @@ void heartbeat_periodic_handler(resource_t *r){
 	if(rssi_count<5){
 		rssi_count++;
 	}
-	rssi_position = (rssi_position++) % 5;
+	rssi_avg =(rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2]+rssi_value[3]+rssi_value[4])/rssi_count:0;
+
+	rssi_position++;
+	rssi_position = (rssi_position) % 5;
 
 	coap_packet_t notification[1];
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
-	coap_set_payload(notification, content, snprintf_P(content, sizeof(content), PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),RSSI_AVG));
+	coap_set_payload(notification, content, snprintf_P(content, sizeof(content), PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),rssi_avg));
 
 	REST.notify_subscribers(r, event_counter, notification);
 
@@ -213,14 +216,7 @@ void rd_post_response_handler(void *response){
 		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
 		registred=1;
-		putcount=30;
-		etimer_set(&rdput, 10*CLOCK_SECOND);
-	}
-	else if (((coap_packet_t *) response)->code == BAD_REQUEST_4_00) {
-		printf("BAD REQUEST ANSWERING\n");
-	}
-	else{
-			etimer_set(&rdpost, CLOCK_SECOND *60);
+		stimer_set(&rdput, 60);
 	}
 }
 
@@ -228,14 +224,15 @@ void rd_put_response_handler(void *response){
 
 	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
 		registred=0;
-		etimer_set(&rdpost, CLOCK_SECOND *10);
+		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Statsu at RD\n");
-		putcount=0;
+		printf("Updated Status at RD\n");
+		stimer_set(&rdput, 3600);
 	}
 	
 }
+
 
 PROCESS_THREAD(coap_process, ev, data)
 {
@@ -256,7 +253,8 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
-	etimer_set(&rdpost, 30*CLOCK_SECOND);
+	etimer_set(&event_gen, 5*CLOCK_SECOND);
+	stimer_set(&rdpost, 60);
 
 	while(1) {
 		PROCESS_WAIT_EVENT();
@@ -265,7 +263,11 @@ PROCESS_THREAD(coap_process, ev, data)
 			event_tilt_handler(&resource_tilt);
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
-			if (!registred &&etimer_expired(&rdpost)) {
+				if(etimer_expired(&event_gen)) {
+					etimer_set(&event_gen, 5 * CLOCK_SECOND);
+				}	
+		}
+		if (!registred && stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -278,14 +280,10 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				printf("send post\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
+				stimer_set(&rdpost, 300);
 
-			}
-			if (etimer_expired(&rdput)) {
-				if(putcount < 30){
-					putcount++;
-					etimer_set(&rdput, 240*CLOCK_SECOND);
-					continue;
-				}
+		}
+		if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -297,8 +295,9 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				printf("send put\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+				stimer_set(&rdput, 3600);
 			}
-		}
+	
 	}
 
 	PROCESS_END();

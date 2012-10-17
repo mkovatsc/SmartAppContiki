@@ -72,3 +72,4 @@ void COM_send_wheel_event(int8_t t);
 void COM_send_mode_event(int8_t m);
 void COM_send_battery_event(uint16_t b);
 void COM_send_temperature_event(uint16_t t);
+void COM_send_valve_event(uint8_t t);

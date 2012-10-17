@@ -49,7 +49,7 @@ uint8_t CTL_temp_wanted=0;   // actual desired temperature
 uint8_t CTL_temp_wanted_last=0xff;   // desired temperature value used for last PID control
 uint8_t CTL_temp_auto=0;   // actual desired temperature by timer
 uint8_t CTL_valve_wanted=0;
-
+uint8_t CTL_valve_old_wanted=0;
 uint8_t CTL_mode_changed=0;
 uint8_t CTL_mode_changed_timer=0;
 
@@ -212,6 +212,10 @@ UPDATE_NOW:
 					new_valve = pid_Controller(calc_temp(temp),temp_average,valveHistory[0],updateNow);
 				}
 				CTL_valve_wanted = new_valve;
+			}
+			if(new_valve != CTL_valve_old_wanted){
+				CTL_valve_old_wanted = new_valve;
+				COM_send_valve_event(new_valve);
 			}
 			CTL_temp_wanted_last=temp;
 			{	

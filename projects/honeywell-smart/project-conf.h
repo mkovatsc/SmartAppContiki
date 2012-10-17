@@ -34,9 +34,10 @@
 
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS 6
+#define COAP_MAX_OPEN_TRANSACTIONS 9
+
 #undef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS         6
+#define COAP_MAX_OBSERVERS         8
 
 #undef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE     128

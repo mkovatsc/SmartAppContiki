@@ -381,6 +381,19 @@ void COM_send_error_event(uint8_t e){
 	COM_flush();
 }
 
+/*!
+ *******************************************************************************
+ *  \brief Event Valve Changed *
+ *  \note
+ ******************************************************************************/
+void COM_send_valve_event(uint8_t e){
+	COM_putchar('E');
+	COM_putchar('V');
+	COM_putchar(':');
+	print_decXX(e);
+	COM_putchar('\n');
+	COM_flush();
+}
 
 /*!
  *******************************************************************************
