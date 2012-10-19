@@ -34,6 +34,8 @@
 #pragma once
 
 extern uint8_t CTL_temp_wanted; //!< wanted temperature
+extern uint8_t CTL_temp_wanted_auto;
+extern uint8_t CTL_temp_wanted_manual; 
 extern uint8_t CTL_valve_wanted; //!< wanted valve (just valid in the valve mode)
 extern uint8_t CTL_temp_wanted_last;   // desired temperatur value used for last PID control
 extern uint8_t CTL_temp_auto;
@@ -61,6 +63,8 @@ extern uint8_t valveHistory[VALVE_HISTORY_LEN];
 #define CTL_update_temp_auto() (CTL_temp_auto=0)
 #define CTL_test_auto() (CTL_mode_auto && (CTL_temp_auto==CTL_temp_wanted))
 #define CTL_set_temp(t) (PID_force_update = 10, CTL_temp_wanted=t)
+#define CTL_set_temp_auto(t) (PID_force_update = 10, CTL_temp_wanted_auto=t)
+#define CTL_set_temp_manual(t) (PID_force_update = 10, CTL_temp_wanted_manual=t)
 
 void CTL_update(bool minute_ch);
 void CTL_temp_change_inc (int8_t ch);

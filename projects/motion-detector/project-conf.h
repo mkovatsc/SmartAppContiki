@@ -34,9 +34,9 @@
 
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS 6
+#define COAP_MAX_OPEN_TRANSACTIONS 9
 #undef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS         6
+#define COAP_MAX_OBSERVERS         COAP_MAX_OPEN_TRANSACTIONS-1
 
 #undef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE     128
@@ -64,12 +64,15 @@
 #endif
 
 #undef RF_CHANNEL
-#define RF_CHANNEL 21
+#define RF_CHANNEL 24
 
 #undef IEEE802154_CONF_PANID
 #define IEEE802154_CONF_PANID 0xBEEF
 
 #undef EUI64_ADDRESS
-#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2b}
+#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x39}
+
+#define COAP_RD_SET_IPV6(ipaddr)	uip_ip6addr(ipaddr, 0x2001, 0x620, 0x8, 0x35db, 0, 0, 0, 0x1f)
+#define COAP_RD_PORT							UIP_HTONS(5683)
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

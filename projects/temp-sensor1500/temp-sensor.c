@@ -59,7 +59,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.9.3"
+#define VERSION "0.10.3"
 #define EPTYPE "SteelHead"
 
 
@@ -84,7 +84,7 @@ clock_time_t last_temperature_reading;
 
 static int16_t linear_correction = 100;
 static int16_t offset_correction = 0;
-static int16_t threshold = 50;
+static int16_t threshold = 20;
 static uint8_t poll_time = 5;
 
 static int16_t rssi_value[5];
@@ -160,7 +160,7 @@ void temperature_event_handler(resource_t *r) {
 }
 
 /*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"temperature\"");
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"threshold temperature\"");
 void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -477,7 +477,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",30*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),rssi_avg);
@@ -543,7 +543,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	SENSORS_ACTIVATE(radio_sensor);
 
-	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
+	COAP_RD_SET_IPV6(&rd_ipaddr);
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
@@ -586,7 +586,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&post,query); 	
 
 				printf("send post\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
 		}
@@ -601,7 +601,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&put,query); 	
 
 				printf("send put\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 			
 		}

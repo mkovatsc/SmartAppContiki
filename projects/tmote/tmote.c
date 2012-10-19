@@ -59,14 +59,7 @@
 #include "dev/radio-sensor.h"
 #include "dev/sht11-sensor.h"
 
-static uip_ip6addr_t rd_ipaddr;
-
 static struct etimer sht;
-static struct	stimer rdpost;
-static struct stimer rdput;
-static char * location;
-static char loc[40];
-static uint8_t registred = 0;
 
 static int16_t rssi_value[3];
 static int16_t rssi_count=0;
@@ -75,7 +68,7 @@ static int16_t rssi_avg=0;
 
 static int16_t temperature=0;
 static int16_t temperature_last=0;
-static int16_t threshold = 50;
+static int16_t threshold = 20;
 static uint8_t poll_time=5;
 
 /*--------------------COAP Resources-----------------------------------------------------------*/
@@ -137,7 +130,7 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 }
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",30*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf((char*)buffer, preferred_size, "version:%s\nuptime:%lu\nrssi:%i",VERSION,clock_seconds(),rssi_avg);
@@ -166,39 +159,12 @@ void heartbeat_periodic_handler(resource_t *r){
 
 }
 
-/*--------- RD MSG ACK Handle-------------------------------------*/
-
-void rd_post_response_handler(void *response){
-
-	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
-		coap_get_header_location_path(response, &location);
-		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
-		registred=1;
-		stimer_set(&rdput, 60);
-	}
-}
-
-void rd_put_response_handler(void *response){
-
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
-		registred=0;
-		stimer_set(&rdpost, 300);
-	}
-	else{
-		printf("Updated Status at RD\n");
-		stimer_set(&rdput, 3600);
-	}
-}
-
 PROCESS(tmote_temperature, "Tmote Sky Temperature Sensor");
 AUTOSTART_PROCESSES(&tmote_temperature);
 
 PROCESS_THREAD(tmote_temperature, ev, data)
 {
 	PROCESS_BEGIN();
-
-	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
 
 	/* if static routes are used rather than RPL */
 	#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET) && !defined (CONTIKI_TARGET_NATIVE)
@@ -216,8 +182,7 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 	rest_activate_resource(&resource_threshold);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 	
-	stimer_set(&rdpost, 60);
-	etimer_set(&sht, 10*CLOCK_SECOND);
+	etimer_set(&sht, 30*CLOCK_SECOND);
 
   /* Define application-specific events here. */
 	while(1) {
@@ -232,37 +197,6 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 				etimer_set(&sht, CLOCK_SECOND * poll_time);
 			}
 		}
-		if (!registred && stimer_expired(&rdpost)) {
-				static coap_packet_t post[1];
-				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
-
-				coap_set_header_uri_path(post,"/rd");
-				const char query[40];
-				uint8_t addr[8];
-		    rimeaddr_copy((rimeaddr_t *)&addr, &rimeaddr_node_addr);
-
-				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
-				coap_set_header_uri_query(&post,query); 	
-
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
-				stimer_set(&rdpost, 300);
-
-		}
-		if (registred && stimer_expired(&rdput)) {
-				static coap_packet_t put[1];
-				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
-
-				coap_set_header_uri_path(put,loc);
-				const char query[40];
-
-				snprintf(query,39,"rt=\"%s\"",EPTYPE);
-				coap_set_header_uri_query(&put,query); 	
-
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
-				stimer_set(&rdput, 3600);
-		}
-		
-		
 	} /* while (1) */
 
 	PROCESS_END();

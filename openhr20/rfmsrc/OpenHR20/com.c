@@ -787,7 +787,7 @@ void COM_command_parse (void) {
 									break;
 								}
 								CTL_change_mode(auto_target);
-								CTL_set_temp(com_hex[0]);
+								CTL_set_temp_auto(com_hex[0]);
 								COM_putchar('1');
 								break;
 							}

@@ -45,7 +45,9 @@
 #include "keyboard.h"
 
 // global Vars for default values: temperatures and speed
-uint8_t CTL_temp_wanted=0;   // actual desired temperature
+uint8_t CTL_temp_wanted=0x22;   // actual desired temperature
+uint8_t CTL_temp_wanted_manual=0x22;
+uint8_t CTL_temp_wanted_auto=0x22;
 uint8_t CTL_temp_wanted_last=0xff;   // desired temperature value used for last PID control
 uint8_t CTL_temp_auto=0;   // actual desired temperature by timer
 uint8_t CTL_valve_wanted=0;
@@ -184,6 +186,12 @@ void CTL_update(bool minute_ch) {
 	}
 	else if ((PID_update_timeout == 0)||(PID_force_update==0)) {
 		uint8_t temp;
+		if (CTL_mode_auto == auto_target){
+			CTL_temp_wanted = CTL_temp_wanted_auto;
+		}
+		else if (CTL_mode_auto == manual_target){
+			CTL_temp_wanted = CTL_temp_wanted_manual;
+		}
 		if (((CTL_temp_wanted<TEMP_MIN) || mode_window()) ) {
 			temp = TEMP_MIN;	// frost protection to TEMP_MIN 
 		} else {
@@ -267,12 +275,13 @@ UPDATE_NOW:
  *  \param ch relative change
  ******************************************************************************/
 void CTL_temp_change_inc (int8_t ch) {
-	CTL_temp_wanted+=ch;
-	if (CTL_temp_wanted<TEMP_MIN-1) {
-		CTL_temp_wanted= TEMP_MIN-1;
-	} else if (CTL_temp_wanted>TEMP_MAX+1) {
-		CTL_temp_wanted= TEMP_MAX+1;
+	CTL_temp_wanted_manual+=ch;
+	if (CTL_temp_wanted_manual<TEMP_MIN-1) {
+		CTL_temp_wanted_manual= TEMP_MIN-1;
+	} else if (CTL_temp_wanted_manual>TEMP_MAX+1) {
+		CTL_temp_wanted_manual= TEMP_MAX+1;
 	}
+	CTL_temp_wanted = CTL_temp_wanted_manual;
 	CTL_mode_window = 0;
 	PID_force_update = 9;
 }
@@ -316,11 +325,11 @@ void CTL_change_mode(int8_t m) {
 
 		if (CTL_mode_auto >=2){ 	
 			//Was in auto, go into manual mode
-			CTL_mode_auto = manual_timers;
+			CTL_mode_auto = manual_target;
 		}
 		else{
 			//Was in manual mode, go into auto
-			CTL_mode_auto = auto_timers;
+			CTL_mode_auto = auto_target;
 		}
 		PID_force_update = 9;
 		CTL_mode_changed= 1;
@@ -362,6 +371,12 @@ void CTL_change_mode(int8_t m) {
 		CTL_temp_wanted=(CTL_temp_auto=RTC_ActualTimerTemperature(false));
 		// CTL_temp_auto=0;  //refresh wanted temperature in next step
 	}	
+	if(CTL_mode_auto == manual_target){
+		CTL_temp_wanted = CTL_temp_wanted_manual;
+	}
+	else if( CTL_mode_auto == auto_target){
+		CTL_temp_wanted = CTL_temp_wanted_auto;
+	}
 	CTL_mode_window = 0;
 }
 

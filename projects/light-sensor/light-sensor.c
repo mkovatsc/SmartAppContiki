@@ -61,7 +61,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.9.3"
+#define VERSION "0.10.3"
 #define EPTYPE "LightSensor"
 
 
@@ -233,7 +233,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",30*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -304,7 +304,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	SENSORS_ACTIVATE(radio_sensor);
 
-	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);
+	COAP_RD_SET_IPV6(&rd_ipaddr);
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
@@ -340,7 +340,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&post,query); 	
 
 				printf("send post\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
 		}
@@ -355,7 +355,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&put,query); 	
 
 				printf("send put\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 		}
 		

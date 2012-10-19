@@ -71,7 +71,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.9.5"
+#define VERSION "0.10.6"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -122,6 +122,7 @@ static int16_t rssi_avg;
 
 /* EEPROM variables */
 uint16_t ee_error_ip[8] EEMEM;
+uint16_t ee_error_port EEMEM;
 char ee_error_uri[50] EEMEM;
 char ee_identifier[50] EEMEM;
 
@@ -149,6 +150,7 @@ static process_event_t error_event;
 static uint8_t error_active = 0;
 
 uint16_t error_ip[8];
+uint16_t error_port;
 char error_uri[50];
 char identifier[50];
 
@@ -242,7 +244,7 @@ typedef struct application_separate_get_valve_wanted_store {
 
 static uint8_t separate_get_valve_wanted_active = 0;
 static application_separate_get_valve_wanted_store_t separate_get_valve_wanted_store[1];
-
+/*
 typedef struct application_separate_get_predefined_store {
 	coap_separate_t request_metadata;
 	uint8_t index;
@@ -262,7 +264,7 @@ typedef struct application_separate_get_slots_store {
 
 static uint8_t separate_get_slots_active = 0;
 static application_separate_get_slots_store_t separate_get_slots_store[1];
-
+*/
 
 typedef struct application_separate_get_threshold_temp_store {
 	coap_separate_t request_metadata;
@@ -291,7 +293,7 @@ static int uart_get_char(unsigned char c)
 	}
 	return 1;
 }
-
+/*
 //fill in the cache
 static void parseD(char * data) {
 	//D: d5 01.01.10 14:20:07 AV V: 30 I: 2287 S: 1700 B: 2707 Is: 00000000 Ib: 00 Ic: 28 Ie: 17 X
@@ -345,6 +347,7 @@ static void parseD(char * data) {
 
 	}
 }
+*/
 
 PROCESS_THREAD(honeywell_process, ev, data)
 {
@@ -382,6 +385,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	eeprom_read_block(&error_uri, ee_error_uri, 50);
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
+	error_port = eeprom_read_word(&ee_error_port);
 
 	int i;
 	for(i=0;i<8;i++){
@@ -403,7 +407,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 					switch (buf[0]){
 						case 'D':
-							parseD(buf);
+							//parseD(buf);
 							break;
 
 						case 'S':
@@ -511,7 +515,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									}
 									process_post(&coap_process, get_valve_wanted_response_event, NULL);
 									break;
-								case 'P':
+						/*		case 'P':
 									//Predefined Temperature
 									if(buf[2]=='1'){
 										int temp;
@@ -555,6 +559,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									}
 									process_post(&coap_process, get_slots_response_event, NULL);
 									break;	
+								*/
+						
 								case 'D':
 									//Temperature Threshold
 									if(buf[2]=='1'){
@@ -703,7 +709,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 
 /*--------- Timers --------------------------------------------------------------*/
-
+/*
 static char * getEnergyLevelString(int mode){
 	char * string;
 	switch(mode){
@@ -800,7 +806,7 @@ static void handleTimer(int day, void * request, void* response, uint8_t *buffer
 					else{
 						if(isdigit(time[0]) && isdigit(time[1]) && time[2]==':' && isdigit(time[3]) && isdigit(time[4]) ){ //digit checks
 							int hour = atoi(&time[0]);
-							/*the time string is not NULL terminated */
+							//the time string is not NULL terminated
 							char minutes[3];
 							strncpy(minutes, &time[3], 2);
 							minutes[2] = 0;
@@ -868,7 +874,7 @@ void slots_finalize_handler(){
 		char buffer[30];
 		coap_transaction_t *transaction = NULL;
 		if( (transaction = coap_new_transaction(separate_get_slots_store->request_metadata.mid, &separate_get_slots_store->request_metadata.addr, separate_get_slots_store->request_metadata.port))) {
-			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			coap_packet_t response[1]; // This way the packet can be treated as pointer as usual. 
 			if(separate_get_slots_store->error) {
 				coap_separate_resume(response, &separate_get_slots_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
@@ -893,9 +899,6 @@ void slots_finalize_handler(){
 		}
 		else {
 			separate_get_slots_active = 0;
-			/*
-			 * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
-			 */
 		}
 	}
 
@@ -935,9 +938,11 @@ void day7timer_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 
 
 
+*/
+
 
 /*--------- Predefined Temperatures ---------------------------------------------*/
-
+/*
 static void handle_temperature(int temperature, int index, void * request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset){
 	if (REST.get_method_type(request)==METHOD_GET){
 
@@ -1025,7 +1030,7 @@ void predefined_finalize_handler() {
 		char buffer[10];
 		coap_transaction_t *transaction = NULL;
 		if( (transaction = coap_new_transaction(separate_get_predefined_store->request_metadata.mid, &separate_get_predefined_store->request_metadata.addr, separate_get_predefined_store->request_metadata.port))) {
-			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			coap_packet_t response[1]; // This way the packet can be treated as pointer as usual. 
 			if(separate_get_predefined_store->error) {
 				coap_separate_resume(response, &separate_get_predefined_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
@@ -1058,9 +1063,6 @@ void predefined_finalize_handler() {
 		}
 		else {
 			separate_get_predefined_active = 0;
-			/*
-			 * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
-			 */
 		}
 	}
 }
@@ -1083,6 +1085,7 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 	handle_temperature(poll_data.supercomfort_temperature, 4, request, response, buffer, preferred_size, offset);
 }
 
+*/
 
 
 /*--------- Temperature ---------------------------------------------------------*/
@@ -1705,7 +1708,7 @@ mode_event_handler(resource_t *r)
 
 /*---- wheel event -----------------------------------------------------*/
 
-EVENT_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"number\"");
+EVENT_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"wheel\"");
 
 void
 wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -2003,14 +2006,17 @@ void error_address_handler(void* request, void* response, uint8_t *buffer, uint1
 
 		len = coap_get_payload(request, &string);
 		uint16_t ip[8];
+		uint16_t port;
 		char uri[50];
-		if (sscanf(string,"%*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %s", &ip[0],&ip[1],&ip[2],&ip[3],&ip[4],&ip[5],&ip[6],&ip[7],uri)==9){
+		if (sscanf(string,"%*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %x %*c %*c %x %s", &ip[0],&ip[1],&ip[2],&ip[3],&ip[4],&ip[5],&ip[6],&ip[7], &port,uri)==10){
 			int i;
 			for (i=0; i<8;i++){
 				error_ip[i]=ip[i];
 				eeprom_write_word(&ee_error_ip[i],ip[i]);
 
 			}
+			error_port = port;
+			eeprom_write_word(&ee_error_port,port);
 			strncpy(error_uri,uri,50);
 			eeprom_write_block(uri,ee_error_uri,50);
 		}
@@ -2169,7 +2175,7 @@ void error_msg_response_handler(void *response){
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",30*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -2239,7 +2245,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	//activate the resources
 	SENSORS_ACTIVATE(radio_sensor);
 
-	uip_ip6addr(&rd_ipaddr,0x2001,0x620,0x8,0x101f,0x0,0x0,0x0,0x1);	
+	COAP_RD_SET_IPV6(&rd_ipaddr);
 	rest_activate_resource(&resource_date);
 
 	rest_activate_resource(&resource_time);
@@ -2311,13 +2317,13 @@ PROCESS_THREAD(coap_process, ev, data)
 		}
 		else if (ev == get_valve_wanted_response_event){
 			valve_wanted_finalize_handler();
-		}
+		}/*
 		else if (ev == get_predefined_response_event){
 			predefined_finalize_handler();
 		}
 		else if (ev == get_slots_response_event){
 			slots_finalize_handler();
-		}
+		}*/
 		else if (ev == set_response_event){
 			set_finalize_handler();
 		}
@@ -2355,7 +2361,7 @@ PROCESS_THREAD(coap_process, ev, data)
 			}
 			coap_set_payload(post, buffer, strlen(buffer));
 
-			COAP_BLOCKING_REQUEST(&error_server_ipaddr, REMOTE_PORT, post, error_msg_response_handler);
+			COAP_BLOCKING_REQUEST(&error_server_ipaddr, UIP_HTONS(error_port), post, error_msg_response_handler);
 
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
@@ -2375,7 +2381,8 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&post,query); 	
 
 				printf("send post\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , post, rd_post_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
+
 				stimer_set(&rdpost, 300);
 
 		}
@@ -2390,7 +2397,8 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_set_header_uri_query(&put,query); 	
 
 				printf("send put\n");
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, UIP_HTONS(5683) , put, rd_put_response_handler);
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
+
 				stimer_set(&rdput, 3600);
 		}
 	
