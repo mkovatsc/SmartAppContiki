@@ -71,7 +71,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.10.6"
+#define VERSION "0.10.7"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -126,6 +126,7 @@ uint16_t ee_error_port EEMEM;
 char ee_error_uri[50] EEMEM;
 char ee_identifier[50] EEMEM;
 
+static char last_setting[20];
 
 /* events for observing/separate responses */
 static process_event_t changed_valve_event;
@@ -1225,9 +1226,11 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
+				snprintf_P(last_setting, strlen(last_setting), PSTR("ST%02x\n"),value/5);
 				printf_P(PSTR("ST%02x\n"),value/5);
 			}
 			else {
+				printf("%s",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1338,9 +1341,11 @@ void threshold_temp_handler(void* request, void* response, uint8_t *buffer, uint
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
+				snprintf_P(last_setting, strlen(last_setting), PSTR("SD%02x\n"),value);
 				printf_P(PSTR("SD%02x\n"),value);
 			}
 			else {
+				printf("%s",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1437,8 +1442,10 @@ void threshold_bat_handler(void* request, void* response, uint8_t *buffer, uint1
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
 				printf_P(PSTR("SA%02x\n"),thresh);
+				snprintf_P(last_setting, strlen(last_setting), PSTR("SA%02x\n"),thresh);
 			}
 			else {
+				printf("%s",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1541,9 +1548,11 @@ void valve_wanted_handler(void* request, void* response, uint8_t *buffer, uint16
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
+				snprintf_P(last_setting, strlen(last_setting), PSTR("SV%02x\n"),new_valve);
 				printf_P(PSTR("SV%02x\n"),new_valve);
 			}
 			else {
+				printf("%s",last_setting);
 				coap_separate_reject();
 			}
 		}
@@ -1654,9 +1663,11 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
+				snprintf_P(last_setting, strlen(last_setting), PSTR("%s"),cmd);
 				printf("%s",cmd);
 			}
 			else {
+				printf("%s",last_setting);
 				coap_separate_reject();
 			}
 		}
@@ -1790,9 +1801,11 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 				if (!separate_set_active){
 					coap_separate_accept(request, &separate_set_store->request_metadata);
 					separate_set_active = 1;
+				snprintf_P(last_setting, strlen(last_setting), PSTR("SY%02x%02x%02x\n"),year,month,day);
 					printf_P(PSTR("SY%02x%02x%02x\n"),year,month,day);
 				}
 				else {
+					printf("%s",last_setting);
 					coap_separate_reject();
 				}
 			}
@@ -1890,9 +1903,11 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 					coap_separate_accept(request, &separate_set_store->request_metadata);
 					separate_set_active = 1;
+					snprintf_P(last_setting, strlen(last_setting), PSTR("SH%02x%02x%02x\n"),hour,minute,second);
 					printf_P(PSTR("SH%02x%02x%02x\n"),hour,minute,second);
 				}
 				else {
+					printf("%s", last_setting);
 					coap_separate_reject();
 				}
 			}
@@ -2175,7 +2190,7 @@ void error_msg_response_handler(void *response){
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
