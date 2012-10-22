@@ -382,6 +382,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 	poll_data.mode=2;
 	poll_data.threshold_battery = 100;
+	poll_data.valve_is = 30;
 
 	eeprom_read_block(&error_uri, ee_error_uri, 50);
 	eeprom_read_block(&identifier, ee_identifier, 50);
@@ -635,7 +636,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 									break;
 
 								case 'V':
-									//Battery Value
+									//Valve Value
 									poll_data.valve_is = atoi(&buf[3]);
 									process_post(&coap_process, changed_valve_event, NULL);
 									break;
@@ -1226,11 +1227,11 @@ void target_handler(void* request, void* response, uint8_t *buffer, uint16_t pre
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
-				snprintf_P(last_setting, strlen(last_setting), PSTR("ST%02x\n"),value/5);
+				snprintf_P(last_setting, 20, PSTR("ST%02x"),value/5);
 				printf_P(PSTR("ST%02x\n"),value/5);
 			}
 			else {
-				printf("%s",last_setting);
+				printf("%s\n",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1341,11 +1342,11 @@ void threshold_temp_handler(void* request, void* response, uint8_t *buffer, uint
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
-				snprintf_P(last_setting, strlen(last_setting), PSTR("SD%02x\n"),value);
+				snprintf_P(*last_setting, strlen(last_setting), PSTR("SD%02x"),value);
 				printf_P(PSTR("SD%02x\n"),value);
 			}
 			else {
-				printf("%s",last_setting);
+				printf("%s\n",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1442,10 +1443,10 @@ void threshold_bat_handler(void* request, void* response, uint8_t *buffer, uint1
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
 				printf_P(PSTR("SA%02x\n"),thresh);
-				snprintf_P(last_setting, strlen(last_setting), PSTR("SA%02x\n"),thresh);
+				snprintf_P(last_setting, 20, PSTR("SA%02x"),thresh);
 			}
 			else {
-				printf("%s",last_setting);
+				printf("%s\n",last_setting);
 				coap_separate_reject();
 			}
 
@@ -1548,11 +1549,11 @@ void valve_wanted_handler(void* request, void* response, uint8_t *buffer, uint16
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
-				snprintf_P(last_setting, strlen(last_setting), PSTR("SV%02x\n"),new_valve);
+				snprintf_P(last_setting, 20, PSTR("SV%02x"),new_valve);
 				printf_P(PSTR("SV%02x\n"),new_valve);
 			}
 			else {
-				printf("%s",last_setting);
+				printf("%s\n",last_setting);
 				coap_separate_reject();
 			}
 		}
@@ -1663,11 +1664,11 @@ mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 			if (!separate_set_active){
 				coap_separate_accept(request, &separate_set_store->request_metadata);
 				separate_set_active = 1;
-				snprintf_P(last_setting, strlen(last_setting), PSTR("%s"),cmd);
+				snprintf_P(last_setting, 20, PSTR("%s"),cmd);
 				printf("%s",cmd);
 			}
 			else {
-				printf("%s",last_setting);
+				printf("%s\n",last_setting);
 				coap_separate_reject();
 			}
 		}
@@ -1801,11 +1802,11 @@ void date_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 				if (!separate_set_active){
 					coap_separate_accept(request, &separate_set_store->request_metadata);
 					separate_set_active = 1;
-				snprintf_P(last_setting, strlen(last_setting), PSTR("SY%02x%02x%02x\n"),year,month,day);
+					snprintf_P(last_setting, 20, PSTR("SY%02x%02x%02x"),year,month,day);
 					printf_P(PSTR("SY%02x%02x%02x\n"),year,month,day);
 				}
 				else {
-					printf("%s",last_setting);
+					printf("%s\n",last_setting);
 					coap_separate_reject();
 				}
 			}
@@ -1903,7 +1904,7 @@ void time_handler(void* request, void* response, uint8_t *buffer, uint16_t prefe
 
 					coap_separate_accept(request, &separate_set_store->request_metadata);
 					separate_set_active = 1;
-					snprintf_P(last_setting, strlen(last_setting), PSTR("SH%02x%02x%02x\n"),hour,minute,second);
+					snprintf_P(last_setting, 20, PSTR("SH%02x%02x%02x\n"),hour,minute,second);
 					printf_P(PSTR("SH%02x%02x%02x\n"),hour,minute,second);
 				}
 				else {
@@ -1999,7 +2000,7 @@ void set_finalize_handler() {
 
 /*--------- Error Address ------------------------------------------------------------*/
 
-RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";ct=0;rt=\"string\"");
+RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";ct=0;rt=\"uri\"");
 void error_address_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -2055,7 +2056,7 @@ void error_address_handler(void* request, void* response, uint8_t *buffer, uint1
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"string\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -2139,16 +2140,16 @@ void error_event_handler(resource_t *r) {
 		int p;
 		p=0;
 		if (error_active & ERROR_MOTOR) {
-			p+=snprintf_P(content+p, 4, PSTR("E3\n"));
+			p+=snprintf_P(content+p, 4, PSTR("E3"));
 		}
 		if (error_active & ERROR_MONTAGE) {
-			p += snprintf_P(content+p, 4, PSTR("E2\n"));
+			p += snprintf_P(content+p, 4, PSTR("E2"));
 		}
 		if (error_active & BATT_LOW){
-			p += snprintf_P(content+p, 15, PSTR("Battery empty\n"));
+			p += snprintf_P(content+p, 15, PSTR("Battery empty"));
 		}
 		else if( error_active & BATT_WARNING) {
-			p += snprintf_P(content+p, 15, PSTR("Battery low\n"));
+			p += snprintf_P(content+p, 15, PSTR("Battery low"));
 		}
 	}
 
@@ -2194,7 +2195,7 @@ PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\"
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
-	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),rssi_avg);
+	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s,uptime:%lu,rssi:%i"),VERSION,clock_seconds(),rssi_avg);
  	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
@@ -2216,7 +2217,7 @@ void heartbeat_periodic_handler(resource_t *r){
 
 	coap_packet_t notification[1];
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
-	coap_set_payload(notification, content, snprintf_P(content, sizeof(content), PSTR("version:%s\nuptime:%lu\nrssi:%i"),VERSION,clock_seconds(),rssi_avg));
+	coap_set_payload(notification, content, snprintf_P(content, sizeof(content), PSTR("version:%s,uptime:%lu,rssi:%i"),VERSION,clock_seconds(),rssi_avg));
 
 	REST.notify_subscribers(r, event_counter, notification);
 

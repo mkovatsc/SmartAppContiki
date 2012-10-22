@@ -149,7 +149,7 @@ void RS_Init(void)
 	
 	// Baudrate
 	//long ubrr_val = ((F_CPU)/(baud*8L)-1);
-	uint16_t ubrr_val = ((F_CPU)/(COM_BAUD_RATE*8L)-4);
+	uint16_t ubrr_val = ((F_CPU)/(COM_BAUD_RATE*8L)-3);
  
 	#ifdef _AVR_IOM169P_H_
 		UCSR0A = _BV(U2X0);
