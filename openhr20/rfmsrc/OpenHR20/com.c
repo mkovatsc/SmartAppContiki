@@ -331,7 +331,7 @@ void COM_send_mode_event(int8_t m){
 	COM_putchar('E');
 	COM_putchar('M');
 	COM_putchar(':');
-	print_decXX(m);
+	print_decXXX(m);
 	COM_putchar('\n');
 	COM_flush();
 }
@@ -951,6 +951,7 @@ void COM_command_parse (void) {
 								COM_putchar('1');	
 								COM_putchar(':');	
 								print_decXXXX(bat_average);
+								break;
 							}
 						case 'T':
 							{
@@ -958,6 +959,7 @@ void COM_command_parse (void) {
 								COM_putchar('1');	
 								COM_putchar(':');	
 								print_decXXXX(calc_temp(CTL_temp_wanted_last));
+								break;
 							}
 						case 'V':	
 							{
@@ -965,6 +967,7 @@ void COM_command_parse (void) {
 								COM_putchar('1');	
 								COM_putchar(':');	
 								print_decXX(valve_wanted);
+								break;
 							}
 						case 'I':
 							{
@@ -972,6 +975,7 @@ void COM_command_parse (void) {
 								COM_putchar('1');	
 								COM_putchar(':');	
 								print_decXXXX(temp_average);
+								break;
 							}
 						case 'P':
 							{
@@ -989,6 +993,7 @@ void COM_command_parse (void) {
 								COM_putchar(',');
 								COM_putchar('S');
 								print_hexXX(config_raw[4]);
+								break;
 							}
 						case 'S':
 							{

@@ -205,9 +205,9 @@ uint8_t EEPROM ee_config[][4] ={  // must be alligned to 4 bytes
   /* 08 */  {40,        40,			0,      127},   //!< I_max_credit
   /* 09 */  {30,        30,			0,      255},   //!< I_credit_expiration unit is PID_interval, default 2 hour
   /* 0a */  {240/5,   240/5,     20/5,      255},   //!< PID_interval*5 = interval in seconds;  min=20sec, max=21.25 minutes
-  /* 0b */  {30,         30,        0,      100},   //!< valve_min
-  /* 0c */  {45,         45,        0,      100},   //!< valve_center
-  /* 0d */  {80,         80,        0,      100},   //!< valve_max
+  /* 0b */  {0,           0,        0,      100},   //!< valve_min
+  /* 0c */  {50,         50,        0,      100},   //!< valve_center
+  /* 0d */  {100,       100,        0,      100},   //!< valve_max
   /* 0e */  {64,         64,        0,      127},   //!< valve_hysteresis; valve movement hysteresis (unit is 1/128%), must be <128
   /* 0f */  {32,         32,        32,     255},   //!< min motor_pwm PWM setting
   /* 10 */  {250,       250,        50,     255},   //!< max motor_pwm PWM setting

@@ -58,7 +58,7 @@ uint8_t CTL_mode_changed_timer=0;
 int16_t CTL_temp_threshold = 10;
 int16_t CTL_bat_threshold = 100;
 
-enum mode CTL_mode_auto = auto_target;   // actual desired temperature by timer
+enum mode CTL_mode_auto = auto_valve;   // actual desired temperature by timer
 uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
 #if (HW_WINDOW_DETECTION)
 static uint8_t window_timer=AVERAGE_LEN+1;
@@ -142,8 +142,8 @@ void CTL_update(bool minute_ch) {
 #if (HW_WINDOW_DETECTION)
 	PORTE |= _BV(PE2); // enable pull-up
 #endif
-
-	if ( minute_ch || (CTL_temp_auto==0) ) {
+	
+	if ( (minute_ch || (CTL_temp_auto==0)) && CTL_mode_auto!=auto_valve) {
 		// minutes changed or we need return to timers
 		uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
 		uint8_t border = RTC_ActualTimerTemperature(true);
