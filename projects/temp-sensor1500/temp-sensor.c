@@ -59,7 +59,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.3"
+#define VERSION "0.10.4"
 #define EPTYPE "SteelHead"
 
 
@@ -78,12 +78,12 @@ static char loc[40];
 static uint8_t registred = 0;
 
 static int16_t temperature;
+static int16_t temperature_array[5];
+static int8_t temperature_position=0;
 static int16_t temperature_last;
 static process_event_t changed_temperature_event;
 clock_time_t last_temperature_reading;
 
-static int16_t linear_correction = 100;
-static int16_t offset_correction = 0;
 static int16_t threshold = 20;
 static uint8_t poll_time = 5;
 
@@ -104,7 +104,7 @@ static void read_temperature(void){
 	
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
 
-	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
+	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 3);
 	
 	adc_deinit();
 	/*--- Computation for real value, with x ohm resistor (Steinhart-Hart-Equation)
@@ -119,16 +119,21 @@ static void read_temperature(void){
 	int16_t low = pgm_read_word(&lookup[reading/16]);
 	int16_t high = pgm_read_word(&lookup[(reading/16)+1]);
 	raw_temperature=low+delta*(high-low)/16;
-	int32_t corrected = (((int32_t) raw_temperature) * ((int32_t) linear_correction)/ 100 )+ offset_correction;
+	
+	temperature_array[temperature_position] = raw_temperature;
 
-	int16_t new_temperature = corrected;
+	temperature_position++;
+	temperature_position = temperature_position%5;	
+
+
+	int16_t new_temperature = (temperature_array[0]+temperature_array[1]+temperature_array[2]+temperature_array[3]+temperature_array[4])/5;
 
 	last_temperature_reading =  clock_time();
 	
 //	printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
 
 	temperature =  new_temperature;
-	if (temperature_last - threshold > new_temperature || temperature_last + threshold < new_temperature){
+	if (temperature_last - threshold >= new_temperature || temperature_last + threshold <= new_temperature){
 		temperature_last =  new_temperature;
 		process_post(&coap_process, changed_temperature_event, NULL);
 	}
@@ -137,7 +142,7 @@ static void read_temperature(void){
 /*--CoAP - Process---------------------------------------------------------*/
 
 /*--------- Temperature ---------------------------------------------------------*/
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"");
+PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"",240*CLOCK_SECOND);
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 		snprintf_P((char*)buffer, preferred_size, PSTR(" %d.%02d"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
@@ -145,7 +150,7 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void temperature_event_handler(resource_t *r) {
+void temperature_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -160,7 +165,8 @@ void temperature_event_handler(resource_t *r) {
 }
 
 /*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"threshold temperature\"");
+/*
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold temperature\";rt=\"threshold\"");
 void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -226,211 +232,11 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
         	}
 	}
 }
-
-
-/*---------------------- Correction Linear Factor ----------------------------------------*/
-RESOURCE(linear, METHOD_GET | METHOD_PUT, "config/linear", "title=\"Linear Correction Factor\";rt=\"number\"");
-void linear_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-	if (REST.get_method_type(request)==METHOD_GET)
-	{
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), linear_correction/100, (linear_correction%100));
-		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-		REST.set_response_payload(response, buffer, strlen((char*)buffer));
-	}
-	else {
-        	const uint8_t * string = NULL;
-        	int success = 1;
-        	int len = coap_get_payload(request, &string);
-		uint16_t value;
-		if(len == 1){
-			if (isdigit(string[0])){
-				value = (atoi((char*) string))*100;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 2){
-			if (isdigit(string[0]) && isdigit(string[1])){
-				value = (atoi((char*) string)) * 100;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if (len == 3) {
-			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+2)*10;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 4){
-			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+3)*10;
-			}
-			else if (isdigit(string[0]) && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+2);
-		
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 5){
-			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+3);
-			}
-			else {
-				success = 0;
-			}
-		}
-		else {
-			success = 0;
-		}
-	        if(success){
-			linear_correction=value;
-        		REST.set_response_status(response, REST.status.CHANGED);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	
-	        }
-        	else{
-        		REST.set_response_status(response, REST.status.BAD_REQUEST);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-			REST.set_response_payload(response, buffer, strlen((char*)buffer));
-			return;
-        	}
-	}
-}
-
-
-/*--------------------- Correction Offset ------------------------------------------------*/
-RESOURCE(offset, METHOD_GET | METHOD_PUT, "config/offset", "title=\"Offset Correction\";rt=\"number\"");
-void offset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
-{
-	if (REST.get_method_type(request)==METHOD_GET)
-	{
-		snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), offset_correction/100, offset_correction>0 ? offset_correction%100 : (-1*offset_correction)%100);
-		REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-		REST.set_response_payload(response, buffer, strlen((char*)buffer));
-	}
-	else {
-        	const uint8_t * string = NULL;
-        	int success = 1;
-        	int len = coap_get_payload(request, &string);
-		uint16_t value;
-		if(len == 1){
-			if (isdigit(string[0])){
-				value = (atoi((char*) string))*100;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 2){
-			if (isdigit(string[0]) && isdigit(string[1])){
-				value = (atoi((char*) string)) * 100;
-			}
-			if (string[0]=='-' && isdigit(string[1])){
-				value = (atoi((char*) string)) * 100;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if (len == 3) {
-			if (isdigit(string[0]) && isdigit(string[2]) && string[1]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+2)*10;
-			}
-			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2])){
-				value = (atoi((char*) string) *100);
-			}
-			else if (string[0] == '-' && isdigit(string[2]) && string[1]=='.'){
-				value = atoi((char*) string+2)*-10;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 4){
-			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+3)*10;
-			}
-			else if (isdigit(string[0]) && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+2);
-			}
-			else if (string[0] == '-' && isdigit(string[2]) && isdigit(string[3]) && string[1]=='.'){
-				value = atoi((char*) string+2)*-1;
-			}
-			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[3]) && string[2]=='.'){
-				value = (atoi((char*) string+1) *100);
-				value += atoi((char*) string+3) * 10;
-				value *= -1;
-			}
-			else {
-				success = 0;
-			}
-		}
-		else if(len == 5){
-			if (isdigit(string[0]) && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
-				value = (atoi((char*) string) *100);
-				value += atoi((char*) string+3);
-			}
-			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[3]) && isdigit(string[4]) && string[2]=='.'){
-				value = (atoi((char*) string+1) *100);
-				value += atoi((char*) string+3);
-				value *= -1;
-			}
-			else if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2]) && isdigit(string[4]) && string[3]=='.'){
-				value = (atoi((char*) string+1) *100);
-				value += atoi((char*) string+4)*10;
-				value *= -1;
-
-			}
-			else {
-				success = 0;
-			}
-		}
-		else  if(len == 6){
-			if (string[0] == '-' && isdigit(string[1]) && isdigit(string[2]) && isdigit(string[4]) && isdigit(string[5]) && string[3]=='.'){
-				value = (atoi((char*) string+1) *100);
-				value += atoi((char*) string+4);
-				value *= -1;
-			}
-			else {
-				success=0;
-			}
-		}
-		else {
-			success = 0;
-		}
-	        if(success){
-			offset_correction=value;
-        		REST.set_response_status(response, REST.status.CHANGED);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-	
-	        }
-        	else{
-        		REST.set_response_status(response, REST.status.BAD_REQUEST);
-			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-			REST.set_response_payload(response, buffer, strlen((char*)buffer));
-			return;
-        	}
-	}
-}
+*/
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"string\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -467,7 +273,7 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 
 /*-------------------- Version ---------------------------------------------------------------------------*/
-RESOURCE(version, METHOD_GET, "debug/version", "title=\"Version Number\";rt=\"string\"");
+RESOURCE(version, METHOD_GET, "debug/version", "title=\"Version Number\";rt=\"version\"");
 void version_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -477,7 +283,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s,uptime:%lu,rssi:%i"),VERSION,clock_seconds(),rssi_avg);
@@ -516,7 +322,7 @@ void rd_post_response_handler(void *response){
 		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
 		registred=1;
-		stimer_set(&rdput, 60);
+		stimer_set(&rdput, 3600);
 	}
 }
 
@@ -547,10 +353,8 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
-	rest_activate_event_resource(&resource_temperature);	
-	rest_activate_resource(&resource_threshold);
-	rest_activate_resource(&resource_linear);
-	rest_activate_resource(&resource_offset);
+	rest_activate_periodic_resource(&periodic_resource_temperature);	
+//	rest_activate_resource(&resource_threshold);
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
@@ -565,7 +369,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_temperature_event){
-			temperature_event_handler(&resource_temperature);	
+			temperature_periodic_handler(&resource_temperature);	
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 			if(etimer_expired(&adc)) {
@@ -579,13 +383,13 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
 				coap_set_header_uri_path(post,"/rd");
-				const char query[40];
+				const char query[50];
 				uint8_t addr[8]=EUI64_ADDRESS;
 
-				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
+
 				coap_set_header_uri_query(&post,query); 	
 
-				printf("send post\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
@@ -595,12 +399,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
 				coap_set_header_uri_path(put,loc);
-				const char query[40];
 
-				snprintf(query,39,"rt=\"%s\"",EPTYPE);
-				coap_set_header_uri_query(&put,query); 	
-
-				printf("send put\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 			

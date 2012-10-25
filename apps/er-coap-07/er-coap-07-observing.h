@@ -47,7 +47,7 @@
 #endif /* COAP_MAX_OBSERVERS */
 
 /* Interval in seconds in which NON notifies are changed to CON notifies to check client. */
-#define COAP_OBSERVING_REFRESH_INTERVAL  21600
+#define COAP_OBSERVING_REFRESH_INTERVAL  3600
 
 #if COAP_MAX_OPEN_TRANSACTIONS<COAP_MAX_OBSERVERS
 #warning "COAP_MAX_OPEN_TRANSACTIONS smaller than COAP_MAX_OBSERVERS: cannot handle CON notifications"

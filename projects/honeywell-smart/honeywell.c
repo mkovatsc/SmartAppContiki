@@ -71,7 +71,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.10.7"
+#define VERSION "0.10.8"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -85,24 +85,11 @@ SENSORS(&radio_sensor);
 
 /*---------------------------------------------------------------------------*/
 enum mode {manual_target=0, manual_timers=1, auto_target=2, auto_valve=3, auto_timers=4};
-enum request_type {
-	idle, 
-	poll, 
-	auto_temperatures, 
-	auto_mode, 
-	get_timer
-};
 typedef struct {
 	uint8_t mode;
 	uint16_t time;
 } hw_timer_slot_t;
 
-typedef struct {
-	char command[15];
-	enum request_type type;
-} request;
-
-static enum request_type request_state = idle;
 static struct ringbuf uart_buf;
 static unsigned char uart_buf_data[128] = {0};
 
@@ -380,9 +367,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 	error_event = process_alloc_event();	
 
-	poll_data.mode=2;
+	poll_data.mode=3;
 	poll_data.threshold_battery = 100;
-	poll_data.valve_is = 30;
 
 	eeprom_read_block(&error_uri, ee_error_uri, 50);
 	eeprom_read_block(&identifier, ee_identifier, 50);
@@ -396,7 +382,9 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	// finish booting first
 	PROCESS_PAUSE();
 
-	request_state = idle;
+	printf_P(PSTR("GM\n"));
+	printf_P(PSTR("GV\n"));
+	printf_P(PSTR("GT\n"));
 
 	while (1) {
 		PROCESS_WAIT_EVENT();
@@ -1092,7 +1080,7 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 
 /*--------- Temperature ---------------------------------------------------------*/
 
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Current temperature\";obs;rt=\"temperature\"");
+PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Current temperature\";obs;rt=\"temperature\"",240*CLOCK_SECOND);
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
@@ -1100,7 +1088,7 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void temperature_event_handler(resource_t *r) {
+void temperature_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[6];
 
@@ -1116,7 +1104,7 @@ void temperature_event_handler(resource_t *r) {
 
 /*--------- Battery ---------------------------------------------------------*/
 
-EVENT_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";obs;rt=\"voltage\"");
+PERIODIC_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";obs;rt=\"voltage\"",240*CLOCK_SECOND);
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.battery);
@@ -1125,7 +1113,7 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 
-void battery_event_handler(resource_t *r) {
+void battery_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -1140,16 +1128,16 @@ void battery_event_handler(resource_t *r) {
 
 /*--------- Valve is ---------------------------------------------------------*/
 
-EVENT_RESOURCE(valve_is, METHOD_GET, "sensors/valve", "title=\"Valve Position\";obs;rt=\"valve\"");
+PERIODIC_RESOURCE(valve_is, METHOD_GET, "sensors/valve", "title=\"Valve Position\";obs;rt=\"valve\"",240*CLOCK_SECOND);
 void valve_is_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), (poll_data.valve_is-30)*2);
+	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.valve_is);
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
 
-void valve_is_event_handler(resource_t *r) {
+void valve_is_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -1157,7 +1145,7 @@ void valve_is_event_handler(resource_t *r) {
 
 	coap_packet_t notification[1]; // This way the packet can be treated as pointer as usual.
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
-	coap_set_payload(notification, content, snprintf_P(content, 10, PSTR("%u"),(poll_data.valve_is-30)*2));
+	coap_set_payload(notification, content, snprintf_P(content, 10, PSTR("%u"),poll_data.valve_is));
 
 	REST.notify_subscribers(r, event_i, notification);
 }
@@ -1498,7 +1486,7 @@ void valve_wanted_handler(void* request, void* response, uint8_t *buffer, uint16
 	if (REST.get_method_type(request)==METHOD_GET)
 	{
 		if(poll_data.last_valve_wanted_reading>clock_time()-5*CLOCK_SECOND){
-			snprintf_P((char*)buffer, preferred_size, PSTR("%u"), (poll_data.valve_wanted-30)*2);
+			snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.valve_wanted);
 			REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 			REST.set_response_payload(response, buffer, strlen((char*)buffer));
 			printf_P(PSTR("GV\n"));
@@ -1536,12 +1524,8 @@ void valve_wanted_handler(void* request, void* response, uint8_t *buffer, uint16
 		}
 		if (success) {
 			new_valve = atoi((char*)string);
-			if (new_valve > 100) {
+			if (new_valve <0 || new_valve > 100) {
 				success = 0;
-			}
-			else {
-				// internal valve values: 30-80
-				new_valve = (++new_valve)/2 + 30;
 			}
 		}
 
@@ -1578,7 +1562,7 @@ void valve_wanted_finalize_handler() {
 			}
 			else {
 				coap_separate_resume(response, &separate_get_valve_wanted_store->request_metadata, CONTENT_2_05);
-				snprintf_P(buffer, 10, PSTR("%u"), (poll_data.valve_wanted-30)*2);
+				snprintf_P(buffer, 10, PSTR("%u"), poll_data.valve_wanted);
 				REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 				coap_set_payload(response, buffer, strlen(buffer));
 			}
@@ -1599,7 +1583,7 @@ void valve_wanted_finalize_handler() {
 
 /*---- mode event ------------------------------------------------------*/
 
-EVENT_RESOURCE(mode, METHOD_GET | METHOD_PUT, "set/mode", "title=\"mode event\";ct=0;rt=\"mode\"");
+EVENT_RESOURCE(mode, METHOD_GET | METHOD_PUT, "set/mode", "title=\"mode event\";rt=\"mode\"");
 
 void
 mode_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -1720,7 +1704,7 @@ mode_event_handler(resource_t *r)
 
 /*---- wheel event -----------------------------------------------------*/
 
-EVENT_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"wheel\"");
+PERIODIC_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"wheel\"",240*CLOCK_SECOND);
 
 void
 wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -1733,7 +1717,7 @@ wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 }
 
 	void
-wheel_event_handler(resource_t *r)
+wheel_periodic_handler(resource_t *r)
 {
 	static char content[12];
 	static uint32_t event_counter = 0;
@@ -2000,7 +1984,7 @@ void set_finalize_handler() {
 
 /*--------- Error Address ------------------------------------------------------------*/
 
-RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";ct=0;rt=\"uri\"");
+RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";rt=\"uri\"");
 void error_address_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -2095,7 +2079,7 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 
 /*--------- Error ---------------------------------------------------------*/
-EVENT_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";obs;rt=\"error\"");
+PERIODIC_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";obs;rt=\"error\"",240*CLOCK_SECOND);
 void error_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -2124,7 +2108,7 @@ void error_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 }
 
 
-void error_event_handler(resource_t *r) {
+void error_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[30];
 
@@ -2134,7 +2118,7 @@ void error_event_handler(resource_t *r) {
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0 );
 
 	if(!error_active) {
-		snprintf_P(content, 30, PSTR("All errors fixed"));
+		snprintf_P(content, 30, PSTR("No errors"));
 	}
 	else {
 		int p;
@@ -2232,7 +2216,7 @@ void rd_post_response_handler(void *response){
 		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
 		registred=1;
-		stimer_set(&rdput, 60);
+		stimer_set(&rdput, 3600);
 	}
 }
 
@@ -2265,20 +2249,20 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_date);
 
 	rest_activate_resource(&resource_time);
-	rest_activate_event_resource(&resource_temperature);
-	rest_activate_event_resource(&resource_battery);
+	rest_activate_resource(&resource_valve_wanted);
 	rest_activate_resource(&resource_target);
-	rest_activate_resource(&resource_threshold_temp);
-	rest_activate_resource(&resource_threshold_bat);
-	rest_activate_resource(&resource_error_address);
+//	rest_activate_resource(&resource_threshold_temp);
+//	rest_activate_resource(&resource_threshold_bat);
+//	rest_activate_resource(&resource_error_address);
 	rest_activate_resource(&resource_identifier);
 	// rest_activate_resource(&resource_version);
 
+	rest_activate_periodic_resource(&periodic_resource_temperature);
+	rest_activate_periodic_resource(&periodic_resource_battery);
 	rest_activate_event_resource(&resource_mode);
-	rest_activate_event_resource(&resource_valve_is);
-	rest_activate_resource(&resource_valve_wanted);
-	rest_activate_event_resource(&resource_wheel);
-	rest_activate_event_resource(&resource_error);
+	rest_activate_periodic_resource(&periodic_resource_valve_is);
+	rest_activate_periodic_resource(&periodic_resource_wheel);
+	rest_activate_periodic_resource(&periodic_resource_error);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
 /*
@@ -2301,17 +2285,17 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1){
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_temp_event){
-			temperature_event_handler(&resource_temperature);
+			temperature_periodic_handler(&resource_temperature);
 		}
 		else if (ev == changed_valve_event){
-			valve_is_event_handler(&resource_valve_is);
+			valve_is_periodic_handler(&resource_valve_is);
 		}
 		else if (ev == changed_battery_event){
-			battery_event_handler(&resource_battery);
+			battery_periodic_handler(&resource_battery);
 		}
 
 		else if (ev == changed_wheel_event){
-			wheel_event_handler(&resource_wheel);
+			wheel_periodic_handler(&resource_wheel);
 		}
 		else if (ev == changed_mode_event){
 			mode_event_handler(&resource_mode);
@@ -2345,8 +2329,8 @@ PROCESS_THREAD(coap_process, ev, data)
 		}
 		else if (ev == error_event){
 
-			error_event_handler(&resource_error);
-
+			error_periodic_handler(&resource_error);
+/*
 			uip_ip6addr_t error_server_ipaddr;
 			static coap_packet_t post[1];
 			uip_ip6addr(&error_server_ipaddr,error_ip[0],error_ip[1],error_ip[2],error_ip[3],error_ip[4],error_ip[5],error_ip[6],error_ip[7]);
@@ -2378,7 +2362,7 @@ PROCESS_THREAD(coap_process, ev, data)
 			coap_set_payload(post, buffer, strlen(buffer));
 
 			COAP_BLOCKING_REQUEST(&error_server_ipaddr, UIP_HTONS(error_port), post, error_msg_response_handler);
-
+*/
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 			if(etimer_expired(&event_gen)) {
@@ -2390,13 +2374,12 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
 				coap_set_header_uri_path(post,"/rd");
-				const char query[40];
+				const char query[50];
 				uint8_t addr[8]=EUI64_ADDRESS;
 
-				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
 				coap_set_header_uri_query(&post,query); 	
 
-				printf("send post\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 
 				stimer_set(&rdpost, 300);
@@ -2407,12 +2390,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
 				coap_set_header_uri_path(put,loc);
-				const char query[40];
 
-				snprintf(query,39,"rt=\"%s\"",EPTYPE);
-				coap_set_header_uri_query(&put,query); 	
-
-				printf("send put\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 
 				stimer_set(&rdput, 3600);

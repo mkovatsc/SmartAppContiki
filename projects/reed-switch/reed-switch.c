@@ -66,8 +66,8 @@
 #define TRUE 1
 #define FALSE 0
 
-#define EPTYPE "Reed-Switch"
-#define VERSION "0.10.3"
+#define EPTYPE "ReedSwitch"
+#define VERSION "0.10.4"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -99,7 +99,7 @@ static unsigned long event_count = 0;
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-EVENT_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";obs;rt=\"reed-switch\"");
+PERIODIC_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";obs;rt=\"reed-switch\"",240*CLOCK_SECOND);
 
 void
 reed_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -111,7 +111,7 @@ reed_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 }
 
 void
-event_reed_handler(resource_t *r)
+reed_periodic_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
 	static char content[12];
@@ -127,7 +127,7 @@ event_reed_handler(resource_t *r)
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"string\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -174,7 +174,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -215,7 +215,7 @@ void rd_post_response_handler(void *response){
 		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
 		registred=1;
-		stimer_set(&rdput, 60);
+		stimer_set(&rdput, 3600);
 	}
 }
 
@@ -247,7 +247,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	 
 	eeprom_read_block(&identifier, ee_identifier, 50);
  
-	rest_activate_event_resource(&resource_reed);
+	rest_activate_periodic_resource(&periodic_resource_reed);
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 	etimer_set(&event_gen, 5*CLOCK_SECOND);
@@ -273,7 +273,7 @@ PROCESS_THREAD(coap_process, ev, data)
 					event_count += 1;
 				}
 			}
-			event_reed_handler(&resource_reed);
+			reed_periodic_handler(&resource_reed);
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 				if(etimer_expired(&event_gen)) {
@@ -285,13 +285,12 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
 				coap_set_header_uri_path(post,"/rd");
-				const char query[40];
+				const char query[50];
 				uint8_t addr[8]=EUI64_ADDRESS;
 
-				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
 				coap_set_header_uri_query(&post,query); 	
 
-				printf("send post\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
@@ -301,12 +300,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
 				coap_set_header_uri_path(put,loc);
-				const char query[40];
-
-				snprintf(query,39,"rt=\"%s\"",EPTYPE);
-				coap_set_header_uri_query(&put,query); 	
-
-				printf("send put\n");
+				
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 		}
