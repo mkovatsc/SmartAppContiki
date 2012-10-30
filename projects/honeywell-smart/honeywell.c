@@ -71,7 +71,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.10.8"
+#define VERSION "0.10.9"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -1080,7 +1080,7 @@ void supercomfort_handler(void * request, void* response, uint8_t *buffer, uint1
 
 /*--------- Temperature ---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Current temperature\";obs;rt=\"temperature\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Current temperature\";obs;rt=\"temperature\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%d.%02d"), poll_data.is_temperature/100, poll_data.is_temperature%100);
@@ -1088,7 +1088,7 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void temperature_periodic_handler(resource_t *r) {
+void temperature_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[6];
 
@@ -1104,7 +1104,7 @@ void temperature_periodic_handler(resource_t *r) {
 
 /*--------- Battery ---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";obs;rt=\"voltage\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(battery, METHOD_GET, "sensors/battery", "title=\"Battery voltage\";obs;rt=\"voltage\"");
 void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.battery);
@@ -1113,7 +1113,7 @@ void battery_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 
-void battery_periodic_handler(resource_t *r) {
+void battery_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -1128,7 +1128,7 @@ void battery_periodic_handler(resource_t *r) {
 
 /*--------- Valve is ---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(valve_is, METHOD_GET, "sensors/valve", "title=\"Valve Position\";obs;rt=\"valve\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(valve_is, METHOD_GET, "sensors/valve", "title=\"Valve Position\";obs;rt=\"valve\"");
 void valve_is_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf_P((char*)buffer, preferred_size, PSTR("%u"), poll_data.valve_is);
@@ -1137,7 +1137,7 @@ void valve_is_handler(void* request, void* response, uint8_t *buffer, uint16_t p
 }
 
 
-void valve_is_periodic_handler(resource_t *r) {
+void valve_is_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -1268,7 +1268,7 @@ void target_finalize_handler() {
 
 
 /*--------- Threshold Temperature---------------------------------------------------------*/
-RESOURCE(threshold_temp, METHOD_GET | METHOD_PUT, "config/threshold_temperature", "title=\"Temperature Threshold\";rt=\"threshold temperature\"");
+RESOURCE(threshold_temp, METHOD_GET | METHOD_PUT, "config/threshold_temperature", "title=\"Temperature Threshold\";rt=\"threshold\"");
 void threshold_temp_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -1382,7 +1382,7 @@ void threshold_temp_finalize_handler() {
 
 /*---------------Threshold Battery ---------------------------------------------*/
 
-RESOURCE(threshold_bat, METHOD_GET | METHOD_PUT, "config/threshold_battery", "title=\"Battery Threshold\";rt=\"threshold voltage\"");
+RESOURCE(threshold_bat, METHOD_GET | METHOD_PUT, "config/threshold_battery", "title=\"Battery Threshold\";rt=\"threshold\"");
 void threshold_bat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -1704,7 +1704,7 @@ mode_event_handler(resource_t *r)
 
 /*---- wheel event -----------------------------------------------------*/
 
-PERIODIC_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"wheel\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(wheel, METHOD_GET, "sensors/wheel", "title=\"Wheel Event\";obs;rt=\"wheel\"");
 
 void
 wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -1717,7 +1717,7 @@ wheel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 }
 
 	void
-wheel_periodic_handler(resource_t *r)
+wheel_event_handler(resource_t *r)
 {
 	static char content[12];
 	static uint32_t event_counter = 0;
@@ -2040,7 +2040,7 @@ void error_address_handler(void* request, void* response, uint8_t *buffer, uint1
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"id\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifier\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -2079,7 +2079,7 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 
 /*--------- Error ---------------------------------------------------------*/
-PERIODIC_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";obs;rt=\"error\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";obs;rt=\"error\"");
 void error_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -2108,7 +2108,7 @@ void error_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 }
 
 
-void error_periodic_handler(resource_t *r) {
+void error_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[30];
 
@@ -2257,12 +2257,12 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_resource(&resource_identifier);
 	// rest_activate_resource(&resource_version);
 
-	rest_activate_periodic_resource(&periodic_resource_temperature);
-	rest_activate_periodic_resource(&periodic_resource_battery);
+	rest_activate_event_resource(&resource_temperature);
+	rest_activate_event_resource(&resource_battery);
 	rest_activate_event_resource(&resource_mode);
-	rest_activate_periodic_resource(&periodic_resource_valve_is);
-	rest_activate_periodic_resource(&periodic_resource_wheel);
-	rest_activate_periodic_resource(&periodic_resource_error);
+	rest_activate_event_resource(&resource_valve_is);
+	rest_activate_event_resource(&resource_wheel);
+	rest_activate_event_resource(&resource_error);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
 /*
@@ -2285,17 +2285,17 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1){
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_temp_event){
-			temperature_periodic_handler(&resource_temperature);
+			temperature_event_handler(&resource_temperature);
 		}
 		else if (ev == changed_valve_event){
-			valve_is_periodic_handler(&resource_valve_is);
+			valve_is_event_handler(&resource_valve_is);
 		}
 		else if (ev == changed_battery_event){
-			battery_periodic_handler(&resource_battery);
+			battery_event_handler(&resource_battery);
 		}
 
 		else if (ev == changed_wheel_event){
-			wheel_periodic_handler(&resource_wheel);
+			wheel_event_handler(&resource_wheel);
 		}
 		else if (ev == changed_mode_event){
 			mode_event_handler(&resource_mode);
@@ -2329,7 +2329,7 @@ PROCESS_THREAD(coap_process, ev, data)
 		}
 		else if (ev == error_event){
 
-			error_periodic_handler(&resource_error);
+			error_event_handler(&resource_error);
 /*
 			uip_ip6addr_t error_server_ipaddr;
 			static coap_packet_t post[1];

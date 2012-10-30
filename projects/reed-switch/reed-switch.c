@@ -99,7 +99,7 @@ static unsigned long event_count = 0;
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";obs;rt=\"reed-switch\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(reed, METHOD_GET, "sensors/reed-switch", "title=\"Reed Switch\";obs;rt=\"reed-switch\"");
 
 void
 reed_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -111,7 +111,7 @@ reed_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 }
 
 void
-reed_periodic_handler(resource_t *r)
+reed_event_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
 	static char content[12];
@@ -247,7 +247,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	 
 	eeprom_read_block(&identifier, ee_identifier, 50);
  
-	rest_activate_periodic_resource(&periodic_resource_reed);
+	rest_activate_event_resource(&resource_reed);
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 	etimer_set(&event_gen, 5*CLOCK_SECOND);
@@ -273,7 +273,7 @@ PROCESS_THREAD(coap_process, ev, data)
 					event_count += 1;
 				}
 			}
-			reed_periodic_handler(&resource_reed);
+			reed_event_handler(&resource_reed);
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 				if(etimer_expired(&event_gen)) {

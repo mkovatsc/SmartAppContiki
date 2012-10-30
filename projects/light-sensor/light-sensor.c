@@ -61,7 +61,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.3"
+#define VERSION "0.10.4"
 #define EPTYPE "LightSensor"
 
 
@@ -105,7 +105,7 @@ static void read_light(void){
 	static int16_t reading;
 
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
-	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 1);
+	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
 	
 	adc_deinit();
 	
@@ -124,7 +124,7 @@ static void read_light(void){
 
 /*--CoAP - Process---------------------------------------------------------*/
 
-EVENT_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";obs;rt=\"light\"");
+PERIODIC_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";obs;rt=\"light\"",240*CLOCK_SECOND);
 void light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 		snprintf_P((char*)buffer, preferred_size, PSTR("%i"), light);
@@ -132,7 +132,7 @@ void light_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void light_event_handler(resource_t *r) {
+void light_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[6];
 
@@ -147,7 +147,8 @@ void light_event_handler(resource_t *r) {
 }
 
 /*--------- Threshold ---------------------------------------------------------*/
-RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold\";rt=\"threshold light\"");
+/*
+RESOURCE(threshold, METHOD_GET | METHOD_PUT, "config/threshold", "title=\"Threshold\";rt=\"threshold\"");
 void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -184,10 +185,10 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
         	}
 	}
 }
-
+*/
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"string\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifier\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -233,7 +234,7 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 
@@ -274,7 +275,7 @@ void rd_post_response_handler(void *response){
 		strcpy(loc,location);
 		printf("REGISTRED AT RD\n");
 		registred=1;
-		stimer_set(&rdput, 60);
+		stimer_set(&rdput, 3600);
 	}
 }
 
@@ -308,8 +309,8 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
-	rest_activate_event_resource(&resource_light);	
-	rest_activate_event_resource(&resource_threshold);	
+	rest_activate_periodic_resource(&periodic_resource_light);	
+//	rest_activate_resource(&resource_threshold);	
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
@@ -319,7 +320,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_light_event){
-			light_event_handler(&resource_light);	
+			light_periodic_handler(&resource_light);	
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 			if (etimer_expired(&adc)) {
@@ -332,14 +333,13 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
 				coap_set_header_uri_path(post,"/rd");
-				const char query[40];
+				const char query[50];
 				uint8_t addr[8]=EUI64_ADDRESS;
 
 
-				snprintf(query,39,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
 				coap_set_header_uri_query(&post,query); 	
 
-				printf("send post\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
@@ -349,12 +349,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 	
 				coap_set_header_uri_path(put,loc);
-				const char query[40];
 
-				snprintf(query,39,"rt=\"%s\"",EPTYPE);
-				coap_set_header_uri_query(&put,query); 	
-
-				printf("send put\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 		}

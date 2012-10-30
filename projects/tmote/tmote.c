@@ -36,7 +36,7 @@
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#define VERSION "0.8.2"
+#define VERSION "0.8.3"
 #define EPTYPE "Tmote-Sky"
 
 #include <stdio.h>
@@ -72,7 +72,7 @@ static int16_t threshold = 20;
 static uint8_t poll_time=5;
 
 /*--------------------COAP Resources-----------------------------------------------------------*/
-EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"");
+PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"",240*CLOCK_SECOND);
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	snprintf((char*)buffer, preferred_size, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
@@ -81,15 +81,15 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 
 }
 
-void temperature_event_handler(resource_t *r) {
+void temperature_periodic_handler(resource_t *r) {
 	static uint32_t event_i = 0;
-	char content[6];
+	char content[8];
 
 	++event_i;
 
   coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
   coap_init_message(notification, COAP_TYPE_CON, CONTENT_2_05, 0 );
-  coap_set_payload(notification, content, snprintf(content, 6, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
+  coap_set_payload(notification, content, snprintf(content, 7, "%d.%02d\n",temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100));
 
 	REST.notify_subscribers(r, event_i, notification);
 
@@ -130,10 +130,10 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 }
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"string\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"Heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-	snprintf((char*)buffer, preferred_size, "version:%s\nuptime:%lu\nrssi:%i",VERSION,clock_seconds(),rssi_avg);
+	snprintf((char*)buffer, preferred_size, "version:%s,uptime:%lu,rssi:%i",VERSION,clock_seconds(),rssi_avg);
  	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
@@ -153,7 +153,7 @@ void heartbeat_periodic_handler(resource_t *r){
 	rssi_avg = (rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2])/rssi_count:0;
 	coap_packet_t notification[1];
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
-	coap_set_payload(notification, content, snprintf(content, sizeof(content), "version:%s\nuptime:%lu\nrssi:%i",VERSION,clock_seconds(),rssi_avg));
+	coap_set_payload(notification, content, snprintf(content, sizeof(content), "version:%s,uptime:%lu,rssi:%i",VERSION,clock_seconds(),rssi_avg));
 
 	REST.notify_subscribers(r, event_counter, notification);
 
@@ -178,7 +178,7 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 	SENSORS_ACTIVATE(sht11_sensor);
 	SENSORS_ACTIVATE(radio_sensor);
 
-	rest_activate_event_resource(&resource_temperature);
+	rest_activate_periodic_resource(&periodic_resource_temperature);
 	rest_activate_resource(&resource_threshold);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 	
@@ -192,7 +192,7 @@ PROCESS_THREAD(tmote_temperature, ev, data)
 				temperature = -3960+sht11_sensor.value(SHT11_SENSOR_TEMP);
 				if (temperature < temperature_last - threshold || temperature > temperature_last + threshold){
 					temperature_last=temperature;
-					temperature_event_handler(&resource_temperature);	
+					temperature_periodic_handler(&resource_temperature);	
 				}
 				etimer_set(&sht, CLOCK_SECOND * poll_time);
 			}

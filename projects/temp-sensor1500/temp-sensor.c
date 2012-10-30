@@ -78,7 +78,7 @@ static char loc[40];
 static uint8_t registred = 0;
 
 static int16_t temperature;
-static int16_t temperature_array[5];
+static int16_t temperature_array[4];
 static int8_t temperature_position=0;
 static int16_t temperature_last;
 static process_event_t changed_temperature_event;
@@ -104,7 +104,7 @@ static void read_temperature(void){
 	
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
 
-	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 3);
+	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
 	
 	adc_deinit();
 	/*--- Computation for real value, with x ohm resistor (Steinhart-Hart-Equation)
@@ -112,25 +112,29 @@ static void read_temperature(void){
 	kelvin = 1 / (0.001129148 + (0.000234125 * temp) + (8.76741e-8 * temp * temp * temp) );
 	celsius = temp-273.15;
 	------*/
-	if(reading==0){ // Reading should never be 0, this means -76 deg C, sensors does not support this
-		return;
-	}
+
+	//printf("%i\n",reading);
+	
 	int16_t delta = reading % 16;
 	int16_t low = pgm_read_word(&lookup[reading/16]);
 	int16_t high = pgm_read_word(&lookup[(reading/16)+1]);
 	raw_temperature=low+delta*(high-low)/16;
+
+	if(raw_temperature < -2000 || raw_temperature > 5000){
+		return;
+	}
 	
 	temperature_array[temperature_position] = raw_temperature;
 
 	temperature_position++;
-	temperature_position = temperature_position%5;	
+	temperature_position = temperature_position%4;	
 
 
-	int16_t new_temperature = (temperature_array[0]+temperature_array[1]+temperature_array[2]+temperature_array[3]+temperature_array[4])/5;
+	int16_t new_temperature = (temperature_array[0]+temperature_array[1]+temperature_array[2]+temperature_array[3])/4;
 
 	last_temperature_reading =  clock_time();
 	
-//	printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
+	//printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
 
 	temperature =  new_temperature;
 	if (temperature_last - threshold >= new_temperature || temperature_last + threshold <= new_temperature){
@@ -142,7 +146,7 @@ static void read_temperature(void){
 /*--CoAP - Process---------------------------------------------------------*/
 
 /*--------- Temperature ---------------------------------------------------------*/
-PERIODIC_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(temperature, METHOD_GET, "sensors/temperature", "title=\"Temperature\";obs;rt=\"temperature\"");
 void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 		snprintf_P((char*)buffer, preferred_size, PSTR(" %d.%02d"),temperature/100, temperature>0 ? temperature%100 : (-1*temperature)%100);
@@ -150,7 +154,7 @@ void temperature_handler(void* request, void* response, uint8_t *buffer, uint16_
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void temperature_periodic_handler(resource_t *r) {
+void temperature_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[10];
 
@@ -236,7 +240,7 @@ void threshold_handler(void* request, void* response, uint8_t *buffer, uint16_t 
 
 
 /*--------- Node Identifier ------------------------------------------------------------*/
-RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifer\";rt=\"id\"");
+RESOURCE(identifier, METHOD_GET | METHOD_PUT, "config/identifier", "title=\"Identifier\";rt=\"id\"");
 void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 	if (REST.get_method_type(request)==METHOD_GET)
@@ -353,7 +357,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
-	rest_activate_periodic_resource(&periodic_resource_temperature);	
+	rest_activate_event_resource(&resource_temperature);	
 //	rest_activate_resource(&resource_threshold);
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
@@ -369,7 +373,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_temperature_event){
-			temperature_periodic_handler(&resource_temperature);	
+			temperature_event_handler(&resource_temperature);	
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
 			if(etimer_expired(&adc)) {

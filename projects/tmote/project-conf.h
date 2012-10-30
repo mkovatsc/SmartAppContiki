@@ -65,7 +65,7 @@
 #define QUEUEBUF_CONF_NUM               4
 
 #undef RF_CHANNEL
-#define RF_CHANNEL 21
+#define RF_CHANNEL 24
 
 #undef IEEE802154_CONF_PANID
 #define IEEE802154_CONF_PANID 0xBEEF
