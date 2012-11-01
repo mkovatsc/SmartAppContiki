@@ -65,7 +65,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.4"
+#define VERSION "0.11.5"
 #define EPTYPE "PirSensor"
 
 
@@ -307,24 +307,26 @@ void heartbeat_periodic_handler(resource_t *r){
 /*--------- RD MSG ACK Handle-------------------------------------*/
 
 void rd_post_response_handler(void *response){
-
+	if (response==NULL){
+		return;
+	}
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
 		coap_get_header_location_path(response, &location);
 		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
 		registred=1;
 		stimer_set(&rdput, 3600);
 	}
 }
 
 void rd_put_response_handler(void *response){
-
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+	if (response==NULL){
+		return;
+	}
+	if (((coap_packet_t *) response)->code != CHANGED_2_04 ) {
 		registred=0;
 		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Status at RD\n");
 		stimer_set(&rdput, 3600);
 	}
 	
@@ -369,6 +371,31 @@ PROCESS_THREAD(coap_process, ev, data)
 		}
 
 		else if (ev == PROCESS_EVENT_TIMER){
+			if (!registred && stimer_expired(&rdpost)) {
+				static coap_packet_t post[1];
+				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
+
+				coap_set_header_uri_path(post,"/rd");
+				const char query[50];
+				uint8_t addr[8]=EUI64_ADDRESS;
+
+				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
+				coap_set_header_uri_query(&post,query); 	
+
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
+				stimer_set(&rdpost, 300);
+
+			}
+			if (registred && stimer_expired(&rdput)) {
+				static coap_packet_t put[1];
+				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
+
+				coap_set_header_uri_path(put,loc);
+
+				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
+				stimer_set(&rdput, 3600);
+			}
+
 			if(etimer_expired(&interval_timer)){
 				uint16_t next_interval; 
 				uint8_t current_state;
@@ -408,30 +435,7 @@ PROCESS_THREAD(coap_process, ev, data)
 				etimer_set(&interval_timer, CLOCK_SECOND * next_interval);
 			}
 		}
-		if (!registred && stimer_expired(&rdpost)) {
-				static coap_packet_t post[1];
-				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
-				coap_set_header_uri_path(post,"/rd");
-				const char query[50];
-				uint8_t addr[8]=EUI64_ADDRESS;
-
-				snprintf(query,49,"ep=\"%x-%x-%x-%x-%x-%x-%x-%x\"&rt=\"%s\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],EPTYPE);
-				coap_set_header_uri_query(&post,query); 	
-
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
-				stimer_set(&rdpost, 300);
-
-		}
-		if (registred && stimer_expired(&rdput)) {
-				static coap_packet_t put[1];
-				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
-
-				coap_set_header_uri_path(put,loc);
-
-				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
-				stimer_set(&rdput, 3600);
-		}
 	
 	}
 

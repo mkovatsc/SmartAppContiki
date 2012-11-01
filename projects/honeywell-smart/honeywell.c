@@ -71,7 +71,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.10.9"
+#define VERSION "0.11.10"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -2211,23 +2211,27 @@ void heartbeat_periodic_handler(resource_t *r){
 
 void rd_post_response_handler(void *response){
 
+	if(response==NULL){
+		return;
+	}
+
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
 		coap_get_header_location_path(response, &location);
 		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
 		registred=1;
 		stimer_set(&rdput, 3600);
 	}
 }
 
 void rd_put_response_handler(void *response){
-
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+	if(response==NULL){
+		return;
+	}
+	if (((coap_packet_t *) response)->code !=CHANGED_2_04 ) {
 		registred=0;
 		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Status at RD\n");
 		stimer_set(&rdput, 3600);
 	}
 	
@@ -2365,11 +2369,8 @@ PROCESS_THREAD(coap_process, ev, data)
 */
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
-			if(etimer_expired(&event_gen)) {
-				etimer_set(&event_gen, 5 * CLOCK_SECOND);
-			}	
-		}
-		if (!registred && stimer_expired(&rdpost)) {
+		
+			if (!registred && stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -2384,8 +2385,8 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				stimer_set(&rdpost, 300);
 
-		}
-		if (registred && stimer_expired(&rdput)) {
+			}
+			if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -2394,6 +2395,10 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 
 				stimer_set(&rdput, 3600);
+			}
+			if(etimer_expired(&event_gen)) {
+				etimer_set(&event_gen, 5 * CLOCK_SECOND);
+			}	
 		}
 	
 	}

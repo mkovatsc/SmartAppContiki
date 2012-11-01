@@ -59,7 +59,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.4"
+#define VERSION "0.11.5"
 #define EPTYPE "SteelHead"
 
 
@@ -82,7 +82,7 @@ static int16_t temperature_array[4];
 static int8_t temperature_position=0;
 static int16_t temperature_last;
 static process_event_t changed_temperature_event;
-clock_time_t last_temperature_reading;
+//clock_time_t last_temperature_reading;
 
 static int16_t threshold = 20;
 static uint8_t poll_time = 5;
@@ -100,8 +100,11 @@ char identifier[50];
 /*--ADC-IMPLEMENTATION-----------------------------------------*/
 static void read_temperature(void){
 	static int16_t reading;
-	int16_t raw_temperature;
-	
+	static int16_t raw_temperature;
+	static int16_t delta;
+	static int16_t low;
+	static int16_t high;
+
 	adc_init(ADC_CHAN_ADC2, ADC_MUX5_0,ADC_TRIG_FREE_RUN, ADC_REF_INT_1_6, ADC_PS_32, ADC_ADJ_RIGHT);
 
 	reading = doAdc(ADC_CHAN_ADC2, ADC_MUX5_0, 2);
@@ -115,9 +118,9 @@ static void read_temperature(void){
 
 	//printf("%i\n",reading);
 	
-	int16_t delta = reading % 16;
-	int16_t low = pgm_read_word(&lookup[reading/16]);
-	int16_t high = pgm_read_word(&lookup[(reading/16)+1]);
+	delta = reading % 16;
+	low = pgm_read_word(&lookup[reading/16]);
+	high = pgm_read_word(&lookup[(reading/16)+1]);
 	raw_temperature=low+delta*(high-low)/16;
 
 	if(raw_temperature < -2000 || raw_temperature > 5000){
@@ -129,16 +132,14 @@ static void read_temperature(void){
 	temperature_position++;
 	temperature_position = temperature_position%4;	
 
+	temperature = (temperature_array[0]+temperature_array[1]+temperature_array[2]+temperature_array[3])/4;
 
-	int16_t new_temperature = (temperature_array[0]+temperature_array[1]+temperature_array[2]+temperature_array[3])/4;
-
-	last_temperature_reading =  clock_time();
+	//last_temperature_reading =  clock_time();
 	
 	//printf_P(PSTR("Temp: %d.%02d\n"),new_temperature/100, new_temperature>0 ? new_temperature%100 : (-1*new_temperature)%100);
 
-	temperature =  new_temperature;
-	if (temperature_last - threshold >= new_temperature || temperature_last + threshold <= new_temperature){
-		temperature_last =  new_temperature;
+	if (temperature_last - threshold >= temperature || temperature_last + threshold <= temperature){
+		temperature_last =  temperature;
 		process_post(&coap_process, changed_temperature_event, NULL);
 	}
 }
@@ -321,10 +322,13 @@ void heartbeat_periodic_handler(resource_t *r){
 
 void rd_post_response_handler(void *response){
 
+	if(response==NULL){
+		return;
+	}
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
 		coap_get_header_location_path(response, &location);
 		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
+//		printf("REGISTRED AT RD\n");
 		registred=1;
 		stimer_set(&rdput, 3600);
 	}
@@ -332,12 +336,15 @@ void rd_post_response_handler(void *response){
 
 void rd_put_response_handler(void *response){
 
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+	if(response==NULL){
+		return;
+	}
+	if (((coap_packet_t *) response)->code != CHANGED_2_04) {
 		registred=0;
 		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Status at RD\n");
+//		printf("Updated Status at RD\n");
 		stimer_set(&rdput, 3600);
 	}
 }
@@ -369,20 +376,14 @@ PROCESS_THREAD(coap_process, ev, data)
 	etimer_set(&adc, poll_time*CLOCK_SECOND);
 	stimer_set(&rdpost, 60);
 
-
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_temperature_event){
 			temperature_event_handler(&resource_temperature);	
 		}
 		else  if (ev == PROCESS_EVENT_TIMER){
-			if(etimer_expired(&adc)) {
-				read_temperature();			
-				etimer_set(&adc, CLOCK_SECOND * poll_time);
-			}
 
-		}
-		if (!registred &&stimer_expired(&rdpost)) {
+			if (!registred &&stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -397,8 +398,8 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
-		}
-		if (registred && stimer_expired(&rdput)) {
+			}
+			if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -407,6 +408,12 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 			
+			}
+			if(etimer_expired(&adc)) {
+				etimer_set(&adc, CLOCK_SECOND * poll_time);
+				read_temperature();			
+			}
+
 		}
 
 	}
