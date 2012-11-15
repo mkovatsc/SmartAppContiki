@@ -63,8 +63,8 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.5"
-#define EPTYPE "BallInATube"
+#define VERSION "0.11.5"
+#define EPTYPE "BallInTube"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -97,7 +97,7 @@ char identifier[50];
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(tilt, METHOD_GET, "sensors/tilt-switch", "title=\"Ball in a Tube Switch\";obs;rt=\"ball-in-a-tube\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(tilt, METHOD_GET, "sensors/tilt-switch", "title=\"Ball in a Tube Switch\";obs;rt=\"ball-in-a-tube\"");
 
 void
 tilt_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -109,7 +109,7 @@ tilt_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 }
 
 void
-tilt_periodic_handler(resource_t *r)
+tilt_event_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
 	static char content[15];
@@ -211,10 +211,13 @@ void heartbeat_periodic_handler(resource_t *r){
 
 void rd_post_response_handler(void *response){
 
+	if(response==NULL){
+		return;
+	}
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
 		coap_get_header_location_path(response, &location);
 		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
+//		printf("REGISTRED AT RD\n");
 		registred=1;
 		stimer_set(&rdput, 3600);
 	}
@@ -222,15 +225,17 @@ void rd_post_response_handler(void *response){
 
 void rd_put_response_handler(void *response){
 
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+	if(response==NULL){
+		return;
+	}
+	if (((coap_packet_t *) response)->code != CHANGED_2_04) {
 		registred=0;
 		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Status at RD\n");
+//		printf("Updated Status at RD\n");
 		stimer_set(&rdput, 3600);
 	}
-	
 }
 
 
@@ -249,7 +254,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	tilt_count=0;
  
-	rest_activate_periodic_resource(&periodic_resource_tilt);
+	rest_activate_event_resource(&resource_tilt);
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
@@ -260,12 +265,7 @@ PROCESS_THREAD(coap_process, ev, data)
 		PROCESS_WAIT_EVENT();
 		if (ev == sensors_event && data == &tilt_sensor) {
 			tilt_count++;
-			tilt_periodic_handler(&resource_tilt);
-		}
-		else  if (ev == PROCESS_EVENT_TIMER){
-				if(etimer_expired(&event_gen)) {
-					etimer_set(&event_gen, 5 * CLOCK_SECOND);
-				}	
+			tilt_event_handler(&resource_tilt);
 		}
 		if (!registred && stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
@@ -288,10 +288,13 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				coap_set_header_uri_path(put,loc);
 
-				printf("send put\n");
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
-			}
+		}
+		if(etimer_expired(&event_gen)) {
+			etimer_set(&event_gen, 5 * CLOCK_SECOND);
+		}	
+
 	
 	}
 

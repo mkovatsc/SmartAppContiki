@@ -427,7 +427,9 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 		}
 	}
 
-	if (bufpos>0) {
+	PRINTF("BUF %d, STR %d \n", bufpos, strpos);
+
+	if (bufpos>=0) {
 		PRINTF("BUF %d: %.*s\n", bufpos, bufpos, (char *) buffer);
 
 		coap_set_payload(response, buffer, bufpos );

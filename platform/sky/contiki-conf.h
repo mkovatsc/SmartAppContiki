@@ -12,7 +12,7 @@
 
 
 #ifndef RF_CHANNEL
-#define RF_CHANNEL              26
+#define RF_CHANNEL              21
 #endif /* RF_CHANNEL */
 
 #define CC2420_CONF_AUTOACK              1

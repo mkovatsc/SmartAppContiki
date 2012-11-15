@@ -34,7 +34,7 @@
 
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS 10
+#define COAP_MAX_OPEN_TRANSACTIONS 12
 
 #undef COAP_MAX_OBSERVERS
 #define COAP_MAX_OBSERVERS         COAP_MAX_OPEN_TRANSACTIONS-1
@@ -72,7 +72,7 @@
 #define IEEE802154_CONF_PANID 0xBEEF
 
 #undef EUI64_ADDRESS
-#define EUI64_ADDRESS {0x00,0x21,0x2e,0xff,0xff,0x00,0x03,0xe2}
+#define EUI64_ADDRESS {0x00,0x21,0x2e,0xff,0xff,0x00,0x03,0xe0}
 //#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2d}
 
 #define COAP_RD_SET_IPV6(ipaddr)	uip_ip6addr(ipaddr, 0x2001, 0x620, 0x8, 0x35db, 0, 0, 0, 0x1f)

@@ -61,7 +61,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION "0.10.4"
+#define VERSION "0.11.5"
 #define EPTYPE "LightSensor"
 
 
@@ -124,7 +124,7 @@ static void read_light(void){
 
 /*--CoAP - Process---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";obs;rt=\"light\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(light, METHOD_GET, "sensors/light", "title=\"Light\";obs;rt=\"light\"");
 void light_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
 		snprintf_P((char*)buffer, preferred_size, PSTR("%i"), light);
@@ -132,7 +132,7 @@ void light_handler(void* request, void* response, uint8_t *buffer, uint16_t pref
 		REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void light_periodic_handler(resource_t *r) {
+void light_event_handler(resource_t *r) {
 	static uint32_t event_i = 0;
 	char content[6];
 
@@ -270,10 +270,13 @@ void heartbeat_periodic_handler(resource_t *r){
 
 void rd_post_response_handler(void *response){
 
+	if(response==NULL){
+		return;
+	}
 	if (((coap_packet_t *) response)->code == CREATED_2_01 || ((coap_packet_t *) response)->code == CHANGED_2_04 ) {
 		coap_get_header_location_path(response, &location);
 		strcpy(loc,location);
-		printf("REGISTRED AT RD\n");
+//		printf("REGISTRED AT RD\n");
 		registred=1;
 		stimer_set(&rdput, 3600);
 	}
@@ -281,15 +284,19 @@ void rd_post_response_handler(void *response){
 
 void rd_put_response_handler(void *response){
 
-	if (((coap_packet_t *) response)->code == NOT_FOUND_4_04 ) {
+	if(response==NULL){
+		return;
+	}
+	if (((coap_packet_t *) response)->code != CHANGED_2_04) {
 		registred=0;
 		stimer_set(&rdpost, 300);
 	}
 	else{
-		printf("Updated Status at RD\n");
+//		printf("Updated Status at RD\n");
 		stimer_set(&rdput, 3600);
 	}
 }
+
 
 
 PROCESS_THREAD(coap_process, ev, data)
@@ -309,7 +316,7 @@ PROCESS_THREAD(coap_process, ev, data)
 
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
-	rest_activate_periodic_resource(&periodic_resource_light);	
+	rest_activate_event_resource(&resource_light);	
 //	rest_activate_resource(&resource_threshold);	
 	rest_activate_resource(&resource_identifier);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
@@ -320,13 +327,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	while(1) {
 		PROCESS_WAIT_EVENT();
 		if (ev == changed_light_event){
-			light_periodic_handler(&resource_light);	
-		}
-		else  if (ev == PROCESS_EVENT_TIMER){
-			if (etimer_expired(&adc)) {
-				read_light();			
-				etimer_set(&adc, CLOCK_SECOND * poll_time);
-			}
+			light_event_handler(&resource_light);	
 		}
 		if (!registred &&stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
@@ -352,6 +353,10 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
+		}
+		if (etimer_expired(&adc)) {
+			read_light();			
+			etimer_set(&adc, CLOCK_SECOND * poll_time);
 		}
 		
 	}

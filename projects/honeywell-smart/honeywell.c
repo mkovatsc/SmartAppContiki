@@ -108,9 +108,9 @@ static int16_t rssi_position=0;
 static int16_t rssi_avg;
 
 /* EEPROM variables */
-uint16_t ee_error_ip[8] EEMEM;
-uint16_t ee_error_port EEMEM;
-char ee_error_uri[50] EEMEM;
+//uint16_t ee_error_ip[8] EEMEM;
+//uint16_t ee_error_port EEMEM;
+//char ee_error_uri[50] EEMEM;
 char ee_identifier[50] EEMEM;
 
 static char last_setting[20];
@@ -137,9 +137,9 @@ static process_event_t error_event;
 
 static uint8_t error_active = 0;
 
-uint16_t error_ip[8];
-uint16_t error_port;
-char error_uri[50];
+//uint16_t error_ip[8];
+//uint16_t error_port;
+//char error_uri[50];
 char identifier[50];
 
 
@@ -160,16 +160,16 @@ static struct {
 	uint8_t valve_is;
 	uint8_t mode;
 
-	// values used in the auto mode
+/*	// values used in the auto mode
 	uint16_t frost_temperature;
 	uint16_t energy_temperature;
 	uint16_t comfort_temperature;
 	uint16_t supercomfort_temperature;
-
+*/
 	uint16_t threshold_temperature;
 	uint16_t threshold_battery;
 
-	hw_timer_slot_t timers[8][8];
+//	hw_timer_slot_t timers[8][8];
 
 	/* 0 : justOne
 	 *  1 : weekdays */
@@ -369,9 +369,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 	poll_data.mode=3;
 	poll_data.threshold_battery = 100;
-
+/*
 	eeprom_read_block(&error_uri, ee_error_uri, 50);
-	eeprom_read_block(&identifier, ee_identifier, 50);
 
 	error_port = eeprom_read_word(&ee_error_port);
 
@@ -379,6 +378,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	for(i=0;i<8;i++){
 		error_ip[i] = eeprom_read_word(&ee_error_ip[i]);
 	}
+*/
+	eeprom_read_block(&identifier, ee_identifier, 50);
 	// finish booting first
 	PROCESS_PAUSE();
 
@@ -1268,6 +1269,7 @@ void target_finalize_handler() {
 
 
 /*--------- Threshold Temperature---------------------------------------------------------*/
+/*
 RESOURCE(threshold_temp, METHOD_GET | METHOD_PUT, "config/threshold_temperature", "title=\"Temperature Threshold\";rt=\"threshold\"");
 void threshold_temp_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -1354,7 +1356,7 @@ void threshold_temp_finalize_handler() {
 		char buffer[10];
 		coap_transaction_t *transaction = NULL;
 		if ( (transaction = coap_new_transaction(separate_get_threshold_temp_store->request_metadata.mid, &separate_get_threshold_temp_store->request_metadata.addr, separate_get_threshold_temp_store->request_metadata.port)) ){
-			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			coap_packet_t response[1]; / This way the packet can be treated as pointer as usual. 
 			if(separate_get_threshold_temp_store->error){
 				coap_separate_resume(response, &separate_get_threshold_temp_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
@@ -1373,15 +1375,12 @@ void threshold_temp_finalize_handler() {
 		}
 		else {
 			separate_get_threshold_temp_active = 0;
-			/*
-			 * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
-			 */	
 		}
 	}
 }
 
 /*---------------Threshold Battery ---------------------------------------------*/
-
+/*
 RESOURCE(threshold_bat, METHOD_GET | METHOD_PUT, "config/threshold_battery", "title=\"Battery Threshold\";rt=\"threshold\"");
 void threshold_bat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -1451,7 +1450,7 @@ void threshold_bat_finalize_handler() {
 		char buffer[10];
 		coap_transaction_t *transaction = NULL;
 		if ( (transaction = coap_new_transaction(separate_get_threshold_bat_store->request_metadata.mid, &separate_get_threshold_bat_store->request_metadata.addr, separate_get_threshold_bat_store->request_metadata.port)) ){
-			coap_packet_t response[1]; /* This way the packet can be treated as pointer as usual. */
+			coap_packet_t response[1]; // This way the packet can be treated as pointer as usual.
 			if(separate_get_threshold_bat_store->error){
 				coap_separate_resume(response, &separate_get_threshold_bat_store->request_metadata, INTERNAL_SERVER_ERROR_5_00);
 			}
@@ -1470,9 +1469,6 @@ void threshold_bat_finalize_handler() {
 		}
 		else {
 			separate_get_threshold_bat_active = 0;
-			/*
-			 * TODO: ERROR HANDLING: Set timer for retry, send error message, ...
-			 */	
 		}
 	}
 }
@@ -1983,7 +1979,7 @@ void set_finalize_handler() {
 
 
 /*--------- Error Address ------------------------------------------------------------*/
-
+/*
 RESOURCE(error_address, METHOD_GET | METHOD_PUT, "config/error_address", "title=\"Error URI\";rt=\"uri\"");
 void error_address_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -2079,6 +2075,7 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
 
 /*--------- Error ---------------------------------------------------------*/
+/*
 EVENT_RESOURCE(error, METHOD_GET, "sensors/error", "title=\"Error\";obs;rt=\"error\"");
 void error_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
@@ -2155,23 +2152,6 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 
-
-
-/*--------- ERROR MSG ACK Handle-------------------------------------*/
-
-void error_msg_response_handler(void *response){
-
-	if (((coap_packet_t *) response)->code != CONTENT_2_05) {
-
-		printf("Error\n");
-	}
-	else {
-		printf("OK\n");
-	}
-	// TODO: resend on error
-	//	printf("Answer\n");
-
-}
 
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
@@ -2266,7 +2246,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	rest_activate_event_resource(&resource_mode);
 	rest_activate_event_resource(&resource_valve_is);
 	rest_activate_event_resource(&resource_wheel);
-	rest_activate_event_resource(&resource_error);
+//	rest_activate_event_resource(&resource_error);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
 
 /*
@@ -2313,13 +2293,13 @@ PROCESS_THREAD(coap_process, ev, data)
 		else if (ev == get_target_response_event){
 			target_finalize_handler();
 		}
-		else if (ev == get_threshold_temp_response_event){
+/*		else if (ev == get_threshold_temp_response_event){
 			threshold_temp_finalize_handler();
 		}
 		else if (ev == get_threshold_bat_response_event){
 			threshold_bat_finalize_handler();
 		}
-		else if (ev == get_valve_wanted_response_event){
+*/		else if (ev == get_valve_wanted_response_event){
 			valve_wanted_finalize_handler();
 		}/*
 		else if (ev == get_predefined_response_event){
@@ -2330,11 +2310,11 @@ PROCESS_THREAD(coap_process, ev, data)
 		}*/
 		else if (ev == set_response_event){
 			set_finalize_handler();
-		}
+/*		}
 		else if (ev == error_event){
 
 			error_event_handler(&resource_error);
-/*
+
 			uip_ip6addr_t error_server_ipaddr;
 			static coap_packet_t post[1];
 			uip_ip6addr(&error_server_ipaddr,error_ip[0],error_ip[1],error_ip[2],error_ip[3],error_ip[4],error_ip[5],error_ip[6],error_ip[7]);
@@ -2368,9 +2348,8 @@ PROCESS_THREAD(coap_process, ev, data)
 			COAP_BLOCKING_REQUEST(&error_server_ipaddr, UIP_HTONS(error_port), post, error_msg_response_handler);
 */
 		}
-		else  if (ev == PROCESS_EVENT_TIMER){
-		
-			if (!registred && stimer_expired(&rdpost)) {
+	
+		if (!registred && stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -2385,8 +2364,8 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				stimer_set(&rdpost, 300);
 
-			}
-			if (registred && stimer_expired(&rdput)) {
+		}
+		if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -2395,11 +2374,11 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 
 				stimer_set(&rdput, 3600);
-			}
-			if(etimer_expired(&event_gen)) {
-				etimer_set(&event_gen, 5 * CLOCK_SECOND);
-			}	
 		}
+		if(etimer_expired(&event_gen)) {
+			etimer_set(&event_gen, 5 * CLOCK_SECOND);
+		}	
+		
 	
 	}
 

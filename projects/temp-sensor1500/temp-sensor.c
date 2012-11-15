@@ -113,10 +113,10 @@ static void read_temperature(void){
 	/*--- Computation for real value, with x ohm resistor (Steinhart-Hart-Equation)
 	temp = log(x/(reading/3.3*1.6/1024)-x);
 	kelvin = 1 / (0.001129148 + (0.000234125 * temp) + (8.76741e-8 * temp * temp * temp) );
-	celsius = temp-273.15;
+	celsius = kelvin-273.15;
 	------*/
 
-	//printf("%i\n",reading);
+	printf("%i\n",reading);
 	
 	delta = reading % 16;
 	low = pgm_read_word(&lookup[reading/16]);
@@ -381,9 +381,8 @@ PROCESS_THREAD(coap_process, ev, data)
 		if (ev == changed_temperature_event){
 			temperature_event_handler(&resource_temperature);	
 		}
-		else  if (ev == PROCESS_EVENT_TIMER){
 
-			if (!registred &&stimer_expired(&rdpost)) {
+		if (!registred &&stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -398,8 +397,8 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
-			}
-			if (registred && stimer_expired(&rdput)) {
+		}
+		if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -408,11 +407,11 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
 			
-			}
-			if(etimer_expired(&adc)) {
+		}
+		if(etimer_expired(&adc)) {
 				etimer_set(&adc, CLOCK_SECOND * poll_time);
 				read_temperature();			
-			}
+
 
 		}
 

@@ -66,7 +66,7 @@
 #define FALSE 0
 
 #define VERSION "0.11.5"
-#define EPTYPE "PirSensor"
+#define EPTYPE "PIRSensor"
 
 
 /*--PROCESSES----------------------------------------------------------------*/
@@ -86,8 +86,8 @@ static char * location;
 static char loc[40];
 static uint8_t registred = 0;
 
-static uint8_t interval = 5;
-static uint8_t event_number = 10;
+static uint8_t interval = 7;
+static uint8_t event_number = 7;
 static uint8_t last_state = 0;
 static unsigned long move_count = 0;
 
@@ -104,7 +104,7 @@ static int16_t rssi_avg=0;
 
 /*--SIMPLE RESOURCES---------------------------------------------------------*/
 
-PERIODIC_RESOURCE(motion, METHOD_GET, "sensors/motion", "title=\"Motion Sensor\";obs;rt=\"pir-sensor\"",240*CLOCK_SECOND);
+EVENT_RESOURCE(motion, METHOD_GET, "sensors/motion", "title=\"Motion Sensor\";obs;rt=\"pir-sensor\"");
 
 	void
 motion_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -116,7 +116,7 @@ motion_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 }
 
 	void
-motion_periodic_handler(resource_t *r)
+motion_event_handler(resource_t *r)
 {
 	static uint32_t event_i = 0;
 	static char content[12];
@@ -356,7 +356,7 @@ PROCESS_THREAD(coap_process, ev, data)
 	eeprom_read_block(&identifier, ee_identifier, 50);
 
 	rest_activate_resource(&resource_identifier);
-	rest_activate_periodic_resource(&periodic_resource_motion);
+	rest_activate_event_resource(&resource_motion);
 	rest_activate_resource(&resource_trigger);
 	rest_activate_resource(&resource_interval);
 	rest_activate_periodic_resource(&periodic_resource_heartbeat);
@@ -370,8 +370,7 @@ PROCESS_THREAD(coap_process, ev, data)
 			event_counter++;
 		}
 
-		else if (ev == PROCESS_EVENT_TIMER){
-			if (!registred && stimer_expired(&rdpost)) {
+		if (!registred && stimer_expired(&rdpost)) {
 				static coap_packet_t post[1];
 				coap_init_message(post,COAP_TYPE_CON, COAP_POST,0);
 
@@ -385,8 +384,8 @@ PROCESS_THREAD(coap_process, ev, data)
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , post, rd_post_response_handler);
 				stimer_set(&rdpost, 300);
 
-			}
-			if (registred && stimer_expired(&rdput)) {
+		}
+		if (registred && stimer_expired(&rdput)) {
 				static coap_packet_t put[1];
 				coap_init_message(put,COAP_TYPE_CON, COAP_PUT,0);
 
@@ -394,16 +393,16 @@ PROCESS_THREAD(coap_process, ev, data)
 
 				COAP_BLOCKING_REQUEST(&rd_ipaddr, COAP_RD_PORT , put, rd_put_response_handler);
 				stimer_set(&rdput, 3600);
-			}
+		}
 
-			if(etimer_expired(&interval_timer)){
+		if(etimer_expired(&interval_timer)){
 				uint16_t next_interval; 
 				uint8_t current_state;
 				if (event_counter >= event_number-1){ //only fire event if multiple movements detected in short period
 					current_state = 1;
 					last_movement = clock_seconds();
 					movement_duration = last_movement - start_movement;
-					next_interval = interval*5;
+					next_interval = ((interval*5) > 60) ? interval*5 : 60;
 				}
 				else{
 					start_movement = clock_seconds();
@@ -429,12 +428,12 @@ PROCESS_THREAD(coap_process, ev, data)
 						}
 					}
 					last_state = current_state;
-					motion_periodic_handler(&resource_motion);
+					motion_event_handler(&resource_motion);
 				}
 				event_counter = 0;
 				etimer_set(&interval_timer, CLOCK_SECOND * next_interval);
-			}
 		}
+		
 
 	
 	}
