@@ -37,11 +37,11 @@
 #define UART1_CONF_RX_WITH_DMA   DEPLOY_BR
 #endif
 
-//#undef IEEE802154_CONF_PANID
+#undef IEEE802154_CONF_PANID
 #define IEEE802154_CONF_PANID   0xBEEF
 
-//#undef NETSTACK_CONF_RDC
-//#define NETSTACK_CONF_RDC     nullrdc_driver
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     nullrdc_driver
 
 #ifndef UIP_FALLBACK_INTERFACE
 #define UIP_FALLBACK_INTERFACE   rpl_interface
