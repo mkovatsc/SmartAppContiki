@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2012, Matthias Kovatsch and other contributors.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 
 /* Define which resources to include to meet memory constraints. */
 #define REST_RES_HELLO 1
-#define REST_RES_MIRROR 0 /* causes largest code size */
+#define REST_RES_MIRROR 1 /* causes largest code size */
 #define REST_RES_CHUNKS 1
 #define REST_RES_SEPARATE 1
 #define REST_RES_PUSHING 1
@@ -92,6 +92,8 @@
 #include "er-coap-03.h"
 #elif WITH_COAP == 7
 #include "er-coap-07.h"
+#elif WITH_COAP == 12
+#include "er-coap-12.h"
 #else
 #warning "Erbium example without CoAP-specifc functionality"
 #endif /* CoAP-specific example */
@@ -557,7 +559,7 @@ sub_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
   }
   else
   {
-    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, ".%s", uri_path+base_len);
+    snprintf((char *)buffer, REST_MAX_CHUNK_SIZE, ".%.*s", len-base_len, uri_path+base_len);
   }
 
   REST.set_response_payload(response, buffer, strlen((char *)buffer));

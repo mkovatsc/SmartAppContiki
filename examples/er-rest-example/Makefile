@@ -24,7 +24,7 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # variable for this Makefile
 # configure CoAP implementation (3|7) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=7
+WITH_COAP=12
 
 # new variable since slip-radio
 ifneq ($(TARGET), minimal-net)
@@ -42,7 +42,13 @@ endif
 SMALL=1
 
 # REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 7)
+ifeq ($(WITH_COAP), 12)
+${info INFO: compiling with CoAP-12}
+CFLAGS += -DWITH_COAP=12
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-12
+else ifeq ($(WITH_COAP), 7)
 ${info INFO: compiling with CoAP-08}
 CFLAGS += -DWITH_COAP=7
 CFLAGS += -DREST=coap_rest_implementation

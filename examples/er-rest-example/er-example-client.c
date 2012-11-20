@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2012, Matthias Kovatsch and other contributors.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,8 @@
 #include "er-coap-06-engine.h"
 #elif WITH_COAP == 7
 #include "er-coap-07-engine.h"
+#elif WITH_COAP == 12
+#include "er-coap-12-engine.h"
 #else
 #error "CoAP version defined by WITH_COAP not implemented"
 #endif

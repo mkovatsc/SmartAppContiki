@@ -59,10 +59,10 @@ Add a client:
 
 DETAILS
 -------
-Erbium currently implements draft 08 (name "er-coap-07" stems from last technical draft changes).
+Erbium currently implements draft 12.
 Central features are commented in er-example-server.c.
-In general, apps/er-coap-07 supports:
-* All draft 08 header options
+In general, apps/er-coap-12 supports:
+* All draft 12 header options
 * CON Retransmissions (note COAP_MAX_OPEN_TRANSACTIONS)
 * Blockwise Transfers (note REST_MAX_CHUNK_SIZE, see er-plugtest-server.c for Block1 uploads)
 * Separate Responses (no rest_set_pre_handler() required anymore, note coap_separate_accept(), _reject(), and _resume())
@@ -72,6 +72,8 @@ In general, apps/er-coap-07 supports:
 REST IMPLEMENTATIONS
 --------------------
 The Makefile uses WITH_COAP to configure different implementations for the Erbium (Er) REST Engine.
+* WITH_COAP=12 uses Erbium CoAP 12 apps/er-coap-12/.
+  The default port for coap-12 is 5683.
 * WITH_COAP=7 uses Erbium CoAP 08 apps/er-coap-07/.
   The default port for coap-07/-08 is 5683.
 * WITH_COAP=3 uses Erbium CoAP 03 apps/er-coap-03/.
@@ -81,6 +83,7 @@ The Makefile uses WITH_COAP to configure different implementations for the Erbiu
 
 TODOs
 -----
+* Dedicated Observe buffers
 * Observe client
 * Multiple If-Match ETags
 * (Message deduplication)

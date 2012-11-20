@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,46 +26,41 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
+ * This file is part of the Contiki operating system.
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+/**
+ * \file
+ *      CoAP module for separate responses
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
+ */
 
-#define SICSLOWPAN_CONF_FRAG	1
+#ifndef COAP_SEPARATE_H_
+#define COAP_SEPARATE_H_
 
+#include "er-coap-12.h"
 
-#undef IEEE802154_CONF_PANID
-/* #define IEEE802154_CONF_PANID   0xBEEF */
+typedef struct coap_separate {
 
-/* Disabling RDC for demo purposes. Core updates often require more memory. */
-/* For projects, optimize memory and enable RDC again. */
-#undef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     nullrdc_driver
+  uip_ipaddr_t addr;
+  uint16_t port;
 
-/* Save some memory for the sky platform. */
-#undef UIP_CONF_DS6_NBR_NBU
-#define UIP_CONF_DS6_NBR_NBU     10
-#undef UIP_CONF_DS6_ROUTE_NBU
-#define UIP_CONF_DS6_ROUTE_NBU   10
+  coap_message_type_t type;
+  uint16_t mid;
 
-/* Increase rpl-border-router IP-buffer when using 128. */
-#ifndef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    64
-#endif
+  uint8_t token_len;
+  uint8_t token[COAP_TOKEN_LEN];
 
-/* Multiplies with chunk size, be aware of memory constraints. */
-#ifndef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS   2
-#endif
+  /* separate + blockwise is untested! */
+  uint32_t block2_num;
+  uint16_t block2_size;
 
-/* Must be <= open transaction number. */
-#ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      COAP_MAX_OPEN_TRANSACTIONS-1
-#endif
+} coap_separate_t;
 
-/* Reduce 802.15.4 frame queue to save RAM. */
-#undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM               4
+int coap_separate_handler(resource_t *resource, void *request, void *response);
+void coap_separate_reject();
+int coap_separate_accept(void *request, coap_separate_t *separate_store);
+void coap_separate_resume(void *response, coap_separate_t *separate_store, uint8_t code);
 
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#endif /* COAP_SEPARATE_H_ */

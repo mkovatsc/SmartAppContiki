@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,46 +26,53 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
+ * This file is part of the Contiki operating system.
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+/**
+ * \file
+ *      CoAP module for reliable transport
+ * \author
+ *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
+ */
 
-#define SICSLOWPAN_CONF_FRAG	1
+#ifndef COAP_TRANSACTIONS_H_
+#define COAP_TRANSACTIONS_H_
 
+#include "er-coap-12.h"
 
-#undef IEEE802154_CONF_PANID
-/* #define IEEE802154_CONF_PANID   0xBEEF */
-
-/* Disabling RDC for demo purposes. Core updates often require more memory. */
-/* For projects, optimize memory and enable RDC again. */
-#undef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     nullrdc_driver
-
-/* Save some memory for the sky platform. */
-#undef UIP_CONF_DS6_NBR_NBU
-#define UIP_CONF_DS6_NBR_NBU     10
-#undef UIP_CONF_DS6_ROUTE_NBU
-#define UIP_CONF_DS6_ROUTE_NBU   10
-
-/* Increase rpl-border-router IP-buffer when using 128. */
-#ifndef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    64
-#endif
-
-/* Multiplies with chunk size, be aware of memory constraints. */
+/*
+ * The number of concurrent messages that can be stored for retransmission in the transaction layer.
+ */
 #ifndef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS   2
-#endif
+#define COAP_MAX_OPEN_TRANSACTIONS 4 
+#endif /* COAP_MAX_OPEN_TRANSACTIONS */
 
-/* Must be <= open transaction number. */
-#ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      COAP_MAX_OPEN_TRANSACTIONS-1
-#endif
+/* container for transactions with message buffer and retransmission info */
+typedef struct coap_transaction {
+  struct coap_transaction *next; /* for LIST */
 
-/* Reduce 802.15.4 frame queue to save RAM. */
-#undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM               4
+  uint16_t mid;
+  struct etimer retrans_timer;
+  uint8_t retrans_counter;
 
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+  uip_ipaddr_t addr;
+  uint16_t port;
+
+  restful_response_handler callback;
+  void *callback_data;
+
+  uint16_t packet_len;
+  uint8_t packet[COAP_MAX_PACKET_SIZE+1]; /* +1 for the terminating '\0' to simply and savely use snprintf(buf, len+1, "", ...) in the resource handler. */
+} coap_transaction_t;
+
+void coap_register_as_transaction_handler();
+
+coap_transaction_t *coap_new_transaction(uint16_t mid, uip_ipaddr_t *addr, uint16_t port);
+void coap_send_transaction(coap_transaction_t *t);
+void coap_clear_transaction(coap_transaction_t *t);
+coap_transaction_t *coap_get_transaction_by_mid(uint16_t mid);
+
+void coap_check_transactions();
+
+#endif /* COAP_TRANSACTIONS_H_ */
