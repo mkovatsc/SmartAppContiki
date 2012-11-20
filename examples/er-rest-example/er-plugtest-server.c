@@ -183,8 +183,8 @@ query_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 
 #if REST_RES_SEPARATE
 /* Required to manually (=not by the engine) handle the response transaction. */
-#include "er-coap-07-separate.h"
-#include "er-coap-07-transactions.h"
+#include "er-coap-12-separate.h"
+#include "er-coap-12-transactions.h"
 /*
  * Resource which cannot be served immediately and which cannot be acknowledged in a piggy-backed way
  */

@@ -136,7 +136,7 @@ coap_insert_option_jump(unsigned int number, unsigned int *current_number, uint8
     PRINTF("OPTION JUMP 1: 15\n");
     return 1;
   }
-  else if (delta < 2070)
+  else if (delta < 2064)
   {
     buffer[0] = 0xF2;
     buffer[1] = ((delta/8)-2);
