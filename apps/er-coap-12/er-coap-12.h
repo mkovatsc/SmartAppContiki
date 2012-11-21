@@ -262,9 +262,9 @@ typedef struct {
       coap_pkt->option_count += 1; \
       current_number = number; \
     }
-#define COAP_SERIALIZE_BYTE_OPTION(number, field, field_len, text)      \
+#define COAP_SERIALIZE_BYTE_OPTION(number, field, text)      \
     if (IS_OPTION(coap_pkt, number)) { \
-      PRINTF(text" %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", coap_pkt->field_len, \
+      PRINTF(text" %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", coap_pkt->field##_len, \
         coap_pkt->field[0], \
         coap_pkt->field[1], \
         coap_pkt->field[2], \
@@ -275,17 +275,28 @@ typedef struct {
         coap_pkt->field[7] \
       ); /*FIXME always prints 8 bytes */ \
       uint8_t split_options = '\0'; \
-      option += coap_serialize_array_option(number, current_number, option, coap_pkt->field, coap_pkt->field_len, &split_options); \
+      option += coap_serialize_array_option(number, current_number, option, coap_pkt->field, coap_pkt->field##_len, &split_options); \
       coap_pkt->option_count += split_options; \
       current_number = number; \
     }
-#define COAP_SERIALIZE_STRING_OPTION(number, field, field_len, splitter, text)      \
+#define COAP_SERIALIZE_STRING_OPTION(number, field, splitter, text)      \
     if (IS_OPTION(coap_pkt, number)) { \
-      PRINTF(text" [%.*s]\n", coap_pkt->field_len, coap_pkt->field); \
+      PRINTF(text" [%.*s]\n", coap_pkt->field##_len, coap_pkt->field); \
       uint8_t split_options = splitter; \
-      option += coap_serialize_array_option(number, current_number, option, (uint8_t *) coap_pkt->field, coap_pkt->field_len, &split_options); \
+      option += coap_serialize_array_option(number, current_number, option, (uint8_t *) coap_pkt->field, coap_pkt->field##_len, &split_options); \
       coap_pkt->option_count += split_options; \
       current_number = number; \
+    }
+#define COAP_SERIALIZE_ACCEPT_OPTION(number, field, text)  \
+    if (IS_OPTION(coap_pkt, number)) { \
+      int i; \
+      for (i=0; i<coap_pkt->field##_num; ++i) \
+      { \
+        PRINTF(text" [%u]\n", coap_pkt->field[i]); \
+        option += coap_serialize_int_option(number, current_number, option, coap_pkt->field[i]); \
+        coap_pkt->option_count += 1; \
+        current_number = number; \
+      } \
     }
 #define COAP_SERIALIZE_BLOCK_OPTION(number, field, text)      \
     if (IS_OPTION(coap_pkt, number)) \

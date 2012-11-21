@@ -647,7 +647,8 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   coap_set_header_proxy_uri(response, "ftp://x");
   //coap_set_header_block2(response, 42, 0, 64);
   //coap_set_header_block1(response, 23, 0, 16);
-  coap_set_header_accept(response, TEXT_PLAIN);
+  coap_set_header_accept(response, APPLICATION_XML);
+  coap_set_header_accept(response, APPLICATION_ATOM_XML);
   coap_set_header_if_none_match(response);
 }
 #endif /* REST_RES_MIRROR */
