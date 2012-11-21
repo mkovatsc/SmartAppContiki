@@ -72,8 +72,11 @@
 /*
  * Conservative size limit, as not all options have to be set at the same time.
  */
+#ifndef COAP_MAX_HEADER_SIZE
 /*                            Hdr CoT Age  Tag              Obs  Tok               Blo strings */
 #define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 30) /* 70 */
+#endif /* COAP_MAX_HEADER_SIZE */ 
+
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
 #if COAP_MAX_PACKET_SIZE > (UIP_BUFSIZE - UIP_LLH_LEN - UIP_IPUDPH_LEN)

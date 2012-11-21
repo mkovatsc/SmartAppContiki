@@ -165,7 +165,7 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   unsigned int content_type = REST.get_header_content_type(request);
 
   /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
-  uint32_t max_age = 0;
+  uint32_t max_age_and_size = 0;
   const char *str = NULL;
   uint32_t observe = 0;
   const uint8_t *bytes = NULL;
@@ -180,14 +180,22 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
   int strpos = 0;
   /* snprintf() counts the terminating '\0' to the size parameter.
    * The additional byte is taken care of by allocating REST_MAX_CHUNK_SIZE+1 bytes in the REST framework.
-   * Add +1 to fill the complete buffer. */
-  strpos += snprintf((char *)buffer, REST_MAX_CHUNK_SIZE+1, "CT %u\n", content_type);
-
+   * Add +1 to fill the complete buffer, as the payload does not need a terminating '\0'. */
+  if (content_type!=-1)
+  {
+    strpos += snprintf((char *)buffer, REST_MAX_CHUNK_SIZE+1, "CT %u\n", content_type);
+  }
+  
   /* Some getters such as for ETag or Location are omitted, as these options should not appear in a request.
    * Max-Age might appear in HTTP requests or used for special purposes in CoAP. */
-  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_max_age(request, &max_age))
+  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_max_age(request, &max_age_and_size))
   {
-    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "MA %lu\n", max_age);
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "MA %lu\n", max_age_and_size);
+  }
+  /* For HTTP this is the Length option, for CoAP it is the Size option. */
+  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_length(request, &max_age_and_size))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "SZ %lu\n", max_age_and_size);
   }
 
   if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_header_host(request, &str)))
@@ -277,9 +285,10 @@ mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 
   /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-  REST.set_header_max_age(response, 10); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
+  REST.set_header_max_age(response, 17); /* For HTTP, browsers will not re-request the page for 17 seconds. */
   REST.set_header_etag(response, opaque, 2);
   REST.set_header_location(response, location); /* Initial slash is omitted by framework */
+  REST.set_header_length(response, strpos); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
 
 /* CoAP-specific example: actions not required for normal RESTful Web service. */
 #if WITH_COAP > 1

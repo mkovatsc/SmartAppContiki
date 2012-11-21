@@ -43,7 +43,7 @@
 #include "er-coap-12-transactions.h"
 
 #ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      4
+#define COAP_MAX_OBSERVERS    COAP_MAX_OPEN_TRANSACTIONS-1
 #endif /* COAP_MAX_OBSERVERS */
 
 /* Interval in seconds in which NON notifies are changed to CON notifies to check client. */

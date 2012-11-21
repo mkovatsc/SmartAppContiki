@@ -45,7 +45,7 @@
 #include "er-coap-12-transactions.h"
 
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -101,20 +101,24 @@ coap_set_option_header(int delta, size_t length, uint8_t *buffer)
 {
   if (length<15)
   {
+    PRINTF("Option len: %u\n", delta);
     buffer[0] = (0x0F & length) | (0xF0 & delta<<4);
     return 1;
   }
   else
   {
+    PRINTF("Option len: 15");
     /* WARNING: no extra check for maximum length, know what you are doing */
     uint8_t size = 0;
     buffer[0] = 0x0F | (0xF0 & delta<<4);
     length -= 15;
     while (length > 254)
     {
+      PRINTF("+255");
       buffer[++size] = 0xFF;
       length -= 255;
     }
+    PRINTF("+%u\n", length);
     buffer[++size] = 0xFF & length;
     return ++size;
   }
@@ -230,7 +234,7 @@ coap_serialize_array_option(unsigned int number, unsigned int current_number, ui
 
     *split_option = 1;
 
-    PRINTF("OPTION type %u, delta %u, len %u\n", number, number - current_number, i);
+    PRINTF("OPTION type %u, delta %u, len %u\n", number, number - current_number, length);
   }
 
   return i;
@@ -484,19 +488,30 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
 
       current_number += current_option[0]>>4;
 
-      PRINTF("OPTION %u (type %u, delta %u, len %u): ", option_index, current_number, current_option[0]>>4, (0x0F & current_option[0]) < 15 ? (0x0F & current_option[0]) : current_option[1] + 15);
+      PRINTF("OPTION %u (type %u, delta %u, len %u", option_index, current_number, current_option[0]>>4, (0x0F & current_option[0]));
 
-      if ((0x0F & current_option[0]) < 15) {
+      if ((0x0F & current_option[0]) < 15)
+	  {
         option_len = 0x0F & current_option[0];
-        current_option += 1;
-      } else {
-        option_len = current_option[1] + 15;
-        current_option += 2;
+        ++current_option;
       }
+	  else
+	  {
+	  	option_len = 15;	  
+        do
+        {
+          ++current_option;				            
+          option_len += current_option[0];
+          PRINTF("+%u", current_option[0]);
+        } while (current_option[0]==255);
+        ++current_option;
+      }
+      PRINTF("=%u: ", option_len);
 
       SET_OPTION(coap_pkt, current_number);
 
-      switch (current_number) {
+      switch (current_number)
+      {
         case COAP_OPTION_CONTENT_TYPE:
           coap_pkt->content_type = coap_parse_int_option(current_option, option_len);
           PRINTF("Content-Format [%u]\n", coap_pkt->content_type);

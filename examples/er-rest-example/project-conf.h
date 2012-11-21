@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +29,40 @@
  *
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+#ifndef __PROJECT_ERBIUM_CONF_H__
+#define __PROJECT_ERBIUM_CONF_H__
 
-#define SICSLOWPAN_CONF_FRAG	1
+/* Some platforms have weird includes. */
+#undef IEEE802154_CONF_PANID
 
 /* Disabling RDC for demo purposes. Core updates often require more memory. */
 /* For projects, optimize memory and enable RDC again. */
 #undef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC     nullrdc_driver
+
+/* Increase rpl-border-router IP-buffer when using more than 64. */
+#undef REST_MAX_CHUNK_SIZE
+#define REST_MAX_CHUNK_SIZE    64
+
+/*
+#undef COAP_MAX_HEADER_SIZE
+#define COAP_MAX_HEADER_SIZE    70
+*/
+
+/*
+#undef UIP_CONF_BUFFER_SIZE
+#define UIP_CONF_BUFFER_SIZE    1280
+*/
+
+/* Multiplies with chunk size, be aware of memory constraints. */
+#undef COAP_MAX_OPEN_TRANSACTIONS
+#define COAP_MAX_OPEN_TRANSACTIONS   4
+
+/* Must be <= open transaction number, default is COAP_MAX_OPEN_TRANSACTIONS-1. */
+/*
+#undef COAP_MAX_OBSERVERS
+#define COAP_MAX_OBSERVERS      2
+*/
 
 /* Save some memory for the sky platform. */
 #undef UIP_CONF_DS6_NBR_NBU
@@ -45,22 +70,11 @@
 #undef UIP_CONF_DS6_ROUTE_NBU
 #define UIP_CONF_DS6_ROUTE_NBU   10
 
-/* Increase rpl-border-router IP-buffer when using 128. */
-#undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE    64
-
-/* Multiplies with chunk size, be aware of memory constraints. */
-#ifndef COAP_MAX_OPEN_TRANSACTIONS
-#define COAP_MAX_OPEN_TRANSACTIONS   2
-#endif
-
-/* Must be <= open transaction number. */
-#ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      COAP_MAX_OPEN_TRANSACTIONS-1
-#endif
-
 /* Reduce 802.15.4 frame queue to save RAM. */
 #undef QUEUEBUF_CONF_NUM
-#define QUEUEBUF_CONF_NUM               4
+#define QUEUEBUF_CONF_NUM       4
 
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#undef SICSLOWPAN_CONF_FRAG
+#define SICSLOWPAN_CONF_FRAG	1
+
+#endif /* __PROJECT_ERBIUM_CONF_H__ */
