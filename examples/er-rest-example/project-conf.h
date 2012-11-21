@@ -34,10 +34,6 @@
 
 #define SICSLOWPAN_CONF_FRAG	1
 
-
-#undef IEEE802154_CONF_PANID
-/* #define IEEE802154_CONF_PANID   0xBEEF */
-
 /* Disabling RDC for demo purposes. Core updates often require more memory. */
 /* For projects, optimize memory and enable RDC again. */
 #undef NETSTACK_CONF_RDC
@@ -50,9 +46,8 @@
 #define UIP_CONF_DS6_ROUTE_NBU   10
 
 /* Increase rpl-border-router IP-buffer when using 128. */
-#ifndef REST_MAX_CHUNK_SIZE
+#undef REST_MAX_CHUNK_SIZE
 #define REST_MAX_CHUNK_SIZE    64
-#endif
 
 /* Multiplies with chunk size, be aware of memory constraints. */
 #ifndef COAP_MAX_OPEN_TRANSACTIONS

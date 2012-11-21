@@ -54,6 +54,9 @@
 #define REST_RES_LARGE_CREATE 1
 #define REST_RES_OBS 1
 
+#define REST_RES_MIRROR 1
+
+
 
 #if !defined (CONTIKI_TARGET_MINIMAL_NET)
 #warning "Should only be compiled for minimal-net!"
@@ -481,7 +484,7 @@ obs_periodic_handler(resource_t *r)
 {
   ++obs_counter;
 
-  PRINTF("TICK %u for /%s\n", obs_counter, r->url);
+  //PRINTF("TICK %u for /%s\n", obs_counter, r->url);
 
   /* Build notification. */
   /*TODO: REST.new_response() */
@@ -495,6 +498,163 @@ obs_periodic_handler(resource_t *r)
   REST.notify_subscribers(r, obs_counter, notification);
 }
 #endif
+
+#if REST_RES_MIRROR
+/* This resource mirrors the incoming request. It shows how to access the options and how to set them for the response. */
+RESOURCE(mirror, METHOD_GET | METHOD_POST | METHOD_PUT | METHOD_DELETE, "debug/mirror", "title=\"Returns your decoded message\";rt=\"Debug\"");
+
+void
+mirror_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  /* The ETag and Token is copied to the header. */
+  uint8_t opaque[] = {0x0A, 0xBC, 0xDE};
+
+  /* Strings are not copied, so use static string buffers or strings in .text memory (char *str = "string in .text";). */
+  static char location[] = {'/','f','/','a','?','k','&','e', 0};
+
+  /* Getter for the header option Content-Type. If the option is not set, text/plain is returned by default. */
+  unsigned int content_type = REST.get_header_content_type(request);
+
+  /* The other getters copy the value (or string/array pointer) to the given pointers and return 1 for success or the length of strings/arrays. */
+  uint32_t max_age_and_size = 0;
+  const char *str = NULL;
+  uint32_t observe = 0;
+  const uint8_t *bytes = NULL;
+  const uint16_t *words = NULL;
+  uint32_t block_num = 0;
+  uint8_t block_more = 0;
+  uint16_t block_size = 0;
+  const char *query = "";
+  int len = 0;
+
+  /* Mirror the received header options in the response payload. Unsupported getters (e.g., rest_get_header_observe() with HTTP) will return 0. */
+
+  int strpos = 0;
+  /* snprintf() counts the terminating '\0' to the size parameter.
+   * The additional byte is taken care of by allocating REST_MAX_CHUNK_SIZE+1 bytes in the REST framework.
+   * Add +1 to fill the complete buffer, as the payload does not need a terminating '\0'. */
+  
+  
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_header_if_match(request, &bytes)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "If-Match 0x");
+    int index = 0;
+    for (index = 0; index<len; ++index) {
+        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
+    }
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_header_host(request, &str)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Uri-Host %.*s\n", len, str);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = coap_get_header_etag(request, &bytes)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "ETag 0x");
+    int index = 0;
+    for (index = 0; index<len; ++index) {
+        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
+    }
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_if_none_match(request))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "If-None-Match\n");
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && coap_get_header_observe(request, &observe))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Observe %lu\n", observe);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = coap_get_header_location_path(request, &str)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Location-Path %.*s\n", len, str);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = coap_get_header_uri_path(request, &str)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Uri-Path %.*s\n", len, str);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && content_type!=-1)
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Content-Format %u\n", content_type);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_max_age(request, &max_age_and_size))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Max-Age %lu\n", max_age_and_size);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_query(request, &query)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Uri-Query %.*s\n", len, query);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_header_accept(request, &words)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Accept ");
+    int index = 0;
+    for (index = 0; index<len; ++index) {
+        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%u", words[index]);
+    }
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = coap_get_header_token(request, &bytes)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Token 0x");
+    int index = 0;
+    for (index = 0; index<len; ++index) {
+        strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "%02X", bytes[index]);
+    }
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n");
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = coap_get_header_location_query(request, &str)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Location-Query %.*s\n", len, str);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && coap_get_header_block2(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Block2 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && coap_get_header_block1(request, &block_num, &block_more, &block_size, NULL)) /* This getter allows NULL pointers to get only a subset of the block parameters. */
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Block1 %lu%s (%u)\n", block_num, block_more ? "+" : "", block_size);
+  }
+  if (strpos<=REST_MAX_CHUNK_SIZE && REST.get_header_length(request, &max_age_and_size))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "Size %lu\n", max_age_and_size);
+  }
+
+  if (strpos<=REST_MAX_CHUNK_SIZE && (len = REST.get_request_payload(request, &bytes)))
+  {
+    strpos += snprintf((char *)buffer+strpos, REST_MAX_CHUNK_SIZE-strpos+1, "\n%.*s", len, bytes);
+  }
+
+  if (strpos >= REST_MAX_CHUNK_SIZE)
+  {
+      buffer[REST_MAX_CHUNK_SIZE-1] = 0xBB; /* '»' to indicate truncation */
+  }
+
+  REST.set_response_payload(response, buffer, strpos);
+
+  PRINTF("/mirror options received: %s\n", buffer);
+
+  /* Set dummy header options for response. Like getters, some setters are not implemented for HTTP and have no effect. */
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_header_max_age(response, 17); /* For HTTP, browsers will not re-request the page for 17 seconds. */
+  REST.set_header_etag(response, opaque, 2);
+  REST.set_header_location(response, location); /* Initial slash is omitted by framework */
+  REST.set_header_length(response, strpos); /* For HTTP, browsers will not re-request the page for 10 seconds. CoAP action depends on the client. */
+
+/* CoAP-specific example: actions not required for normal RESTful Web service. */
+  coap_set_header_uri_host(response, "Contiki");
+  coap_set_header_observe(response, 10);
+  coap_set_header_proxy_uri(response, "ftp://x");
+  //coap_set_header_block2(response, 42, 0, 64);
+  //coap_set_header_block1(response, 23, 0, 16);
+  coap_set_header_accept(response, TEXT_PLAIN);
+  coap_set_header_if_none_match(response);
+}
+#endif /* REST_RES_MIRROR */
+
+
+
+
 
 PROCESS(plugtest_server, "PlugtestServer");
 AUTOSTART_PROCESSES(&plugtest_server);
@@ -551,6 +711,10 @@ PROCESS_THREAD(plugtest_server, ev, data)
 #endif
 #if REST_RES_OBS
   rest_activate_periodic_resource(&periodic_resource_obs);
+#endif
+
+#if REST_RES_MIRROR
+  rest_activate_resource(&resource_mirror);
 #endif
 
   /* Define application-specific events here. */

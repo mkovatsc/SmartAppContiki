@@ -159,21 +159,21 @@ typedef enum {
   COAP_OPTION_IF_NONE_MATCH = 5,  /* 0 B */
   COAP_OPTION_OBSERVE = 6,        /* 0-3 B */
   COAP_OPTION_URI_PORT = 7,       /* 0-2 B */
-  COAP_OPTION_LOCATION_PATH = 8,  /* 1-255 B */
-  COAP_OPTION_URI_PATH = 11,      /* 1-255 B */
+  COAP_OPTION_LOCATION_PATH = 8,  /* 0-255 B */
+  COAP_OPTION_URI_PATH = 11,      /* 0-255 B */
   COAP_OPTION_CONTENT_TYPE = 12,  /* 0-2 B */
   COAP_OPTION_MAX_AGE = 14,       /* 0-4 B */
-  COAP_OPTION_URI_QUERY = 15,     /* 1-270 B */
+  COAP_OPTION_URI_QUERY = 15,     /* 0-270 B */
   COAP_OPTION_ACCEPT = 16,        /* 0-2 B */
   COAP_OPTION_TOKEN = 19,         /* 1-8 B */
   COAP_OPTION_LOCATION_QUERY = 20, /* 1-270 B */
   COAP_OPTION_BLOCK2 = 23,        /* 1-3 B */
   COAP_OPTION_BLOCK1 = 27,        /* 1-3 B */
-  COAP_OPTION_SIZE = 28,        /* 1-3 B */
+  COAP_OPTION_SIZE = 28,          /* 0-4 B */
   COAP_OPTION_PROXY_URI = 35,     /* 1-270 B */
 } coap_option_t;
 
-/* CoAP content-types */
+/* CoAP Content-Types */
 typedef enum {
   TEXT_PLAIN = 0,
     TEXT_XML = 1, /* Indented types are not in the initial registry. */
@@ -199,6 +199,7 @@ typedef enum {
     APPLICATION_X_OBIX_BINARY = 51
 } coap_content_type_t;
 
+/* Parsed message struct */
 typedef struct {
   uint8_t *buffer; /* pointer to CoAP header / incoming packet buffer / memory to serialize packet */
 
@@ -240,6 +241,7 @@ typedef struct {
   uint8_t block1_more;
   uint16_t block1_size;
   uint32_t block1_offset;
+  uint32_t size;
   size_t uri_query_len;
   const char *uri_query;
   uint8_t if_none_match;
@@ -249,6 +251,51 @@ typedef struct {
 
 } coap_packet_t;
 
+/* Option format serialization*/
+#define COAP_SERIALIZE_INT_OPTION(number, field, text)  \
+    if (IS_OPTION(coap_pkt, number)) { \
+      PRINTF(text" [%u]\n", coap_pkt->field); \
+      option += coap_serialize_int_option(number, current_number, option, coap_pkt->field); \
+      coap_pkt->option_count += 1; \
+      current_number = number; \
+    }
+#define COAP_SERIALIZE_BYTE_OPTION(number, field, field_len, text)      \
+    if (IS_OPTION(coap_pkt, number)) { \
+      PRINTF(text" %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", coap_pkt->field_len, \
+        coap_pkt->field[0], \
+        coap_pkt->field[1], \
+        coap_pkt->field[2], \
+        coap_pkt->field[3], \
+        coap_pkt->field[4], \
+        coap_pkt->field[5], \
+        coap_pkt->field[6], \
+        coap_pkt->field[7] \
+      ); /*FIXME always prints 8 bytes */ \
+      uint8_t split_options = '\0'; \
+      option += coap_serialize_array_option(number, current_number, option, coap_pkt->field, coap_pkt->field_len, &split_options); \
+      coap_pkt->option_count += split_options; \
+      current_number = number; \
+    }
+#define COAP_SERIALIZE_STRING_OPTION(number, field, field_len, splitter, text)      \
+    if (IS_OPTION(coap_pkt, number)) { \
+      PRINTF(text" [%.*s]\n", coap_pkt->field_len, coap_pkt->field); \
+      uint8_t split_options = splitter; \
+      option += coap_serialize_array_option(number, current_number, option, (uint8_t *) coap_pkt->field, coap_pkt->field_len, &split_options); \
+      coap_pkt->option_count += split_options; \
+      current_number = number; \
+    }
+#define COAP_SERIALIZE_BLOCK_OPTION(number, field, text)      \
+    if (IS_OPTION(coap_pkt, number)) \
+    { \
+      PRINTF(text" [%lu%s (%u B/blk)]\n", coap_pkt->field##_num, coap_pkt->field##_more ? "+" : "", coap_pkt->field##_size); \
+      uint32_t block = coap_pkt->field##_num << 4; \
+      if (coap_pkt->field##_more) block |= 0x8; \
+      block |= 0xF & coap_log_2(coap_pkt->field##_size/16); \
+      PRINTF(text" encoded: 0x%lX\n", block); \
+      option += coap_serialize_int_option(number, current_number, option, block); \
+      coap_pkt->option_count += 1; \
+      current_number = number; \
+    }
 
 /* To store error code and human-readable payload */
 extern coap_status_t coap_error_code;
@@ -316,6 +363,9 @@ int coap_set_header_block2(void *packet, uint32_t num, uint8_t more, uint16_t si
 
 int coap_get_header_block1(void *packet, uint32_t *num, uint8_t *more, uint16_t *size, uint32_t *offset);
 int coap_set_header_block1(void *packet, uint32_t num, uint8_t more, uint16_t size);
+
+int coap_get_header_size(void *packet, uint32_t *size);
+int coap_set_header_size(void *packet, uint32_t size);
 
 int coap_get_payload(void *packet, uint8_t **payload);
 int coap_set_payload(void *packet, const void *payload, size_t length);

@@ -44,7 +44,7 @@
 
 #include "er-coap-12-engine.h"
 
-#define DEBUG 0 
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
@@ -429,7 +429,6 @@ PROCESS_THREAD(coap_receiver, ev, data)
 
   coap_register_as_transaction_handler();
   coap_init_connection(SERVER_LISTEN_PORT);
-  PRINTF("Listening on port %u\n", UIP_HTONS(SERVER_LISTEN_PORT));
 
   while(1) {
     PROCESS_YIELD();
@@ -537,6 +536,8 @@ const struct rest_implementation coap_rest_implementation = {
   coap_get_header_content_type,
   coap_set_header_content_type,
   coap_get_header_accept,
+  coap_get_header_size,
+  coap_set_header_size,
   coap_get_header_max_age,
   coap_set_header_max_age,
   coap_set_header_etag,

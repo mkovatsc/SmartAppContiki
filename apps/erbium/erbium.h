@@ -182,10 +182,17 @@ struct rest_implementation {
   /** Get the content-type of a request. */
   unsigned int (* get_header_content_type)(void *request);
 
-  /** Set the content-type of a response. */
+  /** Set the Content-Type of a response. */
   int (* set_header_content_type)(void *response, unsigned int content_type);
 
+  /** Get the Accept types of a request. */
   int (* get_header_accept)(void *request, const uint16_t **accept);
+
+  /** Get the Length option of a request. */
+  int (* get_header_length)(void *request, uint32_t *size);
+
+  /** Set the Length option of a response. */
+  int (* set_header_length)(void *response, uint32_t size);
 
   /** Get the Max-Age option of a request. */
   int (* get_header_max_age)(void *request, uint32_t *age);

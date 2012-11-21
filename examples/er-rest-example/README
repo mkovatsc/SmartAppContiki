@@ -84,6 +84,7 @@ The Makefile uses WITH_COAP to configure different implementations for the Erbiu
 TODOs
 -----
 * Dedicated Observe buffers
+* Optimize message struct variable access (directly access struct without copying)
 * Observe client
 * Multiple If-Match ETags
 * (Message deduplication)
