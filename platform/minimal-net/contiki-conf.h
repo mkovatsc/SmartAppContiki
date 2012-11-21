@@ -181,4 +181,12 @@ typedef unsigned long clock_time_t;
 /* Not part of C99 but actually present */
 int strcasecmp(const char*, const char*);
 
+
+/* include the project config */
+/* PROJECT_CONF_H might be defined in the project Makefile */
+#ifdef PROJECT_CONF_H
+#include PROJECT_CONF_H
+#endif /* PROJECT_CONF_H */
+
+
 #endif /* __CONTIKI_CONF_H__ */
