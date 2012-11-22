@@ -43,11 +43,16 @@
 #include "contiki-net.h"
 
 #define MAX_PLUGFEST_PAYLOAD 64+1 /* +1 for the terminating zero, which is not transmitted */
+#define CHUNKS_TOTAL         2048
 
 /* Define which resources to include to meet memory constraints. */
 #define REST_RES_TEST 1
 #define REST_RES_LONG 1
 #define REST_RES_QUERY 1
+#define REST_RES_LOC_QUERY 1
+#define REST_RES_MULTI 1
+#define REST_RES_LINKS 1
+#define REST_RES_PATH 1
 #define REST_RES_SEPARATE 1
 #define REST_RES_LARGE 1
 #define REST_RES_LARGE_UPDATE 1
@@ -97,31 +102,136 @@
  */
 RESOURCE(test, METHOD_GET|METHOD_POST|METHOD_PUT|METHOD_DELETE, "test", "title=\"Default test resource\"");
 
+static uint8_t test_etag[8] = {0};
+static uint8_t test_etag_len = 1;
+static uint8_t test_change = 1;
+static uint8_t test_none_match_okay = 1;
+
+static
+void
+test_update_etag()
+{
+    int i;
+    test_etag_len = (random_rand() % 8) + 1;
+    for (i=0; i<test_etag_len; ++i)
+    {
+      test_etag[i] = random_rand();
+    }
+    test_change = 0;
+    
+    PRINTF("### SERVER ACTION ### Changed ETag %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", test_etag_len,
+            test_etag[0],
+            test_etag[1],
+            test_etag[2],
+            test_etag[3],
+            test_etag[4],
+            test_etag[5],
+            test_etag[6],
+            test_etag[7]
+          );
+}
+
 void
 test_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   coap_packet_t *const coap_req = (coap_packet_t *) request;
 
   uint8_t method = REST.get_method_type(request);
+  const uint8_t *bytes = NULL;
+  size_t len = 0;
+  
+  if (test_change)
+  {
+    test_update_etag();
+  }
 
   PRINTF("/test           ");
+  
   if (method & METHOD_GET)
   {
     PRINTF("GET ");
-    /* Code 2.05 CONTENT is default. */
-    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u", coap_req->type, coap_req->code, coap_req->mid));
+    
+    if ((len = coap_get_header_etag(request, &bytes))>0 && len==test_etag_len && memcmp(test_etag, bytes, len)==0)
+    {
+      PRINTF("validate ");
+      REST.set_response_status(response, REST.status.NOT_MODIFIED);
+      REST.set_header_etag(response, test_etag, test_etag_len);
+      
+      test_change = 1;
+      PRINTF("### SERVER ACTION ### Resouce will change\n");
+	}
+    else
+    {
+      /* Code 2.05 CONTENT is default. */
+      REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+      REST.set_header_etag(response, test_etag, test_etag_len);
+      REST.set_header_max_age(response, 30);
+      REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u", coap_req->type, coap_req->code, coap_req->mid));
+    }
   }
   else if (method & METHOD_POST)
   {
     PRINTF("POST ");
     REST.set_response_status(response, REST.status.CREATED);
-    REST.set_header_location(response, "/nirvana");
+    REST.set_header_location(response, "/location1/location2/location3");
   }
   else if (method & METHOD_PUT)
   {
     PRINTF("PUT ");
-    REST.set_response_status(response, REST.status.CHANGED);
+    
+    if (coap_get_header_if_none_match(request))
+    {
+      if (test_none_match_okay)
+      {
+        REST.set_response_status(response, REST.status.CHANGED);
+        
+        test_none_match_okay = 0;
+        PRINTF("### SERVER ACTION ### If-None-Match will FAIL\n");
+      }
+      else
+      {
+        REST.set_response_status(response, PRECONDITION_FAILED_4_12);
+        
+	    test_none_match_okay = 1;
+        PRINTF("### SERVER ACTION ### If-None-Match will SUCCEED\n");
+	  }
+	}
+    else if (((len = coap_get_header_if_match(request, &bytes))>0 && (len==test_etag_len && memcmp(test_etag, bytes, len)==0)) || len==0)
+    {
+      test_update_etag();
+      REST.set_header_etag(response, test_etag, test_etag_len);
+	  
+      REST.set_response_status(response, REST.status.CHANGED);
+      
+      if (len>0)
+      {
+        test_change = 1;
+        PRINTF("### SERVER ACTION ### Resouce will change\n");
+	  }
+    }
+    else
+    {
+    
+      PRINTF("Check %u/%u\n  [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n  [0x%02X%02X%02X%02X%02X%02X%02X%02X] ", len, test_etag_len,
+            bytes[0],
+            bytes[1],
+            bytes[2],
+            bytes[3],
+            bytes[4],
+            bytes[5],
+            bytes[6],
+            bytes[7],
+            test_etag[0],
+            test_etag[1],
+            test_etag[2],
+            test_etag[3],
+            test_etag[4],
+            test_etag[5],
+            test_etag[6],
+            test_etag[7] );
+    
+	  REST.set_response_status(response, PRECONDITION_FAILED_4_12);
+	}
   }
   else if (method & METHOD_DELETE)
   {
@@ -181,6 +291,102 @@ query_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
   /* Code 2.05 CONTENT is default. */
   REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
   REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u\nQuery: %.*s", coap_req->type, coap_req->code, coap_req->mid, len, query));
+}
+#endif
+
+#if REST_RES_LOC_QUERY
+/*
+ * Resource accepting query parameters
+ */
+RESOURCE(locquery, METHOD_POST, "location-query", "title=\"Resource accepting query parameters\"");
+
+void
+locquery_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  PRINTF("/location-query POST (%s %u)\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid);
+  
+  REST.set_response_status(response, REST.status.CREATED);
+  REST.set_header_location(response, "/location1?first=1&second=2");
+}
+#endif
+
+#if REST_RES_MULTI
+/*
+ * Resource providing text/plain and application/xml
+ */
+RESOURCE(multi, METHOD_GET, "multi-format", "title=\"Resource providing text/plain and application/xml\";ct=\"0 41\"");
+void
+multi_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  const uint16_t *accept = NULL;
+  int num = REST.get_header_accept(request, &accept);
+
+  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
+  {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u\nAccept: %u", coap_req->type, coap_req->code, coap_req->mid, accept[0]));
+  }
+  else if (num && (accept[0]==REST.type.APPLICATION_XML))
+  {
+    REST.set_header_content_type(response, REST.type.APPLICATION_XML);
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "<status type=\"%u\" code=\"%u\" mid=\"%u\" accept=\"%u\"/>", coap_req->type, coap_req->code, coap_req->mid, accept[0]));
+  }
+  else
+  {
+    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
+    const char *msg = "Supporting content-types text/plain and application/xml";
+    REST.set_response_payload(response, msg, strlen(msg));
+  }
+}
+#endif
+
+#if REST_RES_LINKS
+/*
+ * Resources providing text/plain and application/xml
+ */
+RESOURCE(link1, METHOD_GET, "link1", "rt=\"Type1 Type2\";if=\"If1\"");
+SUB_RESOURCE(link2, METHOD_GET, "link2", "rt=\"Type2 Type3\";if=\"If2\"", link1);
+SUB_RESOURCE(link3, METHOD_GET, "link3", "rt=\"Type1 Type3\";if=\"foo\"", link1);
+
+void
+link1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  const char *msg = "Dummy link";
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_response_payload(response, msg, strlen(msg));
+}
+#endif
+
+#if REST_RES_PATH
+/*
+ * Resources providing text/plain and application/xml
+ */
+RESOURCE(path, METHOD_GET | HAS_SUB_RESOURCES, "path", "ct=\"40\"");
+
+void
+path_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+
+  const char *uri_path = NULL;
+  int len = REST.get_url(request, &uri_path);
+  int base_len = strlen(resource_path.url);
+
+  if (len==base_len)
+  {
+    REST.set_header_content_type(response, REST.type.APPLICATION_LINK_FORMAT);
+	snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "</path/sub1>,</path/sub2>,</path/sub3>");
+  }
+  else
+  {
+    REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+    snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "/%.*s", len, uri_path);
+  }
+
+  REST.set_response_payload(response, buffer, strlen((char *)buffer));
 }
 #endif
 
@@ -269,12 +475,15 @@ separate_periodic_handler(resource_t *resource)
 #endif
 
 #if REST_RES_LARGE
+
+/* double expansion */
+#define TO_STRING2(x)  #x
+#define TO_STRING(x)  TO_STRING2(x)
+
 /*
  * Large resource
  */
-RESOURCE(large, METHOD_GET, "large", "title=\"Large resource\";rt=\"block\"");
-
-#define CHUNKS_TOTAL    1280
+RESOURCE(large, METHOD_GET, "large", "title=\"Large resource\";rt=\"block\";sz=\"" TO_STRING(CHUNKS_TOTAL) "\"");
 
 void
 large_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -328,10 +537,10 @@ large_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 /*
  * Large resource that can be updated using PUT method
  */
-RESOURCE(large_update, METHOD_GET|METHOD_PUT, "large-update", "title=\"Large resource that can be updated using PUT method\";rt=\"block\"");
+RESOURCE(large_update, METHOD_GET|METHOD_PUT, "large-update", "title=\"Large resource that can be updated using PUT method\";rt=\"block\";sz=\"" TO_STRING(CHUNKS_TOTAL) "\"");
 
-static int32_t large_update_size = 1280;
-static uint8_t large_update_store[2048] = {0};
+static int32_t large_update_size = CHUNKS_TOTAL;
+static uint8_t large_update_store[CHUNKS_TOTAL] = {0};
 static unsigned int large_update_ct = -1;
 
 void
@@ -353,7 +562,7 @@ large_update_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
       return;
     }
 
-    REST.set_response_payload(response, large_update_store+*offset, preferred_size);
+    REST.set_response_payload(response, large_update_store+*offset, MIN(large_update_size - *offset, preferred_size));
     REST.set_header_content_type(response, large_update_ct);
 
     /* IMPORTANT for chunk-wise resources: Signal chunk awareness to REST engine. */
@@ -459,20 +668,57 @@ large_create_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 /*
  * Observable resource which changes every 5 seconds
  */
-PERIODIC_RESOURCE(obs, METHOD_GET, "obs", "title=\"Observable resource which changes every 5 seconds\";obs;rt=\"observe\"", 5*CLOCK_SECOND);
+PERIODIC_RESOURCE(obs, METHOD_GET|METHOD_PUT|METHOD_DELETE, "obs", "title=\"Observable resource which changes every 5 seconds\";obs;rt=\"observe\"", 5*CLOCK_SECOND);
 
 static uint16_t obs_counter = 0;
 static char obs_content[16];
+static unsigned int obs_format = 0;
 
 void
 obs_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-  REST.set_header_max_age(response, 5);
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
 
-  REST.set_response_payload(response, obs_content, snprintf(obs_content, MAX_PLUGFEST_PAYLOAD, "TICK %lu", obs_counter));
+  uint8_t method = request==NULL ? METHOD_GET : REST.get_method_type(request);
 
-  /* A post_handler that handles subscriptions will be called for periodic resources by the REST framework. */
+  PRINTF("");
+  if (method & METHOD_GET)
+  {
+    if (request!=NULL)
+    {
+      PRINTF("/obs            GET ");
+    }
+    
+    REST.set_header_content_type(response, obs_format);
+    REST.set_header_max_age(response, 5);
+
+    REST.set_response_payload(response, obs_content, snprintf(obs_content, MAX_PLUGFEST_PAYLOAD, "TICK %lu", obs_counter));
+
+    /* A post_handler that handles subscriptions will be called for periodic resources by the REST framework. */
+  }
+  else if (method & METHOD_PUT)
+  {
+    unsigned int ct = REST.get_header_content_type(request);
+    
+    PRINTF("/obs            PUT ");
+    
+    if (ct!=obs_format)
+    {
+	  PRINTF("Purge obs list\n");
+	}
+    
+    obs_format = ct;
+    obs_periodic_handler(&resource_obs);
+    
+    REST.set_response_status(response, REST.status.CHANGED);
+  }
+  else if (method & METHOD_DELETE)
+  {
+    PRINTF("/obs            DELTE ");
+    
+    obs_format = REST.type.TEXT_PLAIN;
+    REST.set_response_status(response, REST.status.DELETED);
+  }
 }
 
 /*
@@ -696,6 +942,20 @@ PROCESS_THREAD(plugtest_server, ev, data)
 #endif
 #if REST_RES_QUERY
   rest_activate_resource(&resource_query);
+#endif
+#if REST_RES_LOC_QUERY
+  rest_activate_resource(&resource_locquery);
+#endif
+#if REST_RES_MULTI
+  rest_activate_resource(&resource_multi);
+#endif
+#if REST_RES_LINKS
+  rest_activate_resource(&resource_link1);
+  rest_activate_resource(&resource_link2);
+  rest_activate_resource(&resource_link3);
+#endif
+#if REST_RES_PATH
+  rest_activate_resource(&resource_path);
 #endif
 #if REST_RES_SEPARATE
   rest_activate_periodic_resource(&periodic_resource_separate);
