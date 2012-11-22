@@ -311,18 +311,73 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     size_t tmplen = 0;
     resource_t* resource = NULL;
 
+#if COAP_LINK_FORMAT_FILTERING
     /* For filtering. */
     const char *filter = NULL;
-    int len = coap_get_query_variable(request, "rt", &filter);
-    char *rt = NULL;
+    const char *attrib = NULL;
+    const char *found = NULL;
+    const char *end = NULL;
+    char *value = NULL;
+    char wildcard = 0;
+	int len = coap_get_header_uri_query(request, &filter);
+	if (len)
+	{
+	  value = strchr(filter, '=');
+	  value[0] = '\0';
+	  ++value;
+	  len -= strlen(filter)+1;
+	  
+	  PRINTF("Filter %s = %.*s\n", filter, len, value);
+	  
+	  if (strcmp(filter,"href")==0 && value[0]=='/')
+	  {
+	    ++value;
+	    --len;
+	  }
+	  
+	  if (value[len-1]=='*')
+	  {
+	    wildcard = 1;
+	    /* Avoid zero length for wildcard only value */
+	    if (len>1)
+	    {
+	      value[--len] = '\0';
+	    }
+	    else
+	    {
+		  *value = '"';
+		}
+	  }
+	}
+#endif
 
     for (resource = (resource_t*)list_head(rest_get_resources()); resource; resource = resource->next)
     {
+#if COAP_LINK_FORMAT_FILTERING
       /* Filtering */
-      if (len && ((rt=strstr(resource->attributes, "rt=\""))==NULL || memcmp(rt+4, filter, len-1)!=0 || (filter[len-1]!='*' && (filter[len-1]!=rt[3+len] || rt[4+len]!='"'))))
+      if (len)
       {
-        continue;
+		if (strcmp(filter,"href")==0)
+		{
+		  attrib=strstr(resource->url, value);
+		  if (attrib==NULL || value[-1]=='/' && attrib!=resource->url) continue;
+		  end = attrib + strlen(attrib);
+		}
+		else
+		{
+		  attrib=strstr(resource->attributes, filter);
+		  if (attrib==NULL || attrib[strlen(filter)]!='=' && attrib[strlen(filter)]!='"') continue;
+          attrib += strlen(filter)+2;
+          end = strchr(attrib, '"');
+		}
+		
+        PRINTF("Filter: res has attrib %s\n", attrib);
+        if ((found=strstr(attrib, value))==NULL || found > end) continue;
+        PRINTF("Filter: res has prefix %s\n", found);
+        if (!wildcard && (found[len]!='"' && found[len]!=' ' && found[len]!='\0')) continue;
+        PRINTF("Filter: res has match\n");
       }
+#endif
 
       PRINTF("res: /%s (%p)\npos: s%d, o%d, b%d\n", resource->url, resource, strpos, *offset, bufpos);
 

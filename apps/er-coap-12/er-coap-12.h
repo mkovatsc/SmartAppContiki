@@ -43,6 +43,8 @@
 #include "contiki-net.h"
 #include "erbium.h"
 
+#define COAP_LINK_FORMAT_FILTERING           1
+
 #define COAP_DEFAULT_PORT                    5683
 
 #ifndef COAP_SERVER_PORT
