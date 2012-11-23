@@ -360,13 +360,13 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 		if (strcmp(filter,"href")==0)
 		{
 		  attrib=strstr(resource->url, value);
-		  if (attrib==NULL || value[-1]=='/' && attrib!=resource->url) continue;
+		  if (attrib==NULL || (value[-1]=='/' && attrib!=resource->url)) continue;
 		  end = attrib + strlen(attrib);
 		}
 		else
 		{
 		  attrib=strstr(resource->attributes, filter);
-		  if (attrib==NULL || attrib[strlen(filter)]!='=' && attrib[strlen(filter)]!='"') continue;
+		  if (attrib==NULL || (attrib[strlen(filter)]!='=' && attrib[strlen(filter)]!='"')) continue;
           attrib += strlen(filter)+2;
           end = strchr(attrib, '"');
 		}

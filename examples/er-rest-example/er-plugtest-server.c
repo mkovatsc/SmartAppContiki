@@ -43,7 +43,8 @@
 #include "contiki-net.h"
 
 #define MAX_PLUGFEST_PAYLOAD 64+1 /* +1 for the terminating zero, which is not transmitted */
-#define CHUNKS_TOTAL         2048
+#define MAX_PLUGFEST_BODY    2048
+#define CHUNKS_TOTAL         2012
 
 /* Define which resources to include to meet memory constraints. */
 #define REST_RES_TEST 1
@@ -237,6 +238,9 @@ test_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
   {
     PRINTF("DELETE ");
     REST.set_response_status(response, REST.status.DELETED);
+    
+    test_none_match_okay = 1;
+    PRINTF("### SERVER ACTION ### If-None-Match will SUCCEED\n");
   }
 
   PRINTF("(%s %u)\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid);
@@ -325,21 +329,26 @@ multi_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
   const uint16_t *accept = NULL;
   int num = REST.get_header_accept(request, &accept);
 
-  if ((num==0) || (num && accept[0]==REST.type.TEXT_PLAIN))
+  PRINTF("/multi-format   GET (%s %u) %d\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid, num);
+
+  if (num==0 || (num && accept[0]==REST.type.TEXT_PLAIN))
   {
     REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
-    REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u\nAccept: %u", coap_req->type, coap_req->code, coap_req->mid, accept[0]));
+    REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u%s", coap_req->type, coap_req->code, coap_req->mid, num ? "\nAccept: 0" : ""));
+PRINTF("PLAIN\n");
   }
   else if (num && (accept[0]==REST.type.APPLICATION_XML))
   {
     REST.set_header_content_type(response, REST.type.APPLICATION_XML);
     REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "<status type=\"%u\" code=\"%u\" mid=\"%u\" accept=\"%u\"/>", coap_req->type, coap_req->code, coap_req->mid, accept[0]));
+PRINTF("XML\n");
   }
   else
   {
-    REST.set_response_status(response, REST.status.UNSUPPORTED_MADIA_TYPE);
+    REST.set_response_status(response, REST.status.NOT_ACCEPTABLE);
     const char *msg = "Supporting content-types text/plain and application/xml";
     REST.set_response_payload(response, msg, strlen(msg));
+    PRINTF("ERROR\n");
   }
 }
 #endif
@@ -537,10 +546,10 @@ large_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
 /*
  * Large resource that can be updated using PUT method
  */
-RESOURCE(large_update, METHOD_GET|METHOD_PUT, "large-update", "title=\"Large resource that can be updated using PUT method\";rt=\"block\";sz=\"" TO_STRING(CHUNKS_TOTAL) "\"");
+RESOURCE(large_update, METHOD_GET|METHOD_PUT, "large-update", "title=\"Large resource that can be updated using PUT method\";rt=\"block\";sz=\"" TO_STRING(MAX_PLUGFEST_BODY) "\"");
 
-static int32_t large_update_size = CHUNKS_TOTAL;
-static uint8_t large_update_store[CHUNKS_TOTAL] = {0};
+static int32_t large_update_size = MAX_PLUGFEST_BODY;
+static uint8_t large_update_store[MAX_PLUGFEST_BODY] = {0};
 static unsigned int large_update_ct = -1;
 
 void
@@ -665,59 +674,93 @@ large_create_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 #endif
 
 #if REST_RES_OBS
+#include "er-coap-12-observing.h"
 /*
  * Observable resource which changes every 5 seconds
  */
-PERIODIC_RESOURCE(obs, METHOD_GET|METHOD_PUT|METHOD_DELETE, "obs", "title=\"Observable resource which changes every 5 seconds\";obs;rt=\"observe\"", 5*CLOCK_SECOND);
+PERIODIC_RESOURCE(obs, METHOD_GET|METHOD_PUT|METHOD_DELETE, "obs", "title=\"Observable resource which changes every 5 seconds\";obs", 5*CLOCK_SECOND);
 
 static uint16_t obs_counter = 0;
-static char obs_content[16];
+static char obs_content[MAX_PLUGFEST_BODY];
+static size_t obs_content_len = 0;
 static unsigned int obs_format = 0;
+
+static
+void
+obs_purge_list()
+{
+  PRINTF("### SERVER ACTION ### Purging obs list");
+  coap_remove_observer_by_url(NULL, 0, resource_obs.url);
+}
 
 void
 obs_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  coap_packet_t *const coap_req = (coap_packet_t *) request;
-
   uint8_t method = request==NULL ? METHOD_GET : REST.get_method_type(request);
 
-  PRINTF("");
+  /* Keep server log clean from ticking events */
+  if (request!=NULL)
+  {
+    PRINTF("/obs            ");
+  }
+  
   if (method & METHOD_GET)
   {
+    /* Keep server log clean from ticking events */
     if (request!=NULL)
     {
-      PRINTF("/obs            GET ");
+      PRINTF("GET ");
     }
     
     REST.set_header_content_type(response, obs_format);
     REST.set_header_max_age(response, 5);
-
-    REST.set_response_payload(response, obs_content, snprintf(obs_content, MAX_PLUGFEST_PAYLOAD, "TICK %lu", obs_counter));
-
+    
+    if (obs_content_len)
+    {
+      REST.set_header_content_type(response, obs_format);
+	  REST.set_response_payload(response, obs_content, obs_content_len);
+	}
+	else
+	{
+      REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+	  REST.set_response_payload(response, obs_content, snprintf(obs_content, MAX_PLUGFEST_PAYLOAD, "TICK %lu", obs_counter));
+	}
     /* A post_handler that handles subscriptions will be called for periodic resources by the REST framework. */
   }
   else if (method & METHOD_PUT)
   {
+    uint8_t *incoming = NULL;
     unsigned int ct = REST.get_header_content_type(request);
     
-    PRINTF("/obs            PUT ");
+    PRINTF("PUT ");
     
     if (ct!=obs_format)
     {
-	  PRINTF("Purge obs list\n");
+	  obs_purge_list();
 	}
     
     obs_format = ct;
+    obs_content_len = REST.get_request_payload(request, &incoming);
+    memcpy(obs_content, incoming, obs_content_len);
     obs_periodic_handler(&resource_obs);
     
     REST.set_response_status(response, REST.status.CHANGED);
   }
   else if (method & METHOD_DELETE)
   {
-    PRINTF("/obs            DELTE ");
+    PRINTF("DELTE ");
     
-    obs_format = REST.type.TEXT_PLAIN;
+	obs_purge_list();
+	
+    obs_counter = 0;
+    obs_content_len = 0;
     REST.set_response_status(response, REST.status.DELETED);
+  }
+  
+  /* Keep server log clean from ticking events */
+  if (request!=NULL)
+  {
+    PRINTF("\n");
   }
 }
 
