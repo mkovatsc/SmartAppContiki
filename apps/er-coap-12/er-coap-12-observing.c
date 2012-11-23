@@ -139,7 +139,7 @@ coap_remove_observer_by_url(uip_ipaddr_t *addr, uint16_t port, const char *url)
   for (obs = (coap_observer_t*)list_head(observers_list); obs; obs = obs->next)
   {
     PRINTF("Remove check URL %p\n", url);
-    if (uip_ipaddr_cmp(&obs->addr, addr) && obs->port==port && (obs->url==url || memcmp(obs->url, url, strlen(obs->url))==0))
+    if ((addr==NULL || uip_ipaddr_cmp(&obs->addr, addr) && obs->port==port) && (obs->url==url || memcmp(obs->url, url, strlen(obs->url))==0))
     {
       coap_remove_observer(obs);
       removed++;
