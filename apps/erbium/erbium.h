@@ -98,8 +98,9 @@ struct rest_implementation_status
   const unsigned int FORBIDDEN;                 /* FORBIDDEN_4_03,                FORBIDDEN_403 */
   const unsigned int NOT_FOUND;                 /* NOT_FOUND_4_04,                NOT_FOUND_404 */
   const unsigned int METHOD_NOT_ALLOWED;        /* METHOD_NOT_ALLOWED_4_05,       METHOD_NOT_ALLOWED_405 */
+  const unsigned int NOT_ACCEPTABLE;            /* NOT_ACCEPTABLE_4_06,           NOT_ACCEPTABLE_406 */
   const unsigned int REQUEST_ENTITY_TOO_LARGE;  /* REQUEST_ENTITY_TOO_LARGE_4_13, REQUEST_ENTITY_TOO_LARGE_413 */
-  const unsigned int UNSUPPORTED_MADIA_TYPE;    /* UNSUPPORTED_MADIA_TYPE_4_15,   UNSUPPORTED_MADIA_TYPE_415 */
+  const unsigned int UNSUPPORTED_MEDIA_TYPE;    /* UNSUPPORTED_MEDIA_TYPE_4_15,   UNSUPPORTED_MEDIA_TYPE_415 */
 
   const unsigned int INTERNAL_SERVER_ERROR;     /* INTERNAL_SERVER_ERROR_5_00,    INTERNAL_SERVER_ERROR_500 */
   const unsigned int NOT_IMPLEMENTED;           /* NOT_IMPLEMENTED_5_01,          NOT_IMPLEMENTED_501 */
