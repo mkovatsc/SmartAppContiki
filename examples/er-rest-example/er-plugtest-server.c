@@ -184,7 +184,7 @@ test_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
     {
       if (test_none_match_okay)
       {
-        REST.set_response_status(response, REST.status.CHANGED);
+        REST.set_response_status(response, REST.status.CREATED);
         
         test_none_match_okay = 0;
         PRINTF("### SERVER ACTION ### If-None-Match will FAIL\n");
