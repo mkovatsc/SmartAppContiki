@@ -318,7 +318,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     const char *found = NULL;
     const char *end = NULL;
     char *value = NULL;
-    char wildcard = 0;
+    char lastchar;
 	int len = coap_get_header_uri_query(request, &filter);
 	if (len)
 	{
@@ -335,19 +335,8 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	    --len;
 	  }
 	  
-	  if (value[len-1]=='*')
-	  {
-	    wildcard = 1;
-	    /* Avoid zero length for wildcard only value */
-	    if (len>1)
-	    {
-	      value[--len] = '\0';
-	    }
-	    else
-	    {
-		  *value = '"';
-		}
-	  }
+	  lastchar = value[len-1];
+	  value[len-1] = '\0';
 	}
 #endif
 
@@ -357,24 +346,24 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
       /* Filtering */
       if (len)
       {
-		if (strcmp(filter,"href")==0)
-		{
-		  attrib=strstr(resource->url, value);
-		  if (attrib==NULL || (value[-1]=='/' && attrib!=resource->url)) continue;
-		  end = attrib + strlen(attrib);
-		}
-		else
-		{
-		  attrib=strstr(resource->attributes, filter);
-		  if (attrib==NULL || (attrib[strlen(filter)]!='=' && attrib[strlen(filter)]!='"')) continue;
+        if (strcmp(filter,"href")==0)
+        {
+          attrib=strstr(resource->url, value);
+          if (attrib==NULL || (value[-1]=='/' && attrib!=resource->url)) continue;
+          end = attrib + strlen(attrib);
+        }
+        else
+        {
+          attrib=strstr(resource->attributes, filter);
+          if (attrib==NULL || (attrib[strlen(filter)]!='=' && attrib[strlen(filter)]!='"')) continue;
           attrib += strlen(filter)+2;
           end = strchr(attrib, '"');
-		}
-		
-        PRINTF("Filter: res has attrib %s\n", attrib);
-        if ((found=strstr(attrib, value))==NULL || found > end) continue;
+        }
+
+        PRINTF("Filter: res has attrib %s (%s)\n", attrib, value);
+        if ((found=strstr(attrib, value))==NULL || (lastchar!=found[len-1] && lastchar!='*') || found > end) continue;
         PRINTF("Filter: res has prefix %s\n", found);
-        if (!wildcard && (found[len]!='"' && found[len]!=' ' && found[len]!='\0')) continue;
+        if (lastchar!='*' && (found[len]!='"' && found[len]!=' ' && found[len]!='\0')) continue;
         PRINTF("Filter: res has match\n");
       }
 #endif
