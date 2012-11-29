@@ -370,6 +370,15 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 
       PRINTF("res: /%s (%p)\npos: s%d, o%d, b%d\n", resource->url, resource, strpos, *offset, bufpos);
 
+      if (strpos>0)
+      {
+        if (strpos >= *offset && bufpos < preferred_size)
+        {
+          buffer[bufpos++] = ',';
+        }
+        ++strpos;
+      }
+
       if (strpos >= *offset && bufpos < preferred_size)
       {
         buffer[bufpos++] = '<';
@@ -420,15 +429,6 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
           }
         }
         strpos += tmplen;
-      }
-
-      if (resource->next)
-      {
-        if (strpos >= *offset && bufpos < preferred_size)
-        {
-          buffer[bufpos++] = ',';
-        }
-        ++strpos;
       }
 
       /* buffer full, but resource not completed yet; or: do not break if resource exactly fills buffer. */
