@@ -44,7 +44,7 @@
 
 #include "er-coap-12-engine.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #define PRINT6ADDR(addr) PRINTF("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15])
@@ -361,7 +361,23 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
         }
 
         PRINTF("Filter: res has attrib %s (%s)\n", attrib, value);
-        if ((found=strstr(attrib, value))==NULL || (lastchar!=found[len-1] && lastchar!='*') || found > end) continue;
+        found = attrib;
+        while ((found=strstr(found, value))!=NULL) {
+            if (found > end)
+            {
+              found = NULL;
+              break;
+            }
+            if (lastchar==found[len-1] || lastchar=='*')
+            {
+              break;
+            }
+            ++found;
+        }
+        if (found==NULL)
+        {
+          continue;
+        }
         PRINTF("Filter: res has prefix %s\n", found);
         if (lastchar!='*' && (found[len]!='"' && found[len]!=' ' && found[len]!='\0')) continue;
         PRINTF("Filter: res has match\n");
