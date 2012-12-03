@@ -238,9 +238,247 @@ test_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
   {
     PRINTF("DELETE ");
     REST.set_response_status(response, REST.status.DELETED);
-    
-    test_none_match_okay = 1;
-    PRINTF("### SERVER ACTION ### If-None-Match will SUCCEED\n");
+  }
+
+  PRINTF("(%s %u)\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid);
+}
+
+
+RESOURCE(create1, METHOD_PUT|METHOD_DELETE, "create1", "title=\"Default test resource\"");
+
+static uint8_t create1_exists = 0;
+
+void
+create1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  uint8_t method = REST.get_method_type(request);
+  const uint8_t *bytes = NULL;
+  size_t len = 0;
+
+  if (test_change)
+  {
+    test_update_etag();
+  }
+
+  PRINTF("/create1       ");
+
+  if (method & METHOD_PUT)
+  {
+    PRINTF("PUT ");
+
+    if (coap_get_header_if_none_match(request))
+    {
+      if (!create1_exists)
+      {
+        REST.set_response_status(response, REST.status.CREATED);
+
+        create1_exists = 1;
+      }
+      else
+      {
+        REST.set_response_status(response, PRECONDITION_FAILED_4_12);
+      }
+    }
+    else
+    {
+      REST.set_response_status(response, REST.status.CHANGED);
+    }
+  }
+  else if (method & METHOD_DELETE)
+  {
+    PRINTF("DELETE ");
+    REST.set_response_status(response, REST.status.DELETED);
+
+    create1_exists = 0;
+  }
+}
+
+RESOURCE(create2, METHOD_POST, "create2", "title=\"Creates on POST\"");
+
+void
+create2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  uint8_t method = REST.get_method_type(request);
+  const uint8_t *bytes = NULL;
+  size_t len = 0;
+
+  if (test_change)
+  {
+    test_update_etag();
+  }
+
+  PRINTF("/create2       ");
+
+  REST.set_response_status(response, REST.status.CREATED);
+  REST.set_header_location(response, "/location1/location2/location3");
+}
+
+RESOURCE(create3, METHOD_PUT|METHOD_DELETE, "create3", "title=\"Default test resource\"");
+
+static uint8_t create3_exists = 0;
+
+void
+create3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  uint8_t method = REST.get_method_type(request);
+  const uint8_t *bytes = NULL;
+  size_t len = 0;
+
+  if (test_change)
+  {
+    test_update_etag();
+  }
+
+  PRINTF("/create3       ");
+
+  if (method & METHOD_PUT)
+  {
+    PRINTF("PUT ");
+
+    if (coap_get_header_if_none_match(request))
+    {
+      if (!create3_exists)
+      {
+        REST.set_response_status(response, REST.status.CREATED);
+
+        create3_exists = 1;
+      }
+      else
+      {
+        REST.set_response_status(response, PRECONDITION_FAILED_4_12);
+      }
+    }
+    else
+    {
+      REST.set_response_status(response, REST.status.CHANGED);
+    }
+  }
+  else if (method & METHOD_DELETE)
+  {
+    PRINTF("DELETE ");
+    REST.set_response_status(response, REST.status.DELETED);
+
+    create3_exists = 0;
+  }
+}
+
+
+
+
+
+RESOURCE(validate, METHOD_GET|METHOD_PUT, "validate", "title=\"Default test resource\"");
+
+static uint8_t validate_etag[8] = {0};
+static uint8_t validate_etag_len = 1;
+static uint8_t validate_change = 1;
+
+static
+void
+validate_update_etag()
+{
+    int i;
+    validate_etag_len = (random_rand() % 8) + 1;
+    for (i=0; i<validate_etag_len; ++i)
+    {
+      validate_etag[i] = random_rand();
+    }
+    validate_change = 0;
+
+    PRINTF("### SERVER ACTION ### Changed ETag %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", validate_etag_len,
+            validate_etag[0],
+            validate_etag[1],
+            validate_etag[2],
+            validate_etag[3],
+            validate_etag[4],
+            validate_etag[5],
+            validate_etag[6],
+            validate_etag[7]
+          );
+}
+
+void
+validate_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  coap_packet_t *const coap_req = (coap_packet_t *) request;
+
+  uint8_t method = REST.get_method_type(request);
+  const uint8_t *bytes = NULL;
+  size_t len = 0;
+
+  if (validate_change)
+  {
+    validate_update_etag();
+  }
+
+  PRINTF("/validate       ");
+
+  if (method & METHOD_GET)
+  {
+    PRINTF("GET ");
+
+    if ((len = coap_get_header_etag(request, &bytes))>0 && len==validate_etag_len && memcmp(validate_etag, bytes, len)==0)
+    {
+      PRINTF("validate ");
+      REST.set_response_status(response, REST.status.NOT_MODIFIED);
+      REST.set_header_etag(response, validate_etag, validate_etag_len);
+
+      validate_change = 1;
+      PRINTF("### SERVER ACTION ### Resouce will change\n");
+        }
+    else
+    {
+      /* Code 2.05 CONTENT is default. */
+      REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+      REST.set_header_etag(response, validate_etag, validate_etag_len);
+      REST.set_header_max_age(response, 30);
+      REST.set_response_payload(response, buffer, snprintf((char *)buffer, MAX_PLUGFEST_PAYLOAD, "Type: %u\nCode: %u\nMID: %u", coap_req->type, coap_req->code, coap_req->mid));
+    }
+  }
+  else if (method & METHOD_PUT)
+  {
+    PRINTF("PUT ");
+
+    if (((len = coap_get_header_if_match(request, &bytes))>0 && (len==validate_etag_len && memcmp(validate_etag, bytes, len)==0)) || len==0)
+    {
+      validate_update_etag();
+      REST.set_header_etag(response, validate_etag, validate_etag_len);
+
+      REST.set_response_status(response, REST.status.CHANGED);
+
+      if (len>0)
+      {
+        validate_change = 1;
+        PRINTF("### SERVER ACTION ### Resouce will change\n");
+          }
+    }
+    else
+    {
+      PRINTF("Check %u/%u\n  [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n  [0x%02X%02X%02X%02X%02X%02X%02X%02X] ", len, validate_etag_len,
+          bytes[0],
+          bytes[1],
+          bytes[2],
+          bytes[3],
+          bytes[4],
+          bytes[5],
+          bytes[6],
+          bytes[7],
+          validate_etag[0],
+          validate_etag[1],
+          validate_etag[2],
+          validate_etag[3],
+          validate_etag[4],
+          validate_etag[5],
+          validate_etag[6],
+          validate_etag[7] );
+
+        REST.set_response_status(response, PRECONDITION_FAILED_4_12);
+      }
   }
 
   PRINTF("(%s %u)\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid);
@@ -312,7 +550,7 @@ locquery_handler(void* request, void* response, uint8_t *buffer, uint16_t prefer
   PRINTF("/location-query POST (%s %u)\n", coap_req->type==COAP_TYPE_CON?"CON":"NON", coap_req->mid);
   
   REST.set_response_status(response, REST.status.CREATED);
-  REST.set_header_location(response, "/location1?first=1&second=2");
+  REST.set_header_location(response, "?first=1&second=2");
 }
 #endif
 
@@ -548,7 +786,7 @@ large_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred
  */
 RESOURCE(large_update, METHOD_GET|METHOD_PUT, "large-update", "title=\"Large resource that can be updated using PUT method\";rt=\"block\";sz=\"" TO_STRING(MAX_PLUGFEST_BODY) "\"");
 
-static int32_t large_update_size = MAX_PLUGFEST_BODY;
+static int32_t large_update_size = 0;
 static uint8_t large_update_store[MAX_PLUGFEST_BODY] = {0};
 static unsigned int large_update_ct = -1;
 
@@ -685,6 +923,8 @@ static char obs_content[MAX_PLUGFEST_BODY];
 static size_t obs_content_len = 0;
 static unsigned int obs_format = 0;
 
+static char obs_status = 0;
+
 static
 void
 obs_purge_list()
@@ -736,24 +976,25 @@ obs_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
     
     if (ct!=obs_format)
     {
-	  obs_purge_list();
-	}
+        obs_status = 1;
+
+      obs_format = ct;
+    } else {
     
-    obs_format = ct;
-    obs_content_len = REST.get_request_payload(request, &incoming);
-    memcpy(obs_content, incoming, obs_content_len);
-    obs_periodic_handler(&resource_obs);
+      obs_format = ct;
+      obs_content_len = REST.get_request_payload(request, &incoming);
+      memcpy(obs_content, incoming, obs_content_len);
+      obs_periodic_handler(&resource_obs);
+    }
     
     REST.set_response_status(response, REST.status.CHANGED);
   }
   else if (method & METHOD_DELETE)
   {
-    PRINTF("DELTE ");
+    PRINTF("DELETE ");
+
+    obs_status = 2;
     
-	obs_purge_list();
-	
-    obs_counter = 0;
-    obs_content_len = 0;
     REST.set_response_status(response, REST.status.DELETED);
   }
   
@@ -775,6 +1016,35 @@ obs_periodic_handler(resource_t *r)
 
   //PRINTF("TICK %u for /%s\n", obs_counter, r->url);
 
+  if (obs_status==1)
+    {
+      coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+            coap_init_message(notification, COAP_TYPE_NON, INTERNAL_SERVER_ERROR_5_00, 0 );
+
+            /* Notify the registered observers with the given message type, observe option, and payload. */
+            REST.notify_subscribers(&resource_obs, -1, notification);
+
+            PRINTF("######### sending 5.00\n");
+
+            obs_purge_list();
+    }
+  else if (obs_status==2)
+    {
+
+      coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
+      coap_init_message(notification, COAP_TYPE_NON, NOT_FOUND_4_04, 0 );
+
+
+      /* Notify the registered observers with the given message type, observe option, and payload. */
+      REST.notify_subscribers(&resource_obs, -1, notification);
+
+      obs_purge_list();
+
+      obs_counter = 0;
+      obs_content_len = 0;
+    }
+  else
+    {
   /* Build notification. */
   /*TODO: REST.new_response() */
   coap_packet_t notification[1]; /* This way the packet can be treated as pointer as usual. */
@@ -785,6 +1055,8 @@ obs_periodic_handler(resource_t *r)
 
   /* Notify the registered observers with the given message type, observe option, and payload. */
   REST.notify_subscribers(r, obs_counter, notification);
+    }
+  obs_status = 0;
 }
 #endif
 
@@ -979,6 +1251,10 @@ PROCESS_THREAD(plugtest_server, ev, data)
   /* Activate the application-specific resources. */
 #if REST_RES_TEST
   rest_activate_resource(&resource_test);
+  rest_activate_resource(&resource_validate);
+  rest_activate_resource(&resource_create1);
+  rest_activate_resource(&resource_create2);
+  rest_activate_resource(&resource_create3);
 #endif
 #if REST_RES_LONG
   rest_activate_resource(&resource_longpath);
