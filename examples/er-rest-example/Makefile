@@ -24,7 +24,7 @@ CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
 
 # variable for this Makefile
 # configure CoAP implementation (3|7) (er-coap-07 also supports CoAP draft 08)
-WITH_COAP=12
+WITH_COAP=13
 
 # new variable since slip-radio
 ifneq ($(TARGET), minimal-net)
@@ -35,13 +35,23 @@ ${info INFO: compiling without RPL}
 UIP_CONF_RPL=0
 CFLAGS += -DUIP_CONF_ND6_DEF_MAXDADNS=0
 CFLAGS += -DHARD_CODED_ADDRESS=\"fdfd::10\"
+${info INFO: compiling with large buffers}
+CFLAGS += -DUIP_CONF_BUFFER_SIZE=2048
+CFLAGS += -DREST_MAX_CHUNK_SIZE=1024
+CFLAGS += -DCOAP_MAX_HEADER_SIZE=640
 endif
 
 # linker optimizations
 SMALL=1
 
 # REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 12)
+ifeq ($(WITH_COAP), 13)
+${info INFO: compiling with CoAP-12}
+CFLAGS += -DWITH_COAP=13
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += er-coap-13
+else ifeq ($(WITH_COAP), 12)
 ${info INFO: compiling with CoAP-12}
 CFLAGS += -DWITH_COAP=12
 CFLAGS += -DREST=coap_rest_implementation

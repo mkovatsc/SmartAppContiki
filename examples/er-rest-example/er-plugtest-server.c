@@ -81,6 +81,8 @@
 #include "er-coap-07.h"
 #elif WITH_COAP == 12
 #include "er-coap-12.h"
+#elif WITH_COAP == 13
+#include "er-coap-13.h"
 #else
 #error "Plugtests server without CoAP"
 #endif /* CoAP-specific example */
@@ -639,8 +641,13 @@ path_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 
 #if REST_RES_SEPARATE
 /* Required to manually (=not by the engine) handle the response transaction. */
+#if WITH_COAP == 12
 #include "er-coap-12-separate.h"
 #include "er-coap-12-transactions.h"
+#elif WITH_COAP == 13
+#include "er-coap-13-separate.h"
+#include "er-coap-13-transactions.h"
+#endif
 /*
  * Resource which cannot be served immediately and which cannot be acknowledged in a piggy-backed way
  */
@@ -912,7 +919,12 @@ large_create_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 #endif
 
 #if REST_RES_OBS
+
+#if WITH_COAP == 12
 #include "er-coap-12-observing.h"
+#elif WITH_COAP == 13
+#include "er-coap-13-observing.h"
+#endif
 /*
  * Observable resource which changes every 5 seconds
  */

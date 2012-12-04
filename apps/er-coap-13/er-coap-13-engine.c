@@ -42,7 +42,7 @@
 #include "contiki.h"
 #include "contiki-net.h"
 
-#include "er-coap-12-engine.h"
+#include "er-coap-13-engine.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -129,11 +129,10 @@ coap_receive(void)
             coap_init_message(response, COAP_TYPE_NON, CONTENT_2_05, coap_get_mid());
           }
 
-          /* resource handlers must take care of different handling (e.g., TOKEN_OPTION_REQUIRED_240) */
-          if (IS_OPTION(message, COAP_OPTION_TOKEN))
+          /* mirror token */
+          if (message->token_len)
           {
               coap_set_header_token(response, message->token, message->token_len);
-              SET_OPTION(response, COAP_OPTION_TOKEN);
           }
 
           /* get offset for blockwise transfers */
@@ -483,7 +482,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
 PROCESS_THREAD(coap_receiver, ev, data)
 {
   PROCESS_BEGIN();
-  PRINTF("Starting CoAP-12 receiver...\n");
+  PRINTF("Starting CoAP-13 receiver...\n");
 
   rest_activate_resource(&resource_well_known_core);
 
@@ -583,7 +582,7 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
 /*- Engine Interface ---------------------------------------------------------*/
 /*----------------------------------------------------------------------------*/
 const struct rest_implementation coap_rest_implementation = {
-  "CoAP-12",
+  "CoAP-13",
 
   coap_receiver_init,
   coap_set_service_callback,
