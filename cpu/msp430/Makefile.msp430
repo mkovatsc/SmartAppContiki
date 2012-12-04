@@ -129,7 +129,7 @@ ifndef CC_MCU
 endif
 
 ifndef CFLAGSNO
-CFLAGSNO = -Wall -mmcu=$(CC_MCU) -g $(CFLAGSWERROR)
+CFLAGSNO = -Wall -mmcu=$(CC_MCU) $(CFLAGSWERROR)
 endif
 CFLAGS  += -Os -fno-strict-aliasing
 LDFLAGS += -mmcu=$(CC_MCU) -Wl,-Map=contiki-$(TARGET).map
@@ -151,14 +151,14 @@ PROJECT_OBJECTFILES += ${addprefix $(OBJECTDIR)/,$(CONTIKI_TARGET_MAIN:.c=.o)}
 
 %-stripped.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-	$(STRIP) --strip-unneeded -g -x $@
+	$(STRIP) --strip-unneeded -x $@
 
 %.cm: %.co
 	$(LD) -i -r --unresolved-symbols=ignore-in-object-files -mmsp430x149 -o $@ $^
-	$(STRIP) --strip-unneeded -g -x $@
+	$(STRIP) --strip-unneeded -x $@
 
 %-stripped.o: %.o
-	$(STRIP) --strip-unneeded -g -x -o $@ $<
+	$(STRIP) --strip-unneeded -x -o $@ $<
 
 %.o: ${CONTIKI_TARGET}/loader/%.S
 	$(AS) -o $(notdir $(<:.S=.o)) $<
