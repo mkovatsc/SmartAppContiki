@@ -600,22 +600,6 @@ coap_parse_message(void *packet, uint8_t *data, uint16_t data_len)
         coap_pkt->observe = coap_parse_int_option(current_option, option_length);
         PRINTF("Observe [%lu]\n", coap_pkt->observe);
         break;
-        /*
-      case COAP_OPTION_TOKEN:
-        coap_pkt->token_len = MIN(COAP_TOKEN_LEN, option_length);
-        memcpy(coap_pkt->token, current_option, coap_pkt->token_len);
-        PRINTF("Token %u [0x%02X%02X%02X%02X%02X%02X%02X%02X]\n", coap_pkt->token_len,
-          coap_pkt->token[0],
-          coap_pkt->token[1],
-          coap_pkt->token[2],
-          coap_pkt->token[3],
-          coap_pkt->token[4],
-          coap_pkt->token[5],
-          coap_pkt->token[6],
-          coap_pkt->token[7]
-        ); /*FIXME always prints 8 bytes *//*
-        break;
-        */
       case COAP_OPTION_BLOCK2:
         coap_pkt->block2_num = coap_parse_int_option(current_option, option_length);
         coap_pkt->block2_more = (coap_pkt->block2_num & 0x08)>>3;
@@ -1115,7 +1099,7 @@ coap_set_header_size(void *packet, uint32_t size)
 /*- PAYLOAD -------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_payload(void *packet, uint8_t **payload)
+coap_get_payload(void *packet, const uint8_t **payload)
 {
   coap_packet_t *const coap_pkt = (coap_packet_t *) packet;
 

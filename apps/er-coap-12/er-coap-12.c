@@ -1127,7 +1127,7 @@ coap_set_header_size(void *packet, uint32_t size)
 /*- PAYLOAD -------------------------------------------------------------------------*/
 /*-----------------------------------------------------------------------------------*/
 int
-coap_get_payload(void *packet, uint8_t **payload)
+coap_get_payload(void *packet, const uint8_t **payload)
 {
   coap_packet_t *const coap_pkt = (coap_packet_t *) packet;
 

@@ -317,26 +317,27 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
     const char *found = NULL;
     const char *end = NULL;
     char *value = NULL;
-    char lastchar;
-	int len = coap_get_header_uri_query(request, &filter);
-	if (len)
-	{
-	  value = strchr(filter, '=');
-	  value[0] = '\0';
-	  ++value;
-	  len -= strlen(filter)+1;
-	  
-	  PRINTF("Filter %s = %.*s\n", filter, len, value);
-	  
-	  if (strcmp(filter,"href")==0 && value[0]=='/')
-	  {
-	    ++value;
-	    --len;
-	  }
-	  
-	  lastchar = value[len-1];
-	  value[len-1] = '\0';
-	}
+    char lastchar = '\0';
+    int len = coap_get_header_uri_query(request, &filter);
+
+    if (len)
+    {
+      value = strchr(filter, '=');
+      value[0] = '\0';
+      ++value;
+      len -= strlen(filter)+1;
+
+      PRINTF("Filter %s = %.*s\n", filter, len, value);
+
+      if (strcmp(filter,"href")==0 && value[0]=='/')
+      {
+        ++value;
+        --len;
+      }
+
+      lastchar = value[len-1];
+      value[len-1] = '\0';
+    }
 #endif
 
     for (resource = (resource_t*)list_head(rest_get_resources()); resource; resource = resource->next)

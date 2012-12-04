@@ -44,18 +44,18 @@
 
 
 /* Define which resources to include to meet memory constraints. */
-#define REST_RES_HELLO 1
-#define REST_RES_MIRROR 1 /* causes largest code size */
-#define REST_RES_CHUNKS 1
+#define REST_RES_HELLO 0
+#define REST_RES_MIRROR 0 /* causes largest code size */
+#define REST_RES_CHUNKS 0
 #define REST_RES_SEPARATE 1
 #define REST_RES_PUSHING 1
 #define REST_RES_EVENT 1
 #define REST_RES_SUB 1
-#define REST_RES_LEDS 1
+#define REST_RES_LEDS 0
 #define REST_RES_TOGGLE 1
 #define REST_RES_LIGHT 0
 #define REST_RES_BATTERY 0
-#define REST_RES_RADIO 1
+#define REST_RES_RADIO 0
 
 
 
@@ -372,8 +372,16 @@ chunks_handler(void* request, void* response, uint8_t *buffer, uint16_t preferre
 /******************************************************************************/
 #if REST_RES_SEPARATE && defined (PLATFORM_HAS_BUTTON) && WITH_COAP > 3
 /* Required to manually (=not by the engine) handle the response transaction. */
+#if WITH_COAP == 7
 #include "er-coap-07-separate.h"
 #include "er-coap-07-transactions.h"
+#elif WITH_COAP == 12
+#include "er-coap-12-separate.h"
+#include "er-coap-12-transactions.h"
+#elif WITH_COAP == 13
+#include "er-coap-13-separate.h"
+#include "er-coap-13-transactions.h"
+#endif
 /*
  * CoAP-specific example for separate responses.
  * Note the call "rest_set_pre_handler(&resource_separate, coap_separate_handler);" in the main process.

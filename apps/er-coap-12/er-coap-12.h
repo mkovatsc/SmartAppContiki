@@ -384,7 +384,7 @@ int coap_set_header_block1(void *packet, uint32_t num, uint8_t more, uint16_t si
 int coap_get_header_size(void *packet, uint32_t *size);
 int coap_set_header_size(void *packet, uint32_t size);
 
-int coap_get_payload(void *packet, uint8_t **payload);
+int coap_get_payload(void *packet, const uint8_t **payload);
 int coap_set_payload(void *packet, const void *payload, size_t length);
 
 #endif /* COAP_12_H_ */

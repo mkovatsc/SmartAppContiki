@@ -103,7 +103,7 @@ static int uri_switch = 0;
 void
 client_chunk_handler(void *response)
 {
-  uint8_t *chunk;
+  const uint8_t *chunk;
 
   int len = coap_get_payload(response, &chunk);
   printf("|%.*s", len, (char *)chunk);

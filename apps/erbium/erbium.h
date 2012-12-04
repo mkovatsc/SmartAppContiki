@@ -217,7 +217,7 @@ struct rest_implementation {
   int (* set_header_location)(void *response, const char *location);
 
   /** Get the payload option of a request. */
-  int (* get_request_payload)(void *request, uint8_t **payload);
+  int (* get_request_payload)(void *request, const uint8_t **payload);
 
   /** Set the payload option of a response. */
   int (* set_response_payload)(void *response, const void *payload, size_t length);

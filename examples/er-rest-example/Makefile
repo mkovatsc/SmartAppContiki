@@ -46,7 +46,7 @@ SMALL=1
 
 # REST framework, requires WITH_COAP
 ifeq ($(WITH_COAP), 13)
-${info INFO: compiling with CoAP-12}
+${info INFO: compiling with CoAP-13}
 CFLAGS += -DWITH_COAP=13
 CFLAGS += -DREST=coap_rest_implementation
 CFLAGS += -DUIP_CONF_TCP=0
