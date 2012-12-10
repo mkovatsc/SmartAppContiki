@@ -29,6 +29,7 @@
  * This file is part of the Contiki operating system.
  *
  */
+
 #define PRINTF(FORMAT,args...) printf_P(PSTR(FORMAT),##args)
 
 #define ANNOUNCE_BOOT 1    //adds about 600 bytes to program size
@@ -178,16 +179,16 @@ void initialize(void)
  */
 #if !RF230BB_CONF_LEDONPORTE1   //Conflicts with USART0
 #ifdef RAVEN_LCD_INTERFACE
-  rs232_init(RS232_PORT_0, USART_BAUD_38400,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_0, USART_BAUD_RATE, USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
   rs232_set_input(0,raven_lcd_serial_input);
 #else
   /* Generic or slip connection on uart0 */
-  rs232_init(RS232_PORT_0, USART_BAUD_38400,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_0, USART_BAUD_RATE, USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
 #endif
 #endif
 
   /* Second rs232 port for debugging or slip alternative */
-  rs232_init(RS232_PORT_1, USART_BAUD_57600,USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
+  rs232_init(RS232_PORT_1, USART_BAUD_RATE, USART_PARITY_NONE | USART_STOP_BITS_1 | USART_DATA_BITS_8);
   /* Redirect stdout */
 #if RF230BB_CONF_LEDONPORTE1 || defined(RAVEN_LCD_INTERFACE)
   rs232_redirect_stdout(RS232_PORT_1);
