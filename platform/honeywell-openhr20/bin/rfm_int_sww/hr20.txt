@@ -1,0 +1,19 @@
+Configuration
+RFM=-DRFM=0
+HW_WINDOW_DETECTION=-DHW_WINDOW_DETECTION=0
+==================================
+
+AVR Memory Usage
+----------------
+Device: atmega169p
+
+Program:   14904 bytes (91.0% Full)
+(.text + .data + .bootloader)
+
+Data:        527 bytes (51.5% Full)
+(.data + .bss + .noinit)
+
+EEPROM:      364 bytes (71.1% Full)
+(.eeprom)
+
+

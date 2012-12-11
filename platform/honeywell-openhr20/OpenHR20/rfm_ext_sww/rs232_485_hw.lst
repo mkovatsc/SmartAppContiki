@@ -1,0 +1,249 @@
+   1               		.file	"rs232_485_hw.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	__vector_15
+  18               	__vector_15:
+  19               	.LFB5:
+  20               	.LM1:
+  21 0000 1F92      		push __zero_reg__
+  22 0002 0F92      		push r0
+  23 0004 0FB6      		in r0,__SREG__
+  24 0006 0F92      		push r0
+  25 0008 1124      		clr __zero_reg__
+  26 000a 8F93      		push r24
+  27 000c EF93      		push r30
+  28 000e FF93      		push r31
+  29               	/* prologue: Signal */
+  30               	/* frame size = 0 */
+  31               	.LM2:
+  32 0010 E1EC      		ldi r30,lo8(193)
+  33 0012 F0E0      		ldi r31,hi8(193)
+  34 0014 8081      		ld r24,Z
+  35 0016 877B      		andi r24,lo8(-73)
+  36 0018 8083      		st Z,r24
+  37               	/* epilogue start */
+  38               	.LM3:
+  39 001a FF91      		pop r31
+  40 001c EF91      		pop r30
+  41 001e 8F91      		pop r24
+  42 0020 0F90      		pop r0
+  43 0022 0FBE      		out __SREG__,r0
+  44 0024 0F90      		pop r0
+  45 0026 1F90      		pop __zero_reg__
+  46 0028 1895      		reti
+  47               	.LFE5:
+  49               	.global	RS_Init
+  51               	RS_Init:
+  52               	.LFB6:
+  53               	.LM4:
+  54               	/* prologue: function */
+  55               	/* frame size = 0 */
+  56               	.LM5:
+  57 002a 82E0      		ldi r24,lo8(2)
+  58 002c 8093 C000 		sts 192,r24
+  59               	.LM6:
+  60 0030 1092 C500 		sts 197,__zero_reg__
+  61               	.LM7:
+  62 0034 8DEC      		ldi r24,lo8(-51)
+  63 0036 8093 C400 		sts 196,r24
+  64               	.LM8:
+  65 003a 86E0      		ldi r24,lo8(6)
+  66 003c 8093 C200 		sts 194,r24
+  67               	.LM9:
+  68 0040 EBE6      		ldi r30,lo8(107)
+  69 0042 F0E0      		ldi r31,hi8(107)
+  70 0044 8081      		ld r24,Z
+  71 0046 8160      		ori r24,lo8(1)
+  72 0048 8083      		st Z,r24
+  73               	/* epilogue start */
+  74               	.LM10:
+  75 004a 0895      		ret
+  76               	.LFE6:
+  78               	.global	RS_startSend
+  80               	RS_startSend:
+  81               	.LFB7:
+  82               	.LM11:
+  83               	/* prologue: function */
+  84               	/* frame size = 0 */
+  85               	.LM12:
+  86               	/* #APP */
+  87               	 ;  189 "../common/rs232_485_hw.c" 1
+  88 004c F894      		cli
+  89               	 ;  0 "" 2
+  90               	.LM13:
+  91               	/* #NOAPP */
+  92 004e 8091 C100 		lds r24,193
+  93 0052 85FD      		sbrc r24,5
+  94 0054 00C0      		rjmp .L6
+  95               	.LM14:
+  96 0056 8091 C100 		lds r24,193
+  97 005a 8F7B      		andi r24,lo8(-65)
+  98 005c 8093 C100 		sts 193,r24
+  99               	.LM15:
+ 100 0060 8091 C000 		lds r24,192
+ 101 0064 8064      		ori r24,lo8(64)
+ 102 0066 8093 C000 		sts 192,r24
+ 103               	.LM16:
+ 104 006a 8091 C100 		lds r24,193
+ 105 006e 8862      		ori r24,lo8(40)
+ 106 0070 8093 C100 		sts 193,r24
+ 107               	.L6:
+ 108               	.LM17:
+ 109               	/* #APP */
+ 110               	 ;  209 "../common/rs232_485_hw.c" 1
+ 111 0074 7894      		sei
+ 112               	 ;  0 "" 2
+ 113               	/* epilogue start */
+ 114               	.LM18:
+ 115               	/* #NOAPP */
+ 116 0076 0895      		ret
+ 117               	.LFE7:
+ 119               	.global	__vector_14
+ 121               	__vector_14:
+ 122               	.LFB4:
+ 123               	.LM19:
+ 124 0078 1F92      		push __zero_reg__
+ 125 007a 0F92      		push r0
+ 126 007c 0FB6      		in r0,__SREG__
+ 127 007e 0F92      		push r0
+ 128 0080 1124      		clr __zero_reg__
+ 129 0082 2F93      		push r18
+ 130 0084 3F93      		push r19
+ 131 0086 4F93      		push r20
+ 132 0088 5F93      		push r21
+ 133 008a 6F93      		push r22
+ 134 008c 7F93      		push r23
+ 135 008e 8F93      		push r24
+ 136 0090 9F93      		push r25
+ 137 0092 AF93      		push r26
+ 138 0094 BF93      		push r27
+ 139 0096 EF93      		push r30
+ 140 0098 FF93      		push r31
+ 141               	/* prologue: Signal */
+ 142               	/* frame size = 0 */
+ 143               	.LM20:
+ 144 009a 0E94 0000 		call COM_tx_char_isr
+ 145 009e 8823      		tst r24
+ 146               	.LVL0:
+ 147 00a0 01F0      		breq .L9
+ 148               	.LM21:
+ 149 00a2 8093 C600 		sts 198,r24
+ 150 00a6 00C0      		rjmp .L11
+ 151               	.L9:
+ 152               	.LM22:
+ 153 00a8 8091 C100 		lds r24,193
+ 154               	.LVL1:
+ 155 00ac 8F7D      		andi r24,lo8(-33)
+ 156 00ae 8093 C100 		sts 193,r24
+ 157               	.LM23:
+ 158 00b2 8091 C000 		lds r24,192
+ 159 00b6 8064      		ori r24,lo8(64)
+ 160 00b8 8093 C000 		sts 192,r24
+ 161               	.LM24:
+ 162 00bc 8091 C100 		lds r24,193
+ 163 00c0 8064      		ori r24,lo8(64)
+ 164 00c2 8093 C100 		sts 193,r24
+ 165               	.LVL2:
+ 166               	.L11:
+ 167               	/* epilogue start */
+ 168               	.LM25:
+ 169 00c6 FF91      		pop r31
+ 170 00c8 EF91      		pop r30
+ 171 00ca BF91      		pop r27
+ 172 00cc AF91      		pop r26
+ 173 00ce 9F91      		pop r25
+ 174 00d0 8F91      		pop r24
+ 175               	.LVL3:
+ 176 00d2 7F91      		pop r23
+ 177 00d4 6F91      		pop r22
+ 178 00d6 5F91      		pop r21
+ 179 00d8 4F91      		pop r20
+ 180 00da 3F91      		pop r19
+ 181 00dc 2F91      		pop r18
+ 182 00de 0F90      		pop r0
+ 183 00e0 0FBE      		out __SREG__,r0
+ 184 00e2 0F90      		pop r0
+ 185 00e4 1F90      		pop __zero_reg__
+ 186 00e6 1895      		reti
+ 187               	.LFE4:
+ 189               	.global	__vector_13
+ 191               	__vector_13:
+ 192               	.LFB3:
+ 193               	.LM26:
+ 194 00e8 1F92      		push __zero_reg__
+ 195 00ea 0F92      		push r0
+ 196 00ec 0FB6      		in r0,__SREG__
+ 197 00ee 0F92      		push r0
+ 198 00f0 1124      		clr __zero_reg__
+ 199 00f2 2F93      		push r18
+ 200 00f4 3F93      		push r19
+ 201 00f6 4F93      		push r20
+ 202 00f8 5F93      		push r21
+ 203 00fa 6F93      		push r22
+ 204 00fc 7F93      		push r23
+ 205 00fe 8F93      		push r24
+ 206 0100 9F93      		push r25
+ 207 0102 AF93      		push r26
+ 208 0104 BF93      		push r27
+ 209 0106 EF93      		push r30
+ 210 0108 FF93      		push r31
+ 211               	/* prologue: Signal */
+ 212               	/* frame size = 0 */
+ 213               	.LM27:
+ 214 010a 8091 C600 		lds r24,198
+ 215 010e 0E94 0000 		call COM_rx_char_isr
+ 216               	.LM28:
+ 217 0112 E1EC      		ldi r30,lo8(193)
+ 218 0114 F0E0      		ldi r31,hi8(193)
+ 219 0116 8081      		ld r24,Z
+ 220 0118 8F77      		andi r24,lo8(127)
+ 221 011a 8083      		st Z,r24
+ 222               	.LM29:
+ 223 011c EBE6      		ldi r30,lo8(107)
+ 224 011e F0E0      		ldi r31,hi8(107)
+ 225 0120 8081      		ld r24,Z
+ 226 0122 8160      		ori r24,lo8(1)
+ 227 0124 8083      		st Z,r24
+ 228               	/* epilogue start */
+ 229               	.LM30:
+ 230 0126 FF91      		pop r31
+ 231 0128 EF91      		pop r30
+ 232 012a BF91      		pop r27
+ 233 012c AF91      		pop r26
+ 234 012e 9F91      		pop r25
+ 235 0130 8F91      		pop r24
+ 236 0132 7F91      		pop r23
+ 237 0134 6F91      		pop r22
+ 238 0136 5F91      		pop r21
+ 239 0138 4F91      		pop r20
+ 240 013a 3F91      		pop r19
+ 241 013c 2F91      		pop r18
+ 242 013e 0F90      		pop r0
+ 243 0140 0FBE      		out __SREG__,r0
+ 244 0142 0F90      		pop r0
+ 245 0144 1F90      		pop __zero_reg__
+ 246 0146 1895      		reti
+ 247               	.LFE3:
+ 305               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 rs232_485_hw.c
+C:\Tools\cygwin\tmp/cccgVfei.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/cccgVfei.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/cccgVfei.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/cccgVfei.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/cccgVfei.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/cccgVfei.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/cccgVfei.s:18     .text:00000000 __vector_15
+C:\Tools\cygwin\tmp/cccgVfei.s:51     .text:0000002a RS_Init
+C:\Tools\cygwin\tmp/cccgVfei.s:80     .text:0000004c RS_startSend
+C:\Tools\cygwin\tmp/cccgVfei.s:121    .text:00000078 __vector_14
+C:\Tools\cygwin\tmp/cccgVfei.s:191    .text:000000e8 __vector_13
+
+UNDEFINED SYMBOLS
+COM_tx_char_isr
+COM_rx_char_isr

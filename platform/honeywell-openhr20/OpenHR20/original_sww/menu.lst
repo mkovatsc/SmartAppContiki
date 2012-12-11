@@ -1,0 +1,1741 @@
+   1               		.file	"menu.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  17               	clr_show1:
+  18               	.LFB9:
+  19               	.LM1:
+  20               	.LVL0:
+  21 0000 1F93      		push r17
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24 0002 182F      		mov r17,r24
+  25               	.LM2:
+  26 0004 80E0      		ldi r24,lo8(0)
+  27               	.LVL1:
+  28 0006 0E94 0000 		call LCD_AllSegments
+  29               	.LM3:
+  30 000a 812F      		mov r24,r17
+  31 000c 63E0      		ldi r22,lo8(3)
+  32 000e 0E94 0000 		call LCD_SetSeg
+  33               	/* epilogue start */
+  34               	.LM4:
+  35 0012 1F91      		pop r17
+  36               	.LVL2:
+  37 0014 0895      		ret
+  38               	.LFE9:
+  41               	show_selected_temperature_type:
+  42               	.LFB12:
+  43               	.LM5:
+  44               	.LVL3:
+  45 0016 0F93      		push r16
+  46 0018 1F93      		push r17
+  47               	/* prologue: function */
+  48               	/* frame size = 0 */
+  49 001a 082F      		mov r16,r24
+  50 001c 162F      		mov r17,r22
+  51               	.LM6:
+  52 001e 8111      		cpse r24,__zero_reg__
+  53               	.LVL4:
+  54 0020 60E0      		ldi r22,lo8(0)
+  55               	.LVL5:
+  56               	.L5:
+  57 0022 8CE2      		ldi r24,lo8(44)
+  58               	.LVL6:
+  59 0024 0E94 0000 		call LCD_SetSeg
+  60               	.LVL7:
+  61               	.LM7:
+  62 0028 802F      		mov r24,r16
+  63 002a 8150      		subi r24,lo8(-(-1))
+  64 002c 8230      		cpi r24,lo8(2)
+  65 002e 00F0      		brlo .L6
+  66 0030 60E0      		ldi r22,lo8(0)
+  67               	.LVL8:
+  68 0032 00C0      		rjmp .L7
+  69               	.LVL9:
+  70               	.L6:
+  71 0034 612F      		mov r22,r17
+  72               	.LVL10:
+  73               	.L7:
+  74 0036 85E4      		ldi r24,lo8(69)
+  75 0038 0E94 0000 		call LCD_SetSeg
+  76               	.LVL11:
+  77               	.LM8:
+  78 003c 0230      		cpi r16,lo8(2)
+  79 003e 00F4      		brsh .L8
+  80 0040 10E0      		ldi r17,lo8(0)
+  81               	.L8:
+  82 0042 8DE2      		ldi r24,lo8(45)
+  83 0044 612F      		mov r22,r17
+  84 0046 0E94 0000 		call LCD_SetSeg
+  85               	/* epilogue start */
+  86               	.LM9:
+  87 004a 1F91      		pop r17
+  88               	.LVL12:
+  89 004c 0F91      		pop r16
+  90               	.LVL13:
+  91 004e 0895      		ret
+  92               	.LFE12:
+  94               	.global	menu_view
+  96               	menu_view:
+  97               	.LFB13:
+  98               	.LM10:
+  99               	.LVL14:
+ 100 0050 1F93      		push r17
+ 101               	/* prologue: function */
+ 102               	/* frame size = 0 */
+ 103 0052 182F      		mov r17,r24
+ 104               	.LM11:
+ 105 0054 8091 0000 		lds r24,menu_state
+ 106               	.LVL15:
+ 107 0058 E82F      		mov r30,r24
+ 108 005a F0E0      		ldi r31,lo8(0)
+ 109 005c E831      		cpi r30,24
+ 110 005e F105      		cpc r31,__zero_reg__
+ 111 0060 00F0      		brlo .+2
+ 112 0062 00C0      		rjmp .L69
+ 113 0064 E050      		subi r30,lo8(-(gs(.L28)))
+ 114 0066 F040      		sbci r31,hi8(-(gs(.L28)))
+ 115 0068 0C94 0000 		jmp __tablejump2__
+ 116               		.data
+ 117               		.section .progmem.gcc_sw_table, "a", @progbits
+ 118               		.p2align 1
+ 119               	.L28:
+ 120               		.data
+ 121               		.section .progmem.gcc_sw_table, "a", @progbits
+ 122               		.p2align 1
+ 123 0000 0000      		.word gs(.L12)
+ 124 0002 0000      		.word gs(.L13)
+ 125 0004 0000      		.word gs(.L14)
+ 126 0006 0000      		.word gs(.L14)
+ 127 0008 0000      		.word gs(.L14)
+ 128 000a 0000      		.word gs(.L14)
+ 129 000c 0000      		.word gs(.L15)
+ 130 000e 0000      		.word gs(.L16)
+ 131 0010 0000      		.word gs(.L17)
+ 132 0012 0000      		.word gs(.L18)
+ 133 0014 0000      		.word gs(.L19)
+ 134 0016 0000      		.word gs(.L20)
+ 135 0018 0000      		.word gs(.L21)
+ 136 001a 0000      		.word gs(.L22)
+ 137 001c 0000      		.word gs(.L22)
+ 138 001e 0000      		.word gs(.L23)
+ 139 0020 0000      		.word gs(.L24)
+ 140 0022 0000      		.word gs(.L25)
+ 141 0024 0000      		.word gs(.L25)
+ 142 0026 0000      		.word gs(.L19)
+ 143 0028 0000      		.word gs(.L19)
+ 144 002a 0000      		.word gs(.L69)
+ 145 002c 0000      		.word gs(.L26)
+ 146 002e 0000      		.word gs(.L27)
+ 147               		.text
+ 148               	.L12:
+ 149               	.LM12:
+ 150 006c 83E0      		ldi r24,lo8(3)
+ 151 006e 0E94 0000 		call LCD_AllSegments
+ 152 0072 00C0      		rjmp .L69
+ 153               	.L13:
+ 154               	.LM13:
+ 155 0074 8BE3      		ldi r24,lo8(59)
+ 156 0076 0E94 0000 		call clr_show1
+ 157               	.LM14:
+ 158 007a 81E0      		ldi r24,lo8(257)
+ 159 007c 91E0      		ldi r25,hi8(257)
+ 160 007e 63E0      		ldi r22,lo8(3)
+ 161 0080 0E94 0000 		call LCD_PrintHexW
+ 162 0084 00C0      		rjmp .L69
+ 163               	.L24:
+ 164               	.LM15:
+ 165 0086 80E0      		ldi r24,lo8(0)
+ 166 0088 0E94 0000 		call LCD_AllSegments
+ 167               	.LM16:
+ 168 008c 8091 0000 		lds r24,RTC
+ 169 0090 90E0      		ldi r25,lo8(0)
+ 170 0092 8053      		subi r24,lo8(-(2000))
+ 171 0094 984F      		sbci r25,hi8(-(2000))
+ 172 0096 61E0      		ldi r22,lo8(1)
+ 173 0098 0E94 0000 		call LCD_PrintDecW
+ 174 009c 00C0      		rjmp .L69
+ 175               	.L25:
+ 176               	.LM17:
+ 177 009e 8BE3      		ldi r24,lo8(59)
+ 178 00a0 0E94 0000 		call clr_show1
+ 179               	.LM18:
+ 180 00a4 9091 0000 		lds r25,RTC+1
+ 181 00a8 8091 0000 		lds r24,menu_state
+ 182 00ac 8131      		cpi r24,lo8(17)
+ 183 00ae 01F0      		breq .L29
+ 184 00b0 43E0      		ldi r20,lo8(3)
+ 185 00b2 00C0      		rjmp .L30
+ 186               	.L29:
+ 187 00b4 41E0      		ldi r20,lo8(1)
+ 188               	.L30:
+ 189 00b6 892F      		mov r24,r25
+ 190 00b8 60E0      		ldi r22,lo8(0)
+ 191 00ba 0E94 0000 		call LCD_PrintDec
+ 192               	.LM19:
+ 193 00be 9091 0000 		lds r25,RTC+2
+ 194 00c2 8091 0000 		lds r24,menu_state
+ 195 00c6 8231      		cpi r24,lo8(18)
+ 196 00c8 01F0      		breq .L31
+ 197 00ca 43E0      		ldi r20,lo8(3)
+ 198 00cc 00C0      		rjmp .L32
+ 199               	.L31:
+ 200 00ce 41E0      		ldi r20,lo8(1)
+ 201               	.L32:
+ 202 00d0 892F      		mov r24,r25
+ 203 00d2 62E0      		ldi r22,lo8(2)
+ 204 00d4 00C0      		rjmp .L73
+ 205               	.L19:
+ 206               	.LM20:
+ 207 00d6 1123      		tst r17
+ 208 00d8 01F0      		breq .L33
+ 209               	.LBB16:
+ 210               	.LBB17:
+ 211               	.LM21:
+ 212 00da 80E0      		ldi r24,lo8(0)
+ 213 00dc 0E94 0000 		call LCD_AllSegments
+ 214               	.LM22:
+ 215 00e0 8BE3      		ldi r24,lo8(59)
+ 216 00e2 63E0      		ldi r22,lo8(3)
+ 217 00e4 0E94 0000 		call LCD_SetSeg
+ 218               	.LM23:
+ 219 00e8 83E2      		ldi r24,lo8(35)
+ 220 00ea 63E0      		ldi r22,lo8(3)
+ 221 00ec 0E94 0000 		call LCD_SetSeg
+ 222               	.L33:
+ 223               	.LBE17:
+ 224               	.LBE16:
+ 225               	.LM24:
+ 226 00f0 9091 0000 		lds r25,RTC+3
+ 227 00f4 8091 0000 		lds r24,menu_state
+ 228 00f8 8331      		cpi r24,lo8(19)
+ 229 00fa 01F0      		breq .L34
+ 230 00fc 43E0      		ldi r20,lo8(3)
+ 231 00fe 00C0      		rjmp .L35
+ 232               	.L34:
+ 233 0100 41E0      		ldi r20,lo8(1)
+ 234               	.L35:
+ 235 0102 892F      		mov r24,r25
+ 236 0104 62E0      		ldi r22,lo8(2)
+ 237 0106 0E94 0000 		call LCD_PrintDec
+ 238               	.LM25:
+ 239 010a 9091 0000 		lds r25,RTC+4
+ 240 010e 8091 0000 		lds r24,menu_state
+ 241 0112 8431      		cpi r24,lo8(20)
+ 242 0114 01F0      		breq .L36
+ 243 0116 43E0      		ldi r20,lo8(3)
+ 244 0118 00C0      		rjmp .L37
+ 245               	.L36:
+ 246 011a 41E0      		ldi r20,lo8(1)
+ 247               	.L37:
+ 248 011c 892F      		mov r24,r25
+ 249 011e 60E0      		ldi r22,lo8(0)
+ 250               	.L73:
+ 251 0120 0E94 0000 		call LCD_PrintDec
+ 252 0124 00C0      		rjmp .L69
+ 253               	.L20:
+ 254               	.LM26:
+ 255 0126 80E0      		ldi r24,lo8(0)
+ 256 0128 0E94 0000 		call LCD_AllSegments
+ 257               	.LM27:
+ 258 012c 8091 0000 		lds r24,ring_average
+ 259 0130 9091 0000 		lds r25,(ring_average)+1
+ 260 0134 64E6      		ldi r22,lo8(100)
+ 261 0136 70E0      		ldi r23,hi8(100)
+ 262 0138 0E94 0000 		call __divmodhi4
+ 263 013c 862F      		mov r24,r22
+ 264 013e 62E0      		ldi r22,lo8(2)
+ 265 0140 43E0      		ldi r20,lo8(3)
+ 266 0142 0E94 0000 		call LCD_PrintDec
+ 267               	.LM28:
+ 268 0146 8091 0000 		lds r24,ring_average
+ 269 014a 9091 0000 		lds r25,(ring_average)+1
+ 270 014e 64E6      		ldi r22,lo8(100)
+ 271 0150 70E0      		ldi r23,hi8(100)
+ 272 0152 0E94 0000 		call __divmodhi4
+ 273 0156 60E0      		ldi r22,lo8(0)
+ 274 0158 43E0      		ldi r20,lo8(3)
+ 275 015a 00C0      		rjmp .L73
+ 276               	.L16:
+ 277               	.LM29:
+ 278 015c 8091 0000 		lds r24,MOTOR_calibration_step
+ 279 0160 1816      		cp __zero_reg__,r24
+ 280 0162 04F4      		brge .L38
+ 281               	.LM30:
+ 282 0164 8BE0      		ldi r24,lo8(11)
+ 283 0166 0E94 0000 		call clr_show1
+ 284               	.LM31:
+ 285 016a 8AE0      		ldi r24,lo8(10)
+ 286 016c 63E0      		ldi r22,lo8(3)
+ 287 016e 43E0      		ldi r20,lo8(3)
+ 288 0170 0E94 0000 		call LCD_PrintChar
+ 289               	.LM32:
+ 290 0174 8091 0000 		lds r24,config+25
+ 291 0178 9091 0000 		lds r25,(config+25)+1
+ 292 017c 8F5F      		subi r24,lo8(-1)
+ 293 017e 9F4F      		sbci r25,hi8(-1)
+ 294 0180 01F4      		brne .L39
+ 295 0182 8DE0      		ldi r24,lo8(13)
+ 296 0184 62E0      		ldi r22,lo8(2)
+ 297 0186 43E0      		ldi r20,lo8(3)
+ 298 0188 0E94 0000 		call LCD_PrintChar
+ 299               	.L39:
+ 300               	.LM33:
+ 301 018c 8091 0000 		lds r24,MOTOR_calibration_step
+ 302 0190 6AE0      		ldi r22,lo8(10)
+ 303 0192 0E94 0000 		call __divmodqi4
+ 304 0196 892F      		mov r24,r25
+ 305 0198 60E0      		ldi r22,lo8(0)
+ 306 019a 43E0      		ldi r20,lo8(3)
+ 307 019c 0E94 0000 		call LCD_PrintChar
+ 308 01a0 00C0      		rjmp .L40
+ 309               	.L38:
+ 310               	.LM34:
+ 311 01a2 1123      		tst r17
+ 312 01a4 01F0      		breq .L41
+ 313 01a6 8BE0      		ldi r24,lo8(11)
+ 314 01a8 0E94 0000 		call clr_show1
+ 315               	.L41:
+ 316               	.LM35:
+ 317 01ac 8091 0000 		lds r24,CTL_error
+ 318 01b0 8823      		tst r24
+ 319 01b2 01F0      		breq .L42
+ 320               	.LM36:
+ 321 01b4 87FF      		sbrs r24,7
+ 322 01b6 00C0      		rjmp .L43
+ 323               	.LM37:
+ 324 01b8 8FE0      		ldi r24,lo8(15)
+ 325 01ba 61E0      		ldi r22,lo8(1)
+ 326 01bc 00C0      		rjmp .L71
+ 327               	.L43:
+ 328               	.LM38:
+ 329 01be 82FF      		sbrs r24,2
+ 330 01c0 00C0      		rjmp .L44
+ 331               	.LM39:
+ 332 01c2 80E1      		ldi r24,lo8(16)
+ 333 01c4 00C0      		rjmp .L77
+ 334               	.L44:
+ 335               	.LM40:
+ 336 01c6 83FF      		sbrs r24,3
+ 337 01c8 00C0      		rjmp .L45
+ 338               	.LM41:
+ 339 01ca 81E1      		ldi r24,lo8(17)
+ 340 01cc 00C0      		rjmp .L77
+ 341               	.L45:
+ 342               	.LM42:
+ 343 01ce 86FF      		sbrs r24,6
+ 344 01d0 00C0      		rjmp .L46
+ 345               	.LM43:
+ 346 01d2 8FE0      		ldi r24,lo8(15)
+ 347 01d4 00C0      		rjmp .L77
+ 348               	.L46:
+ 349               	.LM44:
+ 350 01d6 84FF      		sbrs r24,4
+ 351 01d8 00C0      		rjmp .L40
+ 352               	.LM45:
+ 353 01da 82E1      		ldi r24,lo8(18)
+ 354               	.L77:
+ 355 01dc 63E0      		ldi r22,lo8(3)
+ 356               	.L71:
+ 357 01de 0E94 0000 		call LCD_PrintStringID
+ 358 01e2 00C0      		rjmp .L40
+ 359               	.L42:
+ 360               	.LM46:
+ 361 01e4 8091 0000 		lds r24,CTL_mode_window
+ 362 01e8 8823      		tst r24
+ 363 01ea 01F0      		breq .L15
+ 364               	.LM47:
+ 365 01ec 8EE0      		ldi r24,lo8(14)
+ 366 01ee 00C0      		rjmp .L77
+ 367               	.L15:
+ 368               	.LM48:
+ 369 01f0 1123      		tst r17
+ 370 01f2 01F0      		breq .L47
+ 371 01f4 8BE0      		ldi r24,lo8(11)
+ 372 01f6 0E94 0000 		call clr_show1
+ 373               	.L47:
+ 374               	.LM49:
+ 375 01fa 8091 0000 		lds r24,CTL_mode_auto
+ 376 01fe 8230      		cpi r24,lo8(2)
+ 377 0200 00F0      		brlo .L48
+ 378               	.LM50:
+ 379 0202 8091 0000 		lds r24,wheel_tick_counter
+ 380 0206 843F      		cpi r24,lo8(-12)
+ 381 0208 04F4      		brge .L49
+ 382               	.LM51:
+ 383 020a 89E0      		ldi r24,lo8(9)
+ 384 020c 00C0      		rjmp .L77
+ 385               	.L49:
+ 386               	.LM52:
+ 387 020e 87FF      		sbrs r24,7
+ 388 0210 00C0      		rjmp .L50
+ 389               	.LM53:
+ 390 0212 86E1      		ldi r24,lo8(22)
+ 391 0214 00C0      		rjmp .L77
+ 392               	.L50:
+ 393               	.LM54:
+ 394 0216 8D30      		cpi r24,lo8(13)
+ 395 0218 04F0      		brlt .L51
+ 396               	.LM55:
+ 397 021a 85E1      		ldi r24,lo8(21)
+ 398 021c 00C0      		rjmp .L77
+ 399               	.L51:
+ 400               	.LM56:
+ 401 021e 8823      		tst r24
+ 402 0220 01F0      		breq .L52
+ 403               	.LM57:
+ 404 0222 84E1      		ldi r24,lo8(20)
+ 405 0224 00C0      		rjmp .L77
+ 406               	.L52:
+ 407               	.LM58:
+ 408 0226 8091 0000 		lds r24,ring_average+2
+ 409 022a 9091 0000 		lds r25,(ring_average+2)+1
+ 410 022e 63E0      		ldi r22,lo8(3)
+ 411 0230 0E94 0000 		call LCD_PrintTempInt
+ 412 0234 00C0      		rjmp .L40
+ 413               	.L48:
+ 414               	.LM59:
+ 415 0236 8091 0000 		lds r24,CTL_temp_wanted
+ 416 023a 63E0      		ldi r22,lo8(3)
+ 417 023c 0E94 0000 		call LCD_PrintTemp
+ 418               	.L40:
+ 419               	.LM60:
+ 420 0240 8091 0000 		lds r24,CTL_mode_auto
+ 421 0244 8430      		cpi r24,lo8(4)
+ 422 0246 00F4      		brsh .L58
+ 423 0248 8230      		cpi r24,lo8(2)
+ 424 024a 00F4      		brsh .L56
+ 425 024c 8823      		tst r24
+ 426 024e 01F0      		breq .L54
+ 427 0250 8130      		cpi r24,lo8(1)
+ 428 0252 01F4      		brne .L53
+ 429 0254 00C0      		rjmp .L80
+ 430               	.L58:
+ 431 0256 8430      		cpi r24,lo8(4)
+ 432 0258 01F4      		brne .L53
+ 433 025a 00C0      		rjmp .L81
+ 434               	.L80:
+ 435               	.LM61:
+ 436 025c 88E1      		ldi r24,lo8(24)
+ 437 025e 60E0      		ldi r22,lo8(0)
+ 438 0260 0E94 0000 		call LCD_SetSeg
+ 439               	.LM62:
+ 440 0264 82E3      		ldi r24,lo8(50)
+ 441 0266 63E0      		ldi r22,lo8(3)
+ 442 0268 00C0      		rjmp .L78
+ 443               	.L54:
+ 444               	.LM63:
+ 445 026a 88E1      		ldi r24,lo8(24)
+ 446 026c 60E0      		ldi r22,lo8(0)
+ 447 026e 0E94 0000 		call LCD_SetSeg
+ 448               	.LM64:
+ 449 0272 82E3      		ldi r24,lo8(50)
+ 450 0274 63E0      		ldi r22,lo8(3)
+ 451 0276 00C0      		rjmp .L79
+ 452               	.L81:
+ 453               	.LM65:
+ 454 0278 88E1      		ldi r24,lo8(24)
+ 455 027a 63E0      		ldi r22,lo8(3)
+ 456 027c 0E94 0000 		call LCD_SetSeg
+ 457               	.LM66:
+ 458 0280 82E3      		ldi r24,lo8(50)
+ 459 0282 60E0      		ldi r22,lo8(0)
+ 460               	.L78:
+ 461 0284 0E94 0000 		call LCD_SetSeg
+ 462               	.LM67:
+ 463 0288 8AE1      		ldi r24,lo8(26)
+ 464 028a 63E0      		ldi r22,lo8(3)
+ 465 028c 00C0      		rjmp .L72
+ 466               	.L56:
+ 467               	.LM68:
+ 468 028e 88E1      		ldi r24,lo8(24)
+ 469 0290 63E0      		ldi r22,lo8(3)
+ 470 0292 0E94 0000 		call LCD_SetSeg
+ 471               	.LM69:
+ 472 0296 82E3      		ldi r24,lo8(50)
+ 473 0298 60E0      		ldi r22,lo8(0)
+ 474               	.L79:
+ 475 029a 0E94 0000 		call LCD_SetSeg
+ 476               	.LM70:
+ 477 029e 8AE1      		ldi r24,lo8(26)
+ 478 02a0 60E0      		ldi r22,lo8(0)
+ 479               	.L72:
+ 480 02a2 0E94 0000 		call LCD_SetSeg
+ 481               	.L53:
+ 482               	.LM71:
+ 483 02a6 6091 0000 		lds r22,hourbar_buff
+ 484 02aa 7091 0000 		lds r23,(hourbar_buff)+1
+ 485 02ae 8091 0000 		lds r24,(hourbar_buff)+2
+ 486 02b2 9091 0000 		lds r25,(hourbar_buff)+3
+ 487 02b6 0E94 0000 		call LCD_HourBarBitmap
+ 488 02ba 00C0      		rjmp .L69
+ 489               	.L17:
+ 490               	.LM72:
+ 491 02bc 8091 0000 		lds r24,CTL_mode_auto
+ 492 02c0 8230      		cpi r24,lo8(2)
+ 493 02c2 00F0      		brlo .L59
+ 494               	.LM73:
+ 495 02c4 89E0      		ldi r24,lo8(9)
+ 496 02c6 8093 0000 		sts menu_state,r24
+ 497 02ca 00C0      		rjmp .L18
+ 498               	.L59:
+ 499               	.LM74:
+ 500 02cc 1123      		tst r17
+ 501 02ce 01F0      		breq .L60
+ 502 02d0 8BE3      		ldi r24,lo8(59)
+ 503 02d2 0E94 0000 		call clr_show1
+ 504               	.L60:
+ 505               	.LM75:
+ 506 02d6 8091 0000 		lds r24,ring_average+2
+ 507 02da 9091 0000 		lds r25,(ring_average+2)+1
+ 508 02de 63E0      		ldi r22,lo8(3)
+ 509 02e0 0E94 0000 		call LCD_PrintTempInt
+ 510 02e4 00C0      		rjmp .L69
+ 511               	.L18:
+ 512               	.LM76:
+ 513 02e6 1123      		tst r17
+ 514 02e8 01F0      		breq .L61
+ 515 02ea 80E0      		ldi r24,lo8(0)
+ 516 02ec 0E94 0000 		call LCD_AllSegments
+ 517               	.L61:
+ 518               	.LBB18:
+ 519               	.LM77:
+ 520 02f0 0E94 0000 		call MOTOR_GetPosPercent
+ 521               	.LM78:
+ 522 02f4 8536      		cpi r24,lo8(101)
+ 523 02f6 00F4      		brsh .L62
+ 524               	.LM79:
+ 525 02f8 0E94 0000 		call MOTOR_GetPosPercent
+ 526 02fc 90E0      		ldi r25,lo8(0)
+ 527 02fe 60E0      		ldi r22,lo8(0)
+ 528 0300 43E0      		ldi r20,lo8(3)
+ 529 0302 0E94 0000 		call LCD_PrintDec3
+ 530 0306 00C0      		rjmp .L69
+ 531               	.L62:
+ 532               	.LM80:
+ 533 0308 8AE0      		ldi r24,lo8(10)
+ 534 030a 00C0      		rjmp .L74
+ 535               	.L26:
+ 536               	.LBE18:
+ 537               	.LM81:
+ 538 030c 8AE1      		ldi r24,lo8(26)
+ 539 030e 0E94 0000 		call clr_show1
+ 540               	.LM82:
+ 541 0312 8091 0000 		lds r24,menu_set_dow
+ 542 0316 61E0      		ldi r22,lo8(1)
+ 543 0318 00C0      		rjmp .L76
+ 544               	.L27:
+ 545               	.LBB19:
+ 546               	.LBB20:
+ 547               	.LM83:
+ 548 031a 80E0      		ldi r24,lo8(0)
+ 549 031c 0E94 0000 		call LCD_AllSegments
+ 550               	.LM84:
+ 551 0320 8BE3      		ldi r24,lo8(59)
+ 552 0322 63E0      		ldi r22,lo8(3)
+ 553 0324 0E94 0000 		call LCD_SetSeg
+ 554               	.LM85:
+ 555 0328 83E2      		ldi r24,lo8(35)
+ 556 032a 63E0      		ldi r22,lo8(3)
+ 557 032c 0E94 0000 		call LCD_SetSeg
+ 558               	.LM86:
+ 559 0330 8AE1      		ldi r24,lo8(26)
+ 560 0332 63E0      		ldi r22,lo8(3)
+ 561 0334 0E94 0000 		call LCD_SetSeg
+ 562               	.LBE20:
+ 563               	.LBE19:
+ 564               	.LM87:
+ 565 0338 8091 0000 		lds r24,menu_set_dow
+ 566 033c 982F      		mov r25,r24
+ 567 033e 990F      		lsl r25
+ 568 0340 990F      		lsl r25
+ 569 0342 990F      		lsl r25
+ 570 0344 2091 0000 		lds r18,menu_set_slot
+ 571 0348 920F      		add r25,r18
+ 572 034a 9093 0000 		sts timmers_patch_offset,r25
+ 573               	.LM88:
+ 574 034e 9091 0000 		lds r25,menu_set_mode
+ 575 0352 392F      		mov r19,r25
+ 576 0354 3295      		swap r19
+ 577 0356 307F      		andi r19,lo8(-16)
+ 578 0358 20E0      		ldi r18,lo8(0)
+ 579 035a 4091 0000 		lds r20,menu_set_time
+ 580 035e 5091 0000 		lds r21,(menu_set_time)+1
+ 581 0362 240F      		add r18,r20
+ 582 0364 351F      		adc r19,r21
+ 583 0366 3093 0000 		sts (timmers_patch_data)+1,r19
+ 584 036a 2093 0000 		sts timmers_patch_data,r18
+ 585               	.LM89:
+ 586 036e 0E94 0000 		call RTC_DowTimerGetHourBar
+ 587 0372 0E94 0000 		call LCD_HourBarBitmap
+ 588               	.LM90:
+ 589 0376 8FEF      		ldi r24,lo8(-1)
+ 590 0378 8093 0000 		sts timmers_patch_offset,r24
+ 591               	.LM91:
+ 592 037c 8091 0000 		lds r24,menu_set_time
+ 593 0380 9091 0000 		lds r25,(menu_set_time)+1
+ 594 0384 6CE3      		ldi r22,lo8(60)
+ 595 0386 70E0      		ldi r23,hi8(60)
+ 596 0388 0E94 0000 		call __udivmodhi4
+ 597 038c 862F      		mov r24,r22
+ 598 038e 61E0      		ldi r22,lo8(1)
+ 599 0390 0E94 0000 		call LCD_SetHourBarSeg
+ 600               	.LM92:
+ 601 0394 8091 0000 		lds r24,menu_set_time
+ 602 0398 9091 0000 		lds r25,(menu_set_time)+1
+ 603 039c 25E0      		ldi r18,hi8(1440)
+ 604 039e 803A      		cpi r24,lo8(1440)
+ 605 03a0 9207      		cpc r25,r18
+ 606 03a2 00F4      		brsh .L63
+ 607               	.LM93:
+ 608 03a4 6CE3      		ldi r22,lo8(60)
+ 609 03a6 70E0      		ldi r23,hi8(60)
+ 610 03a8 0E94 0000 		call __udivmodhi4
+ 611 03ac 862F      		mov r24,r22
+ 612 03ae 62E0      		ldi r22,lo8(2)
+ 613 03b0 41E0      		ldi r20,lo8(1)
+ 614 03b2 0E94 0000 		call LCD_PrintDec
+ 615               	.LM94:
+ 616 03b6 8091 0000 		lds r24,menu_set_time
+ 617 03ba 9091 0000 		lds r25,(menu_set_time)+1
+ 618 03be 6CE3      		ldi r22,lo8(60)
+ 619 03c0 70E0      		ldi r23,hi8(60)
+ 620 03c2 0E94 0000 		call __udivmodhi4
+ 621 03c6 60E0      		ldi r22,lo8(0)
+ 622 03c8 41E0      		ldi r20,lo8(1)
+ 623 03ca 0E94 0000 		call LCD_PrintDec
+ 624 03ce 00C0      		rjmp .L64
+ 625               	.L63:
+ 626               	.LM95:
+ 627 03d0 89E0      		ldi r24,lo8(9)
+ 628 03d2 61E0      		ldi r22,lo8(1)
+ 629 03d4 0E94 0000 		call LCD_PrintStringID
+ 630               	.L64:
+ 631               	.LM96:
+ 632 03d8 8091 0000 		lds r24,menu_set_mode
+ 633 03dc 61E0      		ldi r22,lo8(1)
+ 634 03de 00C0      		rjmp .L75
+ 635               	.L21:
+ 636               	.LM97:
+ 637 03e0 80E0      		ldi r24,lo8(0)
+ 638 03e2 0E94 0000 		call LCD_AllSegments
+ 639               	.LM98:
+ 640 03e6 88E0      		ldi r24,lo8(8)
+ 641               	.L74:
+ 642 03e8 63E0      		ldi r22,lo8(3)
+ 643               	.L76:
+ 644 03ea 0E94 0000 		call LCD_PrintStringID
+ 645 03ee 00C0      		rjmp .L69
+ 646               	.L22:
+ 647               	.LM99:
+ 648 03f0 83E0      		ldi r24,lo8(3)
+ 649 03f2 0E94 0000 		call LCD_AllSegments
+ 650               	.LM100:
+ 651 03f6 9091 0000 		lds r25,service_idx
+ 652 03fa 8091 0000 		lds r24,menu_state
+ 653 03fe 8D30      		cpi r24,lo8(13)
+ 654 0400 01F0      		breq .L65
+ 655 0402 43E0      		ldi r20,lo8(3)
+ 656 0404 00C0      		rjmp .L66
+ 657               	.L65:
+ 658 0406 41E0      		ldi r20,lo8(1)
+ 659               	.L66:
+ 660 0408 892F      		mov r24,r25
+ 661 040a 62E0      		ldi r22,lo8(2)
+ 662 040c 0E94 0000 		call LCD_PrintHex
+ 663               	.LM101:
+ 664 0410 E091 0000 		lds r30,service_idx
+ 665 0414 F0E0      		ldi r31,lo8(0)
+ 666 0416 E050      		subi r30,lo8(-(config))
+ 667 0418 F040      		sbci r31,hi8(-(config))
+ 668 041a E081      		ld r30,Z
+ 669 041c 8091 0000 		lds r24,menu_state
+ 670 0420 8E30      		cpi r24,lo8(14)
+ 671 0422 01F0      		breq .L67
+ 672 0424 43E0      		ldi r20,lo8(3)
+ 673 0426 00C0      		rjmp .L68
+ 674               	.L67:
+ 675 0428 41E0      		ldi r20,lo8(1)
+ 676               	.L68:
+ 677 042a 8E2F      		mov r24,r30
+ 678 042c 60E0      		ldi r22,lo8(0)
+ 679 042e 0E94 0000 		call LCD_PrintHex
+ 680 0432 00C0      		rjmp .L69
+ 681               	.L23:
+ 682               	.LM102:
+ 683 0434 83E0      		ldi r24,lo8(3)
+ 684 0436 0E94 0000 		call LCD_AllSegments
+ 685               	.LM103:
+ 686 043a 8091 0000 		lds r24,service_watch_n
+ 687 043e 0E94 0000 		call watch
+ 688 0442 63E0      		ldi r22,lo8(3)
+ 689 0444 0E94 0000 		call LCD_PrintHexW
+ 690               	.LM104:
+ 691 0448 8091 0000 		lds r24,service_watch_n
+ 692 044c 61E0      		ldi r22,lo8(1)
+ 693 044e 0E94 0000 		call LCD_SetHourBarSeg
+ 694 0452 00C0      		rjmp .L69
+ 695               	.L14:
+ 696               	.LM105:
+ 697 0454 8BE3      		ldi r24,lo8(59)
+ 698 0456 0E94 0000 		call clr_show1
+ 699               	.LM106:
+ 700 045a 8091 0000 		lds r24,menu_set_dow
+ 701 045e 61E0      		ldi r22,lo8(1)
+ 702 0460 0E94 0000 		call LCD_PrintTemp
+ 703               	.LM107:
+ 704 0464 8091 0000 		lds r24,menu_state
+ 705 0468 8250      		subi r24,lo8(-(-2))
+ 706 046a 63E0      		ldi r22,lo8(3)
+ 707               	.L75:
+ 708 046c 0E94 0000 		call show_selected_temperature_type
+ 709               	.L69:
+ 710               	/* epilogue start */
+ 711               	.LM108:
+ 712 0470 1F91      		pop r17
+ 713               	.LVL16:
+ 714 0472 0895      		ret
+ 715               	.LFE13:
+ 717               	.global	menu_controller
+ 719               	menu_controller:
+ 720               	.LFB8:
+ 721               	.LM109:
+ 722               	.LVL17:
+ 723 0474 EF92      		push r14
+ 724 0476 FF92      		push r15
+ 725 0478 1F93      		push r17
+ 726 047a CF93      		push r28
+ 727 047c DF93      		push r29
+ 728               	/* prologue: function */
+ 729               	/* frame size = 0 */
+ 730               	.LBB21:
+ 731               	.LBB22:
+ 732               	.LM110:
+ 733 047e 4091 0000 		lds r20,kb_events
+ 734 0482 5091 0000 		lds r21,(kb_events)+1
+ 735               	.LBE22:
+ 736 0486 40FF      		sbrs r20,0
+ 737 0488 00C0      		rjmp .L83
+ 738 048a 11E0      		ldi r17,lo8(1)
+ 739               	.LVL18:
+ 740 048c 00C0      		rjmp .L84
+ 741               	.LVL19:
+ 742               	.L83:
+ 743               	.LBB23:
+ 744               	.LM111:
+ 745 048e 41FD      		sbrc r20,1
+ 746 0490 00C0      		rjmp .L85
+ 747 0492 10E0      		ldi r17,lo8(0)
+ 748               	.LVL20:
+ 749 0494 00C0      		rjmp .L84
+ 750               	.LVL21:
+ 751               	.L85:
+ 752 0496 1FEF      		ldi r17,lo8(-1)
+ 753               	.LVL22:
+ 754               	.L84:
+ 755               	.LBE23:
+ 756               	.LBE21:
+ 757               	.LM112:
+ 758 0498 9091 0000 		lds r25,menu_state
+ 759 049c E92F      		mov r30,r25
+ 760 049e F0E0      		ldi r31,lo8(0)
+ 761 04a0 E831      		cpi r30,24
+ 762 04a2 F105      		cpc r31,__zero_reg__
+ 763 04a4 00F0      		brlo .+2
+ 764 04a6 00C0      		rjmp .L86
+ 765 04a8 E050      		subi r30,lo8(-(gs(.L101)))
+ 766 04aa F040      		sbci r31,hi8(-(gs(.L101)))
+ 767 04ac 0C94 0000 		jmp __tablejump2__
+ 768               		.data
+ 769               		.section .progmem.gcc_sw_table, "a", @progbits
+ 770               		.p2align 1
+ 771               	.L101:
+ 772               		.data
+ 773               		.section .progmem.gcc_sw_table, "a", @progbits
+ 774               		.p2align 1
+ 775 0030 0000      		.word gs(.L87)
+ 776 0032 0000      		.word gs(.L88)
+ 777 0034 0000      		.word gs(.L89)
+ 778 0036 0000      		.word gs(.L89)
+ 779 0038 0000      		.word gs(.L89)
+ 780 003a 0000      		.word gs(.L89)
+ 781 003c 0000      		.word gs(.L90)
+ 782 003e 0000      		.word gs(.L90)
+ 783 0040 0000      		.word gs(.L90)
+ 784 0042 0000      		.word gs(.L90)
+ 785 0044 0000      		.word gs(.L90)
+ 786 0046 0000      		.word gs(.L90)
+ 787 0048 0000      		.word gs(.L86)
+ 788 004a 0000      		.word gs(.L91)
+ 789 004c 0000      		.word gs(.L91)
+ 790 004e 0000      		.word gs(.L92)
+ 791 0050 0000      		.word gs(.L93)
+ 792 0052 0000      		.word gs(.L94)
+ 793 0054 0000      		.word gs(.L95)
+ 794 0056 0000      		.word gs(.L96)
+ 795 0058 0000      		.word gs(.L97)
+ 796 005a 0000      		.word gs(.L98)
+ 797 005c 0000      		.word gs(.L99)
+ 798 005e 0000      		.word gs(.L100)
+ 799               		.text
+ 800               	.L87:
+ 801               	.LM113:
+ 802 04b0 8823      		tst r24
+ 803 04b2 01F0      		breq .L102
+ 804               	.LM114:
+ 805 04b4 82E0      		ldi r24,lo8(2)
+ 806               	.LVL23:
+ 807 04b6 8093 0000 		sts menu_auto_update_timeout,r24
+ 808               	.LVL24:
+ 809               	.L102:
+ 810               	.LM115:
+ 811 04ba 8091 0000 		lds r24,menu_auto_update_timeout
+ 812               	.LVL25:
+ 813 04be 8823      		tst r24
+ 814 04c0 01F0      		breq .+2
+ 815 04c2 00C0      		rjmp .L103
+ 816               	.LM116:
+ 817 04c4 81E0      		ldi r24,lo8(1)
+ 818 04c6 8093 0000 		sts menu_state,r24
+ 819 04ca 00C0      		rjmp .L104
+ 820               	.LVL26:
+ 821               	.L88:
+ 822               	.LM117:
+ 823 04cc 8823      		tst r24
+ 824 04ce 01F0      		breq .L105
+ 825               	.LM118:
+ 826 04d0 82E0      		ldi r24,lo8(2)
+ 827               	.LVL27:
+ 828 04d2 8093 0000 		sts menu_auto_update_timeout,r24
+ 829               	.LVL28:
+ 830               	.L105:
+ 831               	.LM119:
+ 832 04d6 8091 0000 		lds r24,menu_auto_update_timeout
+ 833               	.LVL29:
+ 834 04da 8823      		tst r24
+ 835 04dc 01F0      		breq .+2
+ 836 04de 00C0      		rjmp .L103
+ 837               	.LM120:
+ 838 04e0 80E1      		ldi r24,lo8(16)
+ 839 04e2 00C0      		rjmp .L168
+ 840               	.LVL30:
+ 841               	.L93:
+ 842               	.LM121:
+ 843 04e4 1123      		tst r17
+ 844 04e6 01F0      		breq .L106
+ 845 04e8 8091 0000 		lds r24,RTC
+ 846               	.LVL31:
+ 847 04ec 810F      		add r24,r17
+ 848 04ee 0E94 0000 		call RTC_SetYear
+ 849               	.LVL32:
+ 850               	.L106:
+ 851               	.LM122:
+ 852 04f2 8091 0000 		lds r24,kb_events
+ 853               	.LVL33:
+ 854 04f6 82FF      		sbrs r24,2
+ 855 04f8 00C0      		rjmp .L103
+ 856               	.LM123:
+ 857 04fa 81E1      		ldi r24,lo8(17)
+ 858 04fc 00C0      		rjmp .L169
+ 859               	.LVL34:
+ 860               	.L94:
+ 861               	.LM124:
+ 862 04fe 1123      		tst r17
+ 863 0500 01F0      		breq .L107
+ 864 0502 8091 0000 		lds r24,RTC+1
+ 865               	.LVL35:
+ 866 0506 810F      		add r24,r17
+ 867 0508 0E94 0000 		call RTC_SetMonth
+ 868               	.LVL36:
+ 869               	.L107:
+ 870               	.LM125:
+ 871 050c 8091 0000 		lds r24,kb_events
+ 872               	.LVL37:
+ 873 0510 82FF      		sbrs r24,2
+ 874 0512 00C0      		rjmp .L103
+ 875               	.LM126:
+ 876 0514 82E1      		ldi r24,lo8(18)
+ 877 0516 00C0      		rjmp .L169
+ 878               	.LVL38:
+ 879               	.L95:
+ 880               	.LM127:
+ 881 0518 1123      		tst r17
+ 882 051a 01F0      		breq .L108
+ 883 051c 8091 0000 		lds r24,RTC+2
+ 884               	.LVL39:
+ 885 0520 810F      		add r24,r17
+ 886 0522 0E94 0000 		call RTC_SetDay
+ 887               	.LVL40:
+ 888               	.L108:
+ 889               	.LM128:
+ 890 0526 8091 0000 		lds r24,kb_events
+ 891               	.LVL41:
+ 892 052a 82FF      		sbrs r24,2
+ 893 052c 00C0      		rjmp .L103
+ 894               	.LM129:
+ 895 052e 83E1      		ldi r24,lo8(19)
+ 896 0530 00C0      		rjmp .L169
+ 897               	.LVL42:
+ 898               	.L96:
+ 899               	.LM130:
+ 900 0532 1123      		tst r17
+ 901 0534 01F0      		breq .L109
+ 902 0536 8091 0000 		lds r24,RTC+3
+ 903               	.LVL43:
+ 904 053a 810F      		add r24,r17
+ 905 053c 0E94 0000 		call RTC_SetHour
+ 906               	.LVL44:
+ 907               	.L109:
+ 908               	.LM131:
+ 909 0540 8091 0000 		lds r24,kb_events
+ 910               	.LVL45:
+ 911 0544 82FF      		sbrs r24,2
+ 912 0546 00C0      		rjmp .L103
+ 913               	.LM132:
+ 914 0548 84E1      		ldi r24,lo8(20)
+ 915 054a 00C0      		rjmp .L169
+ 916               	.LVL46:
+ 917               	.L97:
+ 918               	.LM133:
+ 919 054c 1123      		tst r17
+ 920 054e 01F0      		breq .L110
+ 921               	.LM134:
+ 922 0550 8091 0000 		lds r24,RTC+4
+ 923               	.LVL47:
+ 924 0554 810F      		add r24,r17
+ 925 0556 0E94 0000 		call RTC_SetMinute
+ 926               	.LM135:
+ 927 055a 80E0      		ldi r24,lo8(0)
+ 928 055c 0E94 0000 		call RTC_SetSecond
+ 929               	.LVL48:
+ 930               	.L110:
+ 931               	.LM136:
+ 932 0560 8091 0000 		lds r24,kb_events
+ 933               	.LVL49:
+ 934 0564 82FF      		sbrs r24,2
+ 935 0566 00C0      		rjmp .L103
+ 936               	.LM137:
+ 937 0568 87E0      		ldi r24,lo8(7)
+ 938 056a 00C0      		rjmp .L169
+ 939               	.LVL50:
+ 940               	.L90:
+ 941               	.LM138:
+ 942 056c 43FF      		sbrs r20,3
+ 943 056e 00C0      		rjmp .L111
+ 944               	.LM139:
+ 945 0570 892F      		mov r24,r25
+ 946               	.LVL51:
+ 947 0572 8F5F      		subi r24,lo8(-(1))
+ 948 0574 8093 0000 		sts menu_state,r24
+ 949               	.LM140:
+ 950 0578 8C30      		cpi r24,lo8(12)
+ 951 057a 01F0      		breq .+2
+ 952 057c 00C0      		rjmp .L112
+ 953 057e 00C0      		rjmp .L172
+ 954               	.LVL52:
+ 955               	.L111:
+ 956               	.LM141:
+ 957 0580 8091 0000 		lds r24,menu_locked
+ 958               	.LVL53:
+ 959 0584 8823      		tst r24
+ 960 0586 01F0      		breq .L113
+ 961               	.LM142:
+ 962 0588 477F      		andi r20,lo8(2039)
+ 963 058a 5770      		andi r21,hi8(2039)
+ 964 058c 452B      		or r20,r21
+ 965 058e 01F4      		brne .+2
+ 966 0590 00C0      		rjmp .L103
+ 967               	.LM143:
+ 968 0592 85E0      		ldi r24,lo8(5)
+ 969 0594 8093 0000 		sts menu_auto_update_timeout,r24
+ 970               	.LM144:
+ 971 0598 8CE0      		ldi r24,lo8(12)
+ 972 059a 00C0      		rjmp .L168
+ 973               	.L113:
+ 974               	.LM145:
+ 975 059c 9650      		subi r25,lo8(-(-6))
+ 976 059e 9230      		cpi r25,lo8(2)
+ 977 05a0 00F0      		brlo .+2
+ 978 05a2 00C0      		rjmp .L114
+ 979               	.LM146:
+ 980 05a4 1123      		tst r17
+ 981 05a6 01F4      		brne .L115
+ 982 05a8 80E0      		ldi r24,lo8(0)
+ 983               	.LVL54:
+ 984 05aa 00C0      		rjmp .L116
+ 985               	.LVL55:
+ 986               	.L115:
+ 987               	.LM147:
+ 988 05ac 8091 0000 		lds r24,CTL_mode_auto
+ 989 05b0 8230      		cpi r24,lo8(2)
+ 990 05b2 00F0      		brlo .L117
+ 991               	.LM148:
+ 992 05b4 8091 0000 		lds r24,wheel_tick_counter
+ 993 05b8 8038      		cpi r24,lo8(-128)
+ 994 05ba 01F4      		brne .L118
+ 995 05bc 81E8      		ldi r24,lo8(-127)
+ 996 05be 00C0      		rjmp .L119
+ 997               	.L118:
+ 998               	.LM149:
+ 999 05c0 8F37      		cpi r24,lo8(127)
+ 1000 05c2 01F4      		brne .L119
+ 1001 05c4 8EE7      		ldi r24,lo8(126)
+ 1002               	.L119:
+ 1003               	.LM150:
+ 1004 05c6 810F      		add r24,r17
+ 1005 05c8 8093 0000 		sts wheel_tick_counter,r24
+ 1006               	.LM151:
+ 1007 05cc 1092 0000 		sts wheel_tick_time,__zero_reg__
+ 1008 05d0 00C0      		rjmp .L120
+ 1009               	.L117:
+ 1010               	.LM152:
+ 1011 05d2 8823      		tst r24
+ 1012 05d4 01F4      		brne .L121
+ 1013               	.LM153:
+ 1014 05d6 812F      		mov r24,r17
+ 1015 05d8 0E94 0000 		call CTL_temp_change_inc
+ 1016 05dc 00C0      		rjmp .L120
+ 1017               	.L121:
+ 1018               	.LM154:
+ 1019 05de 80E0      		ldi r24,lo8(0)
+ 1020 05e0 0E94 0000 		call CTL_change_mode
+ 1021               	.LM155:
+ 1022 05e4 812F      		mov r24,r17
+ 1023 05e6 0E94 0000 		call CTL_temp_change_inc
+ 1024               	.LM156:
+ 1025 05ea 81E0      		ldi r24,lo8(1)
+ 1026 05ec 8093 0000 		sts CTL_mode_changed,r24
+ 1027               	.LM157:
+ 1028 05f0 1092 0000 		sts CTL_mode_changed_timer,__zero_reg__
+ 1029               	.L120:
+ 1030               	.LM158:
+ 1031 05f4 86E0      		ldi r24,lo8(6)
+ 1032 05f6 8093 0000 		sts menu_state,r24
+ 1033 05fa 81E0      		ldi r24,lo8(1)
+ 1034               	.LVL56:
+ 1035               	.L116:
+ 1036               	.LM159:
+ 1037 05fc 9091 0000 		lds r25,kb_events
+ 1038 0600 94FF      		sbrs r25,4
+ 1039 0602 00C0      		rjmp .L122
+ 1040               	.LM160:
+ 1041 0604 8FEF      		ldi r24,lo8(-1)
+ 1042               	.LVL57:
+ 1043 0606 00C0      		rjmp .L173
+ 1044               	.LVL58:
+ 1045               	.L122:
+ 1046               	.LM161:
+ 1047 0608 97FF      		sbrs r25,7
+ 1048 060a 00C0      		rjmp .L123
+ 1049               	.L174:
+ 1050               	.LM162:
+ 1051 060c 8DEF      		ldi r24,lo8(-3)
+ 1052               	.LVL59:
+ 1053               	.L173:
+ 1054 060e 0E94 0000 		call CTL_change_mode
+ 1055               	.LM163:
+ 1056 0612 86E0      		ldi r24,lo8(6)
+ 1057 0614 00C0      		rjmp .L168
+ 1058               	.LVL60:
+ 1059               	.L123:
+ 1060               	.LM164:
+ 1061 0616 92FF      		sbrs r25,2
+ 1062 0618 00C0      		rjmp .L124
+ 1063               	.LM165:
+ 1064 061a 8EEF      		ldi r24,lo8(-2)
+ 1065               	.LVL61:
+ 1066 061c 00C0      		rjmp .L173
+ 1067               	.LVL62:
+ 1068               	.L124:
+ 1069               	.LM166:
+ 1070 061e 95FF      		sbrs r25,5
+ 1071 0620 00C0      		rjmp .L104
+ 1072 0622 00C0      		rjmp .L174
+ 1073               	.LVL63:
+ 1074               	.L114:
+ 1075               	.LM167:
+ 1076 0624 477F      		andi r20,lo8(2039)
+ 1077 0626 5770      		andi r21,hi8(2039)
+ 1078 0628 452B      		or r20,r21
+ 1079 062a 01F4      		brne .+2
+ 1080 062c 00C0      		rjmp .L103
+ 1081 062e 00C0      		rjmp .L172
+ 1082               	.LVL64:
+ 1083               	.L98:
+ 1084               	.LM168:
+ 1085 0630 8823      		tst r24
+ 1086 0632 01F0      		breq .L125
+ 1087 0634 8091 0000 		lds r24,config+34
+ 1088               	.LVL65:
+ 1089 0638 8130      		cpi r24,lo8(1)
+ 1090 063a 01F0      		breq .L126
+ 1091 063c 80E0      		ldi r24,lo8(0)
+ 1092 063e 00C0      		rjmp .L127
+ 1093               	.L126:
+ 1094 0640 8091 0000 		lds r24,RTC+6
+ 1095               	.L127:
+ 1096 0644 8093 0000 		sts menu_set_dow,r24
+ 1097               	.LVL66:
+ 1098               	.L125:
+ 1099               	.LM169:
+ 1100 0648 86E1      		ldi r24,lo8(22)
+ 1101               	.LVL67:
+ 1102 064a 8093 0000 		sts menu_state,r24
+ 1103               	.LVL68:
+ 1104               	.L99:
+ 1105               	.LM170:
+ 1106 064e 1123      		tst r17
+ 1107 0650 01F0      		breq .L128
+ 1108 0652 2091 0000 		lds r18,menu_set_dow
+ 1109 0656 812F      		mov r24,r17
+ 1110 0658 9927      		clr r25
+ 1111 065a 87FD      		sbrc r24,7
+ 1112 065c 9095      		com r25
+ 1113               	.LVL69:
+ 1114 065e 820F      		add r24,r18
+ 1115 0660 911D      		adc r25,__zero_reg__
+ 1116               	.LVL70:
+ 1117 0662 8770      		andi r24,lo8(7)
+ 1118 0664 9070      		andi r25,hi8(7)
+ 1119               	.LVL71:
+ 1120 0666 8093 0000 		sts menu_set_dow,r24
+ 1121               	.LVL72:
+ 1122               	.L128:
+ 1123               	.LM171:
+ 1124 066a 42FF      		sbrs r20,2
+ 1125 066c 00C0      		rjmp .L144
+ 1126               	.LM172:
+ 1127 066e 87E1      		ldi r24,lo8(23)
+ 1128               	.LVL73:
+ 1129 0670 8093 0000 		sts menu_state,r24
+ 1130               	.LM173:
+ 1131 0674 1092 0000 		sts menu_set_slot,__zero_reg__
+ 1132               	.LM174:
+ 1133 0678 1092 0000 		sts config+34,__zero_reg__
+ 1134 067c 8091 0000 		lds r24,menu_set_dow
+ 1135 0680 8823      		tst r24
+ 1136 0682 01F0      		breq .L130
+ 1137 0684 81E0      		ldi r24,lo8(1)
+ 1138 0686 8093 0000 		sts config+34,r24
+ 1139               	.L130:
+ 1140               	.LM175:
+ 1141 068a 82E2      		ldi r24,lo8(34)
+ 1142 068c 0E94 0000 		call eeprom_config_save
+ 1143 0690 00C0      		rjmp .L176
+ 1144               	.LVL74:
+ 1145               	.L100:
+ 1146               	.LM176:
+ 1147 0692 8823      		tst r24
+ 1148 0694 01F0      		breq .L133
+ 1149               	.LM177:
+ 1150 0696 8091 0000 		lds r24,menu_set_dow
+ 1151               	.LVL75:
+ 1152 069a 6091 0000 		lds r22,menu_set_slot
+ 1153 069e 40E0      		ldi r20,lo8(menu_set_mode)
+ 1154 06a0 50E0      		ldi r21,hi8(menu_set_mode)
+ 1155 06a2 0E94 0000 		call RTC_DowTimerGet
+ 1156 06a6 9093 0000 		sts (menu_set_time)+1,r25
+ 1157 06aa 8093 0000 		sts menu_set_time,r24
+ 1158               	.LM178:
+ 1159 06ae 815A      		subi r24,lo8(1441)
+ 1160 06b0 9540      		sbci r25,hi8(1441)
+ 1161 06b2 00F0      		brlo .L133
+ 1162 06b4 80EA      		ldi r24,lo8(1440)
+ 1163 06b6 95E0      		ldi r25,hi8(1440)
+ 1164 06b8 9093 0000 		sts (menu_set_time)+1,r25
+ 1165 06bc 8093 0000 		sts menu_set_time,r24
+ 1166               	.LVL76:
+ 1167               	.L133:
+ 1168               	.LM179:
+ 1169 06c0 1123      		tst r17
+ 1170 06c2 01F0      		breq .L134
+ 1171               	.LM180:
+ 1172 06c4 8091 0000 		lds r24,menu_set_time
+ 1173 06c8 9091 0000 		lds r25,(menu_set_time)+1
+ 1174               	.LVL77:
+ 1175 06cc 6AE0      		ldi r22,lo8(10)
+ 1176 06ce 70E0      		ldi r23,hi8(10)
+ 1177 06d0 0E94 0000 		call __udivmodhi4
+ 1178 06d4 CB01      		movw r24,r22
+ 1179 06d6 8F56      		subi r24,lo8(-(145))
+ 1180 06d8 9F4F      		sbci r25,hi8(-(145))
+ 1181 06da 212F      		mov r18,r17
+ 1182 06dc 3327      		clr r19
+ 1183 06de 27FD      		sbrc r18,7
+ 1184 06e0 3095      		com r19
+ 1185               	.LVL78:
+ 1186 06e2 820F      		add r24,r18
+ 1187 06e4 931F      		adc r25,r19
+ 1188 06e6 61E9      		ldi r22,lo8(145)
+ 1189 06e8 70E0      		ldi r23,hi8(145)
+ 1190 06ea 0E94 0000 		call __udivmodhi4
+ 1191 06ee 9C01      		movw r18,r24
+ 1192               	.LVL79:
+ 1193 06f0 53E0      		ldi r21,3
+ 1194 06f2 880F      	1:	lsl r24
+ 1195 06f4 991F      		rol r25
+ 1196 06f6 5A95      		dec r21
+ 1197 06f8 01F4      		brne 1b
+ 1198 06fa 220F      		lsl r18
+ 1199 06fc 331F      		rol r19
+ 1200 06fe 820F      		add r24,r18
+ 1201 0700 931F      		adc r25,r19
+ 1202 0702 9093 0000 		sts (menu_set_time)+1,r25
+ 1203 0706 8093 0000 		sts menu_set_time,r24
+ 1204               	.LVL80:
+ 1205               	.L134:
+ 1206               	.LM181:
+ 1207 070a 8091 0000 		lds r24,kb_events
+ 1208               	.LVL81:
+ 1209 070e 83FF      		sbrs r24,3
+ 1210 0710 00C0      		rjmp .L135
+ 1211               	.LM182:
+ 1212 0712 8091 0000 		lds r24,menu_set_mode
+ 1213 0716 90E0      		ldi r25,lo8(0)
+ 1214 0718 0596      		adiw r24,5
+ 1215 071a 8370      		andi r24,lo8(3)
+ 1216 071c 9070      		andi r25,hi8(3)
+ 1217 071e 8093 0000 		sts menu_set_mode,r24
+ 1218 0722 00C0      		rjmp .L103
+ 1219               	.L135:
+ 1220               	.LM183:
+ 1221 0724 82FF      		sbrs r24,2
+ 1222 0726 00C0      		rjmp .L136
+ 1223               	.LM184:
+ 1224 0728 4091 0000 		lds r20,menu_set_time
+ 1225 072c 5091 0000 		lds r21,(menu_set_time)+1
+ 1226 0730 8091 0000 		lds r24,menu_set_dow
+ 1227 0734 6091 0000 		lds r22,menu_set_slot
+ 1228 0738 2091 0000 		lds r18,menu_set_mode
+ 1229 073c 0E94 0000 		call RTC_DowTimerSet
+ 1230               	.LM185:
+ 1231 0740 8091 0000 		lds r24,menu_set_slot
+ 1232 0744 8F5F      		subi r24,lo8(-(1))
+ 1233 0746 8093 0000 		sts menu_set_slot,r24
+ 1234 074a 8830      		cpi r24,lo8(8)
+ 1235 074c 00F0      		brlo .L137
+ 1236               	.LM186:
+ 1237 074e 8091 0000 		lds r24,menu_set_dow
+ 1238 0752 8823      		tst r24
+ 1239 0754 01F0      		breq .L138
+ 1240 0756 67E0      		ldi r22,lo8(7)
+ 1241 0758 0E94 0000 		call __udivmodqi4
+ 1242 075c 9F5F      		subi r25,lo8(-(1))
+ 1243 075e 9093 0000 		sts menu_set_dow,r25
+ 1244               	.L138:
+ 1245               	.LM187:
+ 1246 0762 86E1      		ldi r24,lo8(22)
+ 1247 0764 8093 0000 		sts menu_state,r24
+ 1248               	.L137:
+ 1249               	.LM188:
+ 1250 0768 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1251               	.L176:
+ 1252               	.LM189:
+ 1253 076c 8091 0000 		lds r24,config+34
+ 1254 0770 8130      		cpi r24,lo8(1)
+ 1255 0772 01F0      		breq .L139
+ 1256 0774 80E0      		ldi r24,lo8(0)
+ 1257 0776 00C0      		rjmp .L140
+ 1258               	.L139:
+ 1259 0778 8091 0000 		lds r24,RTC+6
+ 1260               	.L140:
+ 1261               	.LBB24:
+ 1262               	.LM190:
+ 1263 077c 0E94 0000 		call RTC_DowTimerGetHourBar
+ 1264               	.LBB25:
+ 1265 0780 6093 0000 		sts hourbar_buff,r22
+ 1266 0784 7093 0000 		sts (hourbar_buff)+1,r23
+ 1267 0788 8093 0000 		sts (hourbar_buff)+2,r24
+ 1268 078c 9093 0000 		sts (hourbar_buff)+3,r25
+ 1269 0790 00C0      		rjmp .L112
+ 1270               	.L136:
+ 1271               	.LBE25:
+ 1272               	.LBE24:
+ 1273               	.LM191:
+ 1274 0792 84FF      		sbrs r24,4
+ 1275 0794 00C0      		rjmp .L103
+ 1276 0796 00C0      		rjmp .L172
+ 1277               	.LVL82:
+ 1278               	.L89:
+ 1279               	.LM192:
+ 1280 0798 8823      		tst r24
+ 1281 079a 01F0      		breq .L141
+ 1282 079c E92F      		mov r30,r25
+ 1283 079e F0E0      		ldi r31,lo8(0)
+ 1284 07a0 E050      		subi r30,lo8(-(config-1))
+ 1285 07a2 F040      		sbci r31,hi8(-(config-1))
+ 1286 07a4 8081      		ld r24,Z
+ 1287               	.LVL83:
+ 1288 07a6 8093 0000 		sts menu_set_dow,r24
+ 1289               	.LVL84:
+ 1290               	.L141:
+ 1291               	.LM193:
+ 1292 07aa 1123      		tst r17
+ 1293 07ac 01F0      		breq .L142
+ 1294               	.LM194:
+ 1295 07ae 8091 0000 		lds r24,menu_set_dow
+ 1296               	.LVL85:
+ 1297 07b2 810F      		add r24,r17
+ 1298 07b4 8093 0000 		sts menu_set_dow,r24
+ 1299               	.LM195:
+ 1300 07b8 8E33      		cpi r24,lo8(62)
+ 1301 07ba 00F0      		brlo .L143
+ 1302 07bc 8DE3      		ldi r24,lo8(61)
+ 1303 07be 8093 0000 		sts menu_set_dow,r24
+ 1304               	.L143:
+ 1305               	.LM196:
+ 1306 07c2 8091 0000 		lds r24,menu_set_dow
+ 1307 07c6 8930      		cpi r24,lo8(9)
+ 1308 07c8 00F4      		brsh .L142
+ 1309 07ca 89E0      		ldi r24,lo8(9)
+ 1310 07cc 8093 0000 		sts menu_set_dow,r24
+ 1311               	.LVL86:
+ 1312               	.L142:
+ 1313               	.LM197:
+ 1314 07d0 42FF      		sbrs r20,2
+ 1315 07d2 00C0      		rjmp .L144
+ 1316               	.LM198:
+ 1317 07d4 E92F      		mov r30,r25
+ 1318 07d6 F0E0      		ldi r31,lo8(0)
+ 1319 07d8 E050      		subi r30,lo8(-(config-1))
+ 1320 07da F040      		sbci r31,hi8(-(config-1))
+ 1321 07dc 8091 0000 		lds r24,menu_set_dow
+ 1322               	.LVL87:
+ 1323 07e0 8083      		st Z,r24
+ 1324               	.LM199:
+ 1325 07e2 8091 0000 		lds r24,menu_state
+ 1326 07e6 8150      		subi r24,lo8(-(-1))
+ 1327 07e8 0E94 0000 		call eeprom_config_save
+ 1328               	.LM200:
+ 1329 07ec 8091 0000 		lds r24,menu_state
+ 1330 07f0 8F5F      		subi r24,lo8(-(1))
+ 1331               	.L169:
+ 1332 07f2 8093 0000 		sts menu_state,r24
+ 1333               	.LM201:
+ 1334 07f6 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1335 07fa 00C0      		rjmp .L112
+ 1336               	.LVL88:
+ 1337               	.L144:
+ 1338               	.LM202:
+ 1339 07fc 44FF      		sbrs r20,4
+ 1340 07fe 00C0      		rjmp .L103
+ 1341 0800 00C0      		rjmp .L172
+ 1342               	.LVL89:
+ 1343               	.L86:
+ 1344               	.LM203:
+ 1345 0802 8091 0000 		lds r24,menu_auto_update_timeout
+ 1346               	.LVL90:
+ 1347 0806 8823      		tst r24
+ 1348 0808 01F0      		breq .+2
+ 1349 080a 00C0      		rjmp .L103
+ 1350 080c 00C0      		rjmp .L172
+ 1351               	.LVL91:
+ 1352               	.L91:
+ 1353               	.LM204:
+ 1354 080e 44FD      		sbrc r20,4
+ 1355 0810 00C0      		rjmp .L172
+ 1356               	.L145:
+ 1357               	.LM205:
+ 1358 0812 43FF      		sbrs r20,3
+ 1359 0814 00C0      		rjmp .L146
+ 1360               	.LM206:
+ 1361 0816 8FE0      		ldi r24,lo8(15)
+ 1362               	.LVL92:
+ 1363 0818 00C0      		rjmp .L168
+ 1364               	.LVL93:
+ 1365               	.L146:
+ 1366               	.LM207:
+ 1367 081a 42FF      		sbrs r20,2
+ 1368 081c 00C0      		rjmp .L147
+ 1369               	.LM208:
+ 1370 081e 9E30      		cpi r25,lo8(14)
+ 1371 0820 01F4      		brne .L148
+ 1372               	.LM209:
+ 1373 0822 8091 0000 		lds r24,service_idx
+ 1374               	.LVL94:
+ 1375 0826 0E94 0000 		call eeprom_config_save
+ 1376               	.LM210:
+ 1377 082a 8DE0      		ldi r24,lo8(13)
+ 1378 082c 00C0      		rjmp .L167
+ 1379               	.LVL95:
+ 1380               	.L148:
+ 1381               	.LM211:
+ 1382 082e 8EE0      		ldi r24,lo8(14)
+ 1383               	.LVL96:
+ 1384               	.L167:
+ 1385 0830 8093 0000 		sts menu_state,r24
+ 1386 0834 00C0      		rjmp .L103
+ 1387               	.LVL97:
+ 1388               	.L147:
+ 1389 0836 C12F      		mov r28,r17
+ 1390 0838 DD27      		clr r29
+ 1391 083a C7FD      		sbrc r28,7
+ 1392 083c D095      		com r29
+ 1393               	.LVL98:
+ 1394               	.LM212:
+ 1395 083e 9D30      		cpi r25,lo8(13)
+ 1396 0840 01F4      		brne .L149
+ 1397               	.LM213:
+ 1398 0842 8091 0000 		lds r24,service_idx
+ 1399               	.LVL99:
+ 1400 0846 C80F      		add r28,r24
+ 1401 0848 D11D      		adc r29,__zero_reg__
+ 1402               	.LVL100:
+ 1403 084a CE01      		movw r24,r28
+ 1404 084c 8B96      		adiw r24,43
+ 1405 084e 6BE2      		ldi r22,lo8(43)
+ 1406 0850 70E0      		ldi r23,hi8(43)
+ 1407 0852 0E94 0000 		call __udivmodhi4
+ 1408 0856 8093 0000 		sts service_idx,r24
+ 1409 085a 00C0      		rjmp .L103
+ 1410               	.LVL101:
+ 1411               	.L149:
+ 1412               	.LBB26:
+ 1413               	.LM214:
+ 1414 085c 8091 0000 		lds r24,service_idx
+ 1415               	.LVL102:
+ 1416 0860 62E0      		ldi r22,lo8(2)
+ 1417 0862 0E94 0000 		call config_read
+ 1418 0866 182F      		mov r17,r24
+ 1419 0868 E82E      		mov r14,r24
+ 1420               	.LVL103:
+ 1421 086a FF24      		clr r15
+ 1422               	.LVL104:
+ 1423               	.LM215:
+ 1424 086c 8091 0000 		lds r24,service_idx
+ 1425 0870 63E0      		ldi r22,lo8(3)
+ 1426 0872 0E94 0000 		call config_read
+ 1427 0876 682F      		mov r22,r24
+ 1428               	.LVL105:
+ 1429 0878 70E0      		ldi r23,lo8(0)
+ 1430               	.LVL106:
+ 1431 087a 6F5F      		subi r22,lo8(-(1))
+ 1432 087c 7F4F      		sbci r23,hi8(-(1))
+ 1433               	.LVL107:
+ 1434 087e 6E19      		sub r22,r14
+ 1435 0880 7F09      		sbc r23,r15
+ 1436               	.LM216:
+ 1437 0882 2091 0000 		lds r18,service_idx
+ 1438 0886 E22F      		mov r30,r18
+ 1439 0888 F0E0      		ldi r31,lo8(0)
+ 1440 088a E050      		subi r30,lo8(-(config))
+ 1441 088c F040      		sbci r31,hi8(-(config))
+ 1442 088e 8081      		ld r24,Z
+ 1443 0890 C80F      		add r28,r24
+ 1444 0892 D11D      		adc r29,__zero_reg__
+ 1445               	.LVL108:
+ 1446 0894 CE19      		sub r28,r14
+ 1447 0896 DF09      		sbc r29,r15
+ 1448               	.LVL109:
+ 1449 0898 CE01      		movw r24,r28
+ 1450 089a 860F      		add r24,r22
+ 1451 089c 971F      		adc r25,r23
+ 1452 089e 0E94 0000 		call __divmodhi4
+ 1453               	.LVL110:
+ 1454 08a2 180F      		add r17,r24
+ 1455 08a4 1083      		st Z,r17
+ 1456               	.LM217:
+ 1457 08a6 2223      		tst r18
+ 1458 08a8 01F4      		brne .L103
+ 1459 08aa 0E94 0000 		call LCD_Init
+ 1460               	.LVL111:
+ 1461 08ae 00C0      		rjmp .L103
+ 1462               	.LVL112:
+ 1463               	.L92:
+ 1464               	.LBE26:
+ 1465               	.LM218:
+ 1466 08b0 44FF      		sbrs r20,4
+ 1467 08b2 00C0      		rjmp .L150
+ 1468               	.LVL113:
+ 1469               	.L172:
+ 1470               	.LM219:
+ 1471 08b4 87E0      		ldi r24,lo8(7)
+ 1472               	.LVL114:
+ 1473 08b6 00C0      		rjmp .L168
+ 1474               	.LVL115:
+ 1475               	.L150:
+ 1476               	.LM220:
+ 1477 08b8 43FF      		sbrs r20,3
+ 1478 08ba 00C0      		rjmp .L151
+ 1479               	.LM221:
+ 1480 08bc 8DE0      		ldi r24,lo8(13)
+ 1481               	.LVL116:
+ 1482               	.L168:
+ 1483 08be 8093 0000 		sts menu_state,r24
+ 1484 08c2 00C0      		rjmp .L112
+ 1485               	.LVL117:
+ 1486               	.L151:
+ 1487               	.LM222:
+ 1488 08c4 8091 0000 		lds r24,service_watch_n
+ 1489               	.LVL118:
+ 1490 08c8 90E0      		ldi r25,lo8(0)
+ 1491 08ca 0B96      		adiw r24,11
+ 1492 08cc 212F      		mov r18,r17
+ 1493 08ce 3327      		clr r19
+ 1494 08d0 27FD      		sbrc r18,7
+ 1495 08d2 3095      		com r19
+ 1496               	.LVL119:
+ 1497 08d4 820F      		add r24,r18
+ 1498 08d6 931F      		adc r25,r19
+ 1499 08d8 6BE0      		ldi r22,lo8(11)
+ 1500 08da 70E0      		ldi r23,hi8(11)
+ 1501 08dc 0E94 0000 		call __divmodhi4
+ 1502 08e0 8093 0000 		sts service_watch_n,r24
+ 1503               	.LM223:
+ 1504 08e4 1123      		tst r17
+ 1505 08e6 01F4      		brne .L112
+ 1506               	.LVL120:
+ 1507               	.L103:
+ 1508 08e8 80E0      		ldi r24,lo8(0)
+ 1509               	.LVL121:
+ 1510 08ea 00C0      		rjmp .L104
+ 1511               	.LVL122:
+ 1512               	.L112:
+ 1513 08ec 81E0      		ldi r24,lo8(1)
+ 1514               	.LVL123:
+ 1515               	.L104:
+ 1516               	.LBB27:
+ 1517               	.LBB28:
+ 1518               	.LM224:
+ 1519 08ee 2091 0000 		lds r18,kb_events
+ 1520 08f2 3091 0000 		lds r19,(kb_events)+1
+ 1521 08f6 9091 0000 		lds r25,menu_locked
+ 1522 08fa 33FF      		sbrs r19,3
+ 1523 08fc 00C0      		rjmp .L152
+ 1524               	.LM225:
+ 1525 08fe 85E0      		ldi r24,lo8(5)
+ 1526               	.LVL124:
+ 1527 0900 8093 0000 		sts menu_auto_update_timeout,r24
+ 1528               	.LM226:
+ 1529 0904 80E0      		ldi r24,lo8(0)
+ 1530 0906 9923      		tst r25
+ 1531 0908 01F4      		brne .L153
+ 1532 090a 81E0      		ldi r24,lo8(1)
+ 1533               	.L153:
+ 1534 090c 8093 0000 		sts menu_locked,r24
+ 1535               	.LM227:
+ 1536 0910 8823      		tst r24
+ 1537 0912 01F0      		breq .L170
+ 1538               	.L154:
+ 1539 0914 8CE0      		ldi r24,lo8(12)
+ 1540 0916 00C0      		rjmp .L165
+ 1541               	.LVL125:
+ 1542               	.L152:
+ 1543               	.LM228:
+ 1544 0918 9923      		tst r25
+ 1545 091a 01F4      		brne .L157
+ 1546               	.LM229:
+ 1547 091c 34FF      		sbrs r19,4
+ 1548 091e 00C0      		rjmp .L158
+ 1549               	.LM230:
+ 1550 0920 8DE0      		ldi r24,lo8(13)
+ 1551               	.LVL126:
+ 1552 0922 00C0      		rjmp .L165
+ 1553               	.LVL127:
+ 1554               	.L158:
+ 1555               	.LM231:
+ 1556 0924 32FF      		sbrs r19,2
+ 1557 0926 00C0      		rjmp .L159
+ 1558               	.LM232:
+ 1559 0928 80E1      		ldi r24,lo8(16)
+ 1560               	.LVL128:
+ 1561 092a 00C0      		rjmp .L165
+ 1562               	.LVL129:
+ 1563               	.L159:
+ 1564               	.LM233:
+ 1565 092c 30FF      		sbrs r19,0
+ 1566 092e 00C0      		rjmp .L160
+ 1567               	.LM234:
+ 1568 0930 85E1      		ldi r24,lo8(21)
+ 1569               	.LVL130:
+ 1570 0932 00C0      		rjmp .L165
+ 1571               	.LVL131:
+ 1572               	.L160:
+ 1573               	.LM235:
+ 1574 0934 35FF      		sbrs r19,5
+ 1575 0936 00C0      		rjmp .L161
+ 1576               	.L170:
+ 1577               	.LM236:
+ 1578 0938 87E0      		ldi r24,lo8(7)
+ 1579               	.LVL132:
+ 1580 093a 00C0      		rjmp .L165
+ 1581               	.LVL133:
+ 1582               	.L161:
+ 1583               	.LM237:
+ 1584 093c 31FF      		sbrs r19,1
+ 1585 093e 00C0      		rjmp .L157
+ 1586               	.LM238:
+ 1587 0940 82E0      		ldi r24,lo8(2)
+ 1588               	.LVL134:
+ 1589               	.L165:
+ 1590 0942 8093 0000 		sts menu_state,r24
+ 1591               	.LVL135:
+ 1592               	.L156:
+ 1593               	.LBE28:
+ 1594               	.LBE27:
+ 1595               	.LM239:
+ 1596 0946 1091 0000 		lds r17,service_idx
+ 1597               	.LVL136:
+ 1598 094a 1B32      		cpi r17,lo8(43)
+ 1599 094c 00F4      		brsh .L166
+ 1600               	.L162:
+ 1601               	.LM240:
+ 1602 094e 812F      		mov r24,r17
+ 1603               	.LVL137:
+ 1604 0950 60E0      		ldi r22,lo8(0)
+ 1605 0952 0E94 0000 		call config_read
+ 1606               	.LVL138:
+ 1607 0956 E12F      		mov r30,r17
+ 1608 0958 F0E0      		ldi r31,lo8(0)
+ 1609 095a E050      		subi r30,lo8(-(config))
+ 1610 095c F040      		sbci r31,hi8(-(config))
+ 1611 095e 8083      		st Z,r24
+ 1612               	.LM241:
+ 1613 0960 8BE2      		ldi r24,lo8(43)
+ 1614 0962 8093 0000 		sts service_idx,r24
+ 1615               	.LVL139:
+ 1616               	.L166:
+ 1617 0966 81E0      		ldi r24,lo8(1)
+ 1618               	.LVL140:
+ 1619               	.L163:
+ 1620               	.LM242:
+ 1621 0968 1092 0000 		sts (kb_events)+1,__zero_reg__
+ 1622 096c 1092 0000 		sts kb_events,__zero_reg__
+ 1623               	.LVL141:
+ 1624               	/* epilogue start */
+ 1625               	.LM243:
+ 1626 0970 DF91      		pop r29
+ 1627 0972 CF91      		pop r28
+ 1628               	.LVL142:
+ 1629 0974 1F91      		pop r17
+ 1630               	.LVL143:
+ 1631 0976 FF90      		pop r15
+ 1632               	.LVL144:
+ 1633 0978 EF90      		pop r14
+ 1634               	.LVL145:
+ 1635 097a 0895      		ret
+ 1636               	.LVL146:
+ 1637               	.L157:
+ 1638               	.LM244:
+ 1639 097c 8823      		tst r24
+ 1640 097e 01F0      		breq .L163
+ 1641 0980 00C0      		rjmp .L156
+ 1642               	.LFE8:
+ 1644               	.global	menu_auto_update_timeout
+ 1645               		.section	.data.menu_auto_update_timeout,"aw",@progbits
+ 1648               	menu_auto_update_timeout:
+ 1649 0000 02        		.byte	2
+ 1650               	.global	wheel_tick_counter
+ 1651               		.section	.bss.wheel_tick_counter,"aw",@nobits
+ 1654               	wheel_tick_counter:
+ 1655 0000 00        		.skip 1,0
+ 1656               	.global	wheel_tick_time
+ 1657               		.section	.bss.wheel_tick_time,"aw",@nobits
+ 1660               	wheel_tick_time:
+ 1661 0000 00        		.skip 1,0
+ 1662               	.global	menu_locked
+ 1663               		.section	.bss.menu_locked,"aw",@nobits
+ 1666               	menu_locked:
+ 1667 0000 00        		.skip 1,0
+ 1668               		.section	.data.service_idx,"aw",@progbits
+ 1671               	service_idx:
+ 1672 0000 2B        		.byte	43
+ 1673               		.section	.bss.service_watch_n,"aw",@nobits
+ 1676               	service_watch_n:
+ 1677 0000 00        		.skip 1,0
+ 1678               		.section	.bss.menu_set_dow,"aw",@nobits
+ 1681               	menu_set_dow:
+ 1682 0000 00        		.skip 1,0
+ 1683               		.section	.bss.menu_set_time,"aw",@nobits
+ 1686               	menu_set_time:
+ 1687 0000 0000      		.skip 2,0
+ 1688               		.section	.bss.menu_set_mode,"aw",@nobits
+ 1691               	menu_set_mode:
+ 1692 0000 00        		.skip 1,0
+ 1693               		.section	.bss.menu_set_slot,"aw",@nobits
+ 1696               	menu_set_slot:
+ 1697 0000 00        		.skip 1,0
+ 1698               		.comm hourbar_buff,4,1
+ 1699               		.comm menu_state,1,1
+ 1748               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 menu.c
+C:\Tools\cygwin\tmp/ccVoBsQj.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccVoBsQj.s:17     .text:00000000 clr_show1
+C:\Tools\cygwin\tmp/ccVoBsQj.s:41     .text:00000016 show_selected_temperature_type
+C:\Tools\cygwin\tmp/ccVoBsQj.s:96     .text:00000050 menu_view
+                            *COM*:00000001 menu_state
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1654   .bss.wheel_tick_counter:00000000 wheel_tick_counter
+                            *COM*:00000004 hourbar_buff
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1681   .bss.menu_set_dow:00000000 menu_set_dow
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1696   .bss.menu_set_slot:00000000 menu_set_slot
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1691   .bss.menu_set_mode:00000000 menu_set_mode
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1686   .bss.menu_set_time:00000000 menu_set_time
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1671   .data.service_idx:00000000 service_idx
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1676   .bss.service_watch_n:00000000 service_watch_n
+C:\Tools\cygwin\tmp/ccVoBsQj.s:719    .text:00000474 menu_controller
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1648   .data.menu_auto_update_timeout:00000000 menu_auto_update_timeout
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1666   .bss.menu_locked:00000000 menu_locked
+C:\Tools\cygwin\tmp/ccVoBsQj.s:1660   .bss.wheel_tick_time:00000000 wheel_tick_time
+
+UNDEFINED SYMBOLS
+LCD_AllSegments
+LCD_SetSeg
+__tablejump2__
+LCD_PrintHexW
+RTC
+LCD_PrintDecW
+LCD_PrintDec
+ring_average
+__divmodhi4
+MOTOR_calibration_step
+LCD_PrintChar
+config
+__divmodqi4
+CTL_error
+LCD_PrintStringID
+CTL_mode_window
+CTL_mode_auto
+LCD_PrintTempInt
+CTL_temp_wanted
+LCD_PrintTemp
+LCD_HourBarBitmap
+MOTOR_GetPosPercent
+LCD_PrintDec3
+timmers_patch_offset
+timmers_patch_data
+RTC_DowTimerGetHourBar
+__udivmodhi4
+LCD_SetHourBarSeg
+LCD_PrintHex
+watch
+kb_events
+RTC_SetYear
+RTC_SetMonth
+RTC_SetDay
+RTC_SetHour
+RTC_SetMinute
+RTC_SetSecond
+CTL_temp_change_inc
+CTL_change_mode
+CTL_mode_changed
+CTL_mode_changed_timer
+eeprom_config_save
+RTC_DowTimerGet
+RTC_DowTimerSet
+__udivmodqi4
+CTL_temp_auto
+config_read
+LCD_Init
+__do_copy_data
+__do_clear_bss

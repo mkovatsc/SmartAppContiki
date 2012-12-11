@@ -1,0 +1,139 @@
+   1               		.file	"rfm.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	rfm_spi16
+  18               	rfm_spi16:
+  19               	.LFB2:
+  20               	.LM1:
+  21               	.LVL0:
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24               	.LM2:
+  25 0000 8D98      		cbi 49-32,5
+  26 0002 40E1      		ldi r20,lo8(16)
+  27               	.LVL1:
+  28               	.L6:
+  29               	.LM3:
+  30 0004 97FF      		sbrs r25,7
+  31 0006 00C0      		rjmp .L2
+  32               	.LM4:
+  33 0008 8E9A      		sbi 49-32,6
+  34 000a 00C0      		rjmp .L3
+  35               	.L2:
+  36               	.LM5:
+  37 000c 8E98      		cbi 49-32,6
+  38               	.L3:
+  39               	.LM6:
+  40 000e 8C9A      		sbi 49-32,4
+  41               	.LM7:
+  42 0010 220F      		lsl r18
+  43 0012 331F      		rol r19
+  44               	.LM8:
+  45 0014 6299      		sbic 44-32,2
+  46               	.LM9:
+  47 0016 2160      		ori r18,lo8(1)
+  48               	.L4:
+  49               	.LM10:
+  50 0018 8C98      		cbi 49-32,4
+  51               	.LM11:
+  52 001a 4150      		subi r20,lo8(-(-1))
+  53 001c 01F0      		breq .L5
+  54               	.LM12:
+  55 001e 880F      		lsl r24
+  56 0020 991F      		rol r25
+  57               	.LVL2:
+  58 0022 00C0      		rjmp .L6
+  59               	.L5:
+  60               	.LM13:
+  61 0024 8D9A      		sbi 49-32,5
+  62               	.LM14:
+  63 0026 8D98      		cbi 49-32,5
+  64               	.LM15:
+  65 0028 C901      		movw r24,r18
+  66               	.LVL3:
+  67               	/* epilogue start */
+  68 002a 0895      		ret
+  69               	.LFE2:
+  71               	.global	RFM_init
+  73               	RFM_init:
+  74               	.LFB3:
+  75               	.LM16:
+  76               	/* prologue: function */
+  77               	/* frame size = 0 */
+  78               	.LM17:
+  79 002c 80E0      		ldi r24,lo8(0)
+  80 002e 90E0      		ldi r25,hi8(0)
+  81 0030 0E94 0000 		call rfm_spi16
+  82               	.LM18:
+  83 0034 87EE      		ldi r24,lo8(-32537)
+  84 0036 90E8      		ldi r25,hi8(-32537)
+  85 0038 0E94 0000 		call rfm_spi16
+  86               	.LM19:
+  87 003c 85E8      		ldi r24,lo8(-22907)
+  88 003e 96EA      		ldi r25,hi8(-22907)
+  89 0040 0E94 0000 		call rfm_spi16
+  90               	.LM20:
+  91 0044 80E1      		ldi r24,lo8(-14832)
+  92 0046 96EC      		ldi r25,hi8(-14832)
+  93 0048 0E94 0000 		call rfm_spi16
+  94               	.LM21:
+  95 004c 83EA      		ldi r24,lo8(-27485)
+  96 004e 94E9      		ldi r25,hi8(-27485)
+  97 0050 0E94 0000 		call rfm_spi16
+  98               	.LM22:
+  99 0054 8BEE      		ldi r24,lo8(-15637)
+ 100 0056 92EC      		ldi r25,hi8(-15637)
+ 101 0058 0E94 0000 		call rfm_spi16
+ 102               	.LM23:
+ 103 005c 81E8      		ldi r24,lo8(-13695)
+ 104 005e 9AEC      		ldi r25,hi8(-13695)
+ 105 0060 0E94 0000 		call rfm_spi16
+ 106               	.LM24:
+ 107 0064 87EA      		ldi r24,lo8(-15193)
+ 108 0066 94EC      		ldi r25,hi8(-15193)
+ 109 0068 0E94 0000 		call rfm_spi16
+ 110               	.LM25:
+ 111 006c 80E3      		ldi r24,lo8(-26576)
+ 112 006e 98E9      		ldi r25,hi8(-26576)
+ 113 0070 0E94 0000 		call rfm_spi16
+ 114               	/* epilogue start */
+ 115               	.LM26:
+ 116 0074 0895      		ret
+ 117               	.LFE3:
+ 119               	.global	rfm_framesize
+ 120               		.section	.data.rfm_framesize,"aw",@progbits
+ 123               	rfm_framesize:
+ 124 0000 06        		.byte	6
+ 125               	.global	rfm_framepos
+ 126               		.section	.bss.rfm_framepos,"aw",@nobits
+ 129               	rfm_framepos:
+ 130 0000 00        		.skip 1,0
+ 131               	.global	rfm_mode
+ 132               		.section	.bss.rfm_mode,"aw",@nobits
+ 135               	rfm_mode:
+ 136 0000 00        		.skip 1,0
+ 137               		.comm rfm_framebuf,80,1
+ 170               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 rfm.c
+C:\Tools\cygwin\tmp/ccv59tIW.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccv59tIW.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccv59tIW.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccv59tIW.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccv59tIW.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccv59tIW.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccv59tIW.s:18     .text:00000000 rfm_spi16
+C:\Tools\cygwin\tmp/ccv59tIW.s:73     .text:0000002c RFM_init
+C:\Tools\cygwin\tmp/ccv59tIW.s:123    .data.rfm_framesize:00000000 rfm_framesize
+C:\Tools\cygwin\tmp/ccv59tIW.s:129    .bss.rfm_framepos:00000000 rfm_framepos
+C:\Tools\cygwin\tmp/ccv59tIW.s:135    .bss.rfm_mode:00000000 rfm_mode
+                            *COM*:00000050 rfm_framebuf
+
+UNDEFINED SYMBOLS
+__do_copy_data
+__do_clear_bss

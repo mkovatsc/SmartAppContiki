@@ -1,0 +1,1146 @@
+   1               		.file	"rtc.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	RTC_SetHour
+  18               	RTC_SetHour:
+  19               	.LFB7:
+  20               	.LM1:
+  21               	.LVL0:
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24               	.LM2:
+  25 0000 885E      		subi r24,lo8(-(24))
+  26               	.LVL1:
+  27 0002 68E1      		ldi r22,lo8(24)
+  28 0004 0E94 0000 		call __udivmodqi4
+  29 0008 9093 0000 		sts RTC+3,r25
+  30               	/* epilogue start */
+  31               	.LM3:
+  32 000c 0895      		ret
+  33               	.LFE7:
+  35               	.global	RTC_SetMinute
+  37               	RTC_SetMinute:
+  38               	.LFB8:
+  39               	.LM4:
+  40               	.LVL2:
+  41               	/* prologue: function */
+  42               	/* frame size = 0 */
+  43               	.LM5:
+  44 000e 845C      		subi r24,lo8(-(60))
+  45               	.LVL3:
+  46 0010 6CE3      		ldi r22,lo8(60)
+  47 0012 0E94 0000 		call __udivmodqi4
+  48 0016 9093 0000 		sts RTC+4,r25
+  49               	/* epilogue start */
+  50               	.LM6:
+  51 001a 0895      		ret
+  52               	.LFE8:
+  54               	.global	RTC_SetSecond
+  56               	RTC_SetSecond:
+  57               	.LFB9:
+  58               	.LM7:
+  59               	.LVL4:
+  60               	/* prologue: function */
+  61               	/* frame size = 0 */
+  62               	.LM8:
+  63 001c 845C      		subi r24,lo8(-(60))
+  64               	.LVL5:
+  65 001e 6CE3      		ldi r22,lo8(60)
+  66 0020 0E94 0000 		call __udivmodqi4
+  67 0024 9093 0000 		sts RTC+5,r25
+  68               	/* epilogue start */
+  69               	.LM9:
+  70 0028 0895      		ret
+  71               	.LFE9:
+  73               	.global	RTC_timer_set
+  75               	RTC_timer_set:
+  76               	.LFB20:
+  77               	.LM10:
+  78               	.LVL6:
+  79               	/* prologue: function */
+  80               	/* frame size = 0 */
+  81               	.LM11:
+  82               	/* #APP */
+  83               	 ;  578 "../common/rtc.c" 1
+  84 002a F894      		cli
+  85               	 ;  0 "" 2
+  86               	.LM12:
+  87               	/* #NOAPP */
+  88 002c E82F      		mov r30,r24
+  89 002e F0E0      		ldi r31,lo8(0)
+  90 0030 81E0      		ldi r24,lo8(1)
+  91 0032 90E0      		ldi r25,hi8(1)
+  92               	.LVL7:
+  93 0034 0E2E      		mov r0,r30
+  94 0036 00C0      		rjmp 2f
+  95 0038 880F      	1:	lsl r24
+  96 003a 991F      		rol r25
+  97 003c 0A94      	2:	dec r0
+  98 003e 02F4      		brpl 1b
+  99 0040 2091 0000 		lds r18,RTC_timer_todo
+ 100 0044 282B      		or r18,r24
+ 101 0046 2093 0000 		sts RTC_timer_todo,r18
+ 102               	.LM13:
+ 103 004a E050      		subi r30,lo8(-(RTC_timer_time-1))
+ 104 004c F040      		sbci r31,hi8(-(RTC_timer_time-1))
+ 105 004e 6083      		st Z,r22
+ 106               	.LM14:
+ 107 0050 8091 B200 		lds r24,178
+ 108               	.LVL8:
+ 109               	.LM15:
+ 110 0054 21FF      		sbrs r18,1
+ 111 0056 00C0      		rjmp .L8
+ 112               	.LM16:
+ 113 0058 9091 0000 		lds r25,RTC_timer_time
+ 114               	.LVL9:
+ 115               	.L8:
+ 116               	.LM17:
+ 117 005c 8091 B300 		lds r24,179
+ 118               	.LVL10:
+ 119 0060 8917      		cp r24,r25
+ 120 0062 01F0      		breq .L9
+ 121               	.L12:
+ 122               	.LM18:
+ 123 0064 8091 B600 		lds r24,182
+ 124 0068 81FD      		sbrc r24,1
+ 125 006a 00C0      		rjmp .L12
+ 126               	.LM19:
+ 127 006c 9093 B300 		sts 179,r25
+ 128               	.L9:
+ 129               	.LM20:
+ 130               	/* #APP */
+ 131               	 ;  599 "../common/rtc.c" 1
+ 132 0070 7894      		sei
+ 133               	 ;  0 "" 2
+ 134               	.LM21:
+ 135               	/* #NOAPP */
+ 136 0072 8091 7000 		lds r24,112
+ 137 0076 8260      		ori r24,lo8(2)
+ 138 0078 8093 7000 		sts 112,r24
+ 139               	/* epilogue start */
+ 140               	.LM22:
+ 141 007c 0895      		ret
+ 142               	.LFE20:
+ 144               	.global	__vector_5
+ 146               	__vector_5:
+ 147               	.LFB21:
+ 148               	.LM23:
+ 149               	/* prologue: naked */
+ 150               	/* frame size = 0 */
+ 151               	.LM24:
+ 152               	/* #APP */
+ 153               	 ;  627 "../common/rtc.c" 1
+ 154               		__my_tmp_reg__ = 16
+ 155 007e 0F93      		push __my_tmp_reg__
+ 156 0080 0FB7      	   in __my_tmp_reg__,__SREG__
+ 157 0082 0F93      		push __my_tmp_reg__
+ 158 0084 F19A      		sbi 30,1	
+ 159 0086 0091 0000 	   lds __my_tmp_reg__,RTC_timer_done
+ 160 008a 0168      		ori __my_tmp_reg__,129
+ 161 008c 0093 0000 	   sts RTC_timer_done,__my_tmp_reg__
+ 162 0090 0F91      		pop __my_tmp_reg__
+ 163 0092 0FBF      	   out __SREG__,__my_tmp_reg__
+ 164 0094 0F91      		pop __my_tmp_reg__
+ 165 0096 1895      		reti
+ 166               	
+ 167               	 ;  0 "" 2
+ 168               	/* epilogue start */
+ 169               	.LM25:
+ 170               	/* #NOAPP */
+ 171               	.LFE21:
+ 173               	.global	__vector_4
+ 175               	__vector_4:
+ 176               	.LFB22:
+ 177               	.LM26:
+ 178 0098 1F92      		push __zero_reg__
+ 179 009a 0F92      		push r0
+ 180 009c 0FB6      		in r0,__SREG__
+ 181 009e 0F92      		push r0
+ 182 00a0 1124      		clr __zero_reg__
+ 183 00a2 2F93      		push r18
+ 184 00a4 8F93      		push r24
+ 185 00a6 9F93      		push r25
+ 186               	/* prologue: Signal */
+ 187               	/* frame size = 0 */
+ 188               	.LM27:
+ 189 00a8 9091 B200 		lds r25,178
+ 190               	.LVL11:
+ 191 00ac 9150      		subi r25,lo8(-(-1))
+ 192               	.LM28:
+ 193 00ae F19A      		sbi 62-32,1
+ 194               	.LM29:
+ 195 00b0 2091 0000 		lds r18,RTC_timer_todo
+ 196 00b4 21FF      		sbrs r18,1
+ 197 00b6 00C0      		rjmp .L17
+ 198 00b8 8091 0000 		lds r24,RTC_timer_time
+ 199 00bc 9817      		cp r25,r24
+ 200 00be 01F4      		brne .L17
+ 201               	.LM30:
+ 202 00c0 81E0      		ldi r24,lo8(1)
+ 203 00c2 8093 0000 		sts kb_timeout,r24
+ 204               	.LM31:
+ 205 00c6 2D7F      		andi r18,lo8(-3)
+ 206 00c8 2093 0000 		sts RTC_timer_todo,r18
+ 207               	.L17:
+ 208               	.LM32:
+ 209 00cc 2091 0000 		lds r18,RTC_timer_todo
+ 210 00d0 21FF      		sbrs r18,1
+ 211 00d2 00C0      		rjmp .L18
+ 212               	.LM33:
+ 213 00d4 9091 0000 		lds r25,RTC_timer_time
+ 214               	.LVL12:
+ 215               	.L18:
+ 216               	.LM34:
+ 217 00d8 8091 B300 		lds r24,179
+ 218 00dc 8917      		cp r24,r25
+ 219 00de 01F0      		breq .L19
+ 220               	.LM35:
+ 221 00e0 9093 B300 		sts 179,r25
+ 222               	.L19:
+ 223               	.LM36:
+ 224 00e4 2223      		tst r18
+ 225 00e6 01F4      		brne .L21
+ 226 00e8 8091 7000 		lds r24,112
+ 227 00ec 8D7F      		andi r24,lo8(-3)
+ 228 00ee 8093 7000 		sts 112,r24
+ 229               	.L21:
+ 230               	/* epilogue start */
+ 231               	.LM37:
+ 232 00f2 9F91      		pop r25
+ 233               	.LVL13:
+ 234 00f4 8F91      		pop r24
+ 235 00f6 2F91      		pop r18
+ 236 00f8 0F90      		pop r0
+ 237 00fa 0FBE      		out __SREG__,r0
+ 238 00fc 0F90      		pop r0
+ 239 00fe 1F90      		pop __zero_reg__
+ 240 0100 1895      		reti
+ 241               	.LFE22:
+ 244               	RTC_FindTimerRawIndex:
+ 245               	.LFB12:
+ 246               	.LM38:
+ 247               	.LVL14:
+ 248 0102 A0E0      		ldi r26,lo8(0)
+ 249 0104 B0E0      		ldi r27,hi8(0)
+ 250 0106 E0E0      		ldi r30,lo8(gs(1f))
+ 251 0108 F0E0      		ldi r31,hi8(gs(1f))
+ 252 010a 0C94 0000 		jmp __prologue_saves__+((18 - 17) * 2)
+ 253               	1:
+ 254               	/* prologue: function */
+ 255               	/* frame size = 0 */
+ 256 010e D82E      		mov r13,r24
+ 257 0110 3B01      		movw r6,r22
+ 258               	.LM39:
+ 259 0112 8823      		tst r24
+ 260 0114 01F4      		brne .L23
+ 261               	.LVL15:
+ 262 0116 42E0      		ldi r20,lo8(2)
+ 263 0118 342E      		mov r3,r20
+ 264               	.LVL16:
+ 265 011a 00C0      		rjmp .L24
+ 266               	.LVL17:
+ 267               	.L23:
+ 268 011c 38E0      		ldi r19,lo8(8)
+ 269 011e 332E      		mov r3,r19
+ 270               	.LVL18:
+ 271               	.L24:
+ 272 0120 AA24      		clr r10
+ 273 0122 AA94      		dec r10
+ 274               	.LVL19:
+ 275 0124 CC24      		clr r12
+ 276               	.LVL20:
+ 277               	.L30:
+ 278               	.LBB24:
+ 279               	.LM40:
+ 280 0126 8D2C      		mov r8,r13
+ 281 0128 9924      		clr r9
+ 282 012a 7401      		movw r14,r8
+ 283 012c 23E0      		ldi r18,3
+ 284 012e EE0C      	1:	lsl r14
+ 285 0130 FF1C      		rol r15
+ 286 0132 2A95      		dec r18
+ 287 0134 01F4      		brne 1b
+ 288 0136 5E2C      		mov r5,r14
+ 289               	.LVL21:
+ 290               	.LM41:
+ 291 0138 98E0      		ldi r25,lo8(8)
+ 292 013a 492E      		mov r4,r25
+ 293 013c 4E0C      		add r4,r14
+ 294 013e 00E0      		ldi r16,lo8(0)
+ 295 0140 10E0      		ldi r17,hi8(0)
+ 296 0142 C0E0      		ldi r28,lo8(0)
+ 297 0144 D0E0      		ldi r29,hi8(0)
+ 298 0146 00C0      		rjmp .L25
+ 299               	.LVL22:
+ 300               	.L27:
+ 301               	.LBB25:
+ 302               	.LM42:
+ 303 0148 0E94 0000 		call eeprom_timers_read_raw
+ 304               	.LVL23:
+ 305 014c 9F70      		andi r25,hi8(4095)
+ 306               	.LVL24:
+ 307               	.LM43:
+ 308 014e 25E0      		ldi r18,hi8(1440)
+ 309 0150 803A      		cpi r24,lo8(1440)
+ 310 0152 9207      		cpc r25,r18
+ 311 0154 00F4      		brsh .L26
+ 312               	.LM44:
+ 313 0156 8017      		cp r24,r16
+ 314 0158 9107      		cpc r25,r17
+ 315 015a 00F0      		brlo .L26
+ 316 015c 6816      		cp r6,r24
+ 317 015e 7906      		cpc r7,r25
+ 318 0160 00F0      		brlo .L26
+ 319 0162 AB2C      		mov r10,r11
+ 320 0164 AE0C      		add r10,r14
+ 321 0166 8C01      		movw r16,r24
+ 322               	.L26:
+ 323 0168 2196      		adiw r28,1
+ 324               	.LVL25:
+ 325               	.L25:
+ 326               	.LM45:
+ 327 016a BC2E      		mov r11,r28
+ 328 016c 8C2F      		mov r24,r28
+ 329               	.LVL26:
+ 330 016e 850D      		add r24,r5
+ 331               	.LBE25:
+ 332               	.LM46:
+ 333 0170 8415      		cp r24,r4
+ 334 0172 00F0      		brlo .L27
+ 335               	.LBE24:
+ 336               	.LM47:
+ 337 0174 A7FE      		sbrs r10,7
+ 338 0176 00C0      		rjmp .L28
+ 339               	.LM48:
+ 340 0178 DD20      		tst r13
+ 341 017a 01F0      		breq .L29
+ 342 017c C401      		movw r24,r8
+ 343               	.LVL27:
+ 344 017e 0596      		adiw r24,5
+ 345 0180 67E0      		ldi r22,lo8(7)
+ 346 0182 70E0      		ldi r23,hi8(7)
+ 347 0184 0E94 0000 		call __divmodhi4
+ 348 0188 D82E      		mov r13,r24
+ 349 018a D394      		inc r13
+ 350               	.LVL28:
+ 351               	.L29:
+ 352               	.LM49:
+ 353 018c C394      		inc r12
+ 354 018e 80EA      		ldi r24,lo8(1440)
+ 355 0190 682E      		mov r6,r24
+ 356 0192 85E0      		ldi r24,hi8(1440)
+ 357 0194 782E      		mov r7,r24
+ 358               	.LVL29:
+ 359 0196 C314      		cp r12,r3
+ 360 0198 00F0      		brlo .L30
+ 361               	.LVL30:
+ 362               	.L28:
+ 363               	.LM50:
+ 364 019a 8A2D      		mov r24,r10
+ 365               	.LVL31:
+ 366               	/* epilogue start */
+ 367 019c CDB7      		in r28,__SP_L__
+ 368 019e DEB7      		in r29,__SP_H__
+ 369 01a0 E1E1      		ldi r30, lo8(17)
+ 370 01a2 0C94 0000 		jmp __epilogue_restores__ + ((18 - 17) * 2)
+ 371               	.LFE12:
+ 373               	.global	RTC_ActualTimerTemperature
+ 375               	RTC_ActualTimerTemperature:
+ 376               	.LFB14:
+ 377               	.LM51:
+ 378               	.LVL32:
+ 379 01a6 FF92      		push r15
+ 380 01a8 0F93      		push r16
+ 381 01aa 1F93      		push r17
+ 382 01ac CF93      		push r28
+ 383 01ae DF93      		push r29
+ 384               	/* prologue: function */
+ 385               	/* frame size = 0 */
+ 386 01b0 F82E      		mov r15,r24
+ 387               	.LM52:
+ 388 01b2 9091 0000 		lds r25,RTC+3
+ 389 01b6 8CE3      		ldi r24,lo8(60)
+ 390               	.LVL33:
+ 391 01b8 989F      		mul r25,r24
+ 392 01ba E001      		movw r28,r0
+ 393 01bc 1124      		clr r1
+ 394               	.LVL34:
+ 395 01be 8091 0000 		lds r24,RTC+4
+ 396 01c2 C80F      		add r28,r24
+ 397 01c4 D11D      		adc r29,__zero_reg__
+ 398               	.LM53:
+ 399 01c6 8091 0000 		lds r24,config+34
+ 400 01ca 8130      		cpi r24,lo8(1)
+ 401 01cc 01F0      		breq .L34
+ 402 01ce 00E0      		ldi r16,lo8(0)
+ 403               	.LVL35:
+ 404 01d0 00C0      		rjmp .L35
+ 405               	.LVL36:
+ 406               	.L34:
+ 407 01d2 0091 0000 		lds r16,RTC+6
+ 408               	.LVL37:
+ 409               	.L35:
+ 410               	.LM54:
+ 411 01d6 802F      		mov r24,r16
+ 412 01d8 BE01      		movw r22,r28
+ 413 01da 0E94 0000 		call RTC_FindTimerRawIndex
+ 414 01de 182F      		mov r17,r24
+ 415               	.LM55:
+ 416 01e0 0E94 0000 		call eeprom_timers_read_raw
+ 417 01e4 FC01      		movw r30,r24
+ 418               	.LVL38:
+ 419               	.LM56:
+ 420 01e6 17FD      		sbrc r17,7
+ 421 01e8 00C0      		rjmp .L36
+ 422               	.LM57:
+ 423 01ea FF20      		tst r15
+ 424 01ec 01F0      		breq .L37
+ 425               	.LM58:
+ 426 01ee 9F70      		andi r25,hi8(4095)
+ 427 01f0 8C17      		cp r24,r28
+ 428 01f2 9D07      		cpc r25,r29
+ 429 01f4 01F4      		brne .L36
+ 430               	.LM59:
+ 431 01f6 1595      		asr r17
+ 432 01f8 1595      		asr r17
+ 433 01fa 1595      		asr r17
+ 434 01fc 1017      		cp r17,r16
+ 435 01fe 01F4      		brne .L36
+ 436               	.L37:
+ 437               	.LM60:
+ 438 0200 EF2F      		mov r30,r31
+ 439 0202 FF27      		clr r31
+ 440 0204 E295      		swap r30
+ 441 0206 EF70      		andi r30,0x0f
+ 442 0208 E370      		andi r30,lo8(3)
+ 443 020a F070      		andi r31,hi8(3)
+ 444 020c E050      		subi r30,lo8(-(config+1))
+ 445 020e F040      		sbci r31,hi8(-(config+1))
+ 446 0210 8081      		ld r24,Z
+ 447 0212 00C0      		rjmp .L38
+ 448               	.L36:
+ 449 0214 80E0      		ldi r24,lo8(0)
+ 450               	.L38:
+ 451               	/* epilogue start */
+ 452               	.LM61:
+ 453 0216 CDB7      		in r28,__SP_L__
+ 454 0218 DEB7      		in r29,__SP_H__
+ 455               	.LVL39:
+ 456 021a E5E0      		ldi r30, lo8(5)
+ 457 021c 0C94 0000 		jmp __epilogue_restores__ + ((18 - 5) * 2)
+ 458               	.LVL40:
+ 459               	.LFE14:
+ 461               	.global	RTC_DowTimerGetHourBar
+ 463               	RTC_DowTimerGetHourBar:
+ 464               	.LFB13:
+ 465               	.LM62:
+ 466               	.LVL41:
+ 467 0220 A0E0      		ldi r26,lo8(0)
+ 468 0222 B0E0      		ldi r27,hi8(0)
+ 469 0224 E0E0      		ldi r30,lo8(gs(1f))
+ 470 0226 F0E0      		ldi r31,hi8(gs(1f))
+ 471 0228 0C94 0000 		jmp __prologue_saves__+((18 - 8) * 2)
+ 472               	1:
+ 473               	/* prologue: function */
+ 474               	/* frame size = 0 */
+ 475 022c C82E      		mov r12,r24
+ 476               	.LM63:
+ 477 022e 77E1      		ldi r23,lo8(23)
+ 478 0230 D72E      		mov r13,r23
+ 479               	.LVL42:
+ 480 0232 EE24      		clr r14
+ 481 0234 FF24      		clr r15
+ 482 0236 8701      		movw r16,r14
+ 483               	.LVL43:
+ 484 0238 C0EA      		ldi r28,lo8(1440)
+ 485 023a D5E0      		ldi r29,hi8(1440)
+ 486               	.LVL44:
+ 487               	.LVL45:
+ 488               	.L49:
+ 489               	.LBB26:
+ 490               	.LM64:
+ 491 023c 8C2D      		mov r24,r12
+ 492 023e BE01      		movw r22,r28
+ 493 0240 0E94 0000 		call RTC_FindTimerRawIndex
+ 494               	.LM65:
+ 495 0244 87FF      		sbrs r24,7
+ 496 0246 00C0      		rjmp .L41
+ 497 0248 80E0      		ldi r24,lo8(0)
+ 498 024a 90E0      		ldi r25,hi8(0)
+ 499               	.LVL46:
+ 500 024c 00C0      		rjmp .L42
+ 501               	.LVL47:
+ 502               	.L41:
+ 503 024e 0E94 0000 		call eeprom_timers_read_raw
+ 504               	.LVL48:
+ 505               	.L42:
+ 506               	.LM66:
+ 507 0252 9C01      		movw r18,r24
+ 508 0254 2070      		andi r18,lo8(12288)
+ 509 0256 3073      		andi r19,hi8(12288)
+ 510               	.LM67:
+ 511 0258 9F70      		andi r25,hi8(4095)
+ 512               	.LVL49:
+ 513 025a 8C17      		cp r24,r28
+ 514 025c 9D07      		cpc r25,r29
+ 515 025e 00F0      		brlo .L43
+ 516 0260 CFEF      		ldi r28,lo8(-1)
+ 517 0262 DFEF      		ldi r29,hi8(-1)
+ 518 0264 00C0      		rjmp .L44
+ 519               	.L43:
+ 520               	.LM68:
+ 521 0266 EC01      		movw r28,r24
+ 522 0268 2197      		sbiw r28,1
+ 523               	.L44:
+ 524 026a 4D2D      		mov r20,r13
+ 525 026c 5CE3      		ldi r21,lo8(60)
+ 526 026e 4502      		muls r20,r21
+ 527 0270 C001      		movw r24,r0
+ 528 0272 1124      		clr r1
+ 529 0274 00C0      		rjmp .L45
+ 530               	.L48:
+ 531               	.LM69:
+ 532 0276 60E2      		ldi r22,hi8(8192)
+ 533 0278 2030      		cpi r18,lo8(8192)
+ 534 027a 3607      		cpc r19,r22
+ 535 027c 00F0      		brlo .L46
+ 536 027e 41E0      		ldi r20,lo8(1)
+ 537 0280 50E0      		ldi r21,hi8(1)
+ 538 0282 60E0      		ldi r22,hlo8(1)
+ 539 0284 70E0      		ldi r23,hhi8(1)
+ 540 0286 E42A      		or r14,r20
+ 541 0288 F52A      		or r15,r21
+ 542 028a 062B      		or r16,r22
+ 543 028c 172B      		or r17,r23
+ 544               	.L46:
+ 545               	.LM70:
+ 546 028e 1D14      		cp __zero_reg__,r13
+ 547 0290 04F4      		brge .L47
+ 548 0292 EE0C      		lsl r14
+ 549 0294 FF1C      		rol r15
+ 550 0296 001F      		rol r16
+ 551 0298 111F      		rol r17
+ 552               	.L47:
+ 553               	.LM71:
+ 554 029a DA94      		dec r13
+ 555 029c CC97      		sbiw r24,60
+ 556               	.L45:
+ 557               	.LM72:
+ 558 029e C817      		cp r28,r24
+ 559 02a0 D907      		cpc r29,r25
+ 560 02a2 04F0      		brlt .L48
+ 561               	.LBE26:
+ 562               	.LM73:
+ 563 02a4 1C16      		cp __zero_reg__,r28
+ 564 02a6 1D06      		cpc __zero_reg__,r29
+ 565 02a8 04F0      		brlt .L49
+ 566               	.LM74:
+ 567 02aa B701      		movw r22,r14
+ 568               	.LVL50:
+ 569 02ac C801      		movw r24,r16
+ 570               	/* epilogue start */
+ 571 02ae CDB7      		in r28,__SP_L__
+ 572 02b0 DEB7      		in r29,__SP_H__
+ 573               	.LVL51:
+ 574 02b2 E8E0      		ldi r30, lo8(8)
+ 575 02b4 0C94 0000 		jmp __epilogue_restores__ + ((18 - 8) * 2)
+ 576               	.LFE13:
+ 578               	.global	RTC_AddOneSecond
+ 580               	RTC_AddOneSecond:
+ 581               	.LFB15:
+ 582               	.LM75:
+ 583               	/* prologue: function */
+ 584               	/* frame size = 0 */
+ 585               	.LM76:
+ 586 02b8 8091 0000 		lds r24,RTC+5
+ 587 02bc 8F5F      		subi r24,lo8(-(1))
+ 588 02be 8093 0000 		sts RTC+5,r24
+ 589 02c2 8C33      		cpi r24,lo8(60)
+ 590 02c4 00F4      		brsh .+2
+ 591 02c6 00C0      		rjmp .L60
+ 592               	.LM77:
+ 593 02c8 1092 0000 		sts RTC+5,__zero_reg__
+ 594               	.LM78:
+ 595 02cc 8091 0000 		lds r24,RTC+4
+ 596 02d0 8F5F      		subi r24,lo8(-(1))
+ 597 02d2 8093 0000 		sts RTC+4,r24
+ 598 02d6 8C33      		cpi r24,lo8(60)
+ 599 02d8 00F4      		brsh .+2
+ 600 02da 00C0      		rjmp .L60
+ 601               	.LM79:
+ 602 02dc 1092 0000 		sts RTC+4,__zero_reg__
+ 603               	.LM80:
+ 604 02e0 8091 0000 		lds r24,RTC+3
+ 605 02e4 8F5F      		subi r24,lo8(-(1))
+ 606 02e6 8093 0000 		sts RTC+3,r24
+ 607 02ea 8831      		cpi r24,lo8(24)
+ 608 02ec 00F4      		brsh .+2
+ 609 02ee 00C0      		rjmp .L54
+ 610               	.LM81:
+ 611 02f0 1092 0000 		sts RTC+3,__zero_reg__
+ 612               	.LBB27:
+ 613               	.LBB28:
+ 614               	.LBB29:
+ 615               	.LBB30:
+ 616               	.LBB31:
+ 617               	.LM82:
+ 618 02f4 2091 0000 		lds r18,RTC+1
+ 619 02f8 E22F      		mov r30,r18
+ 620 02fa F0E0      		ldi r31,lo8(0)
+ 621 02fc E050      		subi r30,lo8(-(RTC_DayOfMonthTablePrgMem-1))
+ 622 02fe F040      		sbci r31,hi8(-(RTC_DayOfMonthTablePrgMem-1))
+ 623               	/* #APP */
+ 624               	 ;  458 "../common/rtc.c" 1
+ 625 0300 3491      		lpm r19, Z
+ 626               		
+ 627               	 ;  0 "" 2
+ 628               	.LVL52:
+ 629               	/* #NOAPP */
+ 630               	.LBE31:
+ 631               	.LM83:
+ 632 0302 2230      		cpi r18,lo8(2)
+ 633 0304 01F4      		brne .L55
+ 634 0306 8091 0000 		lds r24,RTC
+ 635 030a 90E0      		ldi r25,lo8(0)
+ 636 030c 8370      		andi r24,lo8(3)
+ 637 030e 9070      		andi r25,hi8(3)
+ 638 0310 892B      		or r24,r25
+ 639 0312 01F4      		brne .L55
+ 640 0314 3DE1      		ldi r19,lo8(29)
+ 641               	.L55:
+ 642               	.LBE30:
+ 643               	.LBE29:
+ 644               	.LM84:
+ 645 0316 8091 0000 		lds r24,RTC+2
+ 646 031a 8F5F      		subi r24,lo8(-(1))
+ 647 031c 8093 0000 		sts RTC+2,r24
+ 648 0320 3817      		cp r19,r24
+ 649 0322 00F4      		brsh .L56
+ 650               	.LM85:
+ 651 0324 91E0      		ldi r25,lo8(1)
+ 652 0326 9093 0000 		sts RTC+2,r25
+ 653               	.LM86:
+ 654 032a 822F      		mov r24,r18
+ 655 032c 8F5F      		subi r24,lo8(-(1))
+ 656 032e 8093 0000 		sts RTC+1,r24
+ 657 0332 8D30      		cpi r24,lo8(13)
+ 658 0334 00F0      		brlo .L57
+ 659               	.LM87:
+ 660 0336 9093 0000 		sts RTC+1,r25
+ 661               	.LM88:
+ 662 033a 8091 0000 		lds r24,RTC
+ 663 033e 8F5F      		subi r24,lo8(-(1))
+ 664 0340 8093 0000 		sts RTC,r24
+ 665               	.L57:
+ 666               	.LM89:
+ 667 0344 1092 0000 		sts RTC_DS,__zero_reg__
+ 668               	.L56:
+ 669               	.LM90:
+ 670 0348 8091 0000 		lds r24,RTC+6
+ 671 034c 67E0      		ldi r22,lo8(7)
+ 672 034e 0E94 0000 		call __udivmodqi4
+ 673 0352 9F5F      		subi r25,lo8(-(1))
+ 674 0354 9093 0000 		sts RTC+6,r25
+ 675               	.LM91:
+ 676 0358 8091 0000 		lds r24,config+34
+ 677 035c 8130      		cpi r24,lo8(1)
+ 678 035e 01F0      		breq .L58
+ 679 0360 90E0      		ldi r25,lo8(0)
+ 680               	.L58:
+ 681               	.LBB32:
+ 682               	.LM92:
+ 683 0362 892F      		mov r24,r25
+ 684 0364 0E94 0000 		call RTC_DowTimerGetHourBar
+ 685               	.LVL53:
+ 686               	.LBB33:
+ 687 0368 6093 0000 		sts hourbar_buff,r22
+ 688 036c 7093 0000 		sts (hourbar_buff)+1,r23
+ 689 0370 8093 0000 		sts (hourbar_buff)+2,r24
+ 690 0374 9093 0000 		sts (hourbar_buff)+3,r25
+ 691               	.L54:
+ 692               	.LBE33:
+ 693               	.LBE32:
+ 694               	.LBE28:
+ 695               	.LBE27:
+ 696               	.LM93:
+ 697 0378 9091 0000 		lds r25,RTC+1
+ 698 037c 9330      		cpi r25,lo8(3)
+ 699 037e 01F4      		brne .L59
+ 700 0380 8091 0000 		lds r24,RTC+3
+ 701 0384 8230      		cpi r24,lo8(2)
+ 702 0386 01F4      		brne .L60
+ 703               	.LBB34:
+ 704               	.LBB35:
+ 705               	.LM94:
+ 706 0388 8091 0000 		lds r24,RTC+6
+ 707 038c 8730      		cpi r24,lo8(7)
+ 708 038e 01F4      		brne .L60
+ 709               	.LBE35:
+ 710               	.LBE34:
+ 711               	.LM95:
+ 712 0390 8091 0000 		lds r24,RTC+2
+ 713 0394 8931      		cpi r24,lo8(25)
+ 714 0396 00F0      		brlo .L60
+ 715               	.LM96:
+ 716 0398 9093 0000 		sts RTC+3,r25
+ 717 039c 0895      		ret
+ 718               	.L59:
+ 719               	.LM97:
+ 720 039e 9A30      		cpi r25,lo8(10)
+ 721 03a0 01F4      		brne .L60
+ 722 03a2 8091 0000 		lds r24,RTC+3
+ 723 03a6 8330      		cpi r24,lo8(3)
+ 724 03a8 01F4      		brne .L60
+ 725 03aa 8091 0000 		lds r24,RTC_DS
+ 726 03ae 8823      		tst r24
+ 727 03b0 01F4      		brne .L60
+ 728               	.LBB36:
+ 729               	.LBB37:
+ 730               	.LM98:
+ 731 03b2 8091 0000 		lds r24,RTC+6
+ 732 03b6 8730      		cpi r24,lo8(7)
+ 733 03b8 01F4      		brne .L60
+ 734               	.LBE37:
+ 735               	.LBE36:
+ 736               	.LM99:
+ 737 03ba 8091 0000 		lds r24,RTC+2
+ 738 03be 8831      		cpi r24,lo8(24)
+ 739 03c0 00F0      		brlo .L60
+ 740               	.LM100:
+ 741 03c2 82E0      		ldi r24,lo8(2)
+ 742 03c4 8093 0000 		sts RTC+3,r24
+ 743               	.LM101:
+ 744 03c8 81E0      		ldi r24,lo8(1)
+ 745 03ca 8093 0000 		sts RTC_DS,r24
+ 746               	.L60:
+ 747 03ce 0895      		ret
+ 748               	.LFE15:
+ 751               	RTC_SetDayOfWeek:
+ 752               	.LFB19:
+ 753               	.LM102:
+ 754 03d0 0F93      		push r16
+ 755 03d2 1F93      		push r17
+ 756 03d4 CF93      		push r28
+ 757 03d6 DF93      		push r29
+ 758               	/* prologue: function */
+ 759               	/* frame size = 0 */
+ 760               	.LBB38:
+ 761               	.LM103:
+ 762 03d8 8091 0000 		lds r24,RTC+1
+ 763 03dc 21E0      		ldi r18,lo8(1)
+ 764 03de 30E0      		ldi r19,hi8(1)
+ 765 03e0 281B      		sub r18,r24
+ 766 03e2 3109      		sbc r19,__zero_reg__
+ 767 03e4 220F      		lsl r18
+ 768 03e6 331F      		rol r19
+ 769 03e8 EE27      		clr r30
+ 770 03ea FF27      		clr r31
+ 771 03ec E21B      		sub r30,r18
+ 772 03ee F30B      		sbc r31,r19
+ 773               	.LVL54:
+ 774 03f0 E050      		subi r30,lo8(-(daysInYear))
+ 775 03f2 F040      		sbci r31,hi8(-(daysInYear))
+ 776               	/* #APP */
+ 777               	 ;  519 "../common/rtc.c" 1
+ 778 03f4 C591      		lpm r28, Z+
+ 779 03f6 D491      		lpm r29, Z
+ 780               		
+ 781               	 ;  0 "" 2
+ 782               	.LVL55:
+ 783               	/* #NOAPP */
+ 784               	.LBE38:
+ 785 03f8 9091 0000 		lds r25,RTC+2
+ 786 03fc C90F      		add r28,r25
+ 787 03fe D11D      		adc r29,__zero_reg__
+ 788               	.LM104:
+ 789 0400 8330      		cpi r24,lo8(3)
+ 790 0402 00F0      		brlo .L62
+ 791               	.LM105:
+ 792 0404 8091 0000 		lds r24,RTC
+ 793 0408 90E0      		ldi r25,lo8(0)
+ 794 040a 8370      		andi r24,lo8(3)
+ 795 040c 9070      		andi r25,hi8(3)
+ 796 040e 892B      		or r24,r25
+ 797 0410 01F4      		brne .L62
+ 798               	.LM106:
+ 799 0412 2196      		adiw r28,1
+ 800               	.L62:
+ 801               	.LM107:
+ 802 0414 E091 0000 		lds r30,RTC
+ 803               	.LVL56:
+ 804 0418 F0E0      		ldi r31,lo8(0)
+ 805 041a 8F01      		movw r16,r30
+ 806 041c 0150      		subi r16,lo8(-(-1))
+ 807 041e 1040      		sbci r17,hi8(-(-1))
+ 808               	.LM108:
+ 809 0420 C801      		movw r24,r16
+ 810 0422 64E0      		ldi r22,lo8(4)
+ 811 0424 70E0      		ldi r23,hi8(4)
+ 812 0426 0E94 0000 		call __divmodhi4
+ 813 042a 9B01      		movw r18,r22
+ 814 042c C801      		movw r24,r16
+ 815 042e 6CE9      		ldi r22,lo8(-100)
+ 816 0430 7FEF      		ldi r23,hi8(-100)
+ 817 0432 0E94 0000 		call __divmodhi4
+ 818 0436 260F      		add r18,r22
+ 819 0438 371F      		adc r19,r23
+ 820 043a 2E0F      		add r18,r30
+ 821 043c 3F1F      		adc r19,r31
+ 822 043e 2B5F      		subi r18,lo8(-(5))
+ 823 0440 3F4F      		sbci r19,hi8(-(5))
+ 824 0442 C901      		movw r24,r18
+ 825 0444 8C0F      		add r24,r28
+ 826 0446 9D1F      		adc r25,r29
+ 827 0448 67E0      		ldi r22,lo8(7)
+ 828 044a 70E0      		ldi r23,hi8(7)
+ 829 044c 0E94 0000 		call __udivmodhi4
+ 830 0450 982F      		mov r25,r24
+ 831 0452 9F5F      		subi r25,lo8(-(1))
+ 832 0454 9093 0000 		sts RTC+6,r25
+ 833               	.LM109:
+ 834 0458 8091 0000 		lds r24,config+34
+ 835 045c 8130      		cpi r24,lo8(1)
+ 836 045e 01F0      		breq .L63
+ 837 0460 90E0      		ldi r25,lo8(0)
+ 838               	.L63:
+ 839               	.LBB39:
+ 840               	.LM110:
+ 841 0462 892F      		mov r24,r25
+ 842 0464 0E94 0000 		call RTC_DowTimerGetHourBar
+ 843               	.LBB40:
+ 844 0468 6093 0000 		sts hourbar_buff,r22
+ 845 046c 7093 0000 		sts (hourbar_buff)+1,r23
+ 846 0470 8093 0000 		sts (hourbar_buff)+2,r24
+ 847 0474 9093 0000 		sts (hourbar_buff)+3,r25
+ 848               	/* epilogue start */
+ 849               	.LBE40:
+ 850               	.LBE39:
+ 851               	.LM111:
+ 852 0478 DF91      		pop r29
+ 853 047a CF91      		pop r28
+ 854               	.LVL57:
+ 855 047c 1F91      		pop r17
+ 856 047e 0F91      		pop r16
+ 857 0480 0895      		ret
+ 858               	.LFE19:
+ 860               	.global	RTC_SetYear
+ 862               	RTC_SetYear:
+ 863               	.LFB6:
+ 864               	.LM112:
+ 865               	.LVL58:
+ 866               	/* prologue: function */
+ 867               	/* frame size = 0 */
+ 868               	.LM113:
+ 869 0482 8093 0000 		sts RTC,r24
+ 870               	.LM114:
+ 871 0486 0E94 0000 		call RTC_SetDayOfWeek
+ 872               	.LVL59:
+ 873               	/* epilogue start */
+ 874               	.LM115:
+ 875 048a 0895      		ret
+ 876               	.LFE6:
+ 878               	.global	RTC_SetMonth
+ 880               	RTC_SetMonth:
+ 881               	.LFB5:
+ 882               	.LM116:
+ 883               	.LVL60:
+ 884               	/* prologue: function */
+ 885               	/* frame size = 0 */
+ 886               	.LM117:
+ 887 048c 855F      		subi r24,lo8(-(11))
+ 888               	.LVL61:
+ 889 048e 6CE0      		ldi r22,lo8(12)
+ 890 0490 0E94 0000 		call __udivmodqi4
+ 891 0494 9F5F      		subi r25,lo8(-(1))
+ 892 0496 9093 0000 		sts RTC+1,r25
+ 893               	.LM118:
+ 894 049a 0E94 0000 		call RTC_SetDayOfWeek
+ 895               	/* epilogue start */
+ 896               	.LM119:
+ 897 049e 0895      		ret
+ 898               	.LFE5:
+ 900               	.global	RTC_SetDay
+ 902               	RTC_SetDay:
+ 903               	.LFB4:
+ 904               	.LM120:
+ 905               	.LVL62:
+ 906               	/* prologue: function */
+ 907               	/* frame size = 0 */
+ 908 04a0 282F      		mov r18,r24
+ 909               	.LBB41:
+ 910               	.LBB42:
+ 911               	.LBB43:
+ 912               	.LM121:
+ 913 04a2 8091 0000 		lds r24,RTC+1
+ 914               	.LVL63:
+ 915 04a6 E82F      		mov r30,r24
+ 916 04a8 F0E0      		ldi r31,lo8(0)
+ 917 04aa E050      		subi r30,lo8(-(RTC_DayOfMonthTablePrgMem-1))
+ 918 04ac F040      		sbci r31,hi8(-(RTC_DayOfMonthTablePrgMem-1))
+ 919               	/* #APP */
+ 920               	 ;  458 "../common/rtc.c" 1
+ 921 04ae 6491      		lpm r22, Z
+ 922               		
+ 923               	 ;  0 "" 2
+ 924               	.LVL64:
+ 925               	/* #NOAPP */
+ 926               	.LBE43:
+ 927               	.LM122:
+ 928 04b0 8230      		cpi r24,lo8(2)
+ 929 04b2 01F4      		brne .L70
+ 930 04b4 8091 0000 		lds r24,RTC
+ 931 04b8 90E0      		ldi r25,lo8(0)
+ 932 04ba 8370      		andi r24,lo8(3)
+ 933 04bc 9070      		andi r25,hi8(3)
+ 934 04be 892B      		or r24,r25
+ 935 04c0 01F4      		brne .L70
+ 936 04c2 6DE1      		ldi r22,lo8(29)
+ 937               	.L70:
+ 938               	.LBE42:
+ 939               	.LBE41:
+ 940               	.LM123:
+ 941 04c4 2150      		subi r18,lo8(-(-1))
+ 942 04c6 822F      		mov r24,r18
+ 943 04c8 860F      		add r24,r22
+ 944 04ca 0E94 0000 		call __udivmodqi4
+ 945               	.LVL65:
+ 946 04ce 9F5F      		subi r25,lo8(-(1))
+ 947 04d0 9093 0000 		sts RTC+2,r25
+ 948               	.LM124:
+ 949 04d4 0E94 0000 		call RTC_SetDayOfWeek
+ 950               	.LVL66:
+ 951               	/* epilogue start */
+ 952               	.LM125:
+ 953 04d8 0895      		ret
+ 954               	.LFE4:
+ 956               	.global	RTC_Init
+ 958               	RTC_Init:
+ 959               	.LFB3:
+ 960               	.LM126:
+ 961               	/* prologue: function */
+ 962               	/* frame size = 0 */
+ 963               	.LM127:
+ 964 04da 8091 7000 		lds r24,112
+ 965 04de 8E7F      		andi r24,lo8(-2)
+ 966 04e0 8093 7000 		sts 112,r24
+ 967               	.LM128:
+ 968 04e4 88E0      		ldi r24,lo8(8)
+ 969 04e6 8093 B600 		sts 182,r24
+ 970               	.LM129:
+ 971 04ea 1092 B200 		sts 178,__zero_reg__
+ 972               	.LM130:
+ 973 04ee 8091 B000 		lds r24,176
+ 974 04f2 8560      		ori r24,lo8(5)
+ 975 04f4 8093 B000 		sts 176,r24
+ 976               	.L73:
+ 977               	.LM131:
+ 978 04f8 8091 B600 		lds r24,182
+ 979 04fc 8570      		andi r24,lo8(5)
+ 980 04fe 01F4      		brne .L73
+ 981               	.LM132:
+ 982 0500 8FEF      		ldi r24,lo8(-1)
+ 983 0502 87BB      		out 55-32,r24
+ 984               	.LM133:
+ 985 0504 8091 7000 		lds r24,112
+ 986 0508 8160      		ori r24,lo8(1)
+ 987 050a 8093 7000 		sts 112,r24
+ 988               	.LM134:
+ 989 050e 0E94 0000 		call RTC_SetDayOfWeek
+ 990               	/* epilogue start */
+ 991               	.LM135:
+ 992 0512 0895      		ret
+ 993               	.LFE3:
+ 995               	.global	RTC_DowTimerGet
+ 997               	RTC_DowTimerGet:
+ 998               	.LFB11:
+ 999               	.LM136:
+ 1000               	.LVL67:
+ 1001 0514 0F93      		push r16
+ 1002 0516 1F93      		push r17
+ 1003               	/* prologue: function */
+ 1004               	/* frame size = 0 */
+ 1005 0518 8A01      		movw r16,r20
+ 1006               	.LM137:
+ 1007 051a 880F      		lsl r24
+ 1008 051c 880F      		lsl r24
+ 1009 051e 880F      		lsl r24
+ 1010               	.LVL68:
+ 1011 0520 860F      		add r24,r22
+ 1012 0522 0E94 0000 		call eeprom_timers_read_raw
+ 1013               	.LVL69:
+ 1014 0526 9C01      		movw r18,r24
+ 1015               	.LVL70:
+ 1016               	.LM138:
+ 1017 0528 832F      		mov r24,r19
+ 1018 052a 8295      		swap r24
+ 1019 052c 8F70      		andi r24,lo8(15)
+ 1020 052e F801      		movw r30,r16
+ 1021 0530 8083      		st Z,r24
+ 1022 0532 3F70      		andi r19,hi8(4095)
+ 1023               	.LVL71:
+ 1024               	.LM139:
+ 1025 0534 C901      		movw r24,r18
+ 1026               	/* epilogue start */
+ 1027 0536 1F91      		pop r17
+ 1028 0538 0F91      		pop r16
+ 1029               	.LVL72:
+ 1030 053a 0895      		ret
+ 1031               	.LFE11:
+ 1033               	.global	RTC_DowTimerSet
+ 1035               	RTC_DowTimerSet:
+ 1036               	.LFB10:
+ 1037               	.LM140:
+ 1038               	.LVL73:
+ 1039               	/* prologue: function */
+ 1040               	/* frame size = 0 */
+ 1041 053c 962F      		mov r25,r22
+ 1042               	.LM141:
+ 1043 053e 8830      		cpi r24,lo8(8)
+ 1044 0540 00F4      		brsh .L79
+ 1045               	.LVL74:
+ 1046               	.LM142:
+ 1047 0542 6830      		cpi r22,lo8(8)
+ 1048 0544 00F4      		brsh .L79
+ 1049               	.LVL75:
+ 1050               	.LM143:
+ 1051 0546 2430      		cpi r18,lo8(4)
+ 1052 0548 00F4      		brsh .L79
+ 1053               	.LM144:
+ 1054 054a 35E0      		ldi r19,hi8(1500)
+ 1055 054c 4C3D      		cpi r20,lo8(1500)
+ 1056 054e 5307      		cpc r21,r19
+ 1057 0550 00F0      		brlo .L80
+ 1058 0552 4FEF      		ldi r20,lo8(4095)
+ 1059 0554 5FE0      		ldi r21,hi8(4095)
+ 1060               	.LVL76:
+ 1061               	.L80:
+ 1062               	.LM145:
+ 1063 0556 880F      		lsl r24
+ 1064 0558 880F      		lsl r24
+ 1065 055a 880F      		lsl r24
+ 1066               	.LVL77:
+ 1067 055c 722F      		mov r23,r18
+ 1068 055e 7295      		swap r23
+ 1069 0560 707F      		andi r23,lo8(-16)
+ 1070 0562 60E0      		ldi r22,lo8(0)
+ 1071               	.LVL78:
+ 1072 0564 642B      		or r22,r20
+ 1073 0566 752B      		or r23,r21
+ 1074 0568 890F      		add r24,r25
+ 1075               	.LVL79:
+ 1076 056a 0E94 0000 		call eeprom_timers_write_raw
+ 1077               	.LVL80:
+ 1078 056e 81E0      		ldi r24,lo8(1)
+ 1079 0570 0895      		ret
+ 1080               	.LVL81:
+ 1081               	.L79:
+ 1082               	.LM146:
+ 1083 0572 80E0      		ldi r24,lo8(0)
+ 1084               	.LVL82:
+ 1085               	.LM147:
+ 1086 0574 0895      		ret
+ 1087               	.LFE10:
+ 1089               	.global	RTC
+ 1090               		.section	.data.RTC,"aw",@progbits
+ 1093               	RTC:
+ 1094 0000 0C        		.byte	12
+ 1095 0001 01        		.byte	1
+ 1096 0002 01        		.byte	1
+ 1097 0003 0C        		.byte	12
+ 1098 0004 00        		.byte	0
+ 1099 0005 00        		.byte	0
+ 1100 0006 00        		.byte	0
+ 1101               	.global	RTC_DayOfMonthTablePrgMem
+ 1102               		.section	.progmem.data,"a",@progbits
+ 1105               	RTC_DayOfMonthTablePrgMem:
+ 1106 0000 1F        		.byte	31
+ 1107 0001 1C        		.byte	28
+ 1108 0002 1F        		.byte	31
+ 1109 0003 1E        		.byte	30
+ 1110 0004 1F        		.byte	31
+ 1111 0005 1E        		.byte	30
+ 1112 0006 1F        		.byte	31
+ 1113 0007 1F        		.byte	31
+ 1114 0008 1E        		.byte	30
+ 1115 0009 1F        		.byte	31
+ 1116 000a 1E        		.byte	30
+ 1117 000b 1F        		.byte	31
+ 1118               	.global	RTC_timer_todo
+ 1119               		.section	.bss.RTC_timer_todo,"aw",@nobits
+ 1122               	RTC_timer_todo:
+ 1123 0000 00        		.skip 1,0
+ 1124               	.global	RTC_timer_done
+ 1125               		.section	.bss.RTC_timer_done,"aw",@nobits
+ 1128               	RTC_timer_done:
+ 1129 0000 00        		.skip 1,0
+ 1130               		.section	.progmem.data
+ 1133               	daysInYear:
+ 1134 000c 0000      		.word	0
+ 1135 000e 1F00      		.word	31
+ 1136 0010 3B00      		.word	59
+ 1137 0012 5A00      		.word	90
+ 1138 0014 7800      		.word	120
+ 1139 0016 9700      		.word	151
+ 1140 0018 B500      		.word	181
+ 1141 001a D400      		.word	212
+ 1142 001c F300      		.word	243
+ 1143 001e 1101      		.word	273
+ 1144 0020 3001      		.word	304
+ 1145 0022 4E01      		.word	334
+ 1146               		.section	.bss.RTC_timer_time,"aw",@nobits
+ 1149               	RTC_timer_time:
+ 1150 0000 00        		.skip 1,0
+ 1151               		.comm RTC_DS,1,1
+ 1304               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 rtc.c
+C:\Tools\cygwin\tmp/cc2MEjtA.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:18     .text:00000000 RTC_SetHour
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1093   .data.RTC:00000000 RTC
+C:\Tools\cygwin\tmp/cc2MEjtA.s:37     .text:0000000e RTC_SetMinute
+C:\Tools\cygwin\tmp/cc2MEjtA.s:56     .text:0000001c RTC_SetSecond
+C:\Tools\cygwin\tmp/cc2MEjtA.s:75     .text:0000002a RTC_timer_set
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1122   .bss.RTC_timer_todo:00000000 RTC_timer_todo
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1149   .bss.RTC_timer_time:00000000 RTC_timer_time
+C:\Tools\cygwin\tmp/cc2MEjtA.s:146    .text:0000007e __vector_5
+C:\Tools\cygwin\tmp/cc2MEjtA.s:154    *ABS*:00000010 __my_tmp_reg__
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1128   .bss.RTC_timer_done:00000000 RTC_timer_done
+C:\Tools\cygwin\tmp/cc2MEjtA.s:175    .text:00000098 __vector_4
+C:\Tools\cygwin\tmp/cc2MEjtA.s:244    .text:00000102 RTC_FindTimerRawIndex
+C:\Tools\cygwin\tmp/cc2MEjtA.s:375    .text:000001a6 RTC_ActualTimerTemperature
+C:\Tools\cygwin\tmp/cc2MEjtA.s:463    .text:00000220 RTC_DowTimerGetHourBar
+C:\Tools\cygwin\tmp/cc2MEjtA.s:580    .text:000002b8 RTC_AddOneSecond
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1105   .progmem.data:00000000 RTC_DayOfMonthTablePrgMem
+                            *COM*:00000001 RTC_DS
+C:\Tools\cygwin\tmp/cc2MEjtA.s:751    .text:000003d0 RTC_SetDayOfWeek
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1133   .progmem.data:0000000c daysInYear
+C:\Tools\cygwin\tmp/cc2MEjtA.s:862    .text:00000482 RTC_SetYear
+C:\Tools\cygwin\tmp/cc2MEjtA.s:880    .text:0000048c RTC_SetMonth
+C:\Tools\cygwin\tmp/cc2MEjtA.s:902    .text:000004a0 RTC_SetDay
+C:\Tools\cygwin\tmp/cc2MEjtA.s:958    .text:000004da RTC_Init
+C:\Tools\cygwin\tmp/cc2MEjtA.s:997    .text:00000514 RTC_DowTimerGet
+C:\Tools\cygwin\tmp/cc2MEjtA.s:1035   .text:0000053c RTC_DowTimerSet
+
+UNDEFINED SYMBOLS
+__udivmodqi4
+kb_timeout
+__prologue_saves__
+eeprom_timers_read_raw
+__divmodhi4
+__epilogue_restores__
+config
+hourbar_buff
+__udivmodhi4
+eeprom_timers_write_raw
+__do_copy_data
+__do_clear_bss

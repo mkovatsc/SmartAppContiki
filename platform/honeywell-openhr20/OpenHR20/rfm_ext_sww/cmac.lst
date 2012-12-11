@@ -1,0 +1,243 @@
+   1               		.file	"cmac.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	cmac_calc
+  18               	cmac_calc:
+  19               	.LFB2:
+  20               	.LM1:
+  21               	.LVL0:
+  22 0000 A8E0      		ldi r26,lo8(8)
+  23 0002 B0E0      		ldi r27,hi8(8)
+  24 0004 E0E0      		ldi r30,lo8(gs(1f))
+  25 0006 F0E0      		ldi r31,hi8(gs(1f))
+  26 0008 0C94 0000 		jmp __prologue_saves__+((18 - 14) * 2)
+  27               	1:
+  28               	/* prologue: function */
+  29               	/* frame size = 8 */
+  30 000c 6C01      		movw r12,r24
+  31 000e F62E      		mov r15,r22
+  32 0010 E22E      		mov r14,r18
+  33 0012 8E01      		movw r16,r28
+  34 0014 0F5F      		subi r16,lo8(-(1))
+  35 0016 1F4F      		sbci r17,hi8(-(1))
+  36               	.LM2:
+  37 0018 4115      		cp r20,__zero_reg__
+  38 001a 5105      		cpc r21,__zero_reg__
+  39 001c 01F4      		brne .L2
+  40               	.LVL1:
+  41 001e F801      		movw r30,r16
+  42               	.LM3:
+  43 0020 CE01      		movw r24,r28
+  44 0022 0996      		adiw r24,9
+  45               	.L3:
+  46 0024 1192      		st Z+,__zero_reg__
+  47 0026 E817      		cp r30,r24
+  48 0028 F907      		cpc r31,r25
+  49 002a 01F4      		brne .L3
+  50 002c 00C0      		rjmp .L4
+  51               	.LVL2:
+  52               	.L2:
+  53               	.LM4:
+  54 002e C801      		movw r24,r16
+  55 0030 BA01      		movw r22,r20
+  56 0032 48E0      		ldi r20,lo8(8)
+  57 0034 50E0      		ldi r21,hi8(8)
+  58               	.LVL3:
+  59 0036 0E94 0000 		call memcpy
+  60               	.LM5:
+  61 003a C801      		movw r24,r16
+  62 003c B801      		movw r22,r16
+  63 003e 40E0      		ldi r20,lo8(Keys)
+  64 0040 50E0      		ldi r21,hi8(Keys)
+  65 0042 0E94 0000 		call xtea_enc
+  66               	.LVL4:
+  67               	.L4:
+  68 0046 80E0      		ldi r24,lo8(0)
+  69               	.LVL5:
+  70               	.LBB2:
+  71               	.LM6:
+  72 0048 5E01      		movw r10,r28
+  73 004a 0894      		sec
+  74 004c A11C      		adc r10,__zero_reg__
+  75 004e B11C      		adc r11,__zero_reg__
+  76               	.LM7:
+  77 0050 39E0      		ldi r19,lo8(9)
+  78 0052 632E      		mov r6,r19
+  79 0054 712C      		mov r7,__zero_reg__
+  80 0056 6C0E      		add r6,r28
+  81 0058 7D1E      		adc r7,r29
+  82 005a 00C0      		rjmp .L5
+  83               	.LVL6:
+  84               	.L14:
+  85               	.LM8:
+  86 005c 182F      		mov r17,r24
+  87 005e 185F      		subi r17,lo8(-(8))
+  88               	.LVL7:
+  89               	.LM9:
+  90 0060 1F15      		cp r17,r15
+  91 0062 00F0      		brlo .L6
+  92 0064 1F15      		cp r17,r15
+  93 0066 01F0      		breq .L7
+  94 0068 20E0      		ldi r18,lo8(Keys+32)
+  95 006a 822E      		mov r8,r18
+  96 006c 20E0      		ldi r18,hi8(Keys+32)
+  97 006e 922E      		mov r9,r18
+  98 0070 00C0      		rjmp .L6
+  99               	.LVL8:
+ 100               	.L7:
+ 101 0072 90E0      		ldi r25,lo8(Keys+24)
+ 102 0074 892E      		mov r8,r25
+ 103 0076 90E0      		ldi r25,hi8(Keys+24)
+ 104 0078 992E      		mov r9,r25
+ 105               	.L6:
+ 106 007a A501      		movw r20,r10
+ 107               	.LVL9:
+ 108 007c 9401      		movw r18,r8
+ 109 007e 982F      		mov r25,r24
+ 110               	.LVL10:
+ 111               	.L13:
+ 112               	.LBB3:
+ 113               	.LM10:
+ 114 0080 9F15      		cp r25,r15
+ 115 0082 00F4      		brsh .L8
+ 116               	.LVL11:
+ 117 0084 F601      		movw r30,r12
+ 118 0086 E90F      		add r30,r25
+ 119 0088 F11D      		adc r31,__zero_reg__
+ 120 008a E081      		ld r30,Z
+ 121               	.LVL12:
+ 122 008c 00C0      		rjmp .L9
+ 123               	.LVL13:
+ 124               	.L8:
+ 125               	.LM11:
+ 126 008e 9F15      		cp r25,r15
+ 127 0090 01F0      		breq .L10
+ 128 0092 E0E0      		ldi r30,lo8(0)
+ 129               	.LVL14:
+ 130 0094 00C0      		rjmp .L9
+ 131               	.LVL15:
+ 132               	.L10:
+ 133 0096 E0E8      		ldi r30,lo8(-128)
+ 134               	.LVL16:
+ 135               	.L9:
+ 136               	.LM12:
+ 137 0098 1F15      		cp r17,r15
+ 138 009a 00F0      		brlo .L11
+ 139               	.LVL17:
+ 140 009c D901      		movw r26,r18
+ 141 009e 8C91      		ld r24,X
+ 142 00a0 E827      		eor r30,r24
+ 143               	.LVL18:
+ 144               	.L11:
+ 145               	.LM13:
+ 146 00a2 DA01      		movw r26,r20
+ 147 00a4 8C91      		ld r24,X
+ 148 00a6 8E27      		eor r24,r30
+ 149 00a8 FA01      		movw r30,r20
+ 150               	.LVL19:
+ 151 00aa 8193      		st Z+,r24
+ 152 00ac AF01      		movw r20,r30
+ 153 00ae 2F5F      		subi r18,lo8(-(1))
+ 154 00b0 3F4F      		sbci r19,hi8(-(1))
+ 155               	.LBE3:
+ 156               	.LM14:
+ 157 00b2 E615      		cp r30,r6
+ 158 00b4 F705      		cpc r31,r7
+ 159 00b6 01F0      		breq .L12
+ 160 00b8 9F5F      		subi r25,lo8(-(1))
+ 161 00ba 00C0      		rjmp .L13
+ 162               	.L12:
+ 163               	.LM15:
+ 164 00bc C501      		movw r24,r10
+ 165 00be B501      		movw r22,r10
+ 166 00c0 40E0      		ldi r20,lo8(Keys)
+ 167 00c2 50E0      		ldi r21,hi8(Keys)
+ 168 00c4 0E94 0000 		call xtea_enc
+ 169               	.LVL20:
+ 170 00c8 812F      		mov r24,r17
+ 171               	.LVL21:
+ 172               	.L5:
+ 173               	.LBE2:
+ 174               	.LM16:
+ 175 00ca 8F15      		cp r24,r15
+ 176 00cc 00F0      		brlo .L14
+ 177 00ce 8E01      		movw r16,r28
+ 178 00d0 0F5F      		subi r16,lo8(-(1))
+ 179 00d2 1F4F      		sbci r17,hi8(-(1))
+ 180 00d4 6F2D      		mov r22,r15
+ 181 00d6 70E0      		ldi r23,lo8(0)
+ 182               	.LVL22:
+ 183               	.LM17:
+ 184 00d8 EE20      		tst r14
+ 185 00da 01F0      		breq .L15
+ 186               	.LVL23:
+ 187 00dc D601      		movw r26,r12
+ 188 00de A60F      		add r26,r22
+ 189 00e0 B71F      		adc r27,r23
+ 190 00e2 F801      		movw r30,r16
+ 191               	.LM18:
+ 192 00e4 9E01      		movw r18,r28
+ 193 00e6 2B5F      		subi r18,lo8(-(5))
+ 194 00e8 3F4F      		sbci r19,hi8(-(5))
+ 195               	.LVL24:
+ 196               	.L18:
+ 197               	.LM19:
+ 198 00ea 9C91      		ld r25,X
+ 199 00ec 8081      		ld r24,Z
+ 200 00ee 9817      		cp r25,r24
+ 201 00f0 01F0      		breq .L16
+ 202 00f2 80E0      		ldi r24,lo8(0)
+ 203 00f4 00C0      		rjmp .L17
+ 204               	.L16:
+ 205 00f6 1196      		adiw r26,1
+ 206 00f8 3196      		adiw r30,1
+ 207               	.LM20:
+ 208 00fa E217      		cp r30,r18
+ 209 00fc F307      		cpc r31,r19
+ 210 00fe 01F4      		brne .L18
+ 211 0100 00C0      		rjmp .L22
+ 212               	.LVL25:
+ 213               	.L15:
+ 214               	.LM21:
+ 215 0102 C601      		movw r24,r12
+ 216               	.LVL26:
+ 217 0104 860F      		add r24,r22
+ 218 0106 971F      		adc r25,r23
+ 219 0108 B801      		movw r22,r16
+ 220               	.LVL27:
+ 221 010a 44E0      		ldi r20,lo8(4)
+ 222 010c 50E0      		ldi r21,hi8(4)
+ 223               	.LVL28:
+ 224 010e 0E94 0000 		call memcpy
+ 225               	.LVL29:
+ 226               	.L22:
+ 227 0112 81E0      		ldi r24,lo8(1)
+ 228               	.L17:
+ 229               	/* epilogue start */
+ 230               	.LM22:
+ 231 0114 2896      		adiw r28,8
+ 232 0116 EEE0      		ldi r30, lo8(14)
+ 233 0118 0C94 0000 		jmp __epilogue_restores__ + ((18 - 14) * 2)
+ 234               	.LFE2:
+ 260               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 cmac.c
+C:\Tools\cygwin\tmp/ccF2U9y7.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccF2U9y7.s:18     .text:00000000 cmac_calc
+
+UNDEFINED SYMBOLS
+__prologue_saves__
+memcpy
+Keys
+xtea_enc
+__epilogue_restores__

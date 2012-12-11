@@ -1,0 +1,420 @@
+   1               		.file	"keyboard.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	task_keyboard_long_press_detect
+  18               	task_keyboard_long_press_detect:
+  19               	.LFB3:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LM2:
+  24 0000 9091 0000 		lds r25,state_front_prev
+  25 0004 9923      		tst r25
+  26 0006 01F4      		brne .L2
+  27               	.LM3:
+  28 0008 8091 0000 		lds r24,long_quiet
+  29 000c 8F5F      		subi r24,lo8(-(1))
+  30 000e 8093 0000 		sts long_quiet,r24
+  31 0012 8823      		tst r24
+  32 0014 01F4      		brne .L3
+  33               	.LM4:
+  34 0016 8FEF      		ldi r24,lo8(-1)
+  35 0018 8093 0000 		sts long_quiet,r24
+  36 001c 0895      		ret
+  37               	.L3:
+  38               	.LM5:
+  39 001e 8431      		cpi r24,lo8(20)
+  40 0020 01F0      		breq .+2
+  41 0022 00C0      		rjmp .L12
+  42               	.LM6:
+  43 0024 8091 0000 		lds r24,kb_events
+  44 0028 9091 0000 		lds r25,(kb_events)+1
+  45 002c 9062      		ori r25,hi8(8192)
+  46 002e 00C0      		rjmp .L13
+  47               	.L2:
+  48               	.LM7:
+  49 0030 8091 0000 		lds r24,long_press
+  50 0034 8F5F      		subi r24,lo8(-(1))
+  51 0036 8093 0000 		sts long_press,r24
+  52 003a 8823      		tst r24
+  53 003c 01F4      		brne .L5
+  54               	.LM8:
+  55 003e 8FEF      		ldi r24,lo8(-1)
+  56 0040 8093 0000 		sts long_press,r24
+  57 0044 0895      		ret
+  58               	.L5:
+  59               	.LM9:
+  60 0046 8430      		cpi r24,lo8(4)
+  61 0048 01F4      		brne .L12
+  62               	.LM10:
+  63 004a 9830      		cpi r25,lo8(8)
+  64 004c 01F0      		breq .L8
+  65 004e 9930      		cpi r25,lo8(9)
+  66 0050 00F4      		brsh .L11
+  67 0052 9230      		cpi r25,lo8(2)
+  68 0054 01F0      		breq .L6
+  69 0056 9430      		cpi r25,lo8(4)
+  70 0058 01F4      		brne .L12
+  71 005a 00C0      		rjmp .L14
+  72               	.L11:
+  73 005c 9A30      		cpi r25,lo8(10)
+  74 005e 01F0      		breq .L9
+  75 0060 9E30      		cpi r25,lo8(14)
+  76 0062 01F4      		brne .L12
+  77 0064 00C0      		rjmp .L15
+  78               	.L14:
+  79               	.LM11:
+  80 0066 8091 0000 		lds r24,kb_events
+  81 006a 9091 0000 		lds r25,(kb_events)+1
+  82 006e 8062      		ori r24,lo8(288)
+  83 0070 9160      		ori r25,hi8(288)
+  84 0072 00C0      		rjmp .L13
+  85               	.L6:
+  86               	.LM12:
+  87 0074 8091 0000 		lds r24,kb_events
+  88 0078 9091 0000 		lds r25,(kb_events)+1
+  89 007c 8064      		ori r24,lo8(576)
+  90 007e 9260      		ori r25,hi8(576)
+  91 0080 00C0      		rjmp .L13
+  92               	.L8:
+  93               	.LM13:
+  94 0082 8091 0000 		lds r24,kb_events
+  95 0086 9091 0000 		lds r25,(kb_events)+1
+  96 008a 8068      		ori r24,lo8(1152)
+  97 008c 9460      		ori r25,hi8(1152)
+  98 008e 00C0      		rjmp .L13
+  99               	.L9:
+ 100               	.LM14:
+ 101 0090 8091 0000 		lds r24,kb_events
+ 102 0094 9091 0000 		lds r25,(kb_events)+1
+ 103 0098 9860      		ori r25,hi8(2048)
+ 104               	.L13:
+ 105 009a 9093 0000 		sts (kb_events)+1,r25
+ 106 009e 8093 0000 		sts kb_events,r24
+ 107 00a2 0895      		ret
+ 108               	.L15:
+ 109               	.LM15:
+ 110 00a4 8091 0000 		lds r24,kb_events
+ 111 00a8 9091 0000 		lds r25,(kb_events)+1
+ 112 00ac 9061      		ori r25,hi8(4096)
+ 113 00ae 9093 0000 		sts (kb_events)+1,r25
+ 114 00b2 8093 0000 		sts kb_events,r24
+ 115               	.L12:
+ 116 00b6 0895      		ret
+ 117               	.LFE3:
+ 119               	.global	mont_contact_pooling
+ 121               	mont_contact_pooling:
+ 122               	.LFB4:
+ 123               	.LM16:
+ 124               	/* prologue: function */
+ 125               	/* frame size = 0 */
+ 126               	.LM17:
+ 127 00b8 2098      		cbi 36-32,0
+ 128 00ba 289A      		sbi 37-32,0
+ 129               	.LM18:
+ 130               	/* #APP */
+ 131               	 ;  189 "keyboard.c" 1
+ 132 00bc 0000      		nop;
+ 133               	 ;  0 "" 2
+ 134               	 ;  189 "keyboard.c" 1
+ 135 00be 0000      		nop;
+ 136               	 ;  0 "" 2
+ 137               	.LM19:
+ 138               	/* #NOAPP */
+ 139 00c0 83B1      		in r24,35-32
+ 140               	.LM20:
+ 141 00c2 2898      		cbi 37-32,0
+ 142 00c4 209A      		sbi 36-32,0
+ 143               	.LM21:
+ 144 00c6 8095      		com r24
+ 145 00c8 8770      		andi r24,lo8(7)
+ 146 00ca 9091 0000 		lds r25,CTL_error
+ 147 00ce 80FF      		sbrs r24,0
+ 148 00d0 00C0      		rjmp .L17
+ 149               	.LM22:
+ 150 00d2 9460      		ori r25,lo8(4)
+ 151 00d4 9093 0000 		sts CTL_error,r25
+ 152               	.LM23:
+ 153 00d8 1092 0000 		sts sumError,__zero_reg__
+ 154 00dc 1092 0000 		sts (sumError)+1,__zero_reg__
+ 155 00e0 1092 0000 		sts (sumError)+2,__zero_reg__
+ 156 00e4 1092 0000 		sts (sumError)+3,__zero_reg__
+ 157 00e8 80E0      		ldi r24,lo8(0)
+ 158 00ea 0895      		ret
+ 159               	.L17:
+ 160               	.LM24:
+ 161 00ec 9B7F      		andi r25,lo8(-5)
+ 162 00ee 9093 0000 		sts CTL_error,r25
+ 163               	.LM25:
+ 164 00f2 81FF      		sbrs r24,1
+ 165 00f4 00C0      		rjmp .L19
+ 166 00f6 82E0      		ldi r24,lo8(2)
+ 167 00f8 0895      		ret
+ 168               	.L19:
+ 169               	.LM26:
+ 170 00fa 82FD      		sbrc r24,2
+ 171 00fc 00C0      		rjmp .L20
+ 172 00fe 81E0      		ldi r24,lo8(1)
+ 173 0100 0895      		ret
+ 174               	.L20:
+ 175 0102 83E0      		ldi r24,lo8(3)
+ 176               	.LM27:
+ 177 0104 0895      		ret
+ 178               	.LFE4:
+ 180               	.global	__vector_3
+ 182               	__vector_3:
+ 183               	.LFB5:
+ 184               	.LM28:
+ 185 0106 1F92      		push __zero_reg__
+ 186 0108 0F92      		push r0
+ 187 010a 0FB6      		in r0,__SREG__
+ 188 010c 0F92      		push r0
+ 189 010e 1124      		clr __zero_reg__
+ 190 0110 8F93      		push r24
+ 191               	/* prologue: Signal */
+ 192               	/* frame size = 0 */
+ 193               	.LM29:
+ 194 0112 2698      		cbi 36-32,6
+ 195 0114 2E9A      		sbi 37-32,6
+ 196               	.LM30:
+ 197 0116 F09A      		sbi 62-32,0
+ 198               	.LM31:
+ 199               	/* #APP */
+ 200               	 ;  223 "keyboard.c" 1
+ 201 0118 0000      		nop
+ 202               	 ;  0 "" 2
+ 203               	.LM32:
+ 204               	/* #NOAPP */
+ 205 011a 83B1      		in r24,35-32
+ 206 011c 8095      		com r24
+ 207 011e 8E76      		andi r24,lo8(110)
+ 208 0120 8093 0000 		sts keys,r24
+ 209               	.LM33:
+ 210 0124 2E98      		cbi 37-32,6
+ 211 0126 269A      		sbi 36-32,6
+ 212               	/* epilogue start */
+ 213               	.LM34:
+ 214 0128 8F91      		pop r24
+ 215 012a 0F90      		pop r0
+ 216 012c 0FBE      		out __SREG__,r0
+ 217 012e 0F90      		pop r0
+ 218 0130 1F90      		pop __zero_reg__
+ 219 0132 1895      		reti
+ 220               	.LFE5:
+ 222               	.global	task_keyboard
+ 224               	task_keyboard:
+ 225               	.LFB2:
+ 226               	.LM35:
+ 227 0134 1F93      		push r17
+ 228               	/* prologue: function */
+ 229               	/* frame size = 0 */
+ 230               	.LBB2:
+ 231               	.LM36:
+ 232 0136 2091 0000 		lds r18,keys
+ 233               	.LVL0:
+ 234 013a 2076      		andi r18,lo8(96)
+ 235               	.LM37:
+ 236 013c 8091 0000 		lds r24,state_wheel_prev
+ 237 0140 8227      		eor r24,r18
+ 238 0142 85FF      		sbrs r24,5
+ 239 0144 00C0      		rjmp .L25
+ 240               	.LM38:
+ 241 0146 2223      		tst r18
+ 242 0148 01F0      		breq .L26
+ 243 014a 2036      		cpi r18,lo8(96)
+ 244 014c 01F4      		brne .L27
+ 245               	.L26:
+ 246               	.LM39:
+ 247 014e 8091 0000 		lds r24,kb_events
+ 248 0152 9091 0000 		lds r25,(kb_events)+1
+ 249 0156 8260      		ori r24,lo8(2)
+ 250 0158 00C0      		rjmp .L38
+ 251               	.L27:
+ 252               	.LM40:
+ 253 015a 8091 0000 		lds r24,kb_events
+ 254 015e 9091 0000 		lds r25,(kb_events)+1
+ 255 0162 8160      		ori r24,lo8(1)
+ 256               	.L38:
+ 257 0164 9093 0000 		sts (kb_events)+1,r25
+ 258 0168 8093 0000 		sts kb_events,r24
+ 259               	.LM41:
+ 260 016c 1092 0000 		sts long_quiet,__zero_reg__
+ 261               	.LM42:
+ 262 0170 2093 0000 		sts state_wheel_prev,r18
+ 263               	.L25:
+ 264               	.LBE2:
+ 265               	.LBB3:
+ 266               	.LM43:
+ 267 0174 1091 0000 		lds r17,keys
+ 268               	.LVL1:
+ 269 0178 1E70      		andi r17,lo8(14)
+ 270               	.LM44:
+ 271 017a 2091 0000 		lds r18,state_front_prev
+ 272               	.LVL2:
+ 273 017e 1217      		cp r17,r18
+ 274 0180 01F4      		brne .+2
+ 275 0182 00C0      		rjmp .L37
+ 276               	.LM45:
+ 277 0184 1123      		tst r17
+ 278 0186 01F0      		breq .L30
+ 279 0188 2223      		tst r18
+ 280 018a 01F4      		brne .L30
+ 281 018c 8091 0000 		lds r24,kb_timeout
+ 282 0190 8823      		tst r24
+ 283 0192 01F0      		breq .L30
+ 284               	.LM46:
+ 285 0194 1430      		cpi r17,lo8(4)
+ 286 0196 01F4      		brne .L31
+ 287               	.LM47:
+ 288 0198 8091 0000 		lds r24,kb_events
+ 289 019c 9091 0000 		lds r25,(kb_events)+1
+ 290 01a0 8460      		ori r24,lo8(4)
+ 291 01a2 00C0      		rjmp .L39
+ 292               	.L31:
+ 293               	.LM48:
+ 294 01a4 1230      		cpi r17,lo8(2)
+ 295 01a6 01F4      		brne .L32
+ 296               	.LM49:
+ 297 01a8 8091 0000 		lds r24,kb_events
+ 298 01ac 9091 0000 		lds r25,(kb_events)+1
+ 299 01b0 8860      		ori r24,lo8(8)
+ 300 01b2 00C0      		rjmp .L39
+ 301               	.L32:
+ 302               	.LM50:
+ 303 01b4 1830      		cpi r17,lo8(8)
+ 304 01b6 01F4      		brne .L30
+ 305               	.LM51:
+ 306 01b8 8091 0000 		lds r24,kb_events
+ 307 01bc 9091 0000 		lds r25,(kb_events)+1
+ 308 01c0 8061      		ori r24,lo8(16)
+ 309               	.L39:
+ 310 01c2 9093 0000 		sts (kb_events)+1,r25
+ 311 01c6 8093 0000 		sts kb_events,r24
+ 312               	.LM52:
+ 313 01ca 81E0      		ldi r24,lo8(1)
+ 314 01cc 8093 0000 		sts allow_rewoke,r24
+ 315               	.L30:
+ 316               	.LM53:
+ 317 01d0 8091 0000 		lds r24,allow_rewoke
+ 318 01d4 8823      		tst r24
+ 319 01d6 01F0      		breq .L33
+ 320               	.LM54:
+ 321 01d8 2430      		cpi r18,lo8(4)
+ 322 01da 01F4      		brne .L34
+ 323 01dc 1123      		tst r17
+ 324 01de 01F0      		breq .L33
+ 325               	.LM55:
+ 326 01e0 8091 0000 		lds r24,kb_events
+ 327 01e4 9091 0000 		lds r25,(kb_events)+1
+ 328 01e8 8062      		ori r24,lo8(32)
+ 329 01ea 00C0      		rjmp .L40
+ 330               	.L34:
+ 331               	.LM56:
+ 332 01ec 2230      		cpi r18,lo8(2)
+ 333 01ee 01F4      		brne .L35
+ 334 01f0 1123      		tst r17
+ 335 01f2 01F0      		breq .L33
+ 336               	.LM57:
+ 337 01f4 8091 0000 		lds r24,kb_events
+ 338 01f8 9091 0000 		lds r25,(kb_events)+1
+ 339 01fc 8064      		ori r24,lo8(64)
+ 340 01fe 00C0      		rjmp .L40
+ 341               	.L35:
+ 342               	.LM58:
+ 343 0200 2830      		cpi r18,lo8(8)
+ 344 0202 01F4      		brne .L33
+ 345 0204 1123      		tst r17
+ 346 0206 01F0      		breq .L33
+ 347               	.LM59:
+ 348 0208 8091 0000 		lds r24,kb_events
+ 349 020c 9091 0000 		lds r25,(kb_events)+1
+ 350 0210 8068      		ori r24,lo8(128)
+ 351               	.L40:
+ 352 0212 9093 0000 		sts (kb_events)+1,r25
+ 353 0216 8093 0000 		sts kb_events,r24
+ 354               	.LM60:
+ 355 021a 1092 0000 		sts allow_rewoke,__zero_reg__
+ 356               	.L33:
+ 357               	.LM61:
+ 358 021e 8091 0000 		lds r24,kb_timeout
+ 359 0222 8823      		tst r24
+ 360 0224 01F0      		breq .L36
+ 361               	.LM62:
+ 362 0226 1092 0000 		sts kb_timeout,__zero_reg__
+ 363               	.LM63:
+ 364 022a 6091 B200 		lds r22,178
+ 365 022e 6E5C      		subi r22,lo8(-(50))
+ 366 0230 81E0      		ldi r24,lo8(1)
+ 367 0232 0E94 0000 		call RTC_timer_set
+ 368               	.L36:
+ 369               	.LM64:
+ 370 0236 1093 0000 		sts state_front_prev,r17
+ 371               	.LM65:
+ 372 023a 1092 0000 		sts long_press,__zero_reg__
+ 373               	.LM66:
+ 374 023e 1092 0000 		sts long_quiet,__zero_reg__
+ 375               	.L37:
+ 376               	/* epilogue start */
+ 377               	.LBE3:
+ 378               	.LM67:
+ 379 0242 1F91      		pop r17
+ 380               	.LVL3:
+ 381 0244 0895      		ret
+ 382               	.LFE2:
+ 384               	.global	kb_events
+ 385               		.section	.bss.kb_events,"aw",@nobits
+ 388               	kb_events:
+ 389 0000 0000      		.skip 2,0
+ 390               	.global	kb_timeout
+ 391               		.section	.data.kb_timeout,"aw",@progbits
+ 394               	kb_timeout:
+ 395 0000 01        		.byte	1
+ 396               		.section	.bss.keys,"aw",@nobits
+ 399               	keys:
+ 400 0000 00        		.skip 1,0
+ 401               		.section	.bss.allow_rewoke,"aw",@nobits
+ 404               	allow_rewoke:
+ 405 0000 00        		.skip 1,0
+ 406               		.section	.bss.state_front_prev,"aw",@nobits
+ 409               	state_front_prev:
+ 410 0000 00        		.skip 1,0
+ 411               		.section	.bss.long_press,"aw",@nobits
+ 414               	long_press:
+ 415 0000 00        		.skip 1,0
+ 416               		.section	.bss.long_quiet,"aw",@nobits
+ 419               	long_quiet:
+ 420 0000 00        		.skip 1,0
+ 421               		.comm state_wheel_prev,1,1
+ 470               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 keyboard.c
+C:\Tools\cygwin\tmp/cc8jYUne.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/cc8jYUne.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/cc8jYUne.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/cc8jYUne.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/cc8jYUne.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/cc8jYUne.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/cc8jYUne.s:18     .text:00000000 task_keyboard_long_press_detect
+C:\Tools\cygwin\tmp/cc8jYUne.s:409    .bss.state_front_prev:00000000 state_front_prev
+C:\Tools\cygwin\tmp/cc8jYUne.s:419    .bss.long_quiet:00000000 long_quiet
+C:\Tools\cygwin\tmp/cc8jYUne.s:388    .bss.kb_events:00000000 kb_events
+C:\Tools\cygwin\tmp/cc8jYUne.s:414    .bss.long_press:00000000 long_press
+C:\Tools\cygwin\tmp/cc8jYUne.s:121    .text:000000b8 mont_contact_pooling
+C:\Tools\cygwin\tmp/cc8jYUne.s:182    .text:00000106 __vector_3
+C:\Tools\cygwin\tmp/cc8jYUne.s:399    .bss.keys:00000000 keys
+C:\Tools\cygwin\tmp/cc8jYUne.s:224    .text:00000134 task_keyboard
+                            *COM*:00000001 state_wheel_prev
+C:\Tools\cygwin\tmp/cc8jYUne.s:394    .data.kb_timeout:00000000 kb_timeout
+C:\Tools\cygwin\tmp/cc8jYUne.s:404    .bss.allow_rewoke:00000000 allow_rewoke
+
+UNDEFINED SYMBOLS
+CTL_error
+sumError
+RTC_timer_set
+__do_copy_data
+__do_clear_bss

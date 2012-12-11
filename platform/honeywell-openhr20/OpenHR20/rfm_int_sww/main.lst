@@ -1,0 +1,517 @@
+   1               		.file	"main.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	main
+  18               	main:
+  19               	.LFB6:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LBB6:
+  24               	.LBB7:
+  25               	.LM2:
+  26 0000 90E8      		ldi r25,lo8(-128)
+  27 0002 9093 6100 		sts 97,r25
+  28               	.LM3:
+  29 0006 81E0      		ldi r24,lo8(1)
+  30 0008 8093 6100 		sts 97,r24
+  31               	.LM4:
+  32 000c 90BF      		out 80-32,r25
+  33               	.LM5:
+  34 000e 8FEF      		ldi r24,lo8(-1)
+  35 0010 8093 7E00 		sts 126,r24
+  36               	.LM6:
+  37 0014 8DE0      		ldi r24,lo8(13)
+  38 0016 8093 6400 		sts 100,r24
+  39               	.LM7:
+  40 001a 88E1      		ldi r24,lo8(24)
+  41 001c 83BB      		out 51-32,r24
+  42               	.LM8:
+  43 001e 8EE0      		ldi r24,lo8(14)
+  44 0020 85B9      		out 37-32,r24
+  45               	.LM9:
+  46 0022 81ED      		ldi r24,lo8(-47)
+  47 0024 84B9      		out 36-32,r24
+  48               	.LM10:
+  49 0026 8AE0      		ldi r24,lo8(10)
+  50 0028 8DB9      		out 45-32,r24
+  51               	.LM11:
+  52 002a 87E0      		ldi r24,lo8(7)
+  53 002c 8EB9      		out 46-32,r24
+  54               	.LM12:
+  55 002e 88E0      		ldi r24,lo8(8)
+  56 0030 80BB      		out 48-32,r24
+  57               	.LM13:
+  58 0032 83EF      		ldi r24,lo8(-13)
+  59 0034 81BB      		out 49-32,r24
+  60               	.LM14:
+  61 0036 8EE2      		ldi r24,lo8(46)
+  62 0038 8093 6C00 		sts 108,r24
+  63               	.LM15:
+  64 003c 80EC      		ldi r24,lo8(-64)
+  65 003e 8DBB      		out 61-32,r24
+  66               	.LM16:
+  67 0040 0E94 0000 		call RTC_Init
+  68               	.LM17:
+  69 0044 83B1      		in r24,35-32
+  70 0046 90E0      		ldi r25,lo8(0)
+  71 0048 8E70      		andi r24,lo8(14)
+  72 004a 01F4      		brne .L2
+  73 004c 91E0      		ldi r25,lo8(1)
+  74               	.L2:
+  75 004e 892F      		mov r24,r25
+  76 0050 0E94 0000 		call eeprom_config_init
+  77               	.LM18:
+  78 0054 81E0      		ldi r24,lo8(1)
+  79 0056 0E94 0000 		call MOTOR_updateCalibration
+  80               	.LM19:
+  81 005a 0E94 0000 		call LCD_Init
+  82               	.LM20:
+  83 005e 83B1      		in r24,35-32
+  84 0060 8095      		com r24
+  85 0062 8076      		andi r24,lo8(96)
+  86 0064 8093 0000 		sts state_wheel_prev,r24
+  87               	.LBE7:
+  88               	.LBE6:
+  89               	.LM21:
+  90 0068 1EBA      		out 62-32,__zero_reg__
+  91               	.LM22:
+  92               	/* #APP */
+  93               	 ;  102 "main.c" 1
+  94 006a 7894      		sei
+  95               	 ;  0 "" 2
+  96               	.LM23:
+  97               	/* #NOAPP */
+  98 006c 80E0      		ldi r24,lo8(ee_layout)
+  99 006e 90E0      		ldi r25,hi8(ee_layout)
+ 100 0070 0E94 0000 		call EEPROM_read
+ 101 0074 8431      		cpi r24,lo8(20)
+ 102 0076 01F0      		breq .L3
+ 103               	.LM24:
+ 104 0078 83E1      		ldi r24,lo8(19)
+ 105 007a 63E0      		ldi r22,lo8(3)
+ 106 007c 0E94 0000 		call LCD_PrintStringID
+ 107               	.LM25:
+ 108 0080 0E94 0000 		call task_lcd_update
+ 109               	.L4:
+ 110 0084 00C0      		rjmp .L4
+ 111               	.L3:
+ 112               	.LM26:
+ 113 0086 0E94 0000 		call COM_init
+ 114               	.LM27:
+ 115 008a 26E0      		ldi r18,lo8(6)
+ 116 008c D22E      		mov r13,r18
+ 117               	.LM28:
+ 118 008e 01E0      		ldi r16,lo8(1)
+ 119               	.LM29:
+ 120 0090 97E0      		ldi r25,lo8(7)
+ 121 0092 F92E      		mov r15,r25
+ 122               	.LM30:
+ 123 0094 83E0      		ldi r24,lo8(3)
+ 124 0096 E82E      		mov r14,r24
+ 125               	.LVL0:
+ 126               	.L34:
+ 127               	.LM31:
+ 128               	/* #APP */
+ 129               	 ;  131 "main.c" 1
+ 130 0098 F894      		cli
+ 131               	 ;  0 "" 2
+ 132               	.LM32:
+ 133               	/* #NOAPP */
+ 134 009a 8EB3      		in r24,62-32
+ 135 009c 8823      		tst r24
+ 136 009e 01F4      		brne .L5
+ 137 00a0 8091 B600 		lds r24,182
+ 138 00a4 90E0      		ldi r25,lo8(0)
+ 139 00a6 8770      		andi r24,lo8(7)
+ 140 00a8 9070      		andi r25,hi8(7)
+ 141 00aa 892B      		or r24,r25
+ 142 00ac 01F4      		brne .L5
+ 143               	.LM33:
+ 144 00ae 84B5      		in r24,68-32
+ 145 00b0 90E0      		ldi r25,lo8(0)
+ 146 00b2 8770      		andi r24,lo8(7)
+ 147 00b4 9070      		andi r25,hi8(7)
+ 148 00b6 892B      		or r24,r25
+ 149 00b8 01F4      		brne .L6
+ 150 00ba 8091 C100 		lds r24,193
+ 151 00be 8871      		andi r24,lo8(24)
+ 152 00c0 01F0      		breq .L7
+ 153               	.L6:
+ 154               	.LM34:
+ 155 00c2 03BF      		out 83-32,r16
+ 156 00c4 00C0      		rjmp .L8
+ 157               	.L7:
+ 158               	.LM35:
+ 159 00c6 8091 0000 		lds r24,sleep_with_ADC
+ 160 00ca 8823      		tst r24
+ 161 00cc 01F0      		breq .L9
+ 162               	.LM36:
+ 163 00ce E3BE      		out 83-32,r14
+ 164 00d0 00C0      		rjmp .L8
+ 165               	.L9:
+ 166               	.LM37:
+ 167 00d2 F3BE      		out 83-32,r15
+ 168               	.L8:
+ 169               	.LM38:
+ 170 00d4 8091 0000 		lds r24,sleep_with_ADC
+ 171 00d8 8823      		tst r24
+ 172 00da 01F0      		breq .L10
+ 173               	.LM39:
+ 174 00dc 1092 0000 		sts sleep_with_ADC,__zero_reg__
+ 175               	.LM40:
+ 176 00e0 8091 7A00 		lds r24,122
+ 177 00e4 8064      		ori r24,lo8(64)
+ 178 00e6 8093 7A00 		sts 122,r24
+ 179               	.L10:
+ 180               	.LM41:
+ 181               	/* #APP */
+ 182               	 ;  153 "main.c" 1
+ 183 00ea 7894      		sei
+ 184               	 ;  0 "" 2
+ 185               	.LM42:
+ 186               	 ;  154 "main.c" 1
+ 187 00ec 8895      		sleep
+ 188               	 ;  0 "" 2
+ 189               	.LM43:
+ 190               	 ;  155 "main.c" 1
+ 191 00ee 0000      		nop
+ 192               	 ;  0 "" 2
+ 193               	.LM44:
+ 194               	/* #NOAPP */
+ 195 00f0 D3BE      		out 83-32,r13
+ 196 00f2 00C0      		rjmp .L11
+ 197               	.L5:
+ 198               	.LM45:
+ 199               	/* #APP */
+ 200               	 ;  160 "main.c" 1
+ 201 00f4 7894      		sei
+ 202               	 ;  0 "" 2
+ 203               	/* #NOAPP */
+ 204               	.L11:
+ 205               	.LM46:
+ 206 00f6 F39B      		sbis 62-32,3
+ 207 00f8 00C0      		rjmp .L12
+ 208               	.LM47:
+ 209 00fa F398      		cbi 62-32,3
+ 210               	.LM48:
+ 211 00fc 0E94 0000 		call task_lcd_update
+ 212 0100 00C0      		rjmp .L34
+ 213               	.L12:
+ 214               	.LM49:
+ 215 0102 F29B      		sbis 62-32,2
+ 216 0104 00C0      		rjmp .L14
+ 217               	.LM50:
+ 218 0106 F298      		cbi 62-32,2
+ 219               	.LM51:
+ 220 0108 0E94 0000 		call task_ADC
+ 221 010c 00C0      		rjmp .L34
+ 222               	.L14:
+ 223               	.LM52:
+ 224 010e F69B      		sbis 62-32,6
+ 225 0110 00C0      		rjmp .L15
+ 226               	.LM53:
+ 227 0112 F698      		cbi 62-32,6
+ 228               	.LM54:
+ 229 0114 0E94 0000 		call COM_command_parse
+ 230 0118 00C0      		rjmp .L34
+ 231               	.L15:
+ 232               	.LM55:
+ 233 011a F59B      		sbis 62-32,5
+ 234 011c 00C0      		rjmp .L16
+ 235               	.LM56:
+ 236 011e F598      		cbi 62-32,5
+ 237               	.LM57:
+ 238 0120 0E94 0000 		call MOTOR_timer_stop
+ 239 0124 00C0      		rjmp .L34
+ 240               	.L16:
+ 241               	.LM58:
+ 242 0126 F09B      		sbis 62-32,0
+ 243 0128 00C0      		rjmp .L17
+ 244               	.LM59:
+ 245 012a F098      		cbi 62-32,0
+ 246               	.LM60:
+ 247 012c 0E94 0000 		call task_keyboard
+ 248               	.L17:
+ 249               	.LM61:
+ 250 0130 F19B      		sbis 62-32,1
+ 251 0132 00C0      		rjmp .L18
+ 252               	.LM62:
+ 253 0134 F198      		cbi 62-32,1
+ 254               	.LM63:
+ 255 0136 8091 0000 		lds r24,RTC_timer_done
+ 256 013a 87FF      		sbrs r24,7
+ 257 013c 00C0      		rjmp .L19
+ 258               	.LM64:
+ 259 013e 0E94 0000 		call RTC_AddOneSecond
+ 260               	.LM65:
+ 261 0142 9091 0000 		lds r25,wheel_tick_time
+ 262               	.LVL1:
+ 263 0146 9F5F      		subi r25,lo8(-(1))
+ 264 0148 9093 0000 		sts wheel_tick_time,r25
+ 265               	.LM66:
+ 266 014c 8091 0000 		lds r24,CTL_mode_changed_timer
+ 267 0150 8F5F      		subi r24,lo8(-(1))
+ 268 0152 8093 0000 		sts CTL_mode_changed_timer,r24
+ 269               	.LM67:
+ 270 0156 9230      		cpi r25,lo8(2)
+ 271 0158 01F4      		brne .L20
+ 272 015a 8091 0000 		lds r24,wheel_tick_counter
+ 273 015e 8823      		tst r24
+ 274 0160 01F0      		breq .L20
+ 275               	.LM68:
+ 276 0162 0E94 0000 		call COM_send_wheel_event
+ 277               	.LVL2:
+ 278               	.LM69:
+ 279 0166 1092 0000 		sts wheel_tick_counter,__zero_reg__
+ 280               	.LVL3:
+ 281               	.L20:
+ 282               	.LM70:
+ 283 016a 8091 0000 		lds r24,CTL_mode_changed
+ 284 016e 8823      		tst r24
+ 285 0170 01F0      		breq .L19
+ 286 0172 8091 0000 		lds r24,CTL_mode_changed_timer
+ 287 0176 8730      		cpi r24,lo8(7)
+ 288 0178 01F4      		brne .L19
+ 289               	.LM71:
+ 290 017a 8091 0000 		lds r24,CTL_mode_auto
+ 291 017e 0E94 0000 		call COM_send_mode_event
+ 292               	.LVL4:
+ 293               	.LM72:
+ 294 0182 1092 0000 		sts CTL_mode_changed,__zero_reg__
+ 295               	.LVL5:
+ 296               	.L19:
+ 297               	.LM73:
+ 298 0186 9091 0000 		lds r25,RTC_timer_done
+ 299               	.LVL6:
+ 300 018a 892F      		mov r24,r25
+ 301 018c 8178      		andi r24,lo8(-127)
+ 302 018e 01F4      		brne .+2
+ 303 0190 00C0      		rjmp .L18
+ 304               	.LBB8:
+ 305               	.LM74:
+ 306               	/* #APP */
+ 307               	 ;  234 "main.c" 1
+ 308 0192 F894      		cli
+ 309               	 ;  0 "" 2
+ 310               	.LM75:
+ 311               	/* #NOAPP */
+ 312 0194 9E77      		andi r25,lo8(126)
+ 313 0196 9093 0000 		sts RTC_timer_done,r25
+ 314               	.LM76:
+ 315               	/* #APP */
+ 316               	 ;  236 "main.c" 1
+ 317 019a 7894      		sei
+ 318               	 ;  0 "" 2
+ 319               	.LM77:
+ 320               	/* #NOAPP */
+ 321 019c 10E0      		ldi r17,lo8(0)
+ 322               	.LVL7:
+ 323 019e 8091 0000 		lds r24,RTC+5
+ 324 01a2 8823      		tst r24
+ 325 01a4 01F4      		brne .L21
+ 326 01a6 11E0      		ldi r17,lo8(1)
+ 327               	.L21:
+ 328               	.LM78:
+ 329 01a8 812F      		mov r24,r17
+ 330 01aa 0E94 0000 		call CTL_update
+ 331               	.LM79:
+ 332 01ae 1123      		tst r17
+ 333 01b0 01F0      		breq .L22
+ 334               	.LM80:
+ 335 01b2 8091 0000 		lds r24,CTL_error
+ 336 01b6 90E0      		ldi r25,lo8(0)
+ 337 01b8 0E94 0000 		call COM_send_error_event
+ 338               	.LM81:
+ 339 01bc 8091 0000 		lds r24,CTL_error
+ 340 01c0 807C      		andi r24,lo8(-64)
+ 341 01c2 01F4      		brne .L23
+ 342 01c4 8091 0000 		lds r24,RTC+6
+ 343 01c8 8630      		cpi r24,lo8(6)
+ 344 01ca 01F4      		brne .L23
+ 345 01cc 8091 0000 		lds r24,RTC+3
+ 346 01d0 8A30      		cpi r24,lo8(10)
+ 347 01d2 01F4      		brne .L23
+ 348 01d4 8091 0000 		lds r24,RTC+4
+ 349 01d8 8823      		tst r24
+ 350 01da 01F4      		brne .L23
+ 351               	.LM82:
+ 352 01dc 0E94 0000 		call MOTOR_updateCalibration
+ 353               	.L23:
+ 354               	.LM83:
+ 355 01e0 8091 0000 		lds r24,CTL_mode_window
+ 356 01e4 8823      		tst r24
+ 357 01e6 01F0      		breq .L22
+ 358               	.LM84:
+ 359 01e8 8150      		subi r24,lo8(-(-1))
+ 360               	.LVL8:
+ 361 01ea 8093 0000 		sts CTL_mode_window,r24
+ 362               	.LM85:
+ 363 01ee 8823      		tst r24
+ 364 01f0 01F4      		brne .L22
+ 365               	.LM86:
+ 366 01f2 1092 0000 		sts PID_force_update,__zero_reg__
+ 367               	.L22:
+ 368               	.LM87:
+ 369 01f6 8091 0000 		lds r24,ring_average
+ 370 01fa 9091 0000 		lds r25,(ring_average)+1
+ 371               	.LVL9:
+ 372 01fe 1816      		cp __zero_reg__,r24
+ 373 0200 1906      		cpc __zero_reg__,r25
+ 374 0202 04F4      		brge .L24
+ 375               	.LM88:
+ 376 0204 0E94 0000 		call mont_contact_pooling
+ 377 0208 0E94 0000 		call MOTOR_updateCalibration
+ 378               	.LM89:
+ 379 020c 8091 0000 		lds r24,valveHistory
+ 380 0210 0E94 0000 		call MOTOR_Goto
+ 381               	.L24:
+ 382               	.LM90:
+ 383 0214 0E94 0000 		call task_keyboard_long_press_detect
+ 384               	.LM91:
+ 385 0218 8091 0000 		lds r24,MOTOR_Dir
+ 386 021c 8823      		tst r24
+ 387 021e 01F0      		breq .L25
+ 388 0220 8091 0000 		lds r24,config+37
+ 389 0224 8823      		tst r24
+ 390 0226 01F0      		breq .L26
+ 391               	.L25:
+ 392               	.LM92:
+ 393 0228 0E94 0000 		call start_task_ADC
+ 394               	.L26:
+ 395               	.LM93:
+ 396 022c 8091 0000 		lds r24,menu_auto_update_timeout
+ 397 0230 87FD      		sbrc r24,7
+ 398 0232 00C0      		rjmp .L27
+ 399               	.LM94:
+ 400 0234 8150      		subi r24,lo8(-(-1))
+ 401 0236 8093 0000 		sts menu_auto_update_timeout,r24
+ 402               	.L27:
+ 403               	.LM95:
+ 404 023a 80E0      		ldi r24,lo8(0)
+ 405 023c 0E94 0000 		call menu_view
+ 406               	.LM96:
+ 407 0240 8091 E400 		lds r24,228
+ 408 0244 8860      		ori r24,lo8(8)
+ 409 0246 8093 E400 		sts 228,r24
+ 410 024a 0093 0000 		sts LCD_force_update,r16
+ 411               	.LVL10:
+ 412               	.L18:
+ 413               	.LBE8:
+ 414               	.LM97:
+ 415 024e 8091 0000 		lds r24,kb_events
+ 416 0252 9091 0000 		lds r25,(kb_events)+1
+ 417 0256 892B      		or r24,r25
+ 418 0258 01F4      		brne .L28
+ 419 025a 8091 0000 		lds r24,menu_auto_update_timeout
+ 420 025e 8823      		tst r24
+ 421 0260 01F4      		brne .L29
+ 422               	.L28:
+ 423               	.LBB9:
+ 424               	.LM98:
+ 425 0262 80E0      		ldi r24,lo8(0)
+ 426 0264 0E94 0000 		call menu_controller
+ 427 0268 182F      		mov r17,r24
+ 428               	.LVL11:
+ 429               	.LM99:
+ 430 026a 8823      		tst r24
+ 431 026c 01F0      		breq .L30
+ 432               	.LVL12:
+ 433               	.LM100:
+ 434 026e 81E0      		ldi r24,lo8(1)
+ 435               	.LVL13:
+ 436 0270 0E94 0000 		call menu_controller
+ 437               	.LVL14:
+ 438               	.L30:
+ 439               	.LM101:
+ 440 0274 812F      		mov r24,r17
+ 441 0276 0E94 0000 		call menu_view
+ 442               	.LM102:
+ 443 027a 8091 E400 		lds r24,228
+ 444 027e 8860      		ori r24,lo8(8)
+ 445 0280 8093 E400 		sts 228,r24
+ 446 0284 0093 0000 		sts LCD_force_update,r16
+ 447 0288 00C0      		rjmp .L34
+ 448               	.LVL15:
+ 449               	.L29:
+ 450               	.LBE9:
+ 451               	.LM103:
+ 452 028a F49B      		sbis 62-32,4
+ 453 028c 00C0      		rjmp .L34
+ 454               	.LM104:
+ 455 028e F498      		cbi 62-32,4
+ 456               	.LM105:
+ 457 0290 0E94 0000 		call mont_contact_pooling
+ 458 0294 0E94 0000 		call MOTOR_updateCalibration
+ 459               	.LM106:
+ 460 0298 0E94 0000 		call MOTOR_timer_pulse
+ 461 029c 00C0      		rjmp .L34
+ 462               	.LFE6:
+ 464               	.global	__fuse
+ 465               		.section	.fuse,"aw",@progbits
+ 468               	__fuse:
+ 469 0000 62        		.byte	98
+ 470 0001 91        		.byte	-111
+ 471 0002 FD        		.byte	-3
+ 496               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:18     .text:00000000 main
+C:\Tools\cygwin\tmp/ccwZ1XXd.s:468    .fuse:00000000 __fuse
+
+UNDEFINED SYMBOLS
+RTC_Init
+eeprom_config_init
+MOTOR_updateCalibration
+LCD_Init
+state_wheel_prev
+ee_layout
+EEPROM_read
+LCD_PrintStringID
+task_lcd_update
+COM_init
+sleep_with_ADC
+task_ADC
+COM_command_parse
+MOTOR_timer_stop
+task_keyboard
+RTC_timer_done
+RTC_AddOneSecond
+wheel_tick_time
+CTL_mode_changed_timer
+wheel_tick_counter
+COM_send_wheel_event
+CTL_mode_changed
+CTL_mode_auto
+COM_send_mode_event
+RTC
+CTL_update
+CTL_error
+COM_send_error_event
+CTL_mode_window
+PID_force_update
+ring_average
+mont_contact_pooling
+valveHistory
+MOTOR_Goto
+task_keyboard_long_press_detect
+MOTOR_Dir
+config
+start_task_ADC
+menu_auto_update_timeout
+menu_view
+LCD_force_update
+kb_events
+menu_controller
+MOTOR_timer_pulse

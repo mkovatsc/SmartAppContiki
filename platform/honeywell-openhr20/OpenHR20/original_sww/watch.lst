@@ -1,0 +1,100 @@
+   1               		.file	"watch.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	watch
+  18               	watch:
+  19               	.LFB5:
+  20               	.LM1:
+  21               	.LVL0:
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24               	.LM2:
+  25 0000 8B30      		cpi r24,lo8(11)
+  26 0002 00F0      		brlo .L2
+  27 0004 25E8      		ldi r18,lo8(133)
+  28 0006 30E0      		ldi r19,hi8(133)
+  29 0008 00C0      		rjmp .L3
+  30               	.L2:
+  31               	.LBB2:
+  32               	.LM3:
+  33 000a E82F      		mov r30,r24
+  34               	.LVL1:
+  35 000c F0E0      		ldi r31,lo8(0)
+  36               	.LVL2:
+  37 000e EE0F      		lsl r30
+  38 0010 FF1F      		rol r31
+  39               	.LVL3:
+  40 0012 E050      		subi r30,lo8(-(watch_map))
+  41 0014 F040      		sbci r31,hi8(-(watch_map))
+  42               	/* #APP */
+  43               	 ;  80 "watch.c" 1
+  44 0016 A591      		lpm r26, Z+
+  45 0018 B491      		lpm r27, Z
+  46               		
+  47               	 ;  0 "" 2
+  48               	.LVL4:
+  49               	/* #NOAPP */
+  50               	.LBE2:
+  51               	.LM4:
+  52 001a B7FF      		sbrs r27,7
+  53 001c 00C0      		rjmp .L4
+  54               	.LM5:
+  55 001e BF77      		andi r27,hi8(32767)
+  56 0020 2D91      		ld r18,X+
+  57 0022 3C91      		ld r19,X
+  58 0024 00C0      		rjmp .L3
+  59               	.L4:
+  60               	.LM6:
+  61 0026 8C91      		ld r24,X
+  62 0028 282F      		mov r18,r24
+  63 002a 30E0      		ldi r19,lo8(0)
+  64               	.LVL5:
+  65               	.L3:
+  66               	.LM7:
+  67 002c C901      		movw r24,r18
+  68               	.LVL6:
+  69               	/* epilogue start */
+  70 002e 0895      		ret
+  71               	.LFE5:
+  73               		.section	.progmem.data,"a",@progbits
+  76               	watch_map:
+  77 0000 0000      		.word	sumError-32768
+  78 0002 0000      		.word	sumError-32766
+  79 0004 0000      		.word	CTL_interatorCredit
+  80 0006 0000      		.word	CTL_creditExpiration
+  81 0008 0000      		.word	CTL_mode_window
+  82 000a 0000      		.word	motor_diag-32768
+  83 000c 0000      		.word	MOTOR_PosMax-32768
+  84 000e 0000      		.word	MOTOR_PosAct-32768
+  85 0010 0000      		.word	MOTOR_PosOvershoot
+  86 0012 0000      		.word	MOTOR_counter-32768
+  87 0014 0000      		.word	MOTOR_counter-32766
+  88               		.comm MOTOR_PosMax,2,1
+ 113               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 watch.c
+C:\Tools\cygwin\tmp/ccCOQnYP.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccCOQnYP.s:18     .text:00000000 watch
+C:\Tools\cygwin\tmp/ccCOQnYP.s:76     .progmem.data:00000000 watch_map
+                            *COM*:00000002 MOTOR_PosMax
+
+UNDEFINED SYMBOLS
+sumError
+CTL_interatorCredit
+CTL_creditExpiration
+CTL_mode_window
+motor_diag
+MOTOR_PosAct
+MOTOR_PosOvershoot
+MOTOR_counter
+__do_clear_bss

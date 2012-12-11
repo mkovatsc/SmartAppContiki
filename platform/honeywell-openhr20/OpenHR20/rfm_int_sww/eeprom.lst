@@ -1,0 +1,734 @@
+   1               		.file	"eeprom.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	EEPROM_read
+  18               	EEPROM_read:
+  19               	.LFB2:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LVL0:
+  24               	.L2:
+  25               	.LM2:
+  26 0000 F999      		sbic 63-32,1
+  27 0002 00C0      		rjmp .L2
+  28               	.LM3:
+  29 0004 92BD      		out (65)+1-32,r25
+  30 0006 81BD      		out 65-32,r24
+  31               	.LM4:
+  32 0008 F89A      		sbi 63-32,0
+  33               	.LM5:
+  34 000a 80B5      		in r24,64-32
+  35               	.LVL1:
+  36               	/* epilogue start */
+  37               	.LM6:
+  38 000c 0895      		ret
+  39               	.LFE2:
+  41               	.global	config_read
+  43               	config_read:
+  44               	.LFB3:
+  45               	.LM7:
+  46               	/* prologue: function */
+  47               	/* frame size = 0 */
+  48               	.LVL2:
+  49               	.L6:
+  50               	.LM8:
+  51 000e F999      		sbic 63-32,1
+  52 0010 00C0      		rjmp .L6
+  53               	.LM9:
+  54 0012 90E0      		ldi r25,lo8(0)
+  55               	.LVL3:
+  56 0014 880F      		lsl r24
+  57 0016 991F      		rol r25
+  58 0018 880F      		lsl r24
+  59 001a 991F      		rol r25
+  60               	.LVL4:
+  61 001c 860F      		add r24,r22
+  62 001e 911D      		adc r25,__zero_reg__
+  63               	.LVL5:
+  64 0020 8050      		subi r24,lo8(-(ee_config))
+  65 0022 9040      		sbci r25,hi8(-(ee_config))
+  66               	.LVL6:
+  67 0024 92BD      		out (65)+1-32,r25
+  68 0026 81BD      		out 65-32,r24
+  69               	.LM10:
+  70 0028 F89A      		sbi 63-32,0
+  71               	.LM11:
+  72 002a 80B5      		in r24,64-32
+  73               	.LVL7:
+  74               	/* epilogue start */
+  75               	.LM12:
+  76 002c 0895      		ret
+  77               	.LFE3:
+  80               	EEPROM_write:
+  81               	.LFB4:
+  82               	.LM13:
+  83               	.LVL8:
+  84               	/* prologue: function */
+  85               	/* frame size = 0 */
+  86 002e 9C01      		movw r18,r24
+  87               	.LM14:
+  88 0030 80E0      		ldi r24,hi8(ee_config)
+  89 0032 2030      		cpi r18,lo8(ee_config)
+  90 0034 3807      		cpc r19,r24
+  91               	.LVL9:
+  92 0036 00F0      		brlo .L13
+  93 0038 C901      		movw r24,r18
+  94 003a 8370      		andi r24,lo8(3)
+  95 003c 9070      		andi r25,hi8(3)
+  96 003e 892B      		or r24,r25
+  97 0040 01F4      		brne .L12
+  98               	.L13:
+  99               	.LM15:
+ 100 0042 F999      		sbic 63-32,1
+ 101 0044 00C0      		rjmp .L13
+ 102               	.LM16:
+ 103 0046 32BD      		out (65)+1-32,r19
+ 104 0048 21BD      		out 65-32,r18
+ 105               	.LM17:
+ 106 004a 60BD      		out 64-32,r22
+ 107               	.LM18:
+ 108               	/* #APP */
+ 109               	 ;  107 "../common/eeprom.c" 1
+ 110 004c F894      		cli
+ 111               	 ;  0 "" 2
+ 112               	.LM19:
+ 113               	/* #NOAPP */
+ 114 004e FA9A      		sbi 63-32,2
+ 115               	.LM20:
+ 116 0050 F99A      		sbi 63-32,1
+ 117               	.LM21:
+ 118               	/* #APP */
+ 119               	 ;  110 "../common/eeprom.c" 1
+ 120 0052 7894      		sei
+ 121               	 ;  0 "" 2
+ 122               	/* #NOAPP */
+ 123               	.L12:
+ 124 0054 0895      		ret
+ 125               	.LFE4:
+ 127               	.global	eeprom_config_save
+ 129               	eeprom_config_save:
+ 130               	.LFB6:
+ 131               	.LM22:
+ 132               	.LVL10:
+ 133 0056 EF92      		push r14
+ 134 0058 FF92      		push r15
+ 135 005a 0F93      		push r16
+ 136 005c 1F93      		push r17
+ 137 005e CF93      		push r28
+ 138 0060 DF93      		push r29
+ 139               	/* prologue: function */
+ 140               	/* frame size = 0 */
+ 141 0062 082F      		mov r16,r24
+ 142               	.LM23:
+ 143 0064 8B32      		cpi r24,lo8(43)
+ 144 0066 00F4      		brsh .L19
+ 145               	.LM24:
+ 146 0068 E82E      		mov r14,r24
+ 147 006a FF24      		clr r15
+ 148 006c E701      		movw r28,r14
+ 149 006e C050      		subi r28,lo8(-(config))
+ 150 0070 D040      		sbci r29,hi8(-(config))
+ 151 0072 1881      		ld r17,Y
+ 152 0074 60E0      		ldi r22,lo8(0)
+ 153 0076 0E94 0000 		call config_read
+ 154               	.LVL11:
+ 155 007a 1817      		cp r17,r24
+ 156 007c 01F0      		breq .L19
+ 157               	.LM25:
+ 158 007e 1881      		ld r17,Y
+ 159 0080 802F      		mov r24,r16
+ 160 0082 62E0      		ldi r22,lo8(2)
+ 161 0084 0E94 0000 		call config_read
+ 162 0088 1817      		cp r17,r24
+ 163 008a 00F0      		brlo .L17
+ 164 008c 1881      		ld r17,Y
+ 165 008e 802F      		mov r24,r16
+ 166 0090 63E0      		ldi r22,lo8(3)
+ 167 0092 0E94 0000 		call config_read
+ 168 0096 8117      		cp r24,r17
+ 169 0098 00F4      		brsh .L18
+ 170               	.L17:
+ 171               	.LM26:
+ 172 009a 802F      		mov r24,r16
+ 173 009c 61E0      		ldi r22,lo8(1)
+ 174 009e 0E94 0000 		call config_read
+ 175 00a2 8883      		st Y,r24
+ 176               	.L18:
+ 177               	.LM27:
+ 178 00a4 EE0C      		lsl r14
+ 179 00a6 FF1C      		rol r15
+ 180 00a8 EE0C      		lsl r14
+ 181 00aa FF1C      		rol r15
+ 182 00ac C701      		movw r24,r14
+ 183 00ae 8050      		subi r24,lo8(-(ee_config))
+ 184 00b0 9040      		sbci r25,hi8(-(ee_config))
+ 185 00b2 6881      		ld r22,Y
+ 186 00b4 0E94 0000 		call EEPROM_write
+ 187               	.LVL12:
+ 188               	.L19:
+ 189               	/* epilogue start */
+ 190               	.LM28:
+ 191 00b8 CDB7      		in r28,__SP_L__
+ 192 00ba DEB7      		in r29,__SP_H__
+ 193 00bc E6E0      		ldi r30, lo8(6)
+ 194 00be 0C94 0000 		jmp __epilogue_restores__ + ((18 - 6) * 2)
+ 195               	.LFE6:
+ 197               	.global	eeprom_config_init
+ 199               	eeprom_config_init:
+ 200               	.LFB5:
+ 201               	.LM29:
+ 202               	.LVL13:
+ 203 00c2 FF92      		push r15
+ 204 00c4 0F93      		push r16
+ 205 00c6 1F93      		push r17
+ 206 00c8 CF93      		push r28
+ 207 00ca DF93      		push r29
+ 208               	/* prologue: function */
+ 209               	/* frame size = 0 */
+ 210 00cc F82E      		mov r15,r24
+ 211               	.LM30:
+ 212 00ce C0E0      		ldi r28,lo8(config)
+ 213 00d0 D0E0      		ldi r29,hi8(config)
+ 214               	.LVL14:
+ 215 00d2 00E0      		ldi r16,lo8(0)
+ 216               	.LVL15:
+ 217               	.L25:
+ 218               	.LM31:
+ 219 00d4 FF20      		tst r15
+ 220 00d6 01F4      		brne .L23
+ 221               	.L21:
+ 222               	.LM32:
+ 223 00d8 802F      		mov r24,r16
+ 224 00da 60E0      		ldi r22,lo8(0)
+ 225 00dc 0E94 0000 		call config_read
+ 226 00e0 182F      		mov r17,r24
+ 227 00e2 8883      		st Y,r24
+ 228               	.LM33:
+ 229 00e4 802F      		mov r24,r16
+ 230 00e6 62E0      		ldi r22,lo8(2)
+ 231 00e8 0E94 0000 		call config_read
+ 232 00ec 1817      		cp r17,r24
+ 233 00ee 00F0      		brlo .L23
+ 234 00f0 1881      		ld r17,Y
+ 235 00f2 802F      		mov r24,r16
+ 236 00f4 63E0      		ldi r22,lo8(3)
+ 237 00f6 0E94 0000 		call config_read
+ 238 00fa 8117      		cp r24,r17
+ 239 00fc 00F4      		brsh .L22
+ 240               	.LVL16:
+ 241               	.L23:
+ 242               	.LM34:
+ 243 00fe 802F      		mov r24,r16
+ 244 0100 61E0      		ldi r22,lo8(1)
+ 245 0102 0E94 0000 		call config_read
+ 246 0106 8883      		st Y,r24
+ 247               	.L22:
+ 248               	.LM35:
+ 249 0108 802F      		mov r24,r16
+ 250 010a 0E94 0000 		call eeprom_config_save
+ 251 010e 0F5F      		subi r16,lo8(-(1))
+ 252               	.LM36:
+ 253 0110 0B32      		cpi r16,lo8(43)
+ 254 0112 01F0      		breq .L26
+ 255               	.LM37:
+ 256 0114 2196      		adiw r28,1
+ 257 0116 00C0      		rjmp .L25
+ 258               	.L26:
+ 259               	/* epilogue start */
+ 260               	.LM38:
+ 261 0118 CDB7      		in r28,__SP_L__
+ 262 011a DEB7      		in r29,__SP_H__
+ 263               	.LVL17:
+ 264 011c E5E0      		ldi r30, lo8(5)
+ 265 011e 0C94 0000 		jmp __epilogue_restores__ + ((18 - 5) * 2)
+ 266               	.LFE5:
+ 268               	.global	eeprom_timers_read_raw
+ 270               	eeprom_timers_read_raw:
+ 271               	.LFB7:
+ 272               	.LM39:
+ 273               	.LVL18:
+ 274               	/* prologue: function */
+ 275               	/* frame size = 0 */
+ 276 0122 982F      		mov r25,r24
+ 277               	.LM40:
+ 278 0124 8091 0000 		lds r24,timmers_patch_offset
+ 279               	.LVL19:
+ 280 0128 9817      		cp r25,r24
+ 281 012a 01F0      		breq .L28
+ 282               	.LBB7:
+ 283               	.LM41:
+ 284 012c 292F      		mov r18,r25
+ 285               	.LVL20:
+ 286 012e 30E0      		ldi r19,lo8(0)
+ 287               	.LVL21:
+ 288 0130 220F      		lsl r18
+ 289 0132 331F      		rol r19
+ 290               	.LVL22:
+ 291 0134 2050      		subi r18,lo8(-(ee_timers))
+ 292 0136 3040      		sbci r19,hi8(-(ee_timers))
+ 293               	.L29:
+ 294               	.LBB8:
+ 295               	.LBB9:
+ 296               	.LM42:
+ 297 0138 F999      		sbic 63-32,1
+ 298 013a 00C0      		rjmp .L29
+ 299               	.LBE9:
+ 300               	.LBE8:
+ 301               	.LM43:
+ 302 013c C901      		movw r24,r18
+ 303 013e 0196      		adiw r24,1
+ 304               	.LBB11:
+ 305               	.LBB10:
+ 306               	.LM44:
+ 307 0140 92BD      		out (65)+1-32,r25
+ 308 0142 81BD      		out 65-32,r24
+ 309               	.LM45:
+ 310 0144 F89A      		sbi 63-32,0
+ 311               	.LM46:
+ 312 0146 40B5      		in r20,64-32
+ 313               	.L30:
+ 314               	.LBE10:
+ 315               	.LBE11:
+ 316               	.LBB12:
+ 317               	.LBB13:
+ 318               	.LM47:
+ 319 0148 F999      		sbic 63-32,1
+ 320 014a 00C0      		rjmp .L30
+ 321               	.LM48:
+ 322 014c 32BD      		out (65)+1-32,r19
+ 323 014e 21BD      		out 65-32,r18
+ 324               	.LM49:
+ 325 0150 F89A      		sbi 63-32,0
+ 326               	.LM50:
+ 327 0152 20B5      		in r18,64-32
+ 328               	.LVL23:
+ 329               	.LBE13:
+ 330               	.LBE12:
+ 331               	.LM51:
+ 332 0154 942F      		mov r25,r20
+ 333               	.LVL24:
+ 334 0156 80E0      		ldi r24,lo8(0)
+ 335 0158 AC01      		movw r20,r24
+ 336 015a 420F      		add r20,r18
+ 337 015c 511D      		adc r21,__zero_reg__
+ 338 015e 9A01      		movw r18,r20
+ 339 0160 00C0      		rjmp .L31
+ 340               	.LVL25:
+ 341               	.L28:
+ 342               	.LBE7:
+ 343               	.LM52:
+ 344 0162 2091 0000 		lds r18,timmers_patch_data
+ 345 0166 3091 0000 		lds r19,(timmers_patch_data)+1
+ 346               	.LVL26:
+ 347               	.L31:
+ 348               	.LM53:
+ 349 016a C901      		movw r24,r18
+ 350               	/* epilogue start */
+ 351 016c 0895      		ret
+ 352               	.LFE7:
+ 354               	.global	eeprom_timers_write_raw
+ 356               	eeprom_timers_write_raw:
+ 357               	.LFB8:
+ 358               	.LM54:
+ 359               	.LVL27:
+ 360 016e FF92      		push r15
+ 361 0170 0F93      		push r16
+ 362 0172 1F93      		push r17
+ 363               	/* prologue: function */
+ 364               	/* frame size = 0 */
+ 365 0174 F72E      		mov r15,r23
+ 366               	.LVL28:
+ 367               	.LM55:
+ 368 0176 8034      		cpi r24,lo8(64)
+ 369 0178 00F4      		brsh .L37
+ 370               	.LVL29:
+ 371               	.LM56:
+ 372 017a 082F      		mov r16,r24
+ 373               	.LVL30:
+ 374 017c 10E0      		ldi r17,lo8(0)
+ 375               	.LVL31:
+ 376 017e 000F      		lsl r16
+ 377 0180 111F      		rol r17
+ 378               	.LVL32:
+ 379 0182 0050      		subi r16,lo8(-(ee_timers))
+ 380 0184 1040      		sbci r17,hi8(-(ee_timers))
+ 381               	.LM57:
+ 382 0186 C801      		movw r24,r16
+ 383               	.LVL33:
+ 384 0188 0E94 0000 		call EEPROM_write
+ 385               	.LVL34:
+ 386               	.LM58:
+ 387 018c C801      		movw r24,r16
+ 388 018e 0196      		adiw r24,1
+ 389 0190 6F2D      		mov r22,r15
+ 390 0192 0E94 0000 		call EEPROM_write
+ 391               	.LVL35:
+ 392               	.L37:
+ 393               	/* epilogue start */
+ 394               	.LM59:
+ 395 0196 1F91      		pop r17
+ 396               	.LVL36:
+ 397 0198 0F91      		pop r16
+ 398               	.LVL37:
+ 399 019a FF90      		pop r15
+ 400               	.LVL38:
+ 401 019c 0895      		ret
+ 402               	.LFE8:
+ 404               	.global	ee_reserved1
+ 405               		.section	.eeprom,"aw",@progbits
+ 408               	ee_reserved1:
+ 409 0000 00        		.skip 1,0
+ 410               	.global	ee_reserved2
+ 413               	ee_reserved2:
+ 414 0001 00        		.skip 1,0
+ 415               	.global	ee_reserved3
+ 418               	ee_reserved3:
+ 419 0002 00        		.skip 1,0
+ 420               	.global	ee_layout
+ 423               	ee_layout:
+ 424 0003 14        		.byte	20
+ 425               	.global	ee_timers
+ 428               	ee_timers:
+ 429 0004 A421      		.word	8612
+ 430 0006 1C12      		.word	4636
+ 431 0008 C023      		.word	9152
+ 432 000a EC14      		.word	5356
+ 433 000c FF2F      		.word	12287
+ 434 000e FF1F      		.word	8191
+ 435 0010 FF2F      		.word	12287
+ 436 0012 FF1F      		.word	8191
+ 437 0014 A421      		.word	8612
+ 438 0016 1C12      		.word	4636
+ 439 0018 C023      		.word	9152
+ 440 001a EC14      		.word	5356
+ 441 001c FF2F      		.word	12287
+ 442 001e FF1F      		.word	8191
+ 443 0020 FF2F      		.word	12287
+ 444 0022 FF1F      		.word	8191
+ 445 0024 A421      		.word	8612
+ 446 0026 1C12      		.word	4636
+ 447 0028 C023      		.word	9152
+ 448 002a EC14      		.word	5356
+ 449 002c FF2F      		.word	12287
+ 450 002e FF1F      		.word	8191
+ 451 0030 FF2F      		.word	12287
+ 452 0032 FF1F      		.word	8191
+ 453 0034 A421      		.word	8612
+ 454 0036 1C12      		.word	4636
+ 455 0038 C023      		.word	9152
+ 456 003a EC14      		.word	5356
+ 457 003c FF2F      		.word	12287
+ 458 003e FF1F      		.word	8191
+ 459 0040 FF2F      		.word	12287
+ 460 0042 FF1F      		.word	8191
+ 461 0044 A421      		.word	8612
+ 462 0046 1C12      		.word	4636
+ 463 0048 C023      		.word	9152
+ 464 004a EC14      		.word	5356
+ 465 004c FF2F      		.word	12287
+ 466 004e FF1F      		.word	8191
+ 467 0050 FF2F      		.word	12287
+ 468 0052 FF1F      		.word	8191
+ 469 0054 A421      		.word	8612
+ 470 0056 1C12      		.word	4636
+ 471 0058 C023      		.word	9152
+ 472 005a EC14      		.word	5356
+ 473 005c FF2F      		.word	12287
+ 474 005e FF1F      		.word	8191
+ 475 0060 FF2F      		.word	12287
+ 476 0062 FF1F      		.word	8191
+ 477 0064 A421      		.word	8612
+ 478 0066 1C12      		.word	4636
+ 479 0068 C023      		.word	9152
+ 480 006a EC14      		.word	5356
+ 481 006c FF2F      		.word	12287
+ 482 006e FF1F      		.word	8191
+ 483 0070 FF2F      		.word	12287
+ 484 0072 FF1F      		.word	8191
+ 485 0074 A421      		.word	8612
+ 486 0076 1C12      		.word	4636
+ 487 0078 C023      		.word	9152
+ 488 007a EC14      		.word	5356
+ 489 007c FF2F      		.word	12287
+ 490 007e FF1F      		.word	8191
+ 491 0080 FF2F      		.word	12287
+ 492 0082 FF1F      		.word	8191
+ 493               	.global	ee_reserved2_60
+ 496               	ee_reserved2_60:
+ 497 0084 FF        		.byte	-1
+ 498 0085 FF        		.byte	-1
+ 499 0086 FF        		.byte	-1
+ 500 0087 FF        		.byte	-1
+ 501 0088 FF        		.byte	-1
+ 502 0089 FF        		.byte	-1
+ 503 008a FF        		.byte	-1
+ 504 008b FF        		.byte	-1
+ 505 008c FF        		.byte	-1
+ 506 008d FF        		.byte	-1
+ 507 008e FF        		.byte	-1
+ 508 008f FF        		.byte	-1
+ 509 0090 FF        		.byte	-1
+ 510 0091 FF        		.byte	-1
+ 511 0092 FF        		.byte	-1
+ 512 0093 FF        		.byte	-1
+ 513 0094 FF        		.byte	-1
+ 514 0095 FF        		.byte	-1
+ 515 0096 FF        		.byte	-1
+ 516 0097 FF        		.byte	-1
+ 517 0098 FF        		.byte	-1
+ 518 0099 FF        		.byte	-1
+ 519 009a FF        		.byte	-1
+ 520 009b FF        		.byte	-1
+ 521 009c FF        		.byte	-1
+ 522 009d FF        		.byte	-1
+ 523 009e FF        		.byte	-1
+ 524 009f FF        		.byte	-1
+ 525 00a0 FF        		.byte	-1
+ 526 00a1 FF        		.byte	-1
+ 527 00a2 FF        		.byte	-1
+ 528 00a3 FF        		.byte	-1
+ 529 00a4 FF        		.byte	-1
+ 530 00a5 FF        		.byte	-1
+ 531 00a6 FF        		.byte	-1
+ 532 00a7 FF        		.byte	-1
+ 533 00a8 FF        		.byte	-1
+ 534 00a9 FF        		.byte	-1
+ 535 00aa FF        		.byte	-1
+ 536 00ab FF        		.byte	-1
+ 537 00ac FF        		.byte	-1
+ 538 00ad FF        		.byte	-1
+ 539 00ae FF        		.byte	-1
+ 540 00af FF        		.byte	-1
+ 541 00b0 FF        		.byte	-1
+ 542 00b1 FF        		.byte	-1
+ 543 00b2 FF        		.byte	-1
+ 544 00b3 FF        		.byte	-1
+ 545 00b4 FF        		.byte	-1
+ 546 00b5 FF        		.byte	-1
+ 547 00b6 FF        		.byte	-1
+ 548 00b7 FF        		.byte	-1
+ 549 00b8 FF        		.byte	-1
+ 550 00b9 FF        		.byte	-1
+ 551 00ba FF        		.byte	-1
+ 552 00bb FF        		.byte	-1
+ 553 00bc FF        		.byte	-1
+ 554 00bd FF        		.byte	-1
+ 555 00be FF        		.byte	-1
+ 556 00bf FF        		.byte	-1
+ 557               	.global	ee_config
+ 560               	ee_config:
+ 561 00c0 0E        		.byte	14
+ 562 00c1 0E        		.byte	14
+ 563 00c2 00        		.byte	0
+ 564 00c3 0F        		.byte	15
+ 565 00c4 0A        		.byte	10
+ 566 00c5 0A        		.byte	10
+ 567 00c6 0A        		.byte	10
+ 568 00c7 3C        		.byte	60
+ 569 00c8 22        		.byte	34
+ 570 00c9 22        		.byte	34
+ 571 00ca 0A        		.byte	10
+ 572 00cb 3C        		.byte	60
+ 573 00cc 2A        		.byte	42
+ 574 00cd 2A        		.byte	42
+ 575 00ce 0A        		.byte	10
+ 576 00cf 3C        		.byte	60
+ 577 00d0 30        		.byte	48
+ 578 00d1 30        		.byte	48
+ 579 00d2 0A        		.byte	10
+ 580 00d3 3C        		.byte	60
+ 581 00d4 21        		.byte	33
+ 582 00d5 21        		.byte	33
+ 583 00d6 00        		.byte	0
+ 584 00d7 FF        		.byte	-1
+ 585 00d8 08        		.byte	8
+ 586 00d9 08        		.byte	8
+ 587 00da 00        		.byte	0
+ 588 00db FF        		.byte	-1
+ 589 00dc 20        		.byte	32
+ 590 00dd 20        		.byte	32
+ 591 00de 00        		.byte	0
+ 592 00df FF        		.byte	-1
+ 593 00e0 28        		.byte	40
+ 594 00e1 28        		.byte	40
+ 595 00e2 00        		.byte	0
+ 596 00e3 7F        		.byte	127
+ 597 00e4 1E        		.byte	30
+ 598 00e5 1E        		.byte	30
+ 599 00e6 00        		.byte	0
+ 600 00e7 FF        		.byte	-1
+ 601 00e8 30        		.byte	48
+ 602 00e9 30        		.byte	48
+ 603 00ea 04        		.byte	4
+ 604 00eb FF        		.byte	-1
+ 605 00ec 00        		.byte	0
+ 606 00ed 00        		.byte	0
+ 607 00ee 00        		.byte	0
+ 608 00ef 64        		.byte	100
+ 609 00f0 32        		.byte	50
+ 610 00f1 32        		.byte	50
+ 611 00f2 00        		.byte	0
+ 612 00f3 64        		.byte	100
+ 613 00f4 64        		.byte	100
+ 614 00f5 64        		.byte	100
+ 615 00f6 00        		.byte	0
+ 616 00f7 64        		.byte	100
+ 617 00f8 40        		.byte	64
+ 618 00f9 40        		.byte	64
+ 619 00fa 00        		.byte	0
+ 620 00fb 7F        		.byte	127
+ 621 00fc 20        		.byte	32
+ 622 00fd 20        		.byte	32
+ 623 00fe 20        		.byte	32
+ 624 00ff FF        		.byte	-1
+ 625 0100 FA        		.byte	-6
+ 626 0101 FA        		.byte	-6
+ 627 0102 32        		.byte	50
+ 628 0103 FF        		.byte	-1
+ 629 0104 64        		.byte	100
+ 630 0105 64        		.byte	100
+ 631 0106 01        		.byte	1
+ 632 0107 FF        		.byte	-1
+ 633 0108 19        		.byte	25
+ 634 0109 19        		.byte	25
+ 635 010a 01        		.byte	1
+ 636 010b FF        		.byte	-1
+ 637 010c 4E        		.byte	78
+ 638 010d 4E        		.byte	78
+ 639 010e 05        		.byte	5
+ 640 010f FF        		.byte	-1
+ 641 0110 82        		.byte	-126
+ 642 0111 82        		.byte	-126
+ 643 0112 6E        		.byte	110
+ 644 0113 FA        		.byte	-6
+ 645 0114 96        		.byte	-106
+ 646 0115 96        		.byte	-106
+ 647 0116 6E        		.byte	110
+ 648 0117 FA        		.byte	-6
+ 649 0118 B8        		.byte	-72
+ 650 0119 B8        		.byte	-72
+ 651 011a 0A        		.byte	10
+ 652 011b FF        		.byte	-1
+ 653 011c 32        		.byte	50
+ 654 011d 32        		.byte	50
+ 655 011e 0A        		.byte	10
+ 656 011f C8        		.byte	-56
+ 657 0120 0A        		.byte	10
+ 658 0121 0A        		.byte	10
+ 659 0122 01        		.byte	1
+ 660 0123 40        		.byte	64
+ 661 0124 FF        		.byte	-1
+ 662 0125 FF        		.byte	-1
+ 663 0126 00        		.byte	0
+ 664 0127 FF        		.byte	-1
+ 665 0128 FF        		.byte	-1
+ 666 0129 FF        		.byte	-1
+ 667 012a 00        		.byte	0
+ 668 012b FF        		.byte	-1
+ 669 012c 27        		.byte	39
+ 670 012d 27        		.byte	39
+ 671 012e 00        		.byte	0
+ 672 012f FF        		.byte	-1
+ 673 0130 2D        		.byte	45
+ 674 0131 2D        		.byte	45
+ 675 0132 10        		.byte	16
+ 676 0133 FF        		.byte	-1
+ 677 0134 39        		.byte	57
+ 678 0135 39        		.byte	57
+ 679 0136 10        		.byte	16
+ 680 0137 FF        		.byte	-1
+ 681 0138 4B        		.byte	75
+ 682 0139 4B        		.byte	75
+ 683 013a 10        		.byte	16
+ 684 013b FF        		.byte	-1
+ 685 013c 4D        		.byte	77
+ 686 013d 4D        		.byte	77
+ 687 013e 10        		.byte	16
+ 688 013f FF        		.byte	-1
+ 689 0140 41        		.byte	65
+ 690 0141 41        		.byte	65
+ 691 0142 10        		.byte	16
+ 692 0143 FF        		.byte	-1
+ 693 0144 3D        		.byte	61
+ 694 0145 3D        		.byte	61
+ 695 0146 10        		.byte	16
+ 696 0147 FF        		.byte	-1
+ 697 0148 01        		.byte	1
+ 698 0149 01        		.byte	1
+ 699 014a 00        		.byte	0
+ 700 014b 01        		.byte	1
+ 701 014c 78        		.byte	120
+ 702 014d 78        		.byte	120
+ 703 014e 50        		.byte	80
+ 704 014f A0        		.byte	-96
+ 705 0150 64        		.byte	100
+ 706 0151 64        		.byte	100
+ 707 0152 50        		.byte	80
+ 708 0153 A0        		.byte	-96
+ 709 0154 01        		.byte	1
+ 710 0155 01        		.byte	1
+ 711 0156 00        		.byte	0
+ 712 0157 01        		.byte	1
+ 713 0158 64        		.byte	100
+ 714 0159 64        		.byte	100
+ 715 015a 07        		.byte	7
+ 716 015b FF        		.byte	-1
+ 717 015c 4B        		.byte	75
+ 718 015d 4B        		.byte	75
+ 719 015e 07        		.byte	7
+ 720 015f FF        		.byte	-1
+ 721 0160 08        		.byte	8
+ 722 0161 08        		.byte	8
+ 723 0162 01        		.byte	1
+ 724 0163 20        		.byte	32
+ 725 0164 08        		.byte	8
+ 726 0165 08        		.byte	8
+ 727 0166 01        		.byte	1
+ 728 0167 20        		.byte	32
+ 729 0168 5A        		.byte	90
+ 730 0169 5A        		.byte	90
+ 731 016a 02        		.byte	2
+ 732 016b FF        		.byte	-1
+ 733               	.global	timmers_patch_offset
+ 734               		.section	.data.timmers_patch_offset,"aw",@progbits
+ 737               	timmers_patch_offset:
+ 738 0000 FF        		.byte	-1
+ 739               		.comm config,43,1
+ 740               		.comm timmers_patch_data,2,1
+ 813               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 eeprom.c
+C:\Tools\cygwin\tmp/ccXA9GrT.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccXA9GrT.s:18     .text:00000000 EEPROM_read
+C:\Tools\cygwin\tmp/ccXA9GrT.s:43     .text:0000000e config_read
+C:\Tools\cygwin\tmp/ccXA9GrT.s:560    .eeprom:000000c0 ee_config
+C:\Tools\cygwin\tmp/ccXA9GrT.s:80     .text:0000002e EEPROM_write
+C:\Tools\cygwin\tmp/ccXA9GrT.s:129    .text:00000056 eeprom_config_save
+                            *COM*:0000002b config
+C:\Tools\cygwin\tmp/ccXA9GrT.s:199    .text:000000c2 eeprom_config_init
+C:\Tools\cygwin\tmp/ccXA9GrT.s:270    .text:00000122 eeprom_timers_read_raw
+C:\Tools\cygwin\tmp/ccXA9GrT.s:737    .data.timmers_patch_offset:00000000 timmers_patch_offset
+C:\Tools\cygwin\tmp/ccXA9GrT.s:428    .eeprom:00000004 ee_timers
+                            *COM*:00000002 timmers_patch_data
+C:\Tools\cygwin\tmp/ccXA9GrT.s:356    .text:0000016e eeprom_timers_write_raw
+C:\Tools\cygwin\tmp/ccXA9GrT.s:408    .eeprom:00000000 ee_reserved1
+C:\Tools\cygwin\tmp/ccXA9GrT.s:413    .eeprom:00000001 ee_reserved2
+C:\Tools\cygwin\tmp/ccXA9GrT.s:418    .eeprom:00000002 ee_reserved3
+C:\Tools\cygwin\tmp/ccXA9GrT.s:423    .eeprom:00000003 ee_layout
+C:\Tools\cygwin\tmp/ccXA9GrT.s:496    .eeprom:00000084 ee_reserved2_60
+
+UNDEFINED SYMBOLS
+__epilogue_restores__
+__do_copy_data
+__do_clear_bss

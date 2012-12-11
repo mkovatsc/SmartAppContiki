@@ -1,0 +1,440 @@
+   1               	# 1 "xtea-asm.S"
+   1               	// use file from common folder
+   0               	
+   0               	
+   2               	
+   3               	#define XTEA_ENC
+   4               	// #define XTEA_DEC // we need only encryption
+   5               	
+   6               	#include "../common/xtea-asm.S"
+   1               	/* xtea-asm.S */
+   2               	/*
+   3               	    This file is part of the Crypto-avr-lib/microcrypt-lib.
+   4               	    Copyright (C) 2008  Daniel Otte (daniel.otte@rub.de)
+   5               	
+   6               	    This program is free software: you can redistribute it and/or modify
+   7               	    it under the terms of the GNU General Public License as published by
+   8               	    the Free Software Foundation, either version 3 of the License, or
+   9               	    (at your option) any later version.
+  10               	
+  11               	    This program is distributed in the hope that it will be useful,
+  12               	    but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13               	    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14               	    GNU General Public License for more details.
+  15               	
+  16               	    You should have received a copy of the GNU General Public License
+  17               	    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  18               	*/
+  19               	/* xtea-asm.S 
+  20               	 * Author:      Daniel Otte
+  21               	 * Date:        2006-06-06
+  22               	 * License:     GPLv3 or later
+  23               	 *  Implementation of XTEA for AVR
+  24               	 *  include xtea.h in your C-Project to use this functions.
+  25               	 * source: https://roulette.das-labor.org/trac/browser/microcontroller-2/crypto-lib/xtea.h 
+  26               	*/
+  27               	
+  28               	V01 = 2
+  29               	V02 = 3
+  30               	V03 = 4
+  31               	V04 = 5
+  32               	V11 = 6
+  33               	V12 = 7
+  34               	V13 = 8
+  35               	V14 = 9
+  36               	Accu1 = 14
+  37               	Accu2 = 15
+  38               	Accu3 = 16
+  39               	Accu4 = 17
+  40               	Sum1 = 18
+  41               	Sum2 = 19
+  42               	Sum3 = 20
+  43               	Sum4 = 21
+  44               	Func1 = 22
+  45               	Func2 = 23
+  46               	Func3 = 24
+  47               	Func4 = 25
+  48               	C = 28 /* der kleine Zaehler fuer zwischendurch */
+  49               	
+  50               	#ifdef XTEA_ENC
+  51               	.global xtea_enc
+  52               	; == xtea_enc ==
+  53               	; xtea encrytion function
+  54               	; param1: 16-bit pointer to destination for encrypted block 
+  55               	;  given in r25,r24
+  56               	; param2: 16-bit pointer to the block (64-bit) which is to encrypt 
+  57               	;  given in r23,r22
+  58               	; param3: 16-bit pointer to the key (128-bit) 
+  59               	;  given in r21,r20
+  60               	;
+  61               	xtea_enc:
+  62               	 /* prolog */
+  63:../common/xtea-asm.S ****  	push r2
+  64:../common/xtea-asm.S ****  	push r3
+  65:../common/xtea-asm.S ****  	push r4
+  66:../common/xtea-asm.S ****  	push r5
+  67:../common/xtea-asm.S ****  	push r6
+  68:../common/xtea-asm.S ****  	push r7
+  69:../common/xtea-asm.S ****  	push r8
+  70:../common/xtea-asm.S ****  	push r9
+  71:../common/xtea-asm.S ****  	push r14
+  72:../common/xtea-asm.S ****  	push r15
+  73:../common/xtea-asm.S ****  	push r16
+  74:../common/xtea-asm.S ****  	push r17
+  75:../common/xtea-asm.S ****  	push r28
+  76               	 	
+  77               	 /* load the block */
+  78:../common/xtea-asm.S ****  	movw r26, r22 /* X points to block */
+  79:../common/xtea-asm.S ****  	movw r30, r20 /* Z points to key   */
+  80:../common/xtea-asm.S ****  	ld V01, X+
+  81:../common/xtea-asm.S ****  	ld V02, X+
+  82:../common/xtea-asm.S ****  	ld V03, X+
+  83:../common/xtea-asm.S ****  	ld V04, X+
+  84:../common/xtea-asm.S ****  	ld V11, X+
+  85:../common/xtea-asm.S ****  	ld V12, X+
+  86:../common/xtea-asm.S ****  	ld V13, X+
+  87:../common/xtea-asm.S ****  	ld V14, X+
+  88               	; 	push r25
+  89               	; 	push r24
+  90:../common/xtea-asm.S ****  	movw r26, r24 /* X points to destination */
+  91               	 
+  92:../common/xtea-asm.S **** 	ldi Func1, 32
+  93:../common/xtea-asm.S **** 	mov r0, Func1 /* r1 is cycle-counter */
+  94:../common/xtea-asm.S **** 	clr Sum1
+  95:../common/xtea-asm.S **** 	clr Sum2
+  96:../common/xtea-asm.S **** 	movw Sum3, Sum1
+  97:../common/xtea-asm.S **** 	clt
+  98               	
+  99               	1:
+ 100:../common/xtea-asm.S **** 	movw Accu1, V11
+ 101:../common/xtea-asm.S **** 	movw Accu3, V13
+ 102:../common/xtea-asm.S **** 	ldi C, 4
+ 103:../common/xtea-asm.S **** 2:	lsl Accu1
+ 104:../common/xtea-asm.S **** 	rol Accu2
+ 105:../common/xtea-asm.S **** 	rol Accu3
+ 106:../common/xtea-asm.S **** 	rol Accu4
+ 107:../common/xtea-asm.S **** 	dec C
+ 108:../common/xtea-asm.S **** 	brne 2b			/* Accu == V1 << 4 */
+ 109               	
+ 110:../common/xtea-asm.S **** 	movw Func1, V11
+ 111:../common/xtea-asm.S **** 	movw Func3, V13
+ 112:../common/xtea-asm.S **** 	ldi C, 5
+ 113:../common/xtea-asm.S **** 3:	lsr Func4
+ 114:../common/xtea-asm.S **** 	ror Func3
+ 115:../common/xtea-asm.S **** 	ror Func2
+ 116:../common/xtea-asm.S **** 	ror Func1
+ 117:../common/xtea-asm.S **** 	dec C
+ 118:../common/xtea-asm.S **** 	brne 3b			/* Func == V1 >> 5 */
+ 119               		
+ 120:../common/xtea-asm.S **** 	eor Accu1, Func1
+ 121:../common/xtea-asm.S **** 	eor Accu2, Func2
+ 122:../common/xtea-asm.S **** 	eor Accu3, Func3
+ 123:../common/xtea-asm.S **** 	eor Accu4, Func4
+ 124:../common/xtea-asm.S **** 	add Accu1, V11
+ 125:../common/xtea-asm.S **** 	adc Accu2, V12
+ 126:../common/xtea-asm.S **** 	adc Accu3, V13
+ 127:../common/xtea-asm.S **** 	adc Accu4, V14	/* Accu == ( (V1<<4)^(V1>>5) ) + V1 */
+ 128               		
+ 129:../common/xtea-asm.S **** 	brtc 4f
+ 130:../common/xtea-asm.S **** 	mov C, Sum2
+ 131:../common/xtea-asm.S **** 	lsr C
+ 132:../common/xtea-asm.S **** 	andi C,(0x03 <<2)
+ 133:../common/xtea-asm.S **** 	clt
+ 134:../common/xtea-asm.S **** 	rjmp 5f
+ 135               	4:	
+ 136:../common/xtea-asm.S **** 	mov C, Sum1	/* calc key offset */
+ 137:../common/xtea-asm.S **** 	andi C, 0x03
+ 138:../common/xtea-asm.S **** 	lsl C
+ 139:../common/xtea-asm.S **** 	lsl C
+ 140:../common/xtea-asm.S **** 	set
+ 141               		
+ 142               	5:	
+ 143:../common/xtea-asm.S **** 	add r30, C
+ 144:../common/xtea-asm.S **** 	adc r31, r1
+ 145:../common/xtea-asm.S **** 	ld  Func1, Z
+ 146:../common/xtea-asm.S **** 	ldd Func2, Z+1
+ 147:../common/xtea-asm.S **** 	ldd Func3, Z+2
+ 148:../common/xtea-asm.S **** 	ldd Func4, Z+3 /* Func = key[sum & 3] */
+ 149:../common/xtea-asm.S **** 	sub r30, C
+ 150:../common/xtea-asm.S **** 	sbci r31, 0
+ 151:../common/xtea-asm.S **** 	add Func1, Sum1
+ 152:../common/xtea-asm.S **** 	adc Func2, Sum2
+ 153:../common/xtea-asm.S **** 	adc Func3, Sum3
+ 154:../common/xtea-asm.S **** 	adc Func4, Sum4 
+ 155:../common/xtea-asm.S **** 	eor Accu1, Func1
+ 156:../common/xtea-asm.S **** 	eor Accu2, Func2
+ 157:../common/xtea-asm.S **** 	eor Accu3, Func3
+ 158:../common/xtea-asm.S **** 	eor Accu4, Func4 /* Accu = ((V1<<4 ^ V1>>5) + V1) ^ (sum + key[sum&3])  */
+ 159:../common/xtea-asm.S **** 	add Accu1, V01
+ 160:../common/xtea-asm.S **** 	adc Accu2, V02
+ 161:../common/xtea-asm.S **** 	adc Accu3, V03
+ 162:../common/xtea-asm.S **** 	adc Accu4, V04
+ 163               		
+ 164:../common/xtea-asm.S **** 	movw V01, V11
+ 165:../common/xtea-asm.S **** 	movw V03, V13
+ 166:../common/xtea-asm.S **** 	movw V11, Accu1
+ 167:../common/xtea-asm.S **** 	movw V13, Accu3
+ 168               		
+ 169               		/* sum += delta */ /* delta == 0x9E3779B9 */
+ 170:../common/xtea-asm.S **** 	brtc 6f
+ 171:../common/xtea-asm.S **** 	ldi C, 0xB9
+ 172:../common/xtea-asm.S **** 	add Sum1, C
+ 173:../common/xtea-asm.S **** 	ldi C, 0x79
+ 174:../common/xtea-asm.S **** 	adc Sum2, C
+ 175:../common/xtea-asm.S **** 	ldi C, 0x37
+ 176:../common/xtea-asm.S **** 	adc Sum3, C
+ 177:../common/xtea-asm.S **** 	ldi C, 0x9E
+ 178:../common/xtea-asm.S **** 	adc Sum4, C
+ 179:../common/xtea-asm.S **** 	rjmp 1b
+ 180               		
+ 181               	6:	
+ 182:../common/xtea-asm.S **** 	dec r0
+ 183:../common/xtea-asm.S **** 	breq 7f
+ 184:../common/xtea-asm.S **** 	rjmp 1b 
+ 185               	 
+ 186               	 7:
+ 187               	 /* write block back */
+ 188               	 ;	pop r26
+ 189               	 ;	pop r27
+ 190:../common/xtea-asm.S ****  	st X+, V01
+ 191:../common/xtea-asm.S ****  	st X+, V02
+ 192:../common/xtea-asm.S ****  	st X+, V03
+ 193:../common/xtea-asm.S ****   	st X+, V04
+ 194:../common/xtea-asm.S ****  	st X+, V11
+ 195:../common/xtea-asm.S ****  	st X+, V12
+ 196:../common/xtea-asm.S ****  	st X+, V13
+ 197:../common/xtea-asm.S ****  	st X+, V14
+ 198               	 
+ 199               	 /* epilog */
+ 200:../common/xtea-asm.S ****  	pop r28
+ 201:../common/xtea-asm.S ****  	pop r17
+ 202:../common/xtea-asm.S ****  	pop r16
+ 203:../common/xtea-asm.S ****  	pop r15
+ 204:../common/xtea-asm.S ****  	pop r14
+ 205:../common/xtea-asm.S ****  	pop r9
+ 206:../common/xtea-asm.S ****  	pop r8
+ 207:../common/xtea-asm.S ****  	pop r7
+ 208:../common/xtea-asm.S ****  	pop r6
+ 209:../common/xtea-asm.S ****  	pop r5
+ 210:../common/xtea-asm.S ****  	pop r4
+ 211:../common/xtea-asm.S ****  	pop r3
+ 212:../common/xtea-asm.S ****  	pop r2
+ 213:../common/xtea-asm.S ****  	ret
+ 214               	
+ 215               	#endif // XTEA_ENC
+ 216               	
+ 217               	;####################################################################
+ 218               	 
+ 219               	#ifdef XTEA_DEC
+ 220               	 /* #endif TWO_IN_ONE */	
+ 221               	 
+ 222               	 /* #ifdef TWO_IN_ONE */
+ 223               	 /* now we use the same base-structure for enc- and decryption
+ 224               	 	to indicate operation mode we use the highest bit of param3 (16 bit pointer to key),
+ 225               	 	this is ok, since even the larges atmel today has "only" 8k of ram,
+ 226               	 	but you shouldn't use this feature while using external ram. 
+ 227               	 */
+ 228               	.global xtea_enc
+ 229               	 	ori r21, 0x80
+ 230               	 	
+ 231               	.global xtea_dec
+ 232               	; == xtea_dec ==
+ 233               	; xtea decrytion function
+ 234               	; param1: 16-bit pointer to destination for decrypted block 
+ 235               	;  given in r25,r24
+ 236               	; param2: 16-bit pointer to the block (64-bit) which is to derypt 
+ 237               	;  given in r23,r22
+ 238               	; param3: 16-bit pointer to the key (128-bit) 
+ 239               	;  given in r21,r20
+ 240               	;
+ 241               	/*
+ 242               	void xtea_dec(uint32_t* dest, uint32_t* v, uint32_t* k) {
+ 243               	    uint32_t v0=v[0], v1=v[1], i;
+ 244               	    uint32_t sum=0xC6EF3720, delta=0x9E3779B9;
+ 245               	    for(i=0; i<32; i++) {
+ 246               	        v1 -= ((v0 << 4 ^ v0 >> 5) + v0) ^ (sum + k[sum>>11 & 3]);
+ 247               	        sum -= delta;
+ 248               	        v0 -= ((v1 << 4 ^ v1 >> 5) + v1) ^ (sum + k[sum & 3]);
+ 249               	    }
+ 250               	    dest[0]=v0; dest[1]=v1;
+ 251               	}
+ 252               	*/
+ 253               	
+ 254               	xtea_dec:
+ 255               	 /* prolog */
+ 256               	 	push r2
+ 257               	 	push r3
+ 258               	 	push r4
+ 259               	 	push r5
+ 260               	 	push r6
+ 261               	 	push r7
+ 262               	 	push r8
+ 263               	 	push r9
+ 264               	 	push r14
+ 265               	 	push r15
+ 266               	 	push r16
+ 267               	 	push r17
+ 268               	 	push r28 
+ 269               	 /* load the block */
+ 270               	 	movw r26, r22 /* Z points to block */
+ 271               	 	movw r30, r20 /* X points to key   */
+ 272               	 	ld V01, X+
+ 273               	 	ld V02, X+
+ 274               	 	ld V03, X+
+ 275               	 	ld V04, X+
+ 276               	 	ld V11, X+
+ 277               	 	ld V12, X+
+ 278               	 	ld V13, X+
+ 279               	 	ld V14, X+
+ 280               	 	movw r26, r24 /* Z points to destination */
+ 281               	 
+ 282               		ldi Sum1, 32
+ 283               		mov r0, Sum1 /* r1 is cycle-counter */
+ 284               		ldi Sum1, 0x20 /* sum = 0xC6EF3720 */
+ 285               		ldi Sum2, 0x37
+ 286               		ldi Sum3, 0xEF
+ 287               		ldi Sum4, 0xC6
+ 288               		clt
+ 289               	
+ 290               	1:
+ 291               		movw Accu1, V01
+ 292               		movw Accu3, V03
+ 293               		ldi C, 4
+ 294               	2:	lsl Accu1
+ 295               		rol Accu2
+ 296               		rol Accu3
+ 297               		rol Accu4
+ 298               		dec C
+ 299               		brne 2b			/* Accu == V0 << 4 */
+ 300               	
+ 301               		movw Func1, V01
+ 302               		movw Func3, V03
+ 303               		ldi C, 5
+ 304               	3:	lsr Func4
+ 305               		ror Func3
+ 306               		ror Func2
+ 307               		ror Func1
+ 308               		dec C
+ 309               		brne 3b			/* Func == V0 >> 5 */
+ 310               		
+ 311               		eor Accu1, Func1
+ 312               		eor Accu2, Func2
+ 313               		eor Accu3, Func3
+ 314               		eor Accu4, Func4
+ 315               		add Accu1, V01
+ 316               		adc Accu2, V02
+ 317               		adc Accu3, V03
+ 318               		adc Accu4, V04	/* Accu == ( (V0<<4)^(V0>>5) ) + V0 */
+ 319               		
+ 320               		brts 4f
+ 321               		mov C, Sum2
+ 322               		lsr C
+ 323               		andi C,(0x03 <<2)
+ 324               		set
+ 325               		rjmp 5f
+ 326               	4:	
+ 327               		mov C, Sum1	/* calc key offset */
+ 328               		andi C, 0x03
+ 329               		lsl C
+ 330               		lsl C
+ 331               		clt
+ 332               		
+ 333               	5:	
+ 334               		add r30, C
+ 335               		adc r31, r1
+ 336               		ld  Func1, Z
+ 337               		ldd Func2, Z+1
+ 338               		ldd Func3, Z+2
+ 339               		ldd Func4, Z+3 /* Func = key[sum & 3] */
+ 340               		sub r30, C
+ 341               		sbci r31, 0
+ 342               		add Func1, Sum1
+ 343               		adc Func2, Sum2
+ 344               		adc Func3, Sum3
+ 345               		adc Func4, Sum4 
+ 346               		eor Accu1, Func1
+ 347               		eor Accu2, Func2
+ 348               		eor Accu3, Func3
+ 349               		eor Accu4, Func4 /* Accu = ((V0<<4 ^ V0>>5) + V0) ^ (sum + key[sum&3])  */
+ 350               		sub V11, Accu1
+ 351               		sbc V12, Accu2
+ 352               		sbc V13, Accu3
+ 353               		sbc V14, Accu4
+ 354               		
+ 355               		movw Accu1, V01
+ 356               		movw Accu3, V03
+ 357               		movw V01, V11
+ 358               		movw V03, V13
+ 359               		movw V11, Accu1
+ 360               		movw V13, Accu3
+ 361               		
+ 362               		/* sum += delta */ /* delta == 0x9E3779B9 */
+ 363               		brtc 6f
+ 364               		subi Sum1, 0xB9
+ 365               		sbci Sum2, 0x79
+ 366               		sbci Sum3, 0x37
+ 367               		sbci Sum4, 0x9E
+ 368               		rjmp 1b
+ 369               		
+ 370               	6:	
+ 371               		dec r0
+ 372               		breq 7f
+ 373               		rjmp 1b 
+ 374               	 
+ 375               	7:
+ 376               	 /* write block back */
+ 377               	 	st X+, V01
+ 378               	 	st X+, V02
+ 379               	 	st X+, V03
+ 380               	  	st X+, V04
+ 381               	 	st X+, V11
+ 382               	 	st X+, V12
+ 383               	 	st X+, V13
+ 384               	 	st X+, V14
+ 385               	 
+ 386               	 /* epilog */
+ 387               	 	pop r28
+ 388               	 	pop r17
+ 389               	 	pop r16
+ 390               	 	pop r15
+ 391               	 	pop r14
+ 392               	 	pop r9
+ 393               	 	pop r8
+ 394               	 	pop r7
+ 395               	 	pop r6
+ 396               	 	pop r5
+ 397               	 	pop r4
+ 398               	 	pop r3
+ 399               	 	pop r2
+ 400               	 	ret
+ 401               	 	
+ 402               	 /* #endif */
+ 403               	#endif // XTEA_DEC
+ 404               	
+ 405               	;####################################################################
+ 406               	 
+DEFINED SYMBOLS
+../common/xtea-asm.S:28     *ABS*:00000002 V01
+../common/xtea-asm.S:29     *ABS*:00000003 V02
+../common/xtea-asm.S:30     *ABS*:00000004 V03
+../common/xtea-asm.S:31     *ABS*:00000005 V04
+../common/xtea-asm.S:32     *ABS*:00000006 V11
+../common/xtea-asm.S:33     *ABS*:00000007 V12
+../common/xtea-asm.S:34     *ABS*:00000008 V13
+../common/xtea-asm.S:35     *ABS*:00000009 V14
+../common/xtea-asm.S:36     *ABS*:0000000e Accu1
+../common/xtea-asm.S:37     *ABS*:0000000f Accu2
+../common/xtea-asm.S:38     *ABS*:00000010 Accu3
+../common/xtea-asm.S:39     *ABS*:00000011 Accu4
+../common/xtea-asm.S:40     *ABS*:00000012 Sum1
+../common/xtea-asm.S:41     *ABS*:00000013 Sum2
+../common/xtea-asm.S:42     *ABS*:00000014 Sum3
+../common/xtea-asm.S:43     *ABS*:00000015 Sum4
+../common/xtea-asm.S:44     *ABS*:00000016 Func1
+../common/xtea-asm.S:45     *ABS*:00000017 Func2
+../common/xtea-asm.S:46     *ABS*:00000018 Func3
+../common/xtea-asm.S:47     *ABS*:00000019 Func4
+../common/xtea-asm.S:48     *ABS*:0000001c C
+../common/xtea-asm.S:61     .text:00000000 xtea_enc
+
+NO UNDEFINED SYMBOLS

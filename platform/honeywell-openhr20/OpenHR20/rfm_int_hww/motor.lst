@@ -1,0 +1,1031 @@
+   1               		.file	"motor.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	MOTOR_GetPosPercent
+  18               	MOTOR_GetPosPercent:
+  19               	.LFB6:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LM2:
+  24 0000 8091 0000 		lds r24,MOTOR_calibration_step
+  25 0004 8823      		tst r24
+  26 0006 01F0      		breq .L2
+  27 0008 6FEF      		ldi r22,lo8(-1)
+  28 000a 00C0      		rjmp .L3
+  29               	.L2:
+  30               	.LM3:
+  31 000c 2091 0000 		lds r18,MOTOR_PosAct
+  32 0010 3091 0000 		lds r19,(MOTOR_PosAct)+1
+  33 0014 F901      		movw r30,r18
+  34 0016 93E0      		ldi r25,3
+  35 0018 EE0F      	1:	lsl r30
+  36 001a FF1F      		rol r31
+  37 001c 9A95      		dec r25
+  38 001e 01F4      		brne 1b
+  39 0020 8091 0000 		lds r24,MOTOR_PosMax
+  40 0024 9091 0000 		lds r25,(MOTOR_PosMax)+1
+  41 0028 6AE0      		ldi r22,lo8(10)
+  42 002a 70E0      		ldi r23,hi8(10)
+  43 002c 0E94 0000 		call __divmodhi4
+  44 0030 220F      		lsl r18
+  45 0032 331F      		rol r19
+  46 0034 C901      		movw r24,r18
+  47 0036 8E0F      		add r24,r30
+  48 0038 9F1F      		adc r25,r31
+  49 003a 0E94 0000 		call __divmodhi4
+  50               	.L3:
+  51               	.LM4:
+  52 003e 862F      		mov r24,r22
+  53               	/* epilogue start */
+  54 0040 0895      		ret
+  55               	.LFE6:
+  58               	MOTOR_Control:
+  59               	.LFB9:
+  60               	.LM5:
+  61               	.LVL0:
+  62               	/* prologue: function */
+  63               	/* frame size = 0 */
+  64 0042 E82F      		mov r30,r24
+  65               	.LM6:
+  66 0044 8823      		tst r24
+  67 0046 01F4      		brne .L6
+  68               	.LBB20:
+  69               	.LBB21:
+  70               	.LM7:
+  71 0048 14BA      		out 52-32,__zero_reg__
+  72               	.LM8:
+  73 004a 2F98      		cbi 37-32,7
+  74               	.LBE21:
+  75               	.LBE20:
+  76               	.LM9:
+  77 004c 1092 0000 		sts MOTOR_Dir,__zero_reg__
+  78 0050 0895      		ret
+  79               	.L6:
+  80               	.LM10:
+  81 0052 8091 0000 		lds r24,MOTOR_Dir
+  82               	.LVL1:
+  83 0056 8E17      		cp r24,r30
+  84 0058 01F4      		brne .+2
+  85 005a 00C0      		rjmp .L13
+  86               	.LM11:
+  87 005c 739A      		sbi 46-32,3
+  88               	.LM12:
+  89 005e 1092 0000 		sts (motor_diag_cnt)+1,__zero_reg__
+  90 0062 1092 0000 		sts motor_diag_cnt,__zero_reg__
+  91 0066 1092 0000 		sts (last_eye_change)+1,__zero_reg__
+  92 006a 1092 0000 		sts last_eye_change,__zero_reg__
+  93 006e 1092 0000 		sts (longest_low_eye)+1,__zero_reg__
+  94 0072 1092 0000 		sts longest_low_eye,__zero_reg__
+  95               	.LM13:
+  96 0076 82E0      		ldi r24,lo8(2)
+  97 0078 8093 0000 		sts motor_diag_ignore,r24
+  98               	.LM14:
+  99 007c E093 0000 		sts MOTOR_Dir,r30
+ 100 0080 E093 0000 		sts MOTOR_Dir_Counter,r30
+ 101               	.LM15:
+ 102 0084 9091 0000 		lds r25,config+22
+ 103 0088 8091 0000 		lds r24,MOTOR_calibration_step
+ 104 008c 8823      		tst r24
+ 105 008e 01F4      		brne .L8
+ 106 0090 8091 0000 		lds r24,config+21
+ 107 0094 00C0      		rjmp .L14
+ 108               	.L8:
+ 109 0096 8091 0000 		lds r24,config+20
+ 110               	.L14:
+ 111 009a 282F      		mov r18,r24
+ 112 009c 30E0      		ldi r19,lo8(0)
+ 113 009e 892F      		mov r24,r25
+ 114 00a0 90E0      		ldi r25,lo8(0)
+ 115 00a2 AC01      		movw r20,r24
+ 116 00a4 249F      		mul r18,r20
+ 117 00a6 C001      		movw r24,r0
+ 118 00a8 259F      		mul r18,r21
+ 119 00aa 900D      		add r25,r0
+ 120 00ac 349F      		mul r19,r20
+ 121 00ae 900D      		add r25,r0
+ 122 00b0 1124      		clr r1
+ 123 00b2 64E6      		ldi r22,lo8(100)
+ 124 00b4 70E0      		ldi r23,hi8(100)
+ 125 00b6 0E94 0000 		call __udivmodhi4
+ 126 00ba 33E0      		ldi r19,3
+ 127 00bc 660F      	1:	lsl r22
+ 128 00be 771F      		rol r23
+ 129 00c0 3A95      		dec r19
+ 130 00c2 01F4      		brne 1b
+ 131 00c4 7093 0000 		sts (motor_max_time_for_impulse)+1,r23
+ 132 00c8 6093 0000 		sts motor_max_time_for_impulse,r22
+ 133               	.LM16:
+ 134 00cc 8091 0000 		lds r24,motor_max_time_for_impulse
+ 135 00d0 9091 0000 		lds r25,(motor_max_time_for_impulse)+1
+ 136 00d4 880F      		lsl r24
+ 137 00d6 991F      		rol r25
+ 138 00d8 880F      		lsl r24
+ 139 00da 991F      		rol r25
+ 140 00dc 9093 0000 		sts (motor_timer)+1,r25
+ 141 00e0 8093 0000 		sts motor_timer,r24
+ 142               	.LM17:
+ 143 00e4 81E0      		ldi r24,lo8(1)
+ 144 00e6 85BB      		out 53-32,r24
+ 145               	.LM18:
+ 146 00e8 16BC      		out 70-32,__zero_reg__
+ 147               	.LM19:
+ 148 00ea 8093 6E00 		sts 110,r24
+ 149               	.LM20:
+ 150 00ee 8CB1      		in r24,44-32
+ 151 00f0 8093 0000 		sts pine_last,r24
+ 152               	.LM21:
+ 153 00f4 8091 6B00 		lds r24,107
+ 154 00f8 8061      		ori r24,lo8(16)
+ 155 00fa 8093 6B00 		sts 107,r24
+ 156               	.LM22:
+ 157 00fe 5091 0000 		lds r21,config+16
+ 158               	.LBB22:
+ 159               	.LBB23:
+ 160               	.LM23:
+ 161 0102 4091 0000 		lds r20,config+15
+ 162 0106 252F      		mov r18,r21
+ 163 0108 30E0      		ldi r19,lo8(0)
+ 164 010a 842F      		mov r24,r20
+ 165 010c 90E0      		ldi r25,lo8(0)
+ 166 010e 2817      		cp r18,r24
+ 167 0110 3907      		cpc r19,r25
+ 168 0112 04F4      		brge .L10
+ 169 0114 47BD      		out 71-32,r20
+ 170 0116 00C0      		rjmp .L11
+ 171               	.L10:
+ 172               	.LM24:
+ 173 0118 57BD      		out 71-32,r21
+ 174               	.L11:
+ 175               	.LBE23:
+ 176               	.LBE22:
+ 177               	.LM25:
+ 178 011a EF3F      		cpi r30,lo8(-1)
+ 179 011c 01F4      		brne .L12
+ 180               	.LBB24:
+ 181               	.LBB25:
+ 182               	.LM26:
+ 183 011e 88E0      		ldi r24,lo8(8)
+ 184 0120 84BB      		out 52-32,r24
+ 185               	.LM27:
+ 186 0122 2F98      		cbi 37-32,7
+ 187               	.LBE25:
+ 188               	.LBE24:
+ 189               	.LM28:
+ 190 0124 89E6      		ldi r24,lo8(105)
+ 191 0126 84BD      		out 68-32,r24
+ 192 0128 0895      		ret
+ 193               	.L12:
+ 194               	.LBB26:
+ 195               	.LBB27:
+ 196               	.LM29:
+ 197 012a 80E1      		ldi r24,lo8(16)
+ 198 012c 84BB      		out 52-32,r24
+ 199               	.LM30:
+ 200 012e 2F9A      		sbi 37-32,7
+ 201               	.LBE27:
+ 202               	.LBE26:
+ 203               	.LM31:
+ 204 0130 89E7      		ldi r24,lo8(121)
+ 205 0132 84BD      		out 68-32,r24
+ 206               	.L13:
+ 207 0134 0895      		ret
+ 208               	.LFE9:
+ 210               	.global	MOTOR_Goto
+ 212               	MOTOR_Goto:
+ 213               	.LFB7:
+ 214               	.LM32:
+ 215               	.LVL2:
+ 216               	/* prologue: function */
+ 217               	/* frame size = 0 */
+ 218 0136 282F      		mov r18,r24
+ 219               	.LM33:
+ 220 0138 8091 0000 		lds r24,MOTOR_calibration_step
+ 221               	.LVL3:
+ 222 013c 8823      		tst r24
+ 223 013e 01F0      		breq .+2
+ 224 0140 00C0      		rjmp .L21
+ 225 0142 7399      		sbic 46-32,3
+ 226 0144 00C0      		rjmp .L21
+ 227               	.LM34:
+ 228 0146 2436      		cpi r18,lo8(100)
+ 229 0148 01F4      		brne .L17
+ 230               	.LM35:
+ 231 014a 8091 0000 		lds r24,MOTOR_PosMax
+ 232 014e 9091 0000 		lds r25,(MOTOR_PosMax)+1
+ 233 0152 00C0      		rjmp .L22
+ 234               	.L17:
+ 235               	.LM36:
+ 236 0154 2223      		tst r18
+ 237 0156 01F4      		brne .L19
+ 238               	.LM37:
+ 239 0158 1092 0000 		sts (MOTOR_PosStop)+1,__zero_reg__
+ 240 015c 1092 0000 		sts MOTOR_PosStop,__zero_reg__
+ 241 0160 00C0      		rjmp .L18
+ 242               	.L19:
+ 243               	.LM38:
+ 244 0162 30E0      		ldi r19,lo8(0)
+ 245               	.LVL4:
+ 246 0164 8091 0000 		lds r24,MOTOR_PosMax
+ 247 0168 9091 0000 		lds r25,(MOTOR_PosMax)+1
+ 248 016c 9595      		asr r25
+ 249 016e 8795      		ror r24
+ 250 0170 9595      		asr r25
+ 251 0172 8795      		ror r24
+ 252 0174 AC01      		movw r20,r24
+ 253 0176 249F      		mul r18,r20
+ 254 0178 C001      		movw r24,r0
+ 255 017a 259F      		mul r18,r21
+ 256 017c 900D      		add r25,r0
+ 257 017e 349F      		mul r19,r20
+ 258 0180 900D      		add r25,r0
+ 259 0182 1124      		clr r1
+ 260 0184 69E1      		ldi r22,lo8(25)
+ 261 0186 70E0      		ldi r23,hi8(25)
+ 262 0188 0E94 0000 		call __divmodhi4
+ 263 018c CB01      		movw r24,r22
+ 264               	.L22:
+ 265 018e 9093 0000 		sts (MOTOR_PosStop)+1,r25
+ 266 0192 8093 0000 		sts MOTOR_PosStop,r24
+ 267               	.L18:
+ 268               	.LBB28:
+ 269               	.LM39:
+ 270 0196 4091 0000 		lds r20,MOTOR_PosAct
+ 271 019a 5091 0000 		lds r21,(MOTOR_PosAct)+1
+ 272               	.LVL5:
+ 273               	.LM40:
+ 274 019e 2091 0000 		lds r18,MOTOR_PosStop
+ 275 01a2 3091 0000 		lds r19,(MOTOR_PosStop)+1
+ 276               	.LVL6:
+ 277               	.LM41:
+ 278 01a6 8091 0000 		lds r24,MOTOR_PosOvershoot
+ 279 01aa B901      		movw r22,r18
+ 280 01ac 680F      		add r22,r24
+ 281 01ae 711D      		adc r23,__zero_reg__
+ 282 01b0 6417      		cp r22,r20
+ 283 01b2 7507      		cpc r23,r21
+ 284 01b4 04F4      		brge .L20
+ 285               	.LM42:
+ 286 01b6 8FEF      		ldi r24,lo8(-1)
+ 287 01b8 0E94 0000 		call MOTOR_Control
+ 288               	.LVL7:
+ 289 01bc 0895      		ret
+ 290               	.LVL8:
+ 291               	.L20:
+ 292               	.LM43:
+ 293 01be 8091 0000 		lds r24,MOTOR_PosOvershoot
+ 294 01c2 281B      		sub r18,r24
+ 295 01c4 3109      		sbc r19,__zero_reg__
+ 296 01c6 4217      		cp r20,r18
+ 297 01c8 5307      		cpc r21,r19
+ 298 01ca 04F4      		brge .L21
+ 299               	.LM44:
+ 300 01cc 81E0      		ldi r24,lo8(1)
+ 301 01ce 0E94 0000 		call MOTOR_Control
+ 302               	.LVL9:
+ 303               	.L21:
+ 304 01d2 0895      		ret
+ 305               	.LBE28:
+ 306               	.LFE7:
+ 308               	.global	MOTOR_timer_pulse
+ 310               	MOTOR_timer_pulse:
+ 311               	.LFB10:
+ 312               	.LM45:
+ 313               	/* prologue: function */
+ 314               	/* frame size = 0 */
+ 315               	.LM46:
+ 316 01d4 8091 0000 		lds r24,motor_diag_ignore
+ 317 01d8 8823      		tst r24
+ 318 01da 01F0      		breq .+2
+ 319 01dc 00C0      		rjmp .L24
+ 320               	.LBB29:
+ 321               	.LM47:
+ 322 01de 2091 0000 		lds r18,motor_diag
+ 323 01e2 3091 0000 		lds r19,(motor_diag)+1
+ 324 01e6 2C5F      		subi r18,lo8(-(4))
+ 325 01e8 3F4F      		sbci r19,hi8(-(4))
+ 326 01ea 53E0      		ldi r21,3
+ 327 01ec 3695      	1:	lsr r19
+ 328 01ee 2795      		ror r18
+ 329 01f0 5A95      		dec r21
+ 330 01f2 01F4      		brne 1b
+ 331 01f4 8091 0000 		lds r24,config+22
+ 332 01f8 281B      		sub r18,r24
+ 333 01fa 3109      		sbc r19,__zero_reg__
+ 334 01fc 8091 0000 		lds r24,config+23
+ 335 0200 90E0      		ldi r25,lo8(0)
+ 336 0202 AC01      		movw r20,r24
+ 337 0204 249F      		mul r18,r20
+ 338 0206 C001      		movw r24,r0
+ 339 0208 259F      		mul r18,r21
+ 340 020a 900D      		add r25,r0
+ 341 020c 349F      		mul r19,r20
+ 342 020e 900D      		add r25,r0
+ 343 0210 1124      		clr r1
+ 344 0212 64E6      		ldi r22,lo8(100)
+ 345 0214 70E0      		ldi r23,hi8(100)
+ 346 0216 0E94 0000 		call __divmodhi4
+ 347               	.LM48:
+ 348 021a 8091 0000 		lds r24,config+24
+ 349 021e 482F      		mov r20,r24
+ 350               	.LVL10:
+ 351 0220 50E0      		ldi r21,lo8(0)
+ 352               	.LVL11:
+ 353 0222 4617      		cp r20,r22
+ 354 0224 5707      		cpc r21,r23
+ 355 0226 04F0      		brlt .L25
+ 356               	.LM49:
+ 357 0228 8827      		clr r24
+ 358 022a 9927      		clr r25
+ 359 022c 841B      		sub r24,r20
+ 360 022e 950B      		sbc r25,r21
+ 361 0230 AB01      		movw r20,r22
+ 362 0232 6817      		cp r22,r24
+ 363 0234 7907      		cpc r23,r25
+ 364 0236 04F4      		brge .L25
+ 365               	.LVL12:
+ 366 0238 AC01      		movw r20,r24
+ 367               	.LVL13:
+ 368               	.L25:
+ 369               	.LM50:
+ 370 023a 87B5      		in r24,71-32
+ 371 023c 9A01      		movw r18,r20
+ 372 023e 280F      		add r18,r24
+ 373 0240 311D      		adc r19,__zero_reg__
+ 374               	.LBB30:
+ 375               	.LBB31:
+ 376               	.LM51:
+ 377 0242 4091 0000 		lds r20,config+16
+ 378               	.LVL14:
+ 379 0246 842F      		mov r24,r20
+ 380 0248 90E0      		ldi r25,lo8(0)
+ 381 024a 8217      		cp r24,r18
+ 382 024c 9307      		cpc r25,r19
+ 383 024e 04F0      		brlt .L31
+ 384               	.L27:
+ 385               	.LM52:
+ 386 0250 4091 0000 		lds r20,config+15
+ 387 0254 842F      		mov r24,r20
+ 388 0256 90E0      		ldi r25,lo8(0)
+ 389 0258 2817      		cp r18,r24
+ 390 025a 3907      		cpc r19,r25
+ 391 025c 04F4      		brge .L29
+ 392               	.L31:
+ 393 025e 47BD      		out 71-32,r20
+ 394 0260 0895      		ret
+ 395               	.L29:
+ 396               	.LM53:
+ 397 0262 27BD      		out 71-32,r18
+ 398 0264 0895      		ret
+ 399               	.LVL15:
+ 400               	.L24:
+ 401               	.LBE31:
+ 402               	.LBE30:
+ 403               	.LBE29:
+ 404               	.LM54:
+ 405 0266 8150      		subi r24,lo8(-(-1))
+ 406 0268 8093 0000 		sts motor_diag_ignore,r24
+ 407 026c 0895      		ret
+ 408               	.LFE10:
+ 410               	.global	__vector_2
+ 412               	__vector_2:
+ 413               	.LFB12:
+ 414               	.LM55:
+ 415 026e 1F92      		push __zero_reg__
+ 416 0270 0F92      		push r0
+ 417 0272 0FB6      		in r0,__SREG__
+ 418 0274 0F92      		push r0
+ 419 0276 1124      		clr __zero_reg__
+ 420 0278 2F93      		push r18
+ 421 027a 3F93      		push r19
+ 422 027c 4F93      		push r20
+ 423 027e 5F93      		push r21
+ 424 0280 8F93      		push r24
+ 425 0282 9F93      		push r25
+ 426 0284 AF93      		push r26
+ 427 0286 BF93      		push r27
+ 428               	/* prologue: Signal */
+ 429               	/* frame size = 0 */
+ 430               	.LM56:
+ 431 0288 5CB1      		in r21,44-32
+ 432               	.LVL16:
+ 433               	.LM57:
+ 434 028a 452F      		mov r20,r21
+ 435 028c 50FD      		sbrc r21,0
+ 436 028e 00C0      		rjmp .L33
+ 437               	.LVL17:
+ 438               	.LM58:
+ 439 0290 8091 C100 		lds r24,193
+ 440 0294 8069      		ori r24,lo8(-112)
+ 441 0296 8093 C100 		sts 193,r24
+ 442               	.LM59:
+ 443 029a 8091 6B00 		lds r24,107
+ 444 029e 8E7F      		andi r24,lo8(-2)
+ 445 02a0 8093 6B00 		sts 107,r24
+ 446               	.L33:
+ 447               	.LM60:
+ 448 02a4 8091 6B00 		lds r24,107
+ 449 02a8 84FF      		sbrs r24,4
+ 450 02aa 00C0      		rjmp .L34
+ 451 02ac 8091 0000 		lds r24,pine_last
+ 452 02b0 8527      		eor r24,r21
+ 453               	.LVL18:
+ 454 02b2 84FF      		sbrs r24,4
+ 455 02b4 00C0      		rjmp .L34
+ 456               	.LBB32:
+ 457               	.LM61:
+ 458 02b6 2091 0000 		lds r18,motor_diag_cnt
+ 459 02ba 3091 0000 		lds r19,(motor_diag_cnt)+1
+ 460               	.LVL19:
+ 461 02be 8091 0000 		lds r24,last_eye_change
+ 462 02c2 9091 0000 		lds r25,(last_eye_change)+1
+ 463 02c6 281B      		sub r18,r24
+ 464 02c8 390B      		sbc r19,r25
+ 465               	.LM62:
+ 466 02ca 8091 0000 		lds r24,motor_diag_cnt
+ 467 02ce 9091 0000 		lds r25,(motor_diag_cnt)+1
+ 468 02d2 9093 0000 		sts (last_eye_change)+1,r25
+ 469 02d6 8093 0000 		sts last_eye_change,r24
+ 470               	.LM63:
+ 471 02da 44FD      		sbrc r20,4
+ 472 02dc 00C0      		rjmp .L35
+ 473               	.LM64:
+ 474 02de 8091 0000 		lds r24,config+18
+ 475 02e2 90E0      		ldi r25,lo8(0)
+ 476 02e4 880F      		lsl r24
+ 477 02e6 991F      		rol r25
+ 478 02e8 8217      		cp r24,r18
+ 479 02ea 9307      		cpc r25,r19
+ 480 02ec 00F0      		brlo .+2
+ 481 02ee 00C0      		rjmp .L34
+ 482               	.LM65:
+ 483 02f0 2091 0000 		lds r18,longest_low_eye
+ 484 02f4 3091 0000 		lds r19,(longest_low_eye)+1
+ 485               	.LVL20:
+ 486 02f8 8091 0000 		lds r24,config+17
+ 487 02fc 90E0      		ldi r25,lo8(0)
+ 488 02fe 880F      		lsl r24
+ 489 0300 991F      		rol r25
+ 490 0302 8217      		cp r24,r18
+ 491 0304 9307      		cpc r25,r19
+ 492 0306 00F0      		brlo .+2
+ 493 0308 00C0      		rjmp .L34
+ 494               	.LM66:
+ 495 030a 8091 0000 		lds r24,MOTOR_PosAct
+ 496 030e 9091 0000 		lds r25,(MOTOR_PosAct)+1
+ 497 0312 2091 0000 		lds r18,MOTOR_Dir_Counter
+ 498 0316 3327      		clr r19
+ 499 0318 27FD      		sbrc r18,7
+ 500 031a 3095      		com r19
+ 501 031c 280F      		add r18,r24
+ 502 031e 391F      		adc r19,r25
+ 503 0320 3093 0000 		sts (MOTOR_PosAct)+1,r19
+ 504 0324 2093 0000 		sts MOTOR_PosAct,r18
+ 505               	.LM67:
+ 506 0328 84B3      		in r24,52-32
+ 507 032a 8871      		andi r24,lo8(24)
+ 508 032c 01F4      		brne .L36
+ 509 032e 8091 0000 		lds r24,MOTOR_PosOvershoot
+ 510 0332 8F5F      		subi r24,lo8(-(1))
+ 511 0334 8093 0000 		sts MOTOR_PosOvershoot,r24
+ 512               	.L36:
+ 513               	.LM68:
+ 514 0338 8091 0000 		lds r24,MOTOR_counter
+ 515 033c 9091 0000 		lds r25,(MOTOR_counter)+1
+ 516 0340 A091 0000 		lds r26,(MOTOR_counter)+2
+ 517 0344 B091 0000 		lds r27,(MOTOR_counter)+3
+ 518 0348 0196      		adiw r24,1
+ 519 034a A11D      		adc r26,__zero_reg__
+ 520 034c B11D      		adc r27,__zero_reg__
+ 521 034e 8093 0000 		sts MOTOR_counter,r24
+ 522 0352 9093 0000 		sts (MOTOR_counter)+1,r25
+ 523 0356 A093 0000 		sts (MOTOR_counter)+2,r26
+ 524 035a B093 0000 		sts (MOTOR_counter)+3,r27
+ 525               	.LM69:
+ 526 035e 8091 0000 		lds r24,motor_diag_cnt
+ 527 0362 9091 0000 		lds r25,(motor_diag_cnt)+1
+ 528 0366 9093 0000 		sts (motor_diag)+1,r25
+ 529 036a 8093 0000 		sts motor_diag,r24
+ 530               	.LM70:
+ 531 036e 1092 0000 		sts (longest_low_eye)+1,__zero_reg__
+ 532 0372 1092 0000 		sts longest_low_eye,__zero_reg__
+ 533               	.LM71:
+ 534 0376 1092 0000 		sts (motor_diag_cnt)+1,__zero_reg__
+ 535 037a 1092 0000 		sts motor_diag_cnt,__zero_reg__
+ 536               	.LM72:
+ 537 037e 1092 0000 		sts (last_eye_change)+1,__zero_reg__
+ 538 0382 1092 0000 		sts last_eye_change,__zero_reg__
+ 539               	.LM73:
+ 540 0386 F49A      		sbi 62-32,4
+ 541               	.LM74:
+ 542 0388 2091 0000 		lds r18,MOTOR_PosAct
+ 543 038c 3091 0000 		lds r19,(MOTOR_PosAct)+1
+ 544 0390 8091 0000 		lds r24,MOTOR_PosStop
+ 545 0394 9091 0000 		lds r25,(MOTOR_PosStop)+1
+ 546 0398 2817      		cp r18,r24
+ 547 039a 3907      		cpc r19,r25
+ 548 039c 01F4      		brne .L37
+ 549               	.LM75:
+ 550 039e 1092 0000 		sts MOTOR_PosOvershoot,__zero_reg__
+ 551               	.LBB33:
+ 552               	.LBB34:
+ 553               	.LM76:
+ 554 03a2 14BA      		out 52-32,__zero_reg__
+ 555               	.LM77:
+ 556 03a4 2F98      		cbi 37-32,7
+ 557               	.LBE34:
+ 558               	.LBE33:
+ 559               	.LM78:
+ 560 03a6 F59A      		sbi 62-32,5
+ 561 03a8 00C0      		rjmp .L34
+ 562               	.L37:
+ 563               	.LM79:
+ 564 03aa 8091 0000 		lds r24,motor_max_time_for_impulse
+ 565 03ae 9091 0000 		lds r25,(motor_max_time_for_impulse)+1
+ 566 03b2 9093 0000 		sts (motor_timer)+1,r25
+ 567 03b6 8093 0000 		sts motor_timer,r24
+ 568 03ba 00C0      		rjmp .L34
+ 569               	.LVL21:
+ 570               	.L35:
+ 571               	.LM80:
+ 572 03bc 8091 0000 		lds r24,longest_low_eye
+ 573 03c0 9091 0000 		lds r25,(longest_low_eye)+1
+ 574 03c4 8217      		cp r24,r18
+ 575 03c6 9307      		cpc r25,r19
+ 576 03c8 00F4      		brsh .L34
+ 577 03ca 3093 0000 		sts (longest_low_eye)+1,r19
+ 578 03ce 2093 0000 		sts longest_low_eye,r18
+ 579               	.L34:
+ 580               	.LBE32:
+ 581               	.LM81:
+ 582 03d2 5093 0000 		sts pine_last,r21
+ 583               	/* epilogue start */
+ 584               	.LM82:
+ 585 03d6 BF91      		pop r27
+ 586 03d8 AF91      		pop r26
+ 587 03da 9F91      		pop r25
+ 588 03dc 8F91      		pop r24
+ 589 03de 5F91      		pop r21
+ 590               	.LVL22:
+ 591 03e0 4F91      		pop r20
+ 592 03e2 3F91      		pop r19
+ 593 03e4 2F91      		pop r18
+ 594               	.LVL23:
+ 595 03e6 0F90      		pop r0
+ 596 03e8 0FBE      		out __SREG__,r0
+ 597 03ea 0F90      		pop r0
+ 598 03ec 1F90      		pop __zero_reg__
+ 599 03ee 1895      		reti
+ 600               	.LFE12:
+ 602               	.global	__vector_11
+ 604               	__vector_11:
+ 605               	.LFB13:
+ 606               	.LM83:
+ 607 03f0 1F92      		push __zero_reg__
+ 608 03f2 0F92      		push r0
+ 609 03f4 0FB6      		in r0,__SREG__
+ 610 03f6 0F92      		push r0
+ 611 03f8 1124      		clr __zero_reg__
+ 612 03fa 2F93      		push r18
+ 613 03fc 8F93      		push r24
+ 614 03fe 9F93      		push r25
+ 615               	/* prologue: Signal */
+ 616               	/* frame size = 0 */
+ 617               	.LM84:
+ 618 0400 8091 0000 		lds r24,motor_diag_cnt
+ 619 0404 9091 0000 		lds r25,(motor_diag_cnt)+1
+ 620 0408 0196      		adiw r24,1
+ 621 040a 9093 0000 		sts (motor_diag_cnt)+1,r25
+ 622 040e 8093 0000 		sts motor_diag_cnt,r24
+ 623               	.LM85:
+ 624 0412 8091 0000 		lds r24,motor_diag_cnt
+ 625 0416 9091 0000 		lds r25,(motor_diag_cnt)+1
+ 626 041a 2091 0000 		lds r18,config+19
+ 627 041e 9217      		cp r25,r18
+ 628 0420 00F0      		brlo .L40
+ 629               	.LM86:
+ 630 0422 88E4      		ldi r24,lo8(72)
+ 631 0424 84BD      		out 68-32,r24
+ 632               	.LM87:
+ 633 0426 8091 6B00 		lds r24,107
+ 634 042a 8F7E      		andi r24,lo8(-17)
+ 635 042c 8093 6B00 		sts 107,r24
+ 636               	.LM88:
+ 637 0430 1092 6E00 		sts 110,__zero_reg__
+ 638               	.LM89:
+ 639 0434 7398      		cbi 46-32,3
+ 640               	.LM90:
+ 641 0436 F498      		cbi 62-32,4
+ 642 0438 00C0      		rjmp .L44
+ 643               	.L40:
+ 644               	.LM91:
+ 645 043a 8091 0000 		lds r24,motor_timer
+ 646 043e 9091 0000 		lds r25,(motor_timer)+1
+ 647 0442 892B      		or r24,r25
+ 648 0444 01F0      		breq .L42
+ 649               	.LM92:
+ 650 0446 8091 0000 		lds r24,motor_timer
+ 651 044a 9091 0000 		lds r25,(motor_timer)+1
+ 652 044e 0197      		sbiw r24,1
+ 653 0450 9093 0000 		sts (motor_timer)+1,r25
+ 654 0454 8093 0000 		sts motor_timer,r24
+ 655 0458 00C0      		rjmp .L43
+ 656               	.L42:
+ 657               	.LM93:
+ 658 045a 84B3      		in r24,52-32
+ 659 045c 8871      		andi r24,lo8(24)
+ 660 045e 01F0      		breq .L43
+ 661               	.LM94:
+ 662 0460 8091 0000 		lds r24,motor_diag_cnt
+ 663 0464 9091 0000 		lds r25,(motor_diag_cnt)+1
+ 664 0468 9093 0000 		sts (motor_diag)+1,r25
+ 665 046c 8093 0000 		sts motor_diag,r24
+ 666               	.LM95:
+ 667 0470 F59A      		sbi 62-32,5
+ 668               	.L44:
+ 669               	.LBB35:
+ 670               	.LBB36:
+ 671               	.LM96:
+ 672 0472 14BA      		out 52-32,__zero_reg__
+ 673               	.LM97:
+ 674 0474 2F98      		cbi 37-32,7
+ 675               	.L43:
+ 676               	/* epilogue start */
+ 677               	.LBE36:
+ 678               	.LBE35:
+ 679               	.LM98:
+ 680 0476 9F91      		pop r25
+ 681 0478 8F91      		pop r24
+ 682 047a 2F91      		pop r18
+ 683 047c 0F90      		pop r0
+ 684 047e 0FBE      		out __SREG__,r0
+ 685 0480 0F90      		pop r0
+ 686 0482 1F90      		pop __zero_reg__
+ 687 0484 1895      		reti
+ 688               	.LFE13:
+ 690               	.global	MOTOR_timer_stop
+ 692               	MOTOR_timer_stop:
+ 693               	.LFB11:
+ 694               	.LM99:
+ 695 0486 1F93      		push r17
+ 696 0488 CF93      		push r28
+ 697 048a DF93      		push r29
+ 698               	/* prologue: function */
+ 699               	/* frame size = 0 */
+ 700               	.LM100:
+ 701 048c 1091 0000 		lds r17,MOTOR_Dir
+ 702               	.LVL24:
+ 703               	.LM101:
+ 704 0490 80E0      		ldi r24,lo8(0)
+ 705 0492 0E94 0000 		call MOTOR_Control
+ 706               	.LM102:
+ 707 0496 8091 0000 		lds r24,motor_timer
+ 708 049a 9091 0000 		lds r25,(motor_timer)+1
+ 709 049e 892B      		or r24,r25
+ 710 04a0 01F0      		breq .L46
+ 711               	.LM103:
+ 712 04a2 8091 0000 		lds r24,MOTOR_calibration_step
+ 713 04a6 8823      		tst r24
+ 714 04a8 01F4      		brne .+2
+ 715 04aa 00C0      		rjmp .L47
+ 716 04ac 00C0      		rjmp .L51
+ 717               	.L46:
+ 718               	.LM104:
+ 719 04ae 1130      		cpi r17,lo8(1)
+ 720 04b0 01F0      		breq .+2
+ 721 04b2 00C0      		rjmp .L48
+ 722               	.LBB37:
+ 723               	.LM105:
+ 724 04b4 C091 0000 		lds r28,MOTOR_PosAct
+ 725 04b8 D091 0000 		lds r29,(MOTOR_PosAct)+1
+ 726               	.LVL25:
+ 727               	.LM106:
+ 728 04bc 8091 0000 		lds r24,MOTOR_calibration_step
+ 729 04c0 8230      		cpi r24,lo8(2)
+ 730 04c2 01F4      		brne .L49
+ 731               	.LM107:
+ 732 04c4 D093 0000 		sts (MOTOR_PosMax)+1,r29
+ 733 04c8 C093 0000 		sts MOTOR_PosMax,r28
+ 734               	.LM108:
+ 735 04cc 8091 0000 		lds r24,config+25
+ 736 04d0 9091 0000 		lds r25,(config+25)+1
+ 737 04d4 892B      		or r24,r25
+ 738 04d6 01F4      		brne .L50
+ 739               	.LM109:
+ 740 04d8 C436      		cpi r28,100
+ 741 04da D105      		cpc r29,__zero_reg__
+ 742 04dc 04F0      		brlt .L51
+ 743               	.LM110:
+ 744 04de D093 0000 		sts (config+25)+1,r29
+ 745 04e2 C093 0000 		sts config+25,r28
+ 746               	.LM111:
+ 747 04e6 89E1      		ldi r24,lo8(25)
+ 748 04e8 0E94 0000 		call eeprom_config_save
+ 749               	.LM112:
+ 750 04ec 8AE1      		ldi r24,lo8(26)
+ 751 04ee 0E94 0000 		call eeprom_config_save
+ 752               	.LM113:
+ 753 04f2 1092 0000 		sts MOTOR_calibration_step,__zero_reg__
+ 754 04f6 00C0      		rjmp .L47
+ 755               	.L51:
+ 756               	.LM114:
+ 757 04f8 8FEF      		ldi r24,lo8(-1)
+ 758 04fa 8093 0000 		sts MOTOR_calibration_step,r24
+ 759               	.LM115:
+ 760 04fe 8091 0000 		lds r24,CTL_error
+ 761 0502 8860      		ori r24,lo8(8)
+ 762 0504 8093 0000 		sts CTL_error,r24
+ 763 0508 00C0      		rjmp .L47
+ 764               	.L50:
+ 765               	.LM116:
+ 766 050a 8FEF      		ldi r24,lo8(-1)
+ 767 050c 0E94 0000 		call MOTOR_Control
+ 768               	.LM117:
+ 769 0510 C85E      		subi r28,lo8(-(-1000))
+ 770 0512 D340      		sbci r29,hi8(-(-1000))
+ 771 0514 D093 0000 		sts (MOTOR_PosStop)+1,r29
+ 772 0518 C093 0000 		sts MOTOR_PosStop,r28
+ 773               	.LM118:
+ 774 051c 83E0      		ldi r24,lo8(3)
+ 775 051e 8093 0000 		sts MOTOR_calibration_step,r24
+ 776 0522 00C0      		rjmp .L47
+ 777               	.L49:
+ 778               	.LM119:
+ 779 0524 8091 0000 		lds r24,MOTOR_PosMax
+ 780 0528 9091 0000 		lds r25,(MOTOR_PosMax)+1
+ 781 052c 9093 0000 		sts (MOTOR_PosAct)+1,r25
+ 782 0530 8093 0000 		sts MOTOR_PosAct,r24
+ 783 0534 00C0      		rjmp .L47
+ 784               	.LVL26:
+ 785               	.L48:
+ 786               	.LBE37:
+ 787               	.LM120:
+ 788 0536 1F3F      		cpi r17,lo8(-1)
+ 789 0538 01F4      		brne .L47
+ 790               	.LM121:
+ 791 053a 8091 0000 		lds r24,MOTOR_calibration_step
+ 792 053e 8330      		cpi r24,lo8(3)
+ 793 0540 01F4      		brne .L52
+ 794               	.LM122:
+ 795 0542 1092 0000 		sts MOTOR_calibration_step,__zero_reg__
+ 796               	.LM123:
+ 797 0546 2091 0000 		lds r18,MOTOR_PosAct
+ 798 054a 3091 0000 		lds r19,(MOTOR_PosAct)+1
+ 799 054e 8091 0000 		lds r24,MOTOR_PosMax
+ 800 0552 9091 0000 		lds r25,(MOTOR_PosMax)+1
+ 801 0556 821B      		sub r24,r18
+ 802 0558 930B      		sbc r25,r19
+ 803 055a 9093 0000 		sts (MOTOR_PosMax)+1,r25
+ 804 055e 8093 0000 		sts MOTOR_PosMax,r24
+ 805 0562 00C0      		rjmp .L53
+ 806               	.L52:
+ 807               	.LM124:
+ 808 0564 8091 0000 		lds r24,MOTOR_PosAct
+ 809 0568 9091 0000 		lds r25,(MOTOR_PosAct)+1
+ 810 056c 8536      		cpi r24,101
+ 811 056e 9105      		cpc r25,__zero_reg__
+ 812 0570 04F0      		brlt .L53
+ 813               	.LM125:
+ 814 0572 1093 0000 		sts MOTOR_calibration_step,r17
+ 815               	.LM126:
+ 816 0576 8091 0000 		lds r24,CTL_error
+ 817 057a 8860      		ori r24,lo8(8)
+ 818 057c 8093 0000 		sts CTL_error,r24
+ 819               	.L53:
+ 820               	.LM127:
+ 821 0580 1092 0000 		sts (MOTOR_PosAct)+1,__zero_reg__
+ 822 0584 1092 0000 		sts MOTOR_PosAct,__zero_reg__
+ 823               	.LVL27:
+ 824               	.L47:
+ 825               	.LM128:
+ 826 0588 8091 0000 		lds r24,MOTOR_calibration_step
+ 827 058c 8823      		tst r24
+ 828 058e 01F4      		brne .L55
+ 829 0590 8091 0000 		lds r24,MOTOR_PosMax
+ 830 0594 9091 0000 		lds r25,(MOTOR_PosMax)+1
+ 831 0598 8436      		cpi r24,100
+ 832 059a 9105      		cpc r25,__zero_reg__
+ 833 059c 04F4      		brge .L55
+ 834               	.LM129:
+ 835 059e 8FEF      		ldi r24,lo8(-1)
+ 836 05a0 8093 0000 		sts MOTOR_calibration_step,r24
+ 837               	.LM130:
+ 838 05a4 8091 0000 		lds r24,CTL_error
+ 839 05a8 8860      		ori r24,lo8(8)
+ 840 05aa 8093 0000 		sts CTL_error,r24
+ 841               	.L55:
+ 842               	/* epilogue start */
+ 843               	.LM131:
+ 844 05ae DF91      		pop r29
+ 845 05b0 CF91      		pop r28
+ 846               	.LVL28:
+ 847 05b2 1F91      		pop r17
+ 848               	.LVL29:
+ 849 05b4 0895      		ret
+ 850               	.LFE11:
+ 852               	.global	MOTOR_updateCalibration
+ 854               	MOTOR_updateCalibration:
+ 855               	.LFB5:
+ 856               	.LM132:
+ 857               	.LVL30:
+ 858 05b6 1F93      		push r17
+ 859               	/* prologue: function */
+ 860               	/* frame size = 0 */
+ 861 05b8 182F      		mov r17,r24
+ 862               	.LM133:
+ 863 05ba 8823      		tst r24
+ 864 05bc 01F4      		brne .L57
+ 865               	.LM134:
+ 866 05be 80E0      		ldi r24,lo8(0)
+ 867               	.LVL31:
+ 868 05c0 0E94 0000 		call MOTOR_Control
+ 869               	.LM135:
+ 870 05c4 1092 0000 		sts (MOTOR_PosAct)+1,__zero_reg__
+ 871 05c8 1092 0000 		sts MOTOR_PosAct,__zero_reg__
+ 872               	.LM136:
+ 873 05cc 1092 0000 		sts (MOTOR_PosMax)+1,__zero_reg__
+ 874 05d0 1092 0000 		sts MOTOR_PosMax,__zero_reg__
+ 875               	.LM137:
+ 876 05d4 8EEF      		ldi r24,lo8(-2)
+ 877 05d6 8093 0000 		sts MOTOR_calibration_step,r24
+ 878               	.LM138:
+ 879 05da 85E0      		ldi r24,lo8(5)
+ 880 05dc 8093 0000 		sts MOTOR_wait_for_new_calibration,r24
+ 881               	.LM139:
+ 882 05e0 8091 0000 		lds r24,CTL_error
+ 883 05e4 877F      		andi r24,lo8(-9)
+ 884 05e6 8093 0000 		sts CTL_error,r24
+ 885               	.LM140:
+ 886 05ea 86E0      		ldi r24,lo8(6)
+ 887 05ec 8093 0000 		sts CTL_integratorBlock,r24
+ 888               	.LM141:
+ 889 05f0 8091 0000 		lds r24,config+8
+ 890 05f4 8093 0000 		sts CTL_interatorCredit,r24
+ 891 05f8 00C0      		rjmp .L63
+ 892               	.LVL32:
+ 893               	.L57:
+ 894               	.LM142:
+ 895 05fa 8091 0000 		lds r24,MOTOR_wait_for_new_calibration
+ 896               	.LVL33:
+ 897 05fe 8823      		tst r24
+ 898 0600 01F0      		breq .L59
+ 899               	.LM143:
+ 900 0602 8150      		subi r24,lo8(-(-1))
+ 901 0604 8093 0000 		sts MOTOR_wait_for_new_calibration,r24
+ 902 0608 00C0      		rjmp .L60
+ 903               	.L59:
+ 904               	.LM144:
+ 905 060a 8091 0000 		lds r24,MOTOR_calibration_step
+ 906 060e 8130      		cpi r24,lo8(1)
+ 907 0610 01F4      		brne .L60
+ 908               	.LM145:
+ 909 0612 82E0      		ldi r24,lo8(2)
+ 910 0614 8093 0000 		sts MOTOR_calibration_step,r24
+ 911               	.LM146:
+ 912 0618 88EE      		ldi r24,lo8(1000)
+ 913 061a 93E0      		ldi r25,hi8(1000)
+ 914 061c 9093 0000 		sts (MOTOR_PosStop)+1,r25
+ 915 0620 8093 0000 		sts MOTOR_PosStop,r24
+ 916               	.LM147:
+ 917 0624 81E0      		ldi r24,lo8(1)
+ 918 0626 0E94 0000 		call MOTOR_Control
+ 919               	.L60:
+ 920               	.LM148:
+ 921 062a 8091 0000 		lds r24,MOTOR_calibration_step
+ 922 062e 8E3F      		cpi r24,lo8(-2)
+ 923 0630 01F4      		brne .L63
+ 924               	.LM149:
+ 925 0632 1330      		cpi r17,lo8(3)
+ 926 0634 01F4      		brne .L61
+ 927               	.LM150:
+ 928 0636 8FEF      		ldi r24,lo8(-1)
+ 929 0638 9FEF      		ldi r25,hi8(-1)
+ 930 063a 9093 0000 		sts (config+25)+1,r25
+ 931 063e 8093 0000 		sts config+25,r24
+ 932               	.LM151:
+ 933 0642 89E1      		ldi r24,lo8(25)
+ 934 0644 0E94 0000 		call eeprom_config_save
+ 935               	.LM152:
+ 936 0648 8AE1      		ldi r24,lo8(26)
+ 937 064a 0E94 0000 		call eeprom_config_save
+ 938 064e 00C0      		rjmp .L62
+ 939               	.L61:
+ 940               	.LM153:
+ 941 0650 1230      		cpi r17,lo8(2)
+ 942 0652 01F4      		brne .L62
+ 943               	.LM154:
+ 944 0654 1092 0000 		sts (config+25)+1,__zero_reg__
+ 945 0658 1092 0000 		sts config+25,__zero_reg__
+ 946               	.L62:
+ 947               	.LM155:
+ 948 065c 81E0      		ldi r24,lo8(1)
+ 949 065e 8093 0000 		sts MOTOR_calibration_step,r24
+ 950               	.L63:
+ 951               	/* epilogue start */
+ 952               	.LM156:
+ 953 0662 1F91      		pop r17
+ 954               	.LVL34:
+ 955 0664 0895      		ret
+ 956               	.LFE5:
+ 958               	.global	MOTOR_PosAct
+ 959               		.section	.bss.MOTOR_PosAct,"aw",@nobits
+ 962               	MOTOR_PosAct:
+ 963 0000 0000      		.skip 2,0
+ 964               	.global	MOTOR_PosMax
+ 965               		.section	.bss.MOTOR_PosMax,"aw",@nobits
+ 968               	MOTOR_PosMax:
+ 969 0000 0000      		.skip 2,0
+ 970               	.global	MOTOR_calibration_step
+ 971               		.section	.data.MOTOR_calibration_step,"aw",@progbits
+ 974               	MOTOR_calibration_step:
+ 975 0000 FE        		.byte	-2
+ 976               	.global	motor_diag
+ 977               		.section	.bss.motor_diag,"aw",@nobits
+ 980               	motor_diag:
+ 981 0000 0000      		.skip 2,0
+ 982               	.global	MOTOR_PosOvershoot
+ 983               		.section	.bss.MOTOR_PosOvershoot,"aw",@nobits
+ 986               	MOTOR_PosOvershoot:
+ 987 0000 00        		.skip 1,0
+ 988               		.section	.bss.motor_diag_cnt,"aw",@nobits
+ 991               	motor_diag_cnt:
+ 992 0000 0000      		.skip 2,0
+ 993               		.section	.bss.motor_timer,"aw",@nobits
+ 996               	motor_timer:
+ 997 0000 0000      		.skip 2,0
+ 998               		.section	.bss.pine_last,"aw",@nobits
+ 1001               	pine_last:
+ 1002 0000 00        		.skip 1,0
+ 1003               		.section	.bss.last_eye_change,"aw",@nobits
+ 1006               	last_eye_change:
+ 1007 0000 0000      		.skip 2,0
+ 1008               		.section	.bss.longest_low_eye,"aw",@nobits
+ 1011               	longest_low_eye:
+ 1012 0000 0000      		.skip 2,0
+ 1013               		.section	.data.motor_diag_ignore,"aw",@progbits
+ 1016               	motor_diag_ignore:
+ 1017 0000 02        		.byte	2
+ 1018               		.section	.data.MOTOR_wait_for_new_calibration,"aw",@progbits
+ 1021               	MOTOR_wait_for_new_calibration:
+ 1022 0000 05        		.byte	5
+ 1023               		.section	.bss.MOTOR_PosStop,"aw",@nobits
+ 1026               	MOTOR_PosStop:
+ 1027 0000 0000      		.skip 2,0
+ 1028               		.section	.bss.MOTOR_Dir_Counter,"aw",@nobits
+ 1031               	MOTOR_Dir_Counter:
+ 1032 0000 00        		.skip 1,0
+ 1033               		.section	.bss.motor_max_time_for_impulse,"aw",@nobits
+ 1036               	motor_max_time_for_impulse:
+ 1037 0000 0000      		.skip 2,0
+ 1038               		.comm MOTOR_Dir,1,1
+ 1039               		.comm MOTOR_counter,4,1
+ 1120               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 motor.c
+C:\Tools\cygwin\tmp/ccWcHsHH.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccWcHsHH.s:18     .text:00000000 MOTOR_GetPosPercent
+C:\Tools\cygwin\tmp/ccWcHsHH.s:974    .data.MOTOR_calibration_step:00000000 MOTOR_calibration_step
+C:\Tools\cygwin\tmp/ccWcHsHH.s:962    .bss.MOTOR_PosAct:00000000 MOTOR_PosAct
+C:\Tools\cygwin\tmp/ccWcHsHH.s:968    .bss.MOTOR_PosMax:00000000 MOTOR_PosMax
+C:\Tools\cygwin\tmp/ccWcHsHH.s:58     .text:00000042 MOTOR_Control
+                            *COM*:00000001 MOTOR_Dir
+C:\Tools\cygwin\tmp/ccWcHsHH.s:991    .bss.motor_diag_cnt:00000000 motor_diag_cnt
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1006   .bss.last_eye_change:00000000 last_eye_change
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1011   .bss.longest_low_eye:00000000 longest_low_eye
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1016   .data.motor_diag_ignore:00000000 motor_diag_ignore
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1031   .bss.MOTOR_Dir_Counter:00000000 MOTOR_Dir_Counter
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1036   .bss.motor_max_time_for_impulse:00000000 motor_max_time_for_impulse
+C:\Tools\cygwin\tmp/ccWcHsHH.s:996    .bss.motor_timer:00000000 motor_timer
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1001   .bss.pine_last:00000000 pine_last
+C:\Tools\cygwin\tmp/ccWcHsHH.s:212    .text:00000136 MOTOR_Goto
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1026   .bss.MOTOR_PosStop:00000000 MOTOR_PosStop
+C:\Tools\cygwin\tmp/ccWcHsHH.s:986    .bss.MOTOR_PosOvershoot:00000000 MOTOR_PosOvershoot
+C:\Tools\cygwin\tmp/ccWcHsHH.s:310    .text:000001d4 MOTOR_timer_pulse
+C:\Tools\cygwin\tmp/ccWcHsHH.s:980    .bss.motor_diag:00000000 motor_diag
+C:\Tools\cygwin\tmp/ccWcHsHH.s:412    .text:0000026e __vector_2
+                            *COM*:00000004 MOTOR_counter
+C:\Tools\cygwin\tmp/ccWcHsHH.s:604    .text:000003f0 __vector_11
+C:\Tools\cygwin\tmp/ccWcHsHH.s:692    .text:00000486 MOTOR_timer_stop
+C:\Tools\cygwin\tmp/ccWcHsHH.s:854    .text:000005b6 MOTOR_updateCalibration
+C:\Tools\cygwin\tmp/ccWcHsHH.s:1021   .data.MOTOR_wait_for_new_calibration:00000000 MOTOR_wait_for_new_calibration
+
+UNDEFINED SYMBOLS
+__divmodhi4
+config
+__udivmodhi4
+eeprom_config_save
+CTL_error
+CTL_integratorBlock
+CTL_interatorCredit
+__do_copy_data
+__do_clear_bss

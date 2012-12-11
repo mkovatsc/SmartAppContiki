@@ -1,0 +1,1274 @@
+   1               		.file	"controller.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	CTL_temp_change_inc
+  18               	CTL_temp_change_inc:
+  19               	.LFB4:
+  20               	.LM1:
+  21               	.LVL0:
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24               	.LM2:
+  25 0000 9091 0000 		lds r25,CTL_temp_wanted_manual
+  26 0004 980F      		add r25,r24
+  27 0006 9093 0000 		sts CTL_temp_wanted_manual,r25
+  28               	.LM3:
+  29 000a 9930      		cpi r25,lo8(9)
+  30 000c 00F4      		brsh .L2
+  31               	.LM4:
+  32 000e 89E0      		ldi r24,lo8(9)
+  33               	.LVL1:
+  34 0010 00C0      		rjmp .L5
+  35               	.LVL2:
+  36               	.L2:
+  37               	.LM5:
+  38 0012 9E33      		cpi r25,lo8(62)
+  39 0014 00F0      		brlo .L3
+  40               	.LM6:
+  41 0016 8DE3      		ldi r24,lo8(61)
+  42               	.LVL3:
+  43               	.L5:
+  44 0018 8093 0000 		sts CTL_temp_wanted_manual,r24
+  45               	.LVL4:
+  46               	.L3:
+  47               	.LM7:
+  48 001c 8091 0000 		lds r24,CTL_temp_wanted_manual
+  49               	.LVL5:
+  50 0020 8093 0000 		sts CTL_temp_wanted,r24
+  51               	.LM8:
+  52 0024 1092 0000 		sts CTL_mode_window,__zero_reg__
+  53               	.LM9:
+  54 0028 89E0      		ldi r24,lo8(9)
+  55 002a 8093 0000 		sts PID_force_update,r24
+  56               	/* epilogue start */
+  57               	.LM10:
+  58 002e 0895      		ret
+  59               	.LFE4:
+  61               	.global	CTL_valve_change_inc
+  63               	CTL_valve_change_inc:
+  64               	.LFB5:
+  65               	.LM11:
+  66               	.LVL6:
+  67               	/* prologue: function */
+  68               	/* frame size = 0 */
+  69               	.LM12:
+  70 0030 9091 0000 		lds r25,CTL_valve_wanted
+  71 0034 980F      		add r25,r24
+  72 0036 9093 0000 		sts CTL_valve_wanted,r25
+  73               	.LM13:
+  74 003a 8091 0000 		lds r24,config+13
+  75               	.LVL7:
+  76 003e 8917      		cp r24,r25
+  77 0040 00F0      		brlo .L10
+  78               	.L7:
+  79               	.LM14:
+  80 0042 8091 0000 		lds r24,config+11
+  81 0046 9817      		cp r25,r24
+  82 0048 00F4      		brsh .L8
+  83               	.L10:
+  84               	.LM15:
+  85 004a 8093 0000 		sts CTL_valve_wanted,r24
+  86               	.L8:
+  87               	.LM16:
+  88 004e 1092 0000 		sts CTL_mode_window,__zero_reg__
+  89               	.LM17:
+  90 0052 1092 0000 		sts PID_force_update,__zero_reg__
+  91               	/* epilogue start */
+  92               	.LM18:
+  93 0056 0895      		ret
+  94               	.LFE5:
+  96               	.global	CTL_change_mode
+  98               	CTL_change_mode:
+  99               	.LFB6:
+ 100               	.LM19:
+ 101               	.LVL8:
+ 102               	/* prologue: function */
+ 103               	/* frame size = 0 */
+ 104 0058 282F      		mov r18,r24
+ 105               	.LM20:
+ 106 005a 8F3F      		cpi r24,lo8(-1)
+ 107 005c 01F4      		brne .L12
+ 108               	.LM21:
+ 109 005e 8091 0000 		lds r24,CTL_temp_auto
+ 110               	.LVL9:
+ 111 0062 8093 0000 		sts menu_temp_rewoke,r24
+ 112               	.LM22:
+ 113 0066 8091 0000 		lds r24,CTL_temp_wanted
+ 114 006a 8093 0000 		sts target_temp_rewoke,r24
+ 115               	.LM23:
+ 116 006e 8091 0000 		lds r24,CTL_valve_wanted
+ 117 0072 8093 0000 		sts target_valve_rewoke,r24
+ 118               	.LM24:
+ 119 0076 8091 0000 		lds r24,CTL_mode_auto
+ 120 007a 8093 0000 		sts mode_auto_rewoke,r24
+ 121               	.LM25:
+ 122 007e 8230      		cpi r24,lo8(2)
+ 123 0080 00F0      		brlo .L13
+ 124               	.LM26:
+ 125 0082 1092 0000 		sts CTL_mode_auto,__zero_reg__
+ 126 0086 00C0      		rjmp .L14
+ 127               	.L13:
+ 128               	.LM27:
+ 129 0088 82E0      		ldi r24,lo8(2)
+ 130 008a 8093 0000 		sts CTL_mode_auto,r24
+ 131               	.L14:
+ 132               	.LM28:
+ 133 008e 89E0      		ldi r24,lo8(9)
+ 134 0090 8093 0000 		sts PID_force_update,r24
+ 135               	.LM29:
+ 136 0094 81E0      		ldi r24,lo8(1)
+ 137 0096 8093 0000 		sts CTL_mode_changed,r24
+ 138 009a 00C0      		rjmp .L25
+ 139               	.LVL10:
+ 140               	.L12:
+ 141               	.LM30:
+ 142 009c 8E3F      		cpi r24,lo8(-2)
+ 143 009e 01F4      		brne .L16
+ 144               	.LM31:
+ 145 00a0 8091 0000 		lds r24,CTL_temp_auto
+ 146               	.LVL11:
+ 147 00a4 8093 0000 		sts menu_temp_rewoke,r24
+ 148               	.LM32:
+ 149 00a8 8091 0000 		lds r24,CTL_temp_wanted
+ 150 00ac 8093 0000 		sts target_temp_rewoke,r24
+ 151               	.LM33:
+ 152 00b0 8091 0000 		lds r24,CTL_valve_wanted
+ 153 00b4 8093 0000 		sts target_valve_rewoke,r24
+ 154               	.LM34:
+ 155 00b8 9091 0000 		lds r25,CTL_mode_auto
+ 156 00bc 9093 0000 		sts mode_auto_rewoke,r25
+ 157               	.LM35:
+ 158 00c0 9230      		cpi r25,lo8(2)
+ 159 00c2 00F4      		brsh .L19
+ 160               	.LM36:
+ 161 00c4 81E0      		ldi r24,lo8(1)
+ 162 00c6 9827      		eor r25,r24
+ 163 00c8 9093 0000 		sts CTL_mode_auto,r25
+ 164               	.LM37:
+ 165 00cc 8093 0000 		sts CTL_mode_changed,r24
+ 166               	.LM38:
+ 167 00d0 1092 0000 		sts CTL_mode_changed_timer,__zero_reg__
+ 168 00d4 00C0      		rjmp .L19
+ 169               	.LVL12:
+ 170               	.L16:
+ 171               	.LM39:
+ 172 00d6 8D3F      		cpi r24,lo8(-3)
+ 173 00d8 01F4      		brne .L18
+ 174               	.LM40:
+ 175 00da 8091 0000 		lds r24,menu_temp_rewoke
+ 176               	.LVL13:
+ 177 00de 8093 0000 		sts CTL_temp_auto,r24
+ 178               	.LM41:
+ 179 00e2 8091 0000 		lds r24,target_temp_rewoke
+ 180 00e6 8093 0000 		sts CTL_temp_wanted,r24
+ 181               	.LM42:
+ 182 00ea 8091 0000 		lds r24,target_valve_rewoke
+ 183 00ee 8093 0000 		sts CTL_valve_wanted,r24
+ 184               	.LM43:
+ 185 00f2 8091 0000 		lds r24,mode_auto_rewoke
+ 186 00f6 8093 0000 		sts CTL_mode_auto,r24
+ 187               	.LM44:
+ 188 00fa 89E0      		ldi r24,lo8(9)
+ 189 00fc 8093 0000 		sts PID_force_update,r24
+ 190               	.LM45:
+ 191 0100 1092 0000 		sts CTL_mode_changed,__zero_reg__
+ 192               	.L25:
+ 193               	.LM46:
+ 194 0104 1092 0000 		sts CTL_mode_changed_timer,__zero_reg__
+ 195 0108 00C0      		rjmp .L15
+ 196               	.LVL14:
+ 197               	.L18:
+ 198               	.LM47:
+ 199 010a 87FD      		sbrc r24,7
+ 200 010c 00C0      		rjmp .L19
+ 201 010e 8093 0000 		sts CTL_mode_auto,r24
+ 202               	.LVL15:
+ 203               	.L19:
+ 204               	.LM48:
+ 205 0112 89E0      		ldi r24,lo8(9)
+ 206 0114 8093 0000 		sts PID_force_update,r24
+ 207               	.L15:
+ 208               	.LM49:
+ 209 0118 8091 0000 		lds r24,CTL_mode_auto
+ 210 011c 8130      		cpi r24,lo8(1)
+ 211 011e 01F0      		breq .L20
+ 212 0120 8430      		cpi r24,lo8(4)
+ 213 0122 01F4      		brne .L21
+ 214               	.L20:
+ 215 0124 2D3F      		cpi r18,lo8(-3)
+ 216 0126 01F0      		breq .L21
+ 217               	.LM50:
+ 218 0128 80E0      		ldi r24,lo8(0)
+ 219 012a 0E94 0000 		call RTC_ActualTimerTemperature
+ 220               	.LVL16:
+ 221 012e 8093 0000 		sts CTL_temp_auto,r24
+ 222 0132 8093 0000 		sts CTL_temp_wanted,r24
+ 223               	.LVL17:
+ 224               	.L21:
+ 225               	.LM51:
+ 226 0136 8091 0000 		lds r24,CTL_mode_auto
+ 227 013a 8823      		tst r24
+ 228 013c 01F4      		brne .L22
+ 229               	.LM52:
+ 230 013e 8091 0000 		lds r24,CTL_temp_wanted_manual
+ 231 0142 00C0      		rjmp .L26
+ 232               	.L22:
+ 233               	.LM53:
+ 234 0144 8230      		cpi r24,lo8(2)
+ 235 0146 01F4      		brne .L23
+ 236               	.LM54:
+ 237 0148 8091 0000 		lds r24,CTL_temp_wanted_auto
+ 238               	.L26:
+ 239 014c 8093 0000 		sts CTL_temp_wanted,r24
+ 240               	.L23:
+ 241               	.LM55:
+ 242 0150 1092 0000 		sts CTL_mode_window,__zero_reg__
+ 243               	/* epilogue start */
+ 244               	.LM56:
+ 245 0154 0895      		ret
+ 246               	.LFE6:
+ 248               	.global	CTL_update
+ 250               	CTL_update:
+ 251               	.LFB3:
+ 252               	.LM57:
+ 253               	.LVL18:
+ 254 0156 A0E0      		ldi r26,lo8(0)
+ 255 0158 B0E0      		ldi r27,hi8(0)
+ 256 015a E0E0      		ldi r30,lo8(gs(1f))
+ 257 015c F0E0      		ldi r31,hi8(gs(1f))
+ 258 015e 0C94 0000 		jmp __prologue_saves__+((18 - 13) * 2)
+ 259               	1:
+ 260               	/* prologue: function */
+ 261               	/* frame size = 0 */
+ 262               	.LM58:
+ 263 0162 8823      		tst r24
+ 264 0164 01F4      		brne .L28
+ 265 0166 8091 0000 		lds r24,CTL_temp_auto
+ 266               	.LVL19:
+ 267 016a 8823      		tst r24
+ 268 016c 01F4      		brne .L29
+ 269               	.LVL20:
+ 270               	.L28:
+ 271 016e 8091 0000 		lds r24,CTL_mode_auto
+ 272               	.LVL21:
+ 273 0172 8330      		cpi r24,lo8(3)
+ 274 0174 01F0      		breq .L29
+ 275               	.LBB34:
+ 276               	.LM59:
+ 277 0176 90E0      		ldi r25,lo8(0)
+ 278 0178 8091 0000 		lds r24,CTL_temp_auto
+ 279 017c 8111      		cpse r24,__zero_reg__
+ 280 017e 91E0      		ldi r25,lo8(1)
+ 281               	.L30:
+ 282 0180 892F      		mov r24,r25
+ 283 0182 0E94 0000 		call RTC_ActualTimerTemperature
+ 284 0186 182F      		mov r17,r24
+ 285               	.LVL22:
+ 286               	.LM60:
+ 287 0188 81E0      		ldi r24,lo8(1)
+ 288 018a 0E94 0000 		call RTC_ActualTimerTemperature
+ 289               	.LM61:
+ 290 018e 8823      		tst r24
+ 291 0190 01F0      		breq .L31
+ 292               	.LM62:
+ 293 0192 8091 0000 		lds r24,CTL_mode_auto
+ 294 0196 8230      		cpi r24,lo8(2)
+ 295 0198 00F0      		brlo .L32
+ 296               	.LM63:
+ 297 019a 84E0      		ldi r24,lo8(4)
+ 298 019c 00C0      		rjmp .L90
+ 299               	.L32:
+ 300               	.LM64:
+ 301 019e 81E0      		ldi r24,lo8(1)
+ 302               	.L90:
+ 303 01a0 8093 0000 		sts CTL_mode_auto,r24
+ 304               	.LM65:
+ 305 01a4 81E0      		ldi r24,lo8(1)
+ 306 01a6 8093 0000 		sts CTL_mode_changed,r24
+ 307               	.LM66:
+ 308 01aa 1092 0000 		sts CTL_mode_changed_timer,__zero_reg__
+ 309               	.L31:
+ 310               	.LM67:
+ 311 01ae 1123      		tst r17
+ 312 01b0 01F0      		breq .L29
+ 313               	.LM68:
+ 314 01b2 1093 0000 		sts CTL_temp_auto,r17
+ 315               	.LM69:
+ 316 01b6 8091 0000 		lds r24,CTL_mode_auto
+ 317 01ba 8130      		cpi r24,lo8(1)
+ 318 01bc 01F0      		breq .L34
+ 319 01be 8430      		cpi r24,lo8(4)
+ 320 01c0 01F4      		brne .L29
+ 321               	.L34:
+ 322               	.LM70:
+ 323 01c2 1093 0000 		sts CTL_temp_wanted,r17
+ 324               	.LM71:
+ 325 01c6 8091 0000 		lds r24,PID_force_update
+ 326 01ca 87FF      		sbrs r24,7
+ 327 01cc 00C0      		rjmp .L29
+ 328 01ce 8091 0000 		lds r24,CTL_temp_wanted_last
+ 329 01d2 1817      		cp r17,r24
+ 330 01d4 01F0      		breq .L29
+ 331               	.LM72:
+ 332 01d6 1092 0000 		sts PID_force_update,__zero_reg__
+ 333               	.L29:
+ 334               	.LBE34:
+ 335               	.LM73:
+ 336 01da 0091 0000 		lds r16,CTL_mode_auto
+ 337 01de 0230      		cpi r16,lo8(2)
+ 338 01e0 00F0      		brlo .+2
+ 339 01e2 00C0      		rjmp .L35
+ 340               	.LBB35:
+ 341               	.LBB36:
+ 342               	.LM74:
+ 343 01e4 F090 0000 		lds r15,ring_buf_temp_avgs_pos
+ 344 01e8 1091 0000 		lds r17,CTL_mode_window
+ 345               	.LVL23:
+ 346 01ec 1123      		tst r17
+ 347 01ee 01F0      		breq .L36
+ 348 01f0 8091 0000 		lds r24,config+41
+ 349 01f4 00C0      		rjmp .L91
+ 350               	.L36:
+ 351 01f6 8091 0000 		lds r24,config+40
+ 352               	.L91:
+ 353 01fa 282F      		mov r18,r24
+ 354 01fc 30E0      		ldi r19,lo8(0)
+ 355 01fe 8F2D      		mov r24,r15
+ 356 0200 90E0      		ldi r25,lo8(0)
+ 357 0202 8096      		adiw r24,32
+ 358 0204 821B      		sub r24,r18
+ 359 0206 930B      		sbc r25,r19
+ 360 0208 60E2      		ldi r22,lo8(32)
+ 361 020a 70E0      		ldi r23,hi8(32)
+ 362 020c 0E94 0000 		call __divmodhi4
+ 363 0210 40E0      		ldi r20,lo8(0)
+ 364 0212 50E0      		ldi r21,hi8(0)
+ 365               	.LVL24:
+ 366 0214 60E1      		ldi r22,lo8(10000)
+ 367 0216 77E2      		ldi r23,hi8(10000)
+ 368               	.LVL25:
+ 369               	.L42:
+ 370               	.LBB37:
+ 371               	.LM75:
+ 372 0218 282F      		mov r18,r24
+ 373 021a 30E0      		ldi r19,lo8(0)
+ 374 021c F901      		movw r30,r18
+ 375 021e EE0F      		lsl r30
+ 376 0220 FF1F      		rol r31
+ 377 0222 E050      		subi r30,lo8(-(ring_buf_temp_avgs))
+ 378 0224 F040      		sbci r31,hi8(-(ring_buf_temp_avgs))
+ 379 0226 0190      		ld __tmp_reg__,Z+
+ 380 0228 F081      		ld r31,Z
+ 381 022a E02D      		mov r30,__tmp_reg__
+ 382               	.LVL26:
+ 383               	.LM76:
+ 384 022c 3097      		sbiw r30,0
+ 385 022e 01F0      		breq .L38
+ 386 0230 E617      		cp r30,r22
+ 387 0232 F707      		cpc r31,r23
+ 388 0234 04F4      		brge .L39
+ 389 0236 BF01      		movw r22,r30
+ 390               	.L39:
+ 391               	.LM77:
+ 392 0238 4E17      		cp r20,r30
+ 393 023a 5F07      		cpc r21,r31
+ 394 023c 04F0      		brlt .L40
+ 395               	.L38:
+ 396 023e FA01      		movw r30,r20
+ 397               	.L40:
+ 398               	.LM78:
+ 399 0240 8F15      		cp r24,r15
+ 400 0242 01F0      		breq .L41
+ 401               	.LM79:
+ 402 0244 2F5F      		subi r18,lo8(-(1))
+ 403 0246 3F4F      		sbci r19,hi8(-(1))
+ 404 0248 822F      		mov r24,r18
+ 405 024a 8F71      		andi r24,lo8(31)
+ 406 024c AF01      		movw r20,r30
+ 407 024e 00C0      		rjmp .L42
+ 408               	.L41:
+ 409               	.LBE37:
+ 410               	.LM80:
+ 411 0250 4091 0000 		lds r20,ring_average+2
+ 412 0254 5091 0000 		lds r21,(ring_average+2)+1
+ 413 0258 9A01      		movw r18,r20
+ 414 025a 261B      		sub r18,r22
+ 415 025c 370B      		sbc r19,r23
+ 416 025e 8091 0000 		lds r24,config+39
+ 417               	.LVL27:
+ 418 0262 90E0      		ldi r25,lo8(0)
+ 419 0264 8217      		cp r24,r18
+ 420 0266 9307      		cpc r25,r19
+ 421 0268 04F4      		brge .L43
+ 422               	.LVL28:
+ 423               	.LM81:
+ 424 026a 1123      		tst r17
+ 425 026c 01F0      		breq .L35
+ 426               	.LM82:
+ 427 026e 1092 0000 		sts CTL_mode_window,__zero_reg__
+ 428 0272 00C0      		rjmp .L92
+ 429               	.L43:
+ 430               	.LM83:
+ 431 0274 1123      		tst r17
+ 432 0276 01F4      		brne .L35
+ 433 0278 E41B      		sub r30,r20
+ 434 027a F50B      		sbc r31,r21
+ 435               	.LVL29:
+ 436 027c 8091 0000 		lds r24,config+38
+ 437 0280 90E0      		ldi r25,lo8(0)
+ 438 0282 8E17      		cp r24,r30
+ 439 0284 9F07      		cpc r25,r31
+ 440 0286 04F4      		brge .L35
+ 441               	.LM84:
+ 442 0288 8091 0000 		lds r24,config+42
+ 443 028c 8093 0000 		sts CTL_mode_window,r24
+ 444               	.LVL30:
+ 445               	.L92:
+ 446               	.LM85:
+ 447 0290 1092 0000 		sts PID_force_update,__zero_reg__
+ 448               	.LVL31:
+ 449               	.L35:
+ 450               	.LBE36:
+ 451               	.LBE35:
+ 452               	.LM86:
+ 453 0294 8091 0000 		lds r24,PID_update_timeout
+ 454 0298 9091 0000 		lds r25,(PID_update_timeout)+1
+ 455 029c 0097      		sbiw r24,0
+ 456 029e 01F0      		breq .L44
+ 457               	.LM87:
+ 458 02a0 0197      		sbiw r24,1
+ 459 02a2 9093 0000 		sts (PID_update_timeout)+1,r25
+ 460 02a6 8093 0000 		sts PID_update_timeout,r24
+ 461               	.L44:
+ 462               	.LM88:
+ 463 02aa 8091 0000 		lds r24,PID_force_update
+ 464 02ae 1816      		cp __zero_reg__,r24
+ 465 02b0 04F4      		brge .L45
+ 466               	.LM89:
+ 467 02b2 8150      		subi r24,lo8(-(-1))
+ 468 02b4 00C0      		rjmp .L95
+ 469               	.L45:
+ 470               	.LM90:
+ 471 02b6 2091 0000 		lds r18,PID_update_timeout
+ 472 02ba 3091 0000 		lds r19,(PID_update_timeout)+1
+ 473 02be 2115      		cp r18,__zero_reg__
+ 474 02c0 3105      		cpc r19,__zero_reg__
+ 475 02c2 01F0      		breq .L47
+ 476 02c4 8823      		tst r24
+ 477 02c6 01F0      		breq .+2
+ 478 02c8 00C0      		rjmp .L46
+ 479               	.L47:
+ 480               	.LBB38:
+ 481               	.LM91:
+ 482 02ca 0230      		cpi r16,lo8(2)
+ 483 02cc 01F4      		brne .L48
+ 484               	.LM92:
+ 485 02ce 8091 0000 		lds r24,CTL_temp_wanted_auto
+ 486 02d2 00C0      		rjmp .L93
+ 487               	.L48:
+ 488               	.LM93:
+ 489 02d4 0023      		tst r16
+ 490 02d6 01F4      		brne .L49
+ 491               	.LM94:
+ 492 02d8 8091 0000 		lds r24,CTL_temp_wanted_manual
+ 493               	.L93:
+ 494 02dc 8093 0000 		sts CTL_temp_wanted,r24
+ 495               	.L49:
+ 496               	.LM95:
+ 497 02e0 8090 0000 		lds r8,CTL_temp_wanted
+ 498               	.LVL32:
+ 499 02e4 49E0      		ldi r20,lo8(9)
+ 500 02e6 4815      		cp r20,r8
+ 501 02e8 00F4      		brsh .L50
+ 502 02ea 8091 0000 		lds r24,CTL_mode_window
+ 503 02ee 8823      		tst r24
+ 504 02f0 01F0      		breq .L51
+ 505               	.L50:
+ 506 02f2 7AE0      		ldi r23,lo8(10)
+ 507 02f4 872E      		mov r8,r23
+ 508               	.L51:
+ 509               	.LM96:
+ 510 02f6 40E0      		ldi r20,lo8(0)
+ 511               	.LVL33:
+ 512 02f8 8091 0000 		lds r24,CTL_temp_wanted_last
+ 513 02fc 8816      		cp r8,r24
+ 514 02fe 01F0      		breq .L53
+ 515 0300 41E0      		ldi r20,lo8(1)
+ 516               	.LM97:
+ 517 0302 8092 0000 		sts CTL_temp_wanted_last,r8
+ 518 0306 00C0      		rjmp .L54
+ 519               	.L53:
+ 520               	.LM98:
+ 521 0308 0330      		cpi r16,lo8(3)
+ 522 030a 01F0      		breq .L54
+ 523               	.LM99:
+ 524 030c 232B      		or r18,r19
+ 525 030e 01F0      		breq .+2
+ 526 0310 00C0      		rjmp .L55
+ 527               	.L54:
+ 528               	.LBB39:
+ 529               	.LM100:
+ 530 0312 8091 0000 		lds r24,config+10
+ 531 0316 25E0      		ldi r18,lo8(5)
+ 532 0318 829F      		mul r24,r18
+ 533 031a C001      		movw r24,r0
+ 534 031c 1124      		clr r1
+ 535 031e 9093 0000 		sts (PID_update_timeout)+1,r25
+ 536 0322 8093 0000 		sts PID_update_timeout,r24
+ 537               	.LM101:
+ 538 0326 0330      		cpi r16,lo8(3)
+ 539 0328 01F4      		brne .L56
+ 540               	.LM102:
+ 541 032a 1091 0000 		lds r17,CTL_valve_wanted
+ 542               	.LVL34:
+ 543 032e 00C0      		rjmp .L57
+ 544               	.LVL35:
+ 545               	.L56:
+ 546               	.LM103:
+ 547 0330 5CE3      		ldi r21,lo8(60)
+ 548 0332 5815      		cp r21,r8
+ 549 0334 00F4      		brsh .L58
+ 550               	.LM104:
+ 551 0336 1091 0000 		lds r17,config+13
+ 552               	.LVL36:
+ 553 033a 00C0      		rjmp .L59
+ 554               	.LVL37:
+ 555               	.L58:
+ 556               	.LM105:
+ 557 033c 0091 0000 		lds r16,ring_average+2
+ 558 0340 1091 0000 		lds r17,(ring_average+2)+1
+ 559 0344 7090 0000 		lds r7,valveHistory
+ 560               	.LBB40:
+ 561               	.LBB41:
+ 562               	.LM106:
+ 563 0348 82E3      		ldi r24,lo8(50)
+ 564 034a 889E      		mul r8,r24
+ 565 034c 9001      		movw r18,r0
+ 566 034e 1124      		clr r1
+ 567               	.LVL38:
+ 568 0350 201B      		sub r18,r16
+ 569 0352 310B      		sbc r19,r17
+ 570 0354 8BEF      		ldi r24,hi8(-1200)
+ 571 0356 2035      		cpi r18,lo8(-1200)
+ 572 0358 3807      		cpc r19,r24
+ 573 035a 04F4      		brge .L60
+ 574 035c 20E5      		ldi r18,lo8(-1200)
+ 575 035e 3BEF      		ldi r19,hi8(-1200)
+ 576               	.L60:
+ 577 0360 E901      		movw r28,r18
+ 578 0362 54E0      		ldi r21,hi8(1201)
+ 579 0364 213B      		cpi r18,lo8(1201)
+ 580 0366 3507      		cpc r19,r21
+ 581 0368 04F0      		brlt .L61
+ 582 036a C0EB      		ldi r28,lo8(1200)
+ 583 036c D4E0      		ldi r29,hi8(1200)
+ 584               	.LVL39:
+ 585               	.L61:
+ 586               	.LBB42:
+ 587               	.LM107:
+ 588 036e FE01      		movw r30,r28
+ 589               	.LVL40:
+ 590 0370 D7FF      		sbrs r29,7
+ 591 0372 00C0      		rjmp .L62
+ 592 0374 EE27      		clr r30
+ 593 0376 FF27      		clr r31
+ 594 0378 EC1B      		sub r30,r28
+ 595 037a FD0B      		sbc r31,r29
+ 596               	.L62:
+ 597               	.LM108:
+ 598 037c 4423      		tst r20
+ 599 037e 01F4      		brne .+2
+ 600 0380 00C0      		rjmp .L63
+ 601               	.LM109:
+ 602 0382 8091 0000 		lds r24,config+8
+ 603 0386 8093 0000 		sts CTL_interatorCredit,r24
+ 604               	.LM110:
+ 605 038a 8091 0000 		lds r24,config+9
+ 606 038e 8093 0000 		sts CTL_creditExpiration,r24
+ 607               	.LM111:
+ 608 0392 86E0      		ldi r24,lo8(6)
+ 609 0394 8093 0000 		sts CTL_integratorBlock,r24
+ 610               	.LM112:
+ 611 0398 4091 0000 		lds r20,lastAbsError
+ 612 039c 5091 0000 		lds r21,(lastAbsError)+1
+ 613               	.LVL41:
+ 614               	.LBB43:
+ 615               	.LBB44:
+ 616               	.LM113:
+ 617 03a0 2091 0000 		lds r18,lastTempChangeErrorAbs
+ 618 03a4 3091 0000 		lds r19,(lastTempChangeErrorAbs)+1
+ 619 03a8 C901      		movw r24,r18
+ 620 03aa 880F      		lsl r24
+ 621 03ac 991F      		rol r25
+ 622               	.LVL42:
+ 623 03ae 820F      		add r24,r18
+ 624 03b0 931F      		adc r25,r19
+ 625 03b2 9695      		lsr r25
+ 626 03b4 8795      		ror r24
+ 627 03b6 9695      		lsr r25
+ 628 03b8 8795      		ror r24
+ 629 03ba 4817      		cp r20,r24
+ 630 03bc 5907      		cpc r21,r25
+ 631 03be 00F0      		brlo .L64
+ 632 03c0 4F31      		cpi r20,31
+ 633 03c2 5105      		cpc r21,__zero_reg__
+ 634 03c4 00F0      		brlo .L64
+ 635               	.LM114:
+ 636 03c6 8091 0000 		lds r24,lastTempChangeSumError
+ 637 03ca 9091 0000 		lds r25,(lastTempChangeSumError)+1
+ 638 03ce A091 0000 		lds r26,(lastTempChangeSumError)+2
+ 639 03d2 B091 0000 		lds r27,(lastTempChangeSumError)+3
+ 640 03d6 8093 0000 		sts sumError,r24
+ 641 03da 9093 0000 		sts (sumError)+1,r25
+ 642 03de A093 0000 		sts (sumError)+2,r26
+ 643 03e2 B093 0000 		sts (sumError)+3,r27
+ 644               	.L64:
+ 645               	.LBE44:
+ 646               	.LBE43:
+ 647               	.LM115:
+ 648 03e6 F093 0000 		sts (lastTempChangeErrorAbs)+1,r31
+ 649 03ea E093 0000 		sts lastTempChangeErrorAbs,r30
+ 650               	.LM116:
+ 651 03ee 8091 0000 		lds r24,sumError
+ 652 03f2 9091 0000 		lds r25,(sumError)+1
+ 653 03f6 A091 0000 		lds r26,(sumError)+2
+ 654 03fa B091 0000 		lds r27,(sumError)+3
+ 655 03fe 8093 0000 		sts lastTempChangeSumError,r24
+ 656 0402 9093 0000 		sts (lastTempChangeSumError)+1,r25
+ 657 0406 A093 0000 		sts (lastTempChangeSumError)+2,r26
+ 658 040a B093 0000 		sts (lastTempChangeSumError)+3,r27
+ 659 040e 00C0      		rjmp .L65
+ 660               	.LVL43:
+ 661               	.L63:
+ 662               	.LM117:
+ 663 0410 8091 0000 		lds r24,CTL_integratorBlock
+ 664 0414 8823      		tst r24
+ 665 0416 01F0      		breq .+2
+ 666 0418 00C0      		rjmp .L66
+ 667               	.LM118:
+ 668 041a 8091 0000 		lds r24,CTL_creditExpiration
+ 669 041e 8823      		tst r24
+ 670 0420 01F0      		breq .L67
+ 671               	.LM119:
+ 672 0422 8150      		subi r24,lo8(-(-1))
+ 673 0424 8093 0000 		sts CTL_creditExpiration,r24
+ 674 0428 00C0      		rjmp .L68
+ 675               	.L67:
+ 676               	.LM120:
+ 677 042a 1092 0000 		sts CTL_interatorCredit,__zero_reg__
+ 678               	.L68:
+ 679               	.LM121:
+ 680 042e D7FD      		sbrc r29,7
+ 681 0430 00C0      		rjmp .L69
+ 682 0432 8091 0000 		lds r24,config+13
+ 683 0436 7816      		cp r7,r24
+ 684 0438 00F0      		brlo .+2
+ 685 043a 00C0      		rjmp .L73
+ 686 043c 00C0      		rjmp .L89
+ 687               	.L69:
+ 688 043e 8091 0000 		lds r24,config+11
+ 689 0442 8715      		cp r24,r7
+ 690 0444 00F0      		brlo .+2
+ 691 0446 00C0      		rjmp .L73
+ 692               	.L89:
+ 693               	.LM122:
+ 694 0448 2091 0000 		lds r18,lastErrorSign
+ 695 044c 30E0      		ldi r19,lo8(0)
+ 696 044e 8D2F      		mov r24,r29
+ 697 0450 9927      		clr r25
+ 698 0452 87FD      		sbrc r24,7
+ 699 0454 9A95      		dec r25
+ 700 0456 90E0      		ldi r25,lo8(0)
+ 701 0458 8078      		andi r24,lo8(128)
+ 702 045a 9070      		andi r25,hi8(128)
+ 703 045c 2817      		cp r18,r24
+ 704 045e 3907      		cpc r19,r25
+ 705 0460 01F4      		brne .L74
+ 706 0462 8091 0000 		lds r24,last2AbsError
+ 707 0466 9091 0000 		lds r25,(last2AbsError)+1
+ 708 046a E817      		cp r30,r24
+ 709 046c F907      		cpc r31,r25
+ 710 046e 01F4      		brne .L75
+ 711 0470 E031      		cpi r30,16
+ 712 0472 F105      		cpc r31,__zero_reg__
+ 713 0474 04F4      		brge .L75
+ 714               	.L74:
+ 715               	.LM123:
+ 716 0476 8091 0000 		lds r24,config+8
+ 717 047a 8093 0000 		sts CTL_interatorCredit,r24
+ 718               	.LM124:
+ 719 047e 8091 0000 		lds r24,config+9
+ 720 0482 8093 0000 		sts CTL_creditExpiration,r24
+ 721 0486 00C0      		rjmp .L76
+ 722               	.L75:
+ 723               	.LM125:
+ 724 0488 2091 0000 		lds r18,CTL_interatorCredit
+ 725 048c 1216      		cp __zero_reg__,r18
+ 726 048e 04F4      		brge .L73
+ 727               	.LM126:
+ 728 0490 E817      		cp r30,r24
+ 729 0492 F907      		cpc r31,r25
+ 730 0494 00F0      		brlo .L73
+ 731               	.LM127:
+ 732 0496 CF01      		movw r24,r30
+ 733 0498 69E1      		ldi r22,lo8(25)
+ 734 049a 70E0      		ldi r23,hi8(25)
+ 735               	.LVL44:
+ 736 049c 0E94 0000 		call __divmodhi4
+ 737 04a0 6095      		com r22
+ 738 04a2 260F      		add r18,r22
+ 739 04a4 2093 0000 		sts CTL_interatorCredit,r18
+ 740               	.LVL45:
+ 741               	.L76:
+ 742               	.LM128:
+ 743 04a8 9E01      		movw r18,r28
+ 744 04aa B3E0      		ldi r27,3
+ 745 04ac 220F      	1:	lsl r18
+ 746 04ae 331F      		rol r19
+ 747 04b0 BA95      		dec r27
+ 748 04b2 01F4      		brne 1b
+ 749 04b4 4427      		clr r20
+ 750 04b6 37FD      		sbrc r19,7
+ 751 04b8 4095      		com r20
+ 752 04ba 542F      		mov r21,r20
+ 753 04bc 8091 0000 		lds r24,sumError
+ 754 04c0 9091 0000 		lds r25,(sumError)+1
+ 755 04c4 A091 0000 		lds r26,(sumError)+2
+ 756 04c8 B091 0000 		lds r27,(sumError)+3
+ 757 04cc 820F      		add r24,r18
+ 758 04ce 931F      		adc r25,r19
+ 759 04d0 A41F      		adc r26,r20
+ 760 04d2 B51F      		adc r27,r21
+ 761 04d4 8093 0000 		sts sumError,r24
+ 762 04d8 9093 0000 		sts (sumError)+1,r25
+ 763 04dc A093 0000 		sts (sumError)+2,r26
+ 764 04e0 B093 0000 		sts (sumError)+3,r27
+ 765               	.LVL46:
+ 766               	.L73:
+ 767               	.LM129:
+ 768 04e4 8091 0000 		lds r24,CTL_interatorCredit
+ 769 04e8 1816      		cp __zero_reg__,r24
+ 770 04ea 04F0      		brlt .L77
+ 771               	.LBB45:
+ 772               	.LBB46:
+ 773               	.LM130:
+ 774 04ec 2091 0000 		lds r18,lastTempChangeErrorAbs
+ 775 04f0 3091 0000 		lds r19,(lastTempChangeErrorAbs)+1
+ 776 04f4 C901      		movw r24,r18
+ 777 04f6 880F      		lsl r24
+ 778 04f8 991F      		rol r25
+ 779 04fa 820F      		add r24,r18
+ 780 04fc 931F      		adc r25,r19
+ 781 04fe 9695      		lsr r25
+ 782 0500 8795      		ror r24
+ 783 0502 9695      		lsr r25
+ 784 0504 8795      		ror r24
+ 785 0506 E817      		cp r30,r24
+ 786 0508 F907      		cpc r31,r25
+ 787 050a 00F0      		brlo .L78
+ 788 050c EF31      		cpi r30,31
+ 789 050e F105      		cpc r31,__zero_reg__
+ 790 0510 00F0      		brlo .L78
+ 791               	.LM131:
+ 792 0512 8091 0000 		lds r24,lastTempChangeSumError
+ 793 0516 9091 0000 		lds r25,(lastTempChangeSumError)+1
+ 794 051a A091 0000 		lds r26,(lastTempChangeSumError)+2
+ 795 051e B091 0000 		lds r27,(lastTempChangeSumError)+3
+ 796 0522 8093 0000 		sts sumError,r24
+ 797 0526 9093 0000 		sts (sumError)+1,r25
+ 798 052a A093 0000 		sts (sumError)+2,r26
+ 799 052e B093 0000 		sts (sumError)+3,r27
+ 800               	.L78:
+ 801               	.LM132:
+ 802 0532 8FEF      		ldi r24,lo8(-1)
+ 803 0534 9FEF      		ldi r25,hi8(-1)
+ 804 0536 9093 0000 		sts (lastTempChangeErrorAbs)+1,r25
+ 805 053a 8093 0000 		sts lastTempChangeErrorAbs,r24
+ 806 053e 00C0      		rjmp .L77
+ 807               	.LVL47:
+ 808               	.L66:
+ 809               	.LBE46:
+ 810               	.LBE45:
+ 811               	.LM133:
+ 812 0540 8150      		subi r24,lo8(-(-1))
+ 813 0542 8093 0000 		sts CTL_integratorBlock,r24
+ 814               	.L77:
+ 815               	.LM134:
+ 816 0546 8091 0000 		lds r24,lastAbsError
+ 817 054a 9091 0000 		lds r25,(lastAbsError)+1
+ 818 054e 9093 0000 		sts (last2AbsError)+1,r25
+ 819 0552 8093 0000 		sts last2AbsError,r24
+ 820               	.LM135:
+ 821 0556 F093 0000 		sts (lastAbsError)+1,r31
+ 822 055a E093 0000 		sts lastAbsError,r30
+ 823               	.LM136:
+ 824 055e 8D2F      		mov r24,r29
+ 825 0560 9927      		clr r25
+ 826 0562 87FD      		sbrc r24,7
+ 827 0564 9A95      		dec r25
+ 828               	.LVL48:
+ 829 0566 8078      		andi r24,lo8(-128)
+ 830 0568 8093 0000 		sts lastErrorSign,r24
+ 831               	.L65:
+ 832               	.LBE42:
+ 833               	.LM137:
+ 834 056c 1093 0000 		sts (lastProcessValue)+1,r17
+ 835 0570 0093 0000 		sts lastProcessValue,r16
+ 836               	.LM138:
+ 837 0574 9090 0000 		lds r9,config+7
+ 838 0578 9920      		tst r9
+ 839 057a 01F0      		breq .L79
+ 840               	.LBB47:
+ 841               	.LM139:
+ 842 057c 292D      		mov r18,r9
+ 843 057e 30E0      		ldi r19,lo8(0)
+ 844 0580 40E0      		ldi r20,lo8(0)
+ 845 0582 50E0      		ldi r21,hi8(0)
+ 846               	.LVL49:
+ 847 0584 60E0      		ldi r22,lo8(3276800)
+ 848 0586 70E0      		ldi r23,hi8(3276800)
+ 849 0588 82E3      		ldi r24,hlo8(3276800)
+ 850 058a 90E0      		ldi r25,hhi8(3276800)
+ 851 058c 0E94 0000 		call __divmodsi4
+ 852               	.LVL50:
+ 853 0590 C901      		movw r24,r18
+ 854 0592 DA01      		movw r26,r20
+ 855               	.LM140:
+ 856 0594 E090 0000 		lds r14,sumError
+ 857 0598 F090 0000 		lds r15,(sumError)+1
+ 858 059c 0091 0000 		lds r16,(sumError)+2
+ 859 05a0 1091 0000 		lds r17,(sumError)+3
+ 860 05a4 8E15      		cp r24,r14
+ 861 05a6 9F05      		cpc r25,r15
+ 862 05a8 A007      		cpc r26,r16
+ 863 05aa B107      		cpc r27,r17
+ 864               	.LVL51:
+ 865 05ac 04F4      		brge .L80
+ 866               	.LM141:
+ 867 05ae 8093 0000 		sts sumError,r24
+ 868 05b2 9093 0000 		sts (sumError)+1,r25
+ 869 05b6 A093 0000 		sts (sumError)+2,r26
+ 870 05ba B093 0000 		sts (sumError)+3,r27
+ 871 05be 00C0      		rjmp .L79
+ 872               	.L80:
+ 873               	.LM142:
+ 874 05c0 2227      		clr r18
+ 875 05c2 3327      		clr r19
+ 876 05c4 A901      		movw r20,r18
+ 877 05c6 281B      		sub r18,r24
+ 878 05c8 390B      		sbc r19,r25
+ 879 05ca 4A0B      		sbc r20,r26
+ 880 05cc 5B0B      		sbc r21,r27
+ 881 05ce E216      		cp r14,r18
+ 882 05d0 F306      		cpc r15,r19
+ 883 05d2 0407      		cpc r16,r20
+ 884 05d4 1507      		cpc r17,r21
+ 885 05d6 04F4      		brge .L79
+ 886               	.LM143:
+ 887 05d8 2093 0000 		sts sumError,r18
+ 888 05dc 3093 0000 		sts (sumError)+1,r19
+ 889 05e0 4093 0000 		sts (sumError)+2,r20
+ 890 05e4 5093 0000 		sts (sumError)+3,r21
+ 891               	.LVL52:
+ 892               	.L79:
+ 893               	.LBE47:
+ 894               	.LM144:
+ 895 05e8 7E01      		movw r14,r28
+ 896 05ea 0027      		clr r16
+ 897 05ec F7FC      		sbrc r15,7
+ 898 05ee 0095      		com r16
+ 899 05f0 102F      		mov r17,r16
+ 900               	.LVL53:
+ 901               	.LM145:
+ 902 05f2 C801      		movw r24,r16
+ 903 05f4 B701      		movw r22,r14
+ 904 05f6 A801      		movw r20,r16
+ 905 05f8 9701      		movw r18,r14
+ 906 05fa 0E94 0000 		call __mulsi3
+ 907               	.LVL54:
+ 908 05fe 2091 0000 		lds r18,config+5
+ 909 0602 30E0      		ldi r19,lo8(0)
+ 910 0604 40E0      		ldi r20,lo8(0)
+ 911 0606 50E0      		ldi r21,hi8(0)
+ 912               	.LVL55:
+ 913 0608 0E94 0000 		call __mulsi3
+ 914               	.LM146:
+ 915 060c 672F      		mov r22,r23
+ 916 060e 782F      		mov r23,r24
+ 917 0610 892F      		mov r24,r25
+ 918 0612 9927      		clr r25
+ 919 0614 87FD      		sbrc r24,7
+ 920 0616 9A95      		dec r25
+ 921               	.LVL56:
+ 922               	.LM147:
+ 923 0618 3091 0000 		lds r19,config+6
+ 924 061c 20E0      		ldi r18,lo8(0)
+ 925 061e 40E0      		ldi r20,lo8(0)
+ 926 0620 50E0      		ldi r21,hi8(0)
+ 927 0622 620F      		add r22,r18
+ 928 0624 731F      		adc r23,r19
+ 929 0626 841F      		adc r24,r20
+ 930 0628 951F      		adc r25,r21
+ 931               	.LM148:
+ 932 062a A801      		movw r20,r16
+ 933 062c 9701      		movw r18,r14
+ 934 062e 0E94 0000 		call __mulsi3
+ 935               	.LVL57:
+ 936 0632 5B01      		movw r10,r22
+ 937 0634 6C01      		movw r12,r24
+ 938               	.LVL58:
+ 939               	.LM149:
+ 940 0636 E090 0000 		lds r14,config+12
+ 941 063a FF24      		clr r15
+ 942 063c 00E0      		ldi r16,lo8(0)
+ 943 063e 10E0      		ldi r17,hi8(0)
+ 944 0640 8701      		movw r16,r14
+ 945 0642 FF24      		clr r15
+ 946 0644 EE24      		clr r14
+ 947 0646 692D      		mov r22,r9
+ 948 0648 70E0      		ldi r23,lo8(0)
+ 949 064a 80E0      		ldi r24,lo8(0)
+ 950 064c 90E0      		ldi r25,hi8(0)
+ 951               	.LVL59:
+ 952 064e 2091 0000 		lds r18,sumError
+ 953 0652 3091 0000 		lds r19,(sumError)+1
+ 954 0656 4091 0000 		lds r20,(sumError)+2
+ 955 065a 5091 0000 		lds r21,(sumError)+3
+ 956 065e 0E94 0000 		call __mulsi3
+ 957 0662 E60E      		add r14,r22
+ 958 0664 F71E      		adc r15,r23
+ 959 0666 081F      		adc r16,r24
+ 960 0668 191F      		adc r17,r25
+ 961               	.LM150:
+ 962 066a EA0C      		add r14,r10
+ 963 066c FB1C      		adc r15,r11
+ 964 066e 0C1D      		adc r16,r12
+ 965 0670 1D1D      		adc r17,r13
+ 966               	.LM151:
+ 967 0672 5527      		clr r21
+ 968 0674 17FD      		sbrc r17,7
+ 969 0676 5A95      		dec r21
+ 970 0678 412F      		mov r20,r17
+ 971 067a 302F      		mov r19,r16
+ 972 067c 2F2D      		mov r18,r15
+ 973               	.LVL60:
+ 974               	.LM152:
+ 975 067e 1091 0000 		lds r17,config+13
+ 976               	.LVL61:
+ 977 0682 912F      		mov r25,r17
+ 978               	.LVL62:
+ 979 0684 80E0      		ldi r24,lo8(0)
+ 980               	.LVL63:
+ 981 0686 A0E0      		ldi r26,lo8(0)
+ 982 0688 B0E0      		ldi r27,hi8(0)
+ 983               	.LVL64:
+ 984 068a 8217      		cp r24,r18
+ 985 068c 9307      		cpc r25,r19
+ 986 068e A407      		cpc r26,r20
+ 987 0690 B507      		cpc r27,r21
+ 988 0692 04F0      		brlt .L59
+ 989               	.LM153:
+ 990 0694 57FF      		sbrs r21,7
+ 991 0696 00C0      		rjmp .L81
+ 992               	.LM154:
+ 993 0698 1091 0000 		lds r17,config+11
+ 994               	.LVL65:
+ 995 069c 00C0      		rjmp .L59
+ 996               	.LVL66:
+ 997               	.L81:
+ 998               	.LBB48:
+ 999               	.LM155:
+ 1000 069e C901      		movw r24,r18
+ 1001               	.LVL67:
+ 1002               	.LBB49:
+ 1003               	.LM156:
+ 1004 06a0 2058      		subi r18,lo8(-(128))
+ 1005 06a2 3F4F      		sbci r19,hi8(-(128))
+ 1006               	.LVL68:
+ 1007               	.LM157:
+ 1008 06a4 9715      		cp r25,r7
+ 1009               	.LVL69:
+ 1010 06a6 00F0      		brlo .L82
+ 1011               	.LM158:
+ 1012 06a8 8091 0000 		lds r24,config+14
+ 1013 06ac A901      		movw r20,r18
+ 1014 06ae 481B      		sub r20,r24
+ 1015 06b0 5109      		sbc r21,__zero_reg__
+ 1016 06b2 00C0      		rjmp .L94
+ 1017               	.L82:
+ 1018               	.LM159:
+ 1019 06b4 8091 0000 		lds r24,config+14
+ 1020 06b8 A901      		movw r20,r18
+ 1021 06ba 480F      		add r20,r24
+ 1022 06bc 511D      		adc r21,__zero_reg__
+ 1023               	.L94:
+ 1024               	.LM160:
+ 1025 06be 252F      		mov r18,r21
+ 1026 06c0 3327      		clr r19
+ 1027               	.LVL70:
+ 1028               	.LBE49:
+ 1029               	.LM161:
+ 1030 06c2 1091 0000 		lds r17,config+11
+ 1031               	.LVL71:
+ 1032 06c6 812F      		mov r24,r17
+ 1033 06c8 90E0      		ldi r25,lo8(0)
+ 1034               	.LVL72:
+ 1035 06ca 2817      		cp r18,r24
+ 1036 06cc 3907      		cpc r19,r25
+ 1037 06ce 00F0      		brlo .L59
+ 1038               	.LVL73:
+ 1039               	.LM162:
+ 1040 06d0 122F      		mov r17,r18
+ 1041               	.LVL74:
+ 1042               	.L59:
+ 1043               	.LBE48:
+ 1044               	.LBE41:
+ 1045               	.LBE40:
+ 1046               	.LM163:
+ 1047 06d2 1093 0000 		sts CTL_valve_wanted,r17
+ 1048               	.L57:
+ 1049               	.LM164:
+ 1050 06d6 8091 0000 		lds r24,CTL_valve_old_wanted
+ 1051 06da 1817      		cp r17,r24
+ 1052 06dc 01F0      		breq .L84
+ 1053               	.LM165:
+ 1054 06de 1093 0000 		sts CTL_valve_old_wanted,r17
+ 1055               	.LM166:
+ 1056 06e2 812F      		mov r24,r17
+ 1057 06e4 0E94 0000 		call COM_send_valve_event
+ 1058               	.LVL75:
+ 1059               	.L84:
+ 1060               	.LM167:
+ 1061 06e8 8092 0000 		sts CTL_temp_wanted_last,r8
+ 1062               	.LBB50:
+ 1063               	.LM168:
+ 1064 06ec 1093 0000 		sts valveHistory,r17
+ 1065               	.LVL76:
+ 1066               	.L55:
+ 1067               	.LBE50:
+ 1068               	.LBE39:
+ 1069               	.LM169:
+ 1070 06f0 8FEF      		ldi r24,lo8(-1)
+ 1071               	.L95:
+ 1072 06f2 8093 0000 		sts PID_force_update,r24
+ 1073               	.L46:
+ 1074               	.LBE38:
+ 1075               	.LM170:
+ 1076 06f6 4091 0000 		lds r20,ring_average
+ 1077 06fa 5091 0000 		lds r21,(ring_average)+1
+ 1078               	.LVL77:
+ 1079 06fe 4115      		cp r20,__zero_reg__
+ 1080 0700 5105      		cpc r21,__zero_reg__
+ 1081 0702 01F0      		breq .L88
+ 1082               	.LM171:
+ 1083 0704 8091 0000 		lds r24,config+36
+ 1084 0708 24E1      		ldi r18,lo8(20)
+ 1085               	.LVL78:
+ 1086 070a 829F      		mul r24,r18
+ 1087 070c C001      		movw r24,r0
+ 1088 070e 1124      		clr r1
+ 1089 0710 4817      		cp r20,r24
+ 1090 0712 5907      		cpc r21,r25
+ 1091 0714 00F4      		brsh .L86
+ 1092               	.LM172:
+ 1093 0716 8091 0000 		lds r24,CTL_error
+ 1094 071a 806C      		ori r24,lo8(-64)
+ 1095 071c 8093 0000 		sts CTL_error,r24
+ 1096 0720 00C0      		rjmp .L88
+ 1097               	.L86:
+ 1098               	.LM173:
+ 1099 0722 8091 0000 		lds r24,config+35
+ 1100 0726 829F      		mul r24,r18
+ 1101 0728 C001      		movw r24,r0
+ 1102 072a 1124      		clr r1
+ 1103 072c 2091 0000 		lds r18,CTL_error
+ 1104 0730 4817      		cp r20,r24
+ 1105 0732 5907      		cpc r21,r25
+ 1106 0734 00F4      		brsh .L87
+ 1107               	.LM174:
+ 1108 0736 2064      		ori r18,lo8(64)
+ 1109 0738 2F77      		andi r18,lo8(127)
+ 1110 073a 00C0      		rjmp .L96
+ 1111               	.L87:
+ 1112               	.LM175:
+ 1113 073c 2F73      		andi r18,lo8(63)
+ 1114               	.L96:
+ 1115 073e 2093 0000 		sts CTL_error,r18
+ 1116               	.LVL79:
+ 1117               	.L88:
+ 1118               	/* epilogue start */
+ 1119               	.LM176:
+ 1120 0742 CDB7      		in r28,__SP_L__
+ 1121 0744 DEB7      		in r29,__SP_H__
+ 1122               	.LVL80:
+ 1123 0746 EDE0      		ldi r30, lo8(13)
+ 1124 0748 0C94 0000 		jmp __epilogue_restores__ + ((18 - 13) * 2)
+ 1125               	.LVL81:
+ 1126               	.LFE3:
+ 1128               	.global	CTL_temp_wanted
+ 1129               		.section	.data.CTL_temp_wanted,"aw",@progbits
+ 1132               	CTL_temp_wanted:
+ 1133 0000 22        		.byte	34
+ 1134               	.global	CTL_temp_wanted_manual
+ 1135               		.section	.data.CTL_temp_wanted_manual,"aw",@progbits
+ 1138               	CTL_temp_wanted_manual:
+ 1139 0000 22        		.byte	34
+ 1140               	.global	CTL_temp_wanted_auto
+ 1141               		.section	.data.CTL_temp_wanted_auto,"aw",@progbits
+ 1144               	CTL_temp_wanted_auto:
+ 1145 0000 22        		.byte	34
+ 1146               	.global	CTL_temp_wanted_last
+ 1147               		.section	.data.CTL_temp_wanted_last,"aw",@progbits
+ 1150               	CTL_temp_wanted_last:
+ 1151 0000 FF        		.byte	-1
+ 1152               	.global	CTL_temp_auto
+ 1153               		.section	.bss.CTL_temp_auto,"aw",@nobits
+ 1156               	CTL_temp_auto:
+ 1157 0000 00        		.skip 1,0
+ 1158               	.global	CTL_valve_wanted
+ 1159               		.section	.bss.CTL_valve_wanted,"aw",@nobits
+ 1162               	CTL_valve_wanted:
+ 1163 0000 00        		.skip 1,0
+ 1164               	.global	CTL_valve_old_wanted
+ 1165               		.section	.bss.CTL_valve_old_wanted,"aw",@nobits
+ 1168               	CTL_valve_old_wanted:
+ 1169 0000 00        		.skip 1,0
+ 1170               	.global	CTL_mode_changed
+ 1171               		.section	.bss.CTL_mode_changed,"aw",@nobits
+ 1174               	CTL_mode_changed:
+ 1175 0000 00        		.skip 1,0
+ 1176               	.global	CTL_mode_changed_timer
+ 1177               		.section	.bss.CTL_mode_changed_timer,"aw",@nobits
+ 1180               	CTL_mode_changed_timer:
+ 1181 0000 00        		.skip 1,0
+ 1182               	.global	CTL_temp_threshold
+ 1183               		.section	.data.CTL_temp_threshold,"aw",@progbits
+ 1186               	CTL_temp_threshold:
+ 1187 0000 0A00      		.word	10
+ 1188               	.global	CTL_bat_threshold
+ 1189               		.section	.data.CTL_bat_threshold,"aw",@progbits
+ 1192               	CTL_bat_threshold:
+ 1193 0000 6400      		.word	100
+ 1194               	.global	CTL_mode_auto
+ 1195               		.section	.data.CTL_mode_auto,"aw",@progbits
+ 1198               	CTL_mode_auto:
+ 1199 0000 03        		.byte	3
+ 1200               	.global	CTL_mode_window
+ 1201               		.section	.bss.CTL_mode_window,"aw",@nobits
+ 1204               	CTL_mode_window:
+ 1205 0000 00        		.skip 1,0
+ 1206               	.global	PID_force_update
+ 1207               		.section	.data.PID_force_update,"aw",@progbits
+ 1210               	PID_force_update:
+ 1211 0000 10        		.byte	16
+ 1212               	.global	CTL_error
+ 1213               		.section	.bss.CTL_error,"aw",@nobits
+ 1216               	CTL_error:
+ 1217 0000 00        		.skip 1,0
+ 1218               	.global	sumError
+ 1219               		.section	.bss.sumError,"aw",@nobits
+ 1222               	sumError:
+ 1223 0000 0000 0000 		.skip 4,0
+ 1224               		.section	.data.PID_update_timeout,"aw",@progbits
+ 1227               	PID_update_timeout:
+ 1228 0000 1000      		.word	16
+ 1229               		.section	.bss.lastErrorSign,"aw",@nobits
+ 1232               	lastErrorSign:
+ 1233 0000 00        		.skip 1,0
+ 1234               		.section	.bss.lastProcessValue,"aw",@nobits
+ 1237               	lastProcessValue:
+ 1238 0000 0000      		.skip 2,0
+ 1239               		.section	.bss.menu_temp_rewoke,"aw",@nobits
+ 1242               	menu_temp_rewoke:
+ 1243 0000 00        		.skip 1,0
+ 1244               		.section	.bss.target_temp_rewoke,"aw",@nobits
+ 1247               	target_temp_rewoke:
+ 1248 0000 00        		.skip 1,0
+ 1249               		.section	.bss.target_valve_rewoke,"aw",@nobits
+ 1252               	target_valve_rewoke:
+ 1253 0000 00        		.skip 1,0
+ 1254               		.section	.bss.mode_auto_rewoke,"aw",@nobits
+ 1257               	mode_auto_rewoke:
+ 1258 0000 00        		.skip 1,0
+ 1259               		.section	.bss.lastAbsError,"aw",@nobits
+ 1262               	lastAbsError:
+ 1263 0000 0000      		.skip 2,0
+ 1264               		.section	.bss.last2AbsError,"aw",@nobits
+ 1267               	last2AbsError:
+ 1268 0000 0000      		.skip 2,0
+ 1269               		.section	.bss.lastTempChangeErrorAbs,"aw",@nobits
+ 1272               	lastTempChangeErrorAbs:
+ 1273 0000 0000      		.skip 2,0
+ 1274               		.section	.bss.lastTempChangeSumError,"aw",@nobits
+ 1277               	lastTempChangeSumError:
+ 1278 0000 0000 0000 		.skip 4,0
+ 1279               		.comm valveHistory,1,1
+ 1280               		.comm CTL_integratorBlock,1,1
+ 1281               		.comm CTL_interatorCredit,1,1
+ 1282               		.comm CTL_creditExpiration,1,1
+ 1283               		.comm CTL_open_window_timeout,2,1
+ 1332               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 controller.c
+C:\Tools\cygwin\tmp/ccow5XBf.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccow5XBf.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccow5XBf.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccow5XBf.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccow5XBf.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccow5XBf.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccow5XBf.s:18     .text:00000000 CTL_temp_change_inc
+C:\Tools\cygwin\tmp/ccow5XBf.s:1138   .data.CTL_temp_wanted_manual:00000000 CTL_temp_wanted_manual
+C:\Tools\cygwin\tmp/ccow5XBf.s:1132   .data.CTL_temp_wanted:00000000 CTL_temp_wanted
+C:\Tools\cygwin\tmp/ccow5XBf.s:1204   .bss.CTL_mode_window:00000000 CTL_mode_window
+C:\Tools\cygwin\tmp/ccow5XBf.s:1210   .data.PID_force_update:00000000 PID_force_update
+C:\Tools\cygwin\tmp/ccow5XBf.s:63     .text:00000030 CTL_valve_change_inc
+C:\Tools\cygwin\tmp/ccow5XBf.s:1162   .bss.CTL_valve_wanted:00000000 CTL_valve_wanted
+C:\Tools\cygwin\tmp/ccow5XBf.s:98     .text:00000058 CTL_change_mode
+C:\Tools\cygwin\tmp/ccow5XBf.s:1156   .bss.CTL_temp_auto:00000000 CTL_temp_auto
+C:\Tools\cygwin\tmp/ccow5XBf.s:1242   .bss.menu_temp_rewoke:00000000 menu_temp_rewoke
+C:\Tools\cygwin\tmp/ccow5XBf.s:1247   .bss.target_temp_rewoke:00000000 target_temp_rewoke
+C:\Tools\cygwin\tmp/ccow5XBf.s:1252   .bss.target_valve_rewoke:00000000 target_valve_rewoke
+C:\Tools\cygwin\tmp/ccow5XBf.s:1198   .data.CTL_mode_auto:00000000 CTL_mode_auto
+C:\Tools\cygwin\tmp/ccow5XBf.s:1257   .bss.mode_auto_rewoke:00000000 mode_auto_rewoke
+C:\Tools\cygwin\tmp/ccow5XBf.s:1174   .bss.CTL_mode_changed:00000000 CTL_mode_changed
+C:\Tools\cygwin\tmp/ccow5XBf.s:1180   .bss.CTL_mode_changed_timer:00000000 CTL_mode_changed_timer
+C:\Tools\cygwin\tmp/ccow5XBf.s:1144   .data.CTL_temp_wanted_auto:00000000 CTL_temp_wanted_auto
+C:\Tools\cygwin\tmp/ccow5XBf.s:250    .text:00000156 CTL_update
+C:\Tools\cygwin\tmp/ccow5XBf.s:1150   .data.CTL_temp_wanted_last:00000000 CTL_temp_wanted_last
+C:\Tools\cygwin\tmp/ccow5XBf.s:1227   .data.PID_update_timeout:00000000 PID_update_timeout
+                            *COM*:00000001 valveHistory
+                            *COM*:00000001 CTL_interatorCredit
+                            *COM*:00000001 CTL_creditExpiration
+                            *COM*:00000001 CTL_integratorBlock
+C:\Tools\cygwin\tmp/ccow5XBf.s:1262   .bss.lastAbsError:00000000 lastAbsError
+C:\Tools\cygwin\tmp/ccow5XBf.s:1272   .bss.lastTempChangeErrorAbs:00000000 lastTempChangeErrorAbs
+C:\Tools\cygwin\tmp/ccow5XBf.s:1277   .bss.lastTempChangeSumError:00000000 lastTempChangeSumError
+C:\Tools\cygwin\tmp/ccow5XBf.s:1222   .bss.sumError:00000000 sumError
+C:\Tools\cygwin\tmp/ccow5XBf.s:1232   .bss.lastErrorSign:00000000 lastErrorSign
+C:\Tools\cygwin\tmp/ccow5XBf.s:1267   .bss.last2AbsError:00000000 last2AbsError
+C:\Tools\cygwin\tmp/ccow5XBf.s:1237   .bss.lastProcessValue:00000000 lastProcessValue
+C:\Tools\cygwin\tmp/ccow5XBf.s:1168   .bss.CTL_valve_old_wanted:00000000 CTL_valve_old_wanted
+C:\Tools\cygwin\tmp/ccow5XBf.s:1216   .bss.CTL_error:00000000 CTL_error
+C:\Tools\cygwin\tmp/ccow5XBf.s:1186   .data.CTL_temp_threshold:00000000 CTL_temp_threshold
+C:\Tools\cygwin\tmp/ccow5XBf.s:1192   .data.CTL_bat_threshold:00000000 CTL_bat_threshold
+                            *COM*:00000002 CTL_open_window_timeout
+
+UNDEFINED SYMBOLS
+config
+RTC_ActualTimerTemperature
+__prologue_saves__
+ring_buf_temp_avgs_pos
+__divmodhi4
+ring_buf_temp_avgs
+ring_average
+__divmodsi4
+__mulsi3
+COM_send_valve_event
+__epilogue_restores__
+__do_copy_data
+__do_clear_bss

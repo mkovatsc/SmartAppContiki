@@ -1,0 +1,2767 @@
+   1               		.file	"com.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	COM_putchar
+  18               	COM_putchar:
+  19               	.LFB4:
+  20               	.LM1:
+  21               	.LVL0:
+  22               	/* prologue: function */
+  23               	/* frame size = 0 */
+  24 0000 582F      		mov r21,r24
+  25               	.LM2:
+  26               	/* #APP */
+  27               	 ;  77 "com.c" 1
+  28 0002 F894      		cli
+  29               	 ;  0 "" 2
+  30               	.LM3:
+  31               	/* #NOAPP */
+  32 0004 4091 0000 		lds r20,tx_buff_in
+  33 0008 E42F      		mov r30,r20
+  34 000a F0E0      		ldi r31,lo8(0)
+  35 000c 9F01      		movw r18,r30
+  36 000e 2F5F      		subi r18,lo8(-(1))
+  37 0010 3F4F      		sbci r19,hi8(-(1))
+  38 0012 2F77      		andi r18,lo8(127)
+  39 0014 3070      		andi r19,hi8(127)
+  40 0016 8091 0000 		lds r24,tx_buff_out
+  41               	.LVL1:
+  42 001a 90E0      		ldi r25,lo8(0)
+  43 001c 2817      		cp r18,r24
+  44 001e 3907      		cpc r19,r25
+  45 0020 01F0      		breq .L2
+  46               	.LM4:
+  47 0022 E050      		subi r30,lo8(-(tx_buff))
+  48 0024 F040      		sbci r31,hi8(-(tx_buff))
+  49 0026 5083      		st Z,r21
+  50               	.LM5:
+  51 0028 4F5F      		subi r20,lo8(-(1))
+  52 002a 4F77      		andi r20,lo8(127)
+  53 002c 4093 0000 		sts tx_buff_in,r20
+  54               	.L2:
+  55               	.LM6:
+  56               	/* #APP */
+  57               	 ;  82 "com.c" 1
+  58 0030 7894      		sei
+  59               	 ;  0 "" 2
+  60               	/* epilogue start */
+  61               	.LM7:
+  62               	/* #NOAPP */
+  63 0032 0895      		ret
+  64               	.LFE4:
+  66               	.global	COM_tx_char_isr
+  68               	COM_tx_char_isr:
+  69               	.LFB5:
+  70               	.LM8:
+  71               	/* prologue: function */
+  72               	/* frame size = 0 */
+  73               	.LM9:
+  74 0034 9091 0000 		lds r25,tx_buff_out
+  75 0038 8091 0000 		lds r24,tx_buff_in
+  76 003c 8917      		cp r24,r25
+  77 003e 01F4      		brne .L5
+  78 0040 80E0      		ldi r24,lo8(0)
+  79               	.LVL2:
+  80 0042 0895      		ret
+  81               	.LVL3:
+  82               	.L5:
+  83               	.LM10:
+  84 0044 E92F      		mov r30,r25
+  85 0046 F0E0      		ldi r31,lo8(0)
+  86 0048 E050      		subi r30,lo8(-(tx_buff))
+  87 004a F040      		sbci r31,hi8(-(tx_buff))
+  88 004c 8081      		ld r24,Z
+  89               	.LVL4:
+  90               	.LM11:
+  91 004e 9F5F      		subi r25,lo8(-(1))
+  92 0050 9F77      		andi r25,lo8(127)
+  93 0052 9093 0000 		sts tx_buff_out,r25
+  94               	.LVL5:
+  95               	.LM12:
+  96 0056 0895      		ret
+  97               	.LFE5:
+  99               	.global	COM_rx_char_isr
+ 101               	COM_rx_char_isr:
+ 102               	.LFB6:
+ 103               	.LM13:
+ 104               	.LVL6:
+ 105               	/* prologue: function */
+ 106               	/* frame size = 0 */
+ 107 0058 282F      		mov r18,r24
+ 108               	.LM14:
+ 109 005a 8823      		tst r24
+ 110 005c 01F0      		breq .L12
+ 111               	.LM15:
+ 112 005e 8D30      		cpi r24,lo8(13)
+ 113 0060 01F4      		brne .L10
+ 114 0062 2AE0      		ldi r18,lo8(10)
+ 115               	.LVL7:
+ 116               	.L10:
+ 117               	.LM16:
+ 118 0064 8091 0000 		lds r24,rx_buff_in
+ 119 0068 E82F      		mov r30,r24
+ 120 006a F0E0      		ldi r31,lo8(0)
+ 121 006c E050      		subi r30,lo8(-(rx_buff))
+ 122 006e F040      		sbci r31,hi8(-(rx_buff))
+ 123 0070 2083      		st Z,r18
+ 124               	.LM17:
+ 125 0072 982F      		mov r25,r24
+ 126 0074 9F5F      		subi r25,lo8(-(1))
+ 127 0076 9F73      		andi r25,lo8(63)
+ 128 0078 9093 0000 		sts rx_buff_in,r25
+ 129               	.LM18:
+ 130 007c 8091 0000 		lds r24,rx_buff_out
+ 131 0080 9817      		cp r25,r24
+ 132 0082 01F4      		brne .L11
+ 133               	.LM19:
+ 134 0084 9F5F      		subi r25,lo8(-(1))
+ 135 0086 9F73      		andi r25,lo8(63)
+ 136 0088 9093 0000 		sts rx_buff_out,r25
+ 137               	.L11:
+ 138               	.LM20:
+ 139 008c 2A30      		cpi r18,lo8(10)
+ 140 008e 01F4      		brne .L12
+ 141               	.LM21:
+ 142 0090 F69A      		sbi 62-32,6
+ 143               	.LM22:
+ 144 0092 8091 0000 		lds r24,COM_requests
+ 145 0096 8F5F      		subi r24,lo8(-(1))
+ 146 0098 8093 0000 		sts COM_requests,r24
+ 147               	.LVL8:
+ 148               	.L12:
+ 149 009c 0895      		ret
+ 150               	.LFE6:
+ 153               	COM_getchar:
+ 154               	.LFB7:
+ 155               	.LM23:
+ 156               	/* prologue: function */
+ 157               	/* frame size = 0 */
+ 158               	.LM24:
+ 159               	/* #APP */
+ 160               	 ;  133 "com.c" 1
+ 161 009e F894      		cli
+ 162               	 ;  0 "" 2
+ 163               	.LM25:
+ 164               	/* #NOAPP */
+ 165 00a0 9091 0000 		lds r25,rx_buff_out
+ 166 00a4 8091 0000 		lds r24,rx_buff_in
+ 167 00a8 8917      		cp r24,r25
+ 168 00aa 01F0      		breq .L14
+ 169               	.LM26:
+ 170 00ac E92F      		mov r30,r25
+ 171 00ae F0E0      		ldi r31,lo8(0)
+ 172 00b0 E050      		subi r30,lo8(-(rx_buff))
+ 173 00b2 F040      		sbci r31,hi8(-(rx_buff))
+ 174 00b4 E081      		ld r30,Z
+ 175               	.LVL9:
+ 176               	.LM27:
+ 177 00b6 9F5F      		subi r25,lo8(-(1))
+ 178 00b8 9F73      		andi r25,lo8(63)
+ 179 00ba 9093 0000 		sts rx_buff_out,r25
+ 180               	.LM28:
+ 181 00be 8091 0000 		lds r24,COM_requests
+ 182 00c2 8150      		subi r24,lo8(-(-1))
+ 183 00c4 8093 0000 		sts COM_requests,r24
+ 184 00c8 00C0      		rjmp .L15
+ 185               	.LVL10:
+ 186               	.L14:
+ 187               	.LM29:
+ 188 00ca 1092 0000 		sts COM_requests,__zero_reg__
+ 189 00ce E0E0      		ldi r30,lo8(0)
+ 190               	.LVL11:
+ 191               	.L15:
+ 192               	.LM30:
+ 193               	/* #APP */
+ 194               	 ;  142 "com.c" 1
+ 195 00d0 7894      		sei
+ 196               	 ;  0 "" 2
+ 197               	.LM31:
+ 198               	/* #NOAPP */
+ 199 00d2 8E2F      		mov r24,r30
+ 200               	/* epilogue start */
+ 201 00d4 0895      		ret
+ 202               	.LFE7:
+ 205               	print_decXX:
+ 206               	.LFB9:
+ 207               	.LM32:
+ 208               	.LVL12:
+ 209 00d6 1F93      		push r17
+ 210               	/* prologue: function */
+ 211               	/* frame size = 0 */
+ 212 00d8 182F      		mov r17,r24
+ 213               	.LM33:
+ 214 00da 8436      		cpi r24,lo8(100)
+ 215 00dc 00F0      		brlo .L18
+ 216               	.LM34:
+ 217 00de 64E6      		ldi r22,lo8(100)
+ 218 00e0 0E94 0000 		call __udivmodqi4
+ 219               	.LVL13:
+ 220 00e4 805D      		subi r24,lo8(-(48))
+ 221 00e6 0E94 0000 		call COM_putchar
+ 222               	.LM35:
+ 223 00ea 812F      		mov r24,r17
+ 224 00ec 64E6      		ldi r22,lo8(100)
+ 225 00ee 0E94 0000 		call __udivmodqi4
+ 226 00f2 192F      		mov r17,r25
+ 227               	.LVL14:
+ 228               	.L18:
+ 229               	.LM36:
+ 230 00f4 812F      		mov r24,r17
+ 231 00f6 6AE0      		ldi r22,lo8(10)
+ 232 00f8 0E94 0000 		call __udivmodqi4
+ 233 00fc 805D      		subi r24,lo8(-(48))
+ 234 00fe 0E94 0000 		call COM_putchar
+ 235               	.LM37:
+ 236 0102 812F      		mov r24,r17
+ 237 0104 6AE0      		ldi r22,lo8(10)
+ 238 0106 0E94 0000 		call __udivmodqi4
+ 239 010a 892F      		mov r24,r25
+ 240 010c 805D      		subi r24,lo8(-(48))
+ 241 010e 0E94 0000 		call COM_putchar
+ 242               	/* epilogue start */
+ 243               	.LM38:
+ 244 0112 1F91      		pop r17
+ 245               	.LVL15:
+ 246 0114 0895      		ret
+ 247               	.LFE9:
+ 250               	print_digit:
+ 251               	.LFB10:
+ 252               	.LM39:
+ 253               	.LVL16:
+ 254               	/* prologue: function */
+ 255               	/* frame size = 0 */
+ 256               	.LM40:
+ 257 0116 6AE0      		ldi r22,lo8(10)
+ 258 0118 0E94 0000 		call __udivmodqi4
+ 259               	.LVL17:
+ 260 011c 892F      		mov r24,r25
+ 261 011e 805D      		subi r24,lo8(-(48))
+ 262 0120 0E94 0000 		call COM_putchar
+ 263               	/* epilogue start */
+ 264               	.LM41:
+ 265 0124 0895      		ret
+ 266               	.LFE10:
+ 269               	print_decXXX:
+ 270               	.LFB11:
+ 271               	.LM42:
+ 272               	.LVL18:
+ 273 0126 1F93      		push r17
+ 274               	/* prologue: function */
+ 275               	/* frame size = 0 */
+ 276 0128 182F      		mov r17,r24
+ 277               	.LM43:
+ 278 012a 8436      		cpi r24,lo8(100)
+ 279 012c 00F0      		brlo .L23
+ 280               	.LM44:
+ 281 012e 64E6      		ldi r22,lo8(100)
+ 282 0130 0E94 0000 		call __udivmodqi4
+ 283               	.LVL19:
+ 284 0134 805D      		subi r24,lo8(-(48))
+ 285 0136 0E94 0000 		call COM_putchar
+ 286               	.LM45:
+ 287 013a 812F      		mov r24,r17
+ 288 013c 64E6      		ldi r22,lo8(100)
+ 289 013e 0E94 0000 		call __udivmodqi4
+ 290 0142 192F      		mov r17,r25
+ 291 0144 00C0      		rjmp .L24
+ 292               	.LVL20:
+ 293               	.L23:
+ 294               	.LM46:
+ 295 0146 80E3      		ldi r24,lo8(48)
+ 296               	.LVL21:
+ 297 0148 0E94 0000 		call COM_putchar
+ 298               	.L24:
+ 299               	.LM47:
+ 300 014c 812F      		mov r24,r17
+ 301 014e 6AE0      		ldi r22,lo8(10)
+ 302 0150 0E94 0000 		call __udivmodqi4
+ 303 0154 805D      		subi r24,lo8(-(48))
+ 304 0156 0E94 0000 		call COM_putchar
+ 305               	.LM48:
+ 306 015a 812F      		mov r24,r17
+ 307 015c 6AE0      		ldi r22,lo8(10)
+ 308 015e 0E94 0000 		call __udivmodqi4
+ 309 0162 892F      		mov r24,r25
+ 310 0164 805D      		subi r24,lo8(-(48))
+ 311 0166 0E94 0000 		call COM_putchar
+ 312               	/* epilogue start */
+ 313               	.LM49:
+ 314 016a 1F91      		pop r17
+ 315               	.LVL22:
+ 316 016c 0895      		ret
+ 317               	.LFE11:
+ 320               	print_decXXXX:
+ 321               	.LFB12:
+ 322               	.LM50:
+ 323               	.LVL23:
+ 324 016e 0F93      		push r16
+ 325 0170 1F93      		push r17
+ 326               	/* prologue: function */
+ 327               	/* frame size = 0 */
+ 328 0172 8C01      		movw r16,r24
+ 329               	.LM51:
+ 330 0174 64E6      		ldi r22,lo8(100)
+ 331 0176 70E0      		ldi r23,hi8(100)
+ 332 0178 0E94 0000 		call __udivmodhi4
+ 333               	.LVL24:
+ 334 017c 862F      		mov r24,r22
+ 335 017e 0E94 0000 		call print_decXX
+ 336               	.LM52:
+ 337 0182 C801      		movw r24,r16
+ 338 0184 64E6      		ldi r22,lo8(100)
+ 339 0186 70E0      		ldi r23,hi8(100)
+ 340 0188 0E94 0000 		call __udivmodhi4
+ 341 018c 0E94 0000 		call print_decXX
+ 342               	/* epilogue start */
+ 343               	.LM53:
+ 344 0190 1F91      		pop r17
+ 345 0192 0F91      		pop r16
+ 346               	.LVL25:
+ 347 0194 0895      		ret
+ 348               	.LFE12:
+ 351               	print_hexXX:
+ 352               	.LFB13:
+ 353               	.LM54:
+ 354               	.LVL26:
+ 355 0196 1F93      		push r17
+ 356               	/* prologue: function */
+ 357               	/* frame size = 0 */
+ 358 0198 182F      		mov r17,r24
+ 359               	.LM55:
+ 360 019a 8295      		swap r24
+ 361               	.LVL27:
+ 362 019c 8F70      		andi r24,lo8(15)
+ 363               	.LM56:
+ 364 019e 8A30      		cpi r24,lo8(10)
+ 365 01a0 00F0      		brlo .L29
+ 366               	.LM57:
+ 367 01a2 895A      		subi r24,lo8(-(87))
+ 368               	.LVL28:
+ 369 01a4 00C0      		rjmp .L34
+ 370               	.LVL29:
+ 371               	.L29:
+ 372               	.LM58:
+ 373 01a6 805D      		subi r24,lo8(-(48))
+ 374               	.LVL30:
+ 375               	.L34:
+ 376 01a8 0E94 0000 		call COM_putchar
+ 377               	.LM59:
+ 378 01ac 812F      		mov r24,r17
+ 379               	.LVL31:
+ 380 01ae 8F70      		andi r24,lo8(15)
+ 381               	.LM60:
+ 382 01b0 8A30      		cpi r24,lo8(10)
+ 383 01b2 00F0      		brlo .L31
+ 384               	.LM61:
+ 385 01b4 895A      		subi r24,lo8(-(87))
+ 386               	.LVL32:
+ 387 01b6 00C0      		rjmp .L35
+ 388               	.LVL33:
+ 389               	.L31:
+ 390               	.LM62:
+ 391 01b8 805D      		subi r24,lo8(-(48))
+ 392               	.LVL34:
+ 393               	.L35:
+ 394 01ba 0E94 0000 		call COM_putchar
+ 395               	/* epilogue start */
+ 396               	.LM63:
+ 397 01be 1F91      		pop r17
+ 398               	.LVL35:
+ 399 01c0 0895      		ret
+ 400               	.LFE13:
+ 403               	print_hexXXXX:
+ 404               	.LFB14:
+ 405               	.LM64:
+ 406               	.LVL36:
+ 407 01c2 1F93      		push r17
+ 408               	/* prologue: function */
+ 409               	/* frame size = 0 */
+ 410 01c4 182F      		mov r17,r24
+ 411               	.LM65:
+ 412 01c6 892F      		mov r24,r25
+ 413               	.LVL37:
+ 414 01c8 0E94 0000 		call print_hexXX
+ 415               	.LVL38:
+ 416               	.LM66:
+ 417 01cc 812F      		mov r24,r17
+ 418 01ce 0E94 0000 		call print_hexXX
+ 419               	/* epilogue start */
+ 420               	.LM67:
+ 421 01d2 1F91      		pop r17
+ 422               	.LVL39:
+ 423 01d4 0895      		ret
+ 424               	.LFE14:
+ 427               	print_s_p:
+ 428               	.LFB15:
+ 429               	.LM68:
+ 430               	.LVL40:
+ 431 01d6 CF93      		push r28
+ 432 01d8 DF93      		push r29
+ 433               	/* prologue: function */
+ 434               	/* frame size = 0 */
+ 435 01da EC01      		movw r28,r24
+ 436               	.LBB14:
+ 437               	.LM69:
+ 438 01dc FC01      		movw r30,r24
+ 439               	/* #APP */
+ 440               	 ;  268 "com.c" 1
+ 441 01de 8491      		lpm r24, Z
+ 442               		
+ 443               	 ;  0 "" 2
+ 444               	.LVL41:
+ 445               	/* #NOAPP */
+ 446 01e0 00C0      		rjmp .L39
+ 447               	.L40:
+ 448               	.LBE14:
+ 449               	.LM70:
+ 450 01e2 0E94 0000 		call COM_putchar
+ 451               	.LVL42:
+ 452               	.LM71:
+ 453 01e6 2196      		adiw r28,1
+ 454               	.LBB15:
+ 455 01e8 FE01      		movw r30,r28
+ 456               	/* #APP */
+ 457               	 ;  268 "com.c" 1
+ 458 01ea 8491      		lpm r24, Z
+ 459               		
+ 460               	 ;  0 "" 2
+ 461               	.LVL43:
+ 462               	/* #NOAPP */
+ 463               	.L39:
+ 464               	.LBE15:
+ 465 01ec 8823      		tst r24
+ 466 01ee 01F4      		brne .L40
+ 467               	/* epilogue start */
+ 468               	.LM72:
+ 469 01f0 DF91      		pop r29
+ 470 01f2 CF91      		pop r28
+ 471               	.LVL44:
+ 472 01f4 0895      		ret
+ 473               	.LFE15:
+ 476               	COM_hex_parse:
+ 477               	.LFB27:
+ 478               	.LM73:
+ 479               	.LVL45:
+ 480 01f6 0F93      		push r16
+ 481 01f8 1F93      		push r17
+ 482               	/* prologue: function */
+ 483               	/* frame size = 0 */
+ 484 01fa 082F      		mov r16,r24
+ 485               	.LM74:
+ 486 01fc 10E0      		ldi r17,lo8(0)
+ 487               	.LVL46:
+ 488 01fe 00C0      		rjmp .L43
+ 489               	.LVL47:
+ 490               	.L48:
+ 491               	.LBB16:
+ 492               	.LM75:
+ 493 0200 0E94 0000 		call COM_getchar
+ 494               	.LVL48:
+ 495 0204 982F      		mov r25,r24
+ 496               	.LVL49:
+ 497 0206 282F      		mov r18,r24
+ 498               	.LVL50:
+ 499 0208 2053      		subi r18,lo8(-(-48))
+ 500               	.LM76:
+ 501 020a 2A30      		cpi r18,lo8(10)
+ 502 020c 00F0      		brlo .L44
+ 503               	.LVL51:
+ 504               	.LM77:
+ 505 020e 8156      		subi r24,lo8(-(-97))
+ 506               	.LVL52:
+ 507 0210 8630      		cpi r24,lo8(6)
+ 508 0212 00F4      		brsh .L45
+ 509               	.LM78:
+ 510 0214 2752      		subi r18,lo8(-(-39))
+ 511               	.LVL53:
+ 512               	.L44:
+ 513 0216 E12F      		mov r30,r17
+ 514 0218 E695      		lsr r30
+ 515               	.LM79:
+ 516 021a 10FF      		sbrs r17,0
+ 517 021c 00C0      		rjmp .L46
+ 518               	.LM80:
+ 519 021e F0E0      		ldi r31,lo8(0)
+ 520 0220 E050      		subi r30,lo8(-(com_hex))
+ 521 0222 F040      		sbci r31,hi8(-(com_hex))
+ 522 0224 8081      		ld r24,Z
+ 523 0226 280F      		add r18,r24
+ 524 0228 00C0      		rjmp .L50
+ 525               	.LVL54:
+ 526               	.L46:
+ 527               	.LM81:
+ 528 022a F0E0      		ldi r31,lo8(0)
+ 529 022c E050      		subi r30,lo8(-(com_hex))
+ 530 022e F040      		sbci r31,hi8(-(com_hex))
+ 531 0230 2295      		swap r18
+ 532 0232 207F      		andi r18,lo8(-16)
+ 533               	.L50:
+ 534 0234 2083      		st Z,r18
+ 535               	.LBE16:
+ 536               	.LM82:
+ 537 0236 1F5F      		subi r17,lo8(-(1))
+ 538               	.LVL55:
+ 539               	.L43:
+ 540 0238 1017      		cp r17,r16
+ 541 023a 00F0      		brlo .L48
+ 542               	.LBB17:
+ 543               	.LM83:
+ 544 023c 0E94 0000 		call COM_getchar
+ 545               	.LVL56:
+ 546 0240 982F      		mov r25,r24
+ 547               	.LVL57:
+ 548 0242 8A30      		cpi r24,lo8(10)
+ 549 0244 01F4      		brne .L45
+ 550               	.LVL58:
+ 551 0246 90E0      		ldi r25,lo8(0)
+ 552               	.LVL59:
+ 553               	.L45:
+ 554               	.LBE17:
+ 555               	.LM84:
+ 556 0248 892F      		mov r24,r25
+ 557               	/* epilogue start */
+ 558 024a 1F91      		pop r17
+ 559               	.LVL60:
+ 560 024c 0F91      		pop r16
+ 561               	.LVL61:
+ 562 024e 0895      		ret
+ 563               	.LFE27:
+ 566               	print_idx:
+ 567               	.LFB28:
+ 568               	.LM85:
+ 569               	.LVL62:
+ 570 0250 1F93      		push r17
+ 571               	/* prologue: function */
+ 572               	/* frame size = 0 */
+ 573 0252 162F      		mov r17,r22
+ 574               	.LM86:
+ 575 0254 0E94 0000 		call COM_putchar
+ 576               	.LVL63:
+ 577               	.LM87:
+ 578 0258 8BE5      		ldi r24,lo8(91)
+ 579 025a 0E94 0000 		call COM_putchar
+ 580               	.LM88:
+ 581 025e 812F      		mov r24,r17
+ 582 0260 0E94 0000 		call print_hexXX
+ 583               	.LM89:
+ 584 0264 8DE5      		ldi r24,lo8(93)
+ 585 0266 0E94 0000 		call COM_putchar
+ 586               	.LM90:
+ 587 026a 8DE3      		ldi r24,lo8(61)
+ 588 026c 0E94 0000 		call COM_putchar
+ 589               	/* epilogue start */
+ 590               	.LM91:
+ 591 0270 1F91      		pop r17
+ 592               	.LVL64:
+ 593 0272 0895      		ret
+ 594               	.LFE28:
+ 596               	.global	COM_flush
+ 598               	COM_flush:
+ 599               	.LFB8:
+ 600               	.LM92:
+ 601               	/* prologue: function */
+ 602               	/* frame size = 0 */
+ 603               	.LM93:
+ 604 0274 9091 0000 		lds r25,tx_buff_in
+ 605 0278 8091 0000 		lds r24,tx_buff_out
+ 606 027c 9817      		cp r25,r24
+ 607 027e 01F0      		breq .L55
+ 608               	.LM94:
+ 609 0280 0E94 0000 		call RS_startSend
+ 610               	.L55:
+ 611 0284 0895      		ret
+ 612               	.LFE8:
+ 615               	print_version:
+ 616               	.LFB16:
+ 617               	.LM95:
+ 618               	.LVL65:
+ 619 0286 0F93      		push r16
+ 620 0288 1F93      		push r17
+ 621 028a CF93      		push r28
+ 622 028c DF93      		push r29
+ 623               	/* prologue: function */
+ 624               	/* frame size = 0 */
+ 625 028e 082F      		mov r16,r24
+ 626               	.LM96:
+ 627 0290 86E5      		ldi r24,lo8(86)
+ 628               	.LVL66:
+ 629 0292 0E94 0000 		call COM_putchar
+ 630               	.LBB18:
+ 631               	.LM97:
+ 632 0296 E0E0      		ldi r30,lo8(__c.1588)
+ 633 0298 F0E0      		ldi r31,hi8(__c.1588)
+ 634               	/* #APP */
+ 635               	 ;  283 "com.c" 1
+ 636 029a 1491      		lpm r17, Z
+ 637               		
+ 638               	 ;  0 "" 2
+ 639               	.LVL67:
+ 640               	/* #NOAPP */
+ 641 029c EF01      		movw r28,r30
+ 642               	.LVL68:
+ 643 029e 00C0      		rjmp .L57
+ 644               	.L59:
+ 645               	.LBE18:
+ 646               	.LM98:
+ 647 02a0 812F      		mov r24,r17
+ 648 02a2 0E94 0000 		call COM_putchar
+ 649               	.LM99:
+ 650 02a6 0023      		tst r16
+ 651 02a8 01F0      		breq .L58
+ 652 02aa 812F      		mov r24,r17
+ 653 02ac 0E94 0000 		call wireless_putchar
+ 654               	.L58:
+ 655               	.LM100:
+ 656 02b0 2196      		adiw r28,1
+ 657               	.LBB19:
+ 658 02b2 FE01      		movw r30,r28
+ 659               	/* #APP */
+ 660               	 ;  283 "com.c" 1
+ 661 02b4 1491      		lpm r17, Z
+ 662               		
+ 663               	 ;  0 "" 2
+ 664               	/* #NOAPP */
+ 665               	.L57:
+ 666               	.LBE19:
+ 667 02b6 1123      		tst r17
+ 668 02b8 01F4      		brne .L59
+ 669               	.LM101:
+ 670 02ba 0E94 0000 		call COM_flush
+ 671               	/* epilogue start */
+ 672               	.LM102:
+ 673 02be DF91      		pop r29
+ 674 02c0 CF91      		pop r28
+ 675               	.LVL69:
+ 676 02c2 1F91      		pop r17
+ 677               	.LVL70:
+ 678 02c4 0F91      		pop r16
+ 679               	.LVL71:
+ 680 02c6 0895      		ret
+ 681               	.LFE16:
+ 683               	.global	COM_print_debug
+ 685               	COM_print_debug:
+ 686               	.LFB26:
+ 687               	.LM103:
+ 688               	.LVL72:
+ 689 02c8 1F93      		push r17
+ 690               	/* prologue: function */
+ 691               	/* frame size = 0 */
+ 692 02ca 182F      		mov r17,r24
+ 693               	.LM104:
+ 694 02cc 80E0      		ldi r24,lo8(__c.1633)
+ 695 02ce 90E0      		ldi r25,hi8(__c.1633)
+ 696               	.LVL73:
+ 697 02d0 0E94 0000 		call print_s_p
+ 698               	.LM105:
+ 699 02d4 8091 0000 		lds r24,RTC+6
+ 700 02d8 8053      		subi r24,lo8(-(-48))
+ 701 02da 0E94 0000 		call print_hexXX
+ 702               	.LM106:
+ 703 02de 80E2      		ldi r24,lo8(32)
+ 704 02e0 0E94 0000 		call COM_putchar
+ 705               	.LM107:
+ 706 02e4 8091 0000 		lds r24,RTC+2
+ 707 02e8 0E94 0000 		call print_decXX
+ 708               	.LM108:
+ 709 02ec 8EE2      		ldi r24,lo8(46)
+ 710 02ee 0E94 0000 		call COM_putchar
+ 711               	.LM109:
+ 712 02f2 8091 0000 		lds r24,RTC+1
+ 713 02f6 0E94 0000 		call print_decXX
+ 714               	.LM110:
+ 715 02fa 8EE2      		ldi r24,lo8(46)
+ 716 02fc 0E94 0000 		call COM_putchar
+ 717               	.LM111:
+ 718 0300 8091 0000 		lds r24,RTC
+ 719 0304 0E94 0000 		call print_decXX
+ 720               	.LM112:
+ 721 0308 80E2      		ldi r24,lo8(32)
+ 722 030a 0E94 0000 		call COM_putchar
+ 723               	.LM113:
+ 724 030e 8091 0000 		lds r24,RTC+3
+ 725 0312 0E94 0000 		call print_decXX
+ 726               	.LM114:
+ 727 0316 8AE3      		ldi r24,lo8(58)
+ 728 0318 0E94 0000 		call COM_putchar
+ 729               	.LM115:
+ 730 031c 8091 0000 		lds r24,RTC+4
+ 731 0320 0E94 0000 		call print_decXX
+ 732               	.LM116:
+ 733 0324 8AE3      		ldi r24,lo8(58)
+ 734 0326 0E94 0000 		call COM_putchar
+ 735               	.LM117:
+ 736 032a 8091 0000 		lds r24,RTC+5
+ 737 032e 0E94 0000 		call print_decXX
+ 738               	.LM118:
+ 739 0332 80E2      		ldi r24,lo8(32)
+ 740 0334 0E94 0000 		call COM_putchar
+ 741               	.LM119:
+ 742 0338 8091 0000 		lds r24,CTL_mode_auto
+ 743 033c 8230      		cpi r24,lo8(2)
+ 744 033e 01F0      		breq .L65
+ 745 0340 8330      		cpi r24,lo8(3)
+ 746 0342 00F4      		brsh .L68
+ 747 0344 8823      		tst r24
+ 748 0346 01F0      		breq .L63
+ 749 0348 8130      		cpi r24,lo8(1)
+ 750 034a 01F4      		brne .L62
+ 751 034c 00C0      		rjmp .L88
+ 752               	.L68:
+ 753 034e 8330      		cpi r24,lo8(3)
+ 754 0350 01F0      		breq .L66
+ 755 0352 8430      		cpi r24,lo8(4)
+ 756 0354 01F4      		brne .L62
+ 757 0356 00C0      		rjmp .L89
+ 758               	.L63:
+ 759               	.LM120:
+ 760 0358 8DE4      		ldi r24,lo8(77)
+ 761 035a 00C0      		rjmp .L86
+ 762               	.L88:
+ 763               	.LM121:
+ 764 035c 8DE4      		ldi r24,lo8(77)
+ 765 035e 00C0      		rjmp .L87
+ 766               	.L65:
+ 767               	.LM122:
+ 768 0360 81E4      		ldi r24,lo8(65)
+ 769               	.L86:
+ 770 0362 0E94 0000 		call COM_putchar
+ 771               	.LM123:
+ 772 0366 84E5      		ldi r24,lo8(84)
+ 773 0368 00C0      		rjmp .L85
+ 774               	.L66:
+ 775               	.LM124:
+ 776 036a 81E4      		ldi r24,lo8(65)
+ 777 036c 0E94 0000 		call COM_putchar
+ 778               	.LM125:
+ 779 0370 86E5      		ldi r24,lo8(86)
+ 780 0372 00C0      		rjmp .L85
+ 781               	.L89:
+ 782               	.LM126:
+ 783 0374 81E4      		ldi r24,lo8(65)
+ 784               	.L87:
+ 785 0376 0E94 0000 		call COM_putchar
+ 786               	.LM127:
+ 787 037a 80E5      		ldi r24,lo8(80)
+ 788 037c 00C0      		rjmp .L85
+ 789               	.L62:
+ 790               	.LM128:
+ 791 037e 8DE2      		ldi r24,lo8(45)
+ 792 0380 0E94 0000 		call COM_putchar
+ 793               	.LM129:
+ 794 0384 8DE2      		ldi r24,lo8(45)
+ 795               	.L85:
+ 796 0386 0E94 0000 		call COM_putchar
+ 797               	.LM130:
+ 798 038a 80E0      		ldi r24,lo8(__c.1642)
+ 799 038c 90E0      		ldi r25,hi8(__c.1642)
+ 800 038e 0E94 0000 		call print_s_p
+ 801               	.LM131:
+ 802 0392 8091 0000 		lds r24,valveHistory
+ 803 0396 0E94 0000 		call print_decXX
+ 804               	.LM132:
+ 805 039a 80E0      		ldi r24,lo8(__c.1644)
+ 806 039c 90E0      		ldi r25,hi8(__c.1644)
+ 807 039e 0E94 0000 		call print_s_p
+ 808               	.LM133:
+ 809 03a2 8091 0000 		lds r24,ring_average+2
+ 810 03a6 9091 0000 		lds r25,(ring_average+2)+1
+ 811 03aa 0E94 0000 		call print_decXXXX
+ 812               	.LM134:
+ 813 03ae 80E0      		ldi r24,lo8(__c.1646)
+ 814 03b0 90E0      		ldi r25,hi8(__c.1646)
+ 815 03b2 0E94 0000 		call print_s_p
+ 816               	.LM135:
+ 817 03b6 9091 0000 		lds r25,CTL_temp_wanted_last
+ 818 03ba 9E33      		cpi r25,lo8(62)
+ 819 03bc 00F0      		brlo .L70
+ 820               	.LM136:
+ 821 03be 80E0      		ldi r24,lo8(__c.1648)
+ 822 03c0 90E0      		ldi r25,hi8(__c.1648)
+ 823 03c2 0E94 0000 		call print_s_p
+ 824 03c6 00C0      		rjmp .L71
+ 825               	.L70:
+ 826               	.LM137:
+ 827 03c8 82E3      		ldi r24,lo8(50)
+ 828 03ca 989F      		mul r25,r24
+ 829 03cc C001      		movw r24,r0
+ 830 03ce 1124      		clr r1
+ 831 03d0 0E94 0000 		call print_decXXXX
+ 832               	.L71:
+ 833               	.LM138:
+ 834 03d4 80E0      		ldi r24,lo8(__c.1650)
+ 835 03d6 90E0      		ldi r25,hi8(__c.1650)
+ 836 03d8 0E94 0000 		call print_s_p
+ 837               	.LM139:
+ 838 03dc 8091 0000 		lds r24,ring_average
+ 839 03e0 9091 0000 		lds r25,(ring_average)+1
+ 840 03e4 0E94 0000 		call print_decXXXX
+ 841               	.LM140:
+ 842 03e8 80E0      		ldi r24,lo8(__c.1652)
+ 843 03ea 90E0      		ldi r25,hi8(__c.1652)
+ 844 03ec 0E94 0000 		call print_s_p
+ 845               	.LM141:
+ 846 03f0 8091 0000 		lds r24,sumError
+ 847 03f4 9091 0000 		lds r25,(sumError)+1
+ 848 03f8 A091 0000 		lds r26,(sumError)+2
+ 849 03fc B091 0000 		lds r27,(sumError)+3
+ 850 0400 CD01      		movw r24,r26
+ 851 0402 BB27      		clr r27
+ 852 0404 97FD      		sbrc r25,7
+ 853 0406 B095      		com r27
+ 854 0408 AB2F      		mov r26,r27
+ 855 040a 0E94 0000 		call print_hexXXXX
+ 856               	.LM142:
+ 857 040e 8091 0000 		lds r24,sumError
+ 858 0412 9091 0000 		lds r25,(sumError)+1
+ 859 0416 0E94 0000 		call print_hexXXXX
+ 860               	.LM143:
+ 861 041a 80E0      		ldi r24,lo8(__c.1654)
+ 862 041c 90E0      		ldi r25,hi8(__c.1654)
+ 863 041e 0E94 0000 		call print_s_p
+ 864               	.LM144:
+ 865 0422 8091 0000 		lds r24,CTL_integratorBlock
+ 866 0426 0E94 0000 		call print_hexXX
+ 867               	.LM145:
+ 868 042a 80E0      		ldi r24,lo8(__c.1656)
+ 869 042c 90E0      		ldi r25,hi8(__c.1656)
+ 870 042e 0E94 0000 		call print_s_p
+ 871               	.LM146:
+ 872 0432 8091 0000 		lds r24,CTL_interatorCredit
+ 873 0436 0E94 0000 		call print_hexXX
+ 874               	.LM147:
+ 875 043a 80E0      		ldi r24,lo8(__c.1658)
+ 876 043c 90E0      		ldi r25,hi8(__c.1658)
+ 877 043e 0E94 0000 		call print_s_p
+ 878               	.LM148:
+ 879 0442 8091 0000 		lds r24,CTL_creditExpiration
+ 880 0446 0E94 0000 		call print_hexXX
+ 881               	.LM149:
+ 882 044a 8091 0000 		lds r24,CTL_error
+ 883 044e 8823      		tst r24
+ 884 0450 01F0      		breq .L72
+ 885               	.LM150:
+ 886 0452 80E0      		ldi r24,lo8(__c.1660)
+ 887 0454 90E0      		ldi r25,hi8(__c.1660)
+ 888 0456 0E94 0000 		call print_s_p
+ 889               	.LM151:
+ 890 045a 8091 0000 		lds r24,CTL_error
+ 891 045e 0E94 0000 		call print_hexXX
+ 892               	.L72:
+ 893               	.LM152:
+ 894 0462 1123      		tst r17
+ 895 0464 01F0      		breq .L73
+ 896               	.LM153:
+ 897 0466 80E0      		ldi r24,lo8(__c.1662)
+ 898 0468 90E0      		ldi r25,hi8(__c.1662)
+ 899 046a 0E94 0000 		call print_s_p
+ 900               	.L73:
+ 901               	.LM154:
+ 902 046e 8091 0000 		lds r24,CTL_mode_window
+ 903 0472 8823      		tst r24
+ 904 0474 01F0      		breq .L74
+ 905               	.LM155:
+ 906 0476 80E0      		ldi r24,lo8(__c.1664)
+ 907 0478 90E0      		ldi r25,hi8(__c.1664)
+ 908 047a 0E94 0000 		call print_s_p
+ 909               	.L74:
+ 910               	.LM156:
+ 911 047e 8091 0000 		lds r24,menu_locked
+ 912 0482 8823      		tst r24
+ 913 0484 01F0      		breq .L75
+ 914               	.LM157:
+ 915 0486 80E0      		ldi r24,lo8(__c.1666)
+ 916 0488 90E0      		ldi r25,hi8(__c.1666)
+ 917 048a 0E94 0000 		call print_s_p
+ 918               	.L75:
+ 919               	.LM158:
+ 920 048e 8AE0      		ldi r24,lo8(10)
+ 921 0490 0E94 0000 		call COM_putchar
+ 922               	.LM159:
+ 923 0494 0E94 0000 		call COM_flush
+ 924               	.LM160:
+ 925 0498 1230      		cpi r17,lo8(2)
+ 926 049a 01F0      		breq .L76
+ 927               	.LM161:
+ 928 049c 81E0      		ldi r24,lo8(1)
+ 929 049e 8093 0000 		sts wireless_async,r24
+ 930               	.LM162:
+ 931 04a2 84E4      		ldi r24,lo8(68)
+ 932 04a4 0E94 0000 		call wireless_putchar
+ 933               	.L76:
+ 934               	.LM163:
+ 935 04a8 2091 0000 		lds r18,RTC+4
+ 936 04ac 8091 0000 		lds r24,CTL_mode_auto
+ 937 04b0 8823      		tst r24
+ 938 04b2 01F4      		brne .L77
+ 939 04b4 90E0      		ldi r25,lo8(0)
+ 940 04b6 00C0      		rjmp .L78
+ 941               	.L77:
+ 942 04b8 9091 0000 		lds r25,CTL_temp_auto
+ 943 04bc 8091 0000 		lds r24,CTL_temp_wanted
+ 944 04c0 9817      		cp r25,r24
+ 945 04c2 01F0      		breq .L79
+ 946 04c4 90E8      		ldi r25,lo8(-128)
+ 947 04c6 80E0      		ldi r24,lo8(0)
+ 948               	.L78:
+ 949 04c8 822B      		or r24,r18
+ 950 04ca 892B      		or r24,r25
+ 951 04cc 0E94 0000 		call wireless_putchar
+ 952               	.LM164:
+ 953 04d0 2091 0000 		lds r18,RTC+5
+ 954 04d4 8091 0000 		lds r24,CTL_mode_window
+ 955 04d8 8823      		tst r24
+ 956 04da 01F4      		brne .L80
+ 957 04dc 90E0      		ldi r25,lo8(0)
+ 958 04de 00C0      		rjmp .L81
+ 959               	.L80:
+ 960 04e0 90E4      		ldi r25,lo8(64)
+ 961               	.L81:
+ 962 04e2 8091 0000 		lds r24,menu_locked
+ 963 04e6 8111      		cpse r24,__zero_reg__
+ 964 04e8 80E8      		ldi r24,lo8(-128)
+ 965               	.L83:
+ 966 04ea 922B      		or r25,r18
+ 967 04ec 892B      		or r24,r25
+ 968 04ee 0E94 0000 		call wireless_putchar
+ 969               	.LM165:
+ 970 04f2 8091 0000 		lds r24,CTL_error
+ 971 04f6 0E94 0000 		call wireless_putchar
+ 972               	.LM166:
+ 973 04fa 8091 0000 		lds r24,ring_average+3
+ 974 04fe 0E94 0000 		call wireless_putchar
+ 975               	.LM167:
+ 976 0502 8091 0000 		lds r24,ring_average+2
+ 977 0506 0E94 0000 		call wireless_putchar
+ 978               	.LM168:
+ 979 050a 8091 0000 		lds r24,ring_average+1
+ 980 050e 0E94 0000 		call wireless_putchar
+ 981               	.LM169:
+ 982 0512 8091 0000 		lds r24,ring_average
+ 983 0516 0E94 0000 		call wireless_putchar
+ 984               	.LM170:
+ 985 051a 8091 0000 		lds r24,CTL_temp_wanted
+ 986 051e 0E94 0000 		call wireless_putchar
+ 987               	.LM171:
+ 988 0522 8091 0000 		lds r24,valveHistory
+ 989 0526 0E94 0000 		call wireless_putchar
+ 990               	.LM172:
+ 991 052a 1092 0000 		sts wireless_async,__zero_reg__
+ 992               	/* epilogue start */
+ 993               	.LM173:
+ 994 052e 1F91      		pop r17
+ 995               	.LVL74:
+ 996 0530 0895      		ret
+ 997               	.LVL75:
+ 998               	.L79:
+ 999 0532 90E8      		ldi r25,lo8(-128)
+ 1000 0534 80E4      		ldi r24,lo8(64)
+ 1001 0536 00C0      		rjmp .L78
+ 1002               	.LFE26:
+ 1004               	.global	COM_wireless_command_parse
+ 1006               	COM_wireless_command_parse:
+ 1007               	.LFB31:
+ 1008               	.LM174:
+ 1009               	.LVL76:
+ 1010 0538 A0E0      		ldi r26,lo8(0)
+ 1011 053a B0E0      		ldi r27,hi8(0)
+ 1012 053c E0E0      		ldi r30,lo8(gs(1f))
+ 1013 053e F0E0      		ldi r31,hi8(gs(1f))
+ 1014 0540 0C94 0000 		jmp __prologue_saves__+((18 - 8) * 2)
+ 1015               	1:
+ 1016               	/* prologue: function */
+ 1017               	/* frame size = 0 */
+ 1018 0544 EC01      		movw r28,r24
+ 1019 0546 D62E      		mov r13,r22
+ 1020               	.LM175:
+ 1021 0548 FF24      		clr r15
+ 1022               	.LVL77:
+ 1023               	.LBB20:
+ 1024               	.LM176:
+ 1025 054a 4AE0      		ldi r20,lo8(10)
+ 1026 054c C42E      		mov r12,r20
+ 1027 054e 00C0      		rjmp .L116
+ 1028               	.LVL78:
+ 1029               	.L112:
+ 1030               	.LM177:
+ 1031 0550 FE01      		movw r30,r28
+ 1032 0552 EF0D      		add r30,r15
+ 1033 0554 F11D      		adc r31,__zero_reg__
+ 1034 0556 E080      		ld r14,Z
+ 1035 0558 F394      		inc r15
+ 1036               	.LM178:
+ 1037 055a 8E2D      		mov r24,r14
+ 1038               	.LVL79:
+ 1039 055c 8068      		ori r24,lo8(-128)
+ 1040 055e 0E94 0000 		call wireless_putchar
+ 1041               	.LVL80:
+ 1042               	.LM179:
+ 1043 0562 8E2D      		mov r24,r14
+ 1044 0564 90E0      		ldi r25,lo8(0)
+ 1045               	.LVL81:
+ 1046 0566 FC01      		movw r30,r24
+ 1047 0568 E154      		subi r30,lo8(-(-65))
+ 1048 056a F040      		sbci r31,hi8(-(-65))
+ 1049 056c E731      		cpi r30,23
+ 1050 056e F105      		cpc r31,__zero_reg__
+ 1051 0570 00F0      		brlo .+2
+ 1052 0572 00C0      		rjmp .L116
+ 1053 0574 E050      		subi r30,lo8(-(gs(.L101)))
+ 1054 0576 F040      		sbci r31,hi8(-(gs(.L101)))
+ 1055 0578 0C94 0000 		jmp __tablejump2__
+ 1056               		.data
+ 1057               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1058               		.p2align 1
+ 1059               	.L101:
+ 1060               		.data
+ 1061               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1062               		.p2align 1
+ 1063 0000 0000      		.word gs(.L92)
+ 1064 0002 0000      		.word gs(.L93)
+ 1065 0004 0000      		.word gs(.L116)
+ 1066 0006 0000      		.word gs(.L118)
+ 1067 0008 0000      		.word gs(.L116)
+ 1068 000a 0000      		.word gs(.L116)
+ 1069 000c 0000      		.word gs(.L95)
+ 1070 000e 0000      		.word gs(.L116)
+ 1071 0010 0000      		.word gs(.L116)
+ 1072 0012 0000      		.word gs(.L116)
+ 1073 0014 0000      		.word gs(.L116)
+ 1074 0016 0000      		.word gs(.L96)
+ 1075 0018 0000      		.word gs(.L97)
+ 1076 001a 0000      		.word gs(.L116)
+ 1077 001c 0000      		.word gs(.L116)
+ 1078 001e 0000      		.word gs(.L116)
+ 1079 0020 0000      		.word gs(.L116)
+ 1080 0022 0000      		.word gs(.L98)
+ 1081 0024 0000      		.word gs(.L95)
+ 1082 0026 0000      		.word gs(.L99)
+ 1083 0028 0000      		.word gs(.L116)
+ 1084 002a 0000      		.word gs(.L100)
+ 1085 002c 0000      		.word gs(.L98)
+ 1086               		.text
+ 1087               	.L100:
+ 1088               	.LM180:
+ 1089 057c 81E0      		ldi r24,lo8(1)
+ 1090 057e 0E94 0000 		call print_version
+ 1091               	.LVL82:
+ 1092 0582 00C0      		rjmp .L116
+ 1093               	.LVL83:
+ 1094               	.L99:
+ 1095               	.LM181:
+ 1096 0584 8E01      		movw r16,r28
+ 1097               	.LVL84:
+ 1098 0586 0F0D      		add r16,r15
+ 1099 0588 111D      		adc r17,__zero_reg__
+ 1100 058a F801      		movw r30,r16
+ 1101 058c 8081      		ld r24,Z
+ 1102 058e 0E94 0000 		call wireless_putchar
+ 1103               	.LVL85:
+ 1104               	.LM182:
+ 1105 0592 F801      		movw r30,r16
+ 1106 0594 8081      		ld r24,Z
+ 1107 0596 0E94 0000 		call watch
+ 1108 059a 182F      		mov r17,r24
+ 1109               	.LBB21:
+ 1110               	.LBB22:
+ 1111               	.LM183:
+ 1112 059c 892F      		mov r24,r25
+ 1113 059e 0E94 0000 		call wireless_putchar
+ 1114               	.LM184:
+ 1115 05a2 812F      		mov r24,r17
+ 1116 05a4 00C0      		rjmp .L119
+ 1117               	.LVL86:
+ 1118               	.L95:
+ 1119               	.LBE22:
+ 1120               	.LBE21:
+ 1121               	.LM185:
+ 1122 05a6 F3E5      		ldi r31,lo8(83)
+ 1123 05a8 EF16      		cp r14,r31
+ 1124 05aa 01F4      		brne .L102
+ 1125               	.LM186:
+ 1126 05ac DE01      		movw r26,r28
+ 1127 05ae AF0D      		add r26,r15
+ 1128 05b0 B11D      		adc r27,__zero_reg__
+ 1129 05b2 EC91      		ld r30,X
+ 1130               	.LVL87:
+ 1131 05b4 E433      		cpi r30,lo8(52)
+ 1132 05b6 00F4      		brsh .L102
+ 1133               	.LM187:
+ 1134 05b8 F0E0      		ldi r31,lo8(0)
+ 1135               	.LVL88:
+ 1136 05ba E050      		subi r30,lo8(-(config))
+ 1137 05bc F040      		sbci r31,hi8(-(config))
+ 1138               	.LVL89:
+ 1139 05be 1196      		adiw r26,1
+ 1140 05c0 8C91      		ld r24,X
+ 1141 05c2 1197      		sbiw r26,1
+ 1142 05c4 8083      		st Z,r24
+ 1143               	.LM188:
+ 1144 05c6 8C91      		ld r24,X
+ 1145 05c8 0E94 0000 		call eeprom_config_save
+ 1146               	.LVL90:
+ 1147               	.L102:
+ 1148               	.LM189:
+ 1149 05cc 8E01      		movw r16,r28
+ 1150               	.LVL91:
+ 1151 05ce 0F0D      		add r16,r15
+ 1152 05d0 111D      		adc r17,__zero_reg__
+ 1153 05d2 F801      		movw r30,r16
+ 1154               	.LVL92:
+ 1155 05d4 8081      		ld r24,Z
+ 1156 05d6 0E94 0000 		call wireless_putchar
+ 1157               	.LVL93:
+ 1158               	.LM190:
+ 1159 05da F801      		movw r30,r16
+ 1160 05dc 0081      		ld r16,Z
+ 1161               	.LVL94:
+ 1162 05de 0F3F      		cpi r16,lo8(-1)
+ 1163 05e0 01F4      		brne .L103
+ 1164               	.LM191:
+ 1165 05e2 84E1      		ldi r24,lo8(20)
+ 1166 05e4 00C0      		rjmp .L117
+ 1167               	.L103:
+ 1168               	.LM192:
+ 1169 05e6 E02F      		mov r30,r16
+ 1170 05e8 F0E0      		ldi r31,lo8(0)
+ 1171               	.LVL95:
+ 1172 05ea E050      		subi r30,lo8(-(config))
+ 1173 05ec F040      		sbci r31,hi8(-(config))
+ 1174               	.LVL96:
+ 1175 05ee 8081      		ld r24,Z
+ 1176               	.LVL97:
+ 1177               	.L117:
+ 1178 05f0 0E94 0000 		call wireless_putchar
+ 1179               	.LVL98:
+ 1180               	.LM193:
+ 1181 05f4 F3E5      		ldi r31,lo8(83)
+ 1182 05f6 EF16      		cp r14,r31
+ 1183 05f8 01F0      		breq .+2
+ 1184 05fa 00C0      		rjmp .L120
+ 1185 05fc F394      		inc r15
+ 1186 05fe 00C0      		rjmp .L120
+ 1187               	.LVL99:
+ 1188               	.L98:
+ 1189               	.LM194:
+ 1190 0600 87E5      		ldi r24,lo8(87)
+ 1191 0602 E816      		cp r14,r24
+ 1192 0604 01F4      		brne .L106
+ 1193               	.LM195:
+ 1194 0606 FE01      		movw r30,r28
+ 1195 0608 EF0D      		add r30,r15
+ 1196 060a F11D      		adc r31,__zero_reg__
+ 1197 060c 6081      		ld r22,Z
+ 1198               	.LVL100:
+ 1199 060e 2181      		ldd r18,Z+1
+ 1200 0610 422F      		mov r20,r18
+ 1201 0612 50E0      		ldi r21,lo8(0)
+ 1202 0614 4F70      		andi r20,lo8(15)
+ 1203 0616 5070      		andi r21,hi8(15)
+ 1204 0618 542F      		mov r21,r20
+ 1205 061a 4427      		clr r20
+ 1206 061c 8281      		ldd r24,Z+2
+ 1207 061e 480F      		add r20,r24
+ 1208 0620 511D      		adc r21,__zero_reg__
+ 1209 0622 2295      		swap r18
+ 1210 0624 2F70      		andi r18,lo8(15)
+ 1211 0626 862F      		mov r24,r22
+ 1212 0628 8295      		swap r24
+ 1213 062a 8F70      		andi r24,lo8(15)
+ 1214 062c 6F70      		andi r22,lo8(15)
+ 1215 062e 0E94 0000 		call RTC_DowTimerSet
+ 1216               	.LVL101:
+ 1217               	.LM196:
+ 1218 0632 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1219               	.LVL102:
+ 1220               	.L106:
+ 1221               	.LM197:
+ 1222 0636 8E01      		movw r16,r28
+ 1223               	.LVL103:
+ 1224 0638 0F0D      		add r16,r15
+ 1225 063a 111D      		adc r17,__zero_reg__
+ 1226 063c F801      		movw r30,r16
+ 1227 063e 8081      		ld r24,Z
+ 1228 0640 0E94 0000 		call wireless_putchar
+ 1229               	.LVL104:
+ 1230               	.LM198:
+ 1231 0644 F801      		movw r30,r16
+ 1232 0646 9081      		ld r25,Z
+ 1233               	.LVL105:
+ 1234 0648 892F      		mov r24,r25
+ 1235 064a 8295      		swap r24
+ 1236 064c 8F70      		andi r24,lo8(15)
+ 1237 064e 880F      		lsl r24
+ 1238 0650 880F      		lsl r24
+ 1239 0652 880F      		lsl r24
+ 1240 0654 9F70      		andi r25,lo8(15)
+ 1241 0656 890F      		add r24,r25
+ 1242 0658 0E94 0000 		call eeprom_timers_read_raw
+ 1243               	.LVL106:
+ 1244 065c 182F      		mov r17,r24
+ 1245               	.LBB23:
+ 1246               	.LBB24:
+ 1247               	.LM199:
+ 1248 065e 892F      		mov r24,r25
+ 1249 0660 0E94 0000 		call wireless_putchar
+ 1250               	.LM200:
+ 1251 0664 812F      		mov r24,r17
+ 1252 0666 0E94 0000 		call wireless_putchar
+ 1253               	.LBE24:
+ 1254               	.LBE23:
+ 1255               	.LM201:
+ 1256 066a F7E5      		ldi r31,lo8(87)
+ 1257 066c EF16      		cp r14,r31
+ 1258 066e 01F0      		breq .+2
+ 1259 0670 00C0      		rjmp .L120
+ 1260 0672 82E0      		ldi r24,lo8(2)
+ 1261 0674 F80E      		add r15,r24
+ 1262 0676 00C0      		rjmp .L120
+ 1263               	.LVL107:
+ 1264               	.L93:
+ 1265               	.LM202:
+ 1266 0678 FE01      		movw r30,r28
+ 1267 067a EF0D      		add r30,r15
+ 1268 067c F11D      		adc r31,__zero_reg__
+ 1269 067e 8081      		ld r24,Z
+ 1270 0680 8331      		cpi r24,lo8(19)
+ 1271 0682 01F4      		brne .L108
+ 1272 0684 8181      		ldd r24,Z+1
+ 1273 0686 8432      		cpi r24,lo8(36)
+ 1274 0688 01F4      		brne .L108
+ 1275               	.LM203:
+ 1276               	/* #APP */
+ 1277               	 ;  1220 "com.c" 1
+ 1278 068a F894      		cli
+ 1279               	 ;  0 "" 2
+ 1280               	.LM204:
+ 1281               	/* #NOAPP */
+ 1282 068c 28E0      		ldi r18,lo8(8)
+ 1283 068e 88E1      		ldi r24,lo8(24)
+ 1284 0690 90E0      		ldi r25,hi8(24)
+ 1285               	/* #APP */
+ 1286               	 ;  1221 "com.c" 1
+ 1287 0692 0FB6      		in __tmp_reg__,__SREG__
+ 1288 0694 F894      		cli
+ 1289 0696 A895      		wdr
+ 1290 0698 8093 6000 		sts 96,r24
+ 1291 069c 0FBE      		out __SREG__,__tmp_reg__
+ 1292 069e 2093 6000 		sts 96,r18
+ 1293               		
+ 1294               	 ;  0 "" 2
+ 1295               	/* #NOAPP */
+ 1296               	.L109:
+ 1297 06a2 00C0      		rjmp .L109
+ 1298               	.L108:
+ 1299               	.LM205:
+ 1300 06a4 E2E0      		ldi r30,lo8(2)
+ 1301 06a6 FE0E      		add r15,r30
+ 1302 06a8 00C0      		rjmp .L116
+ 1303               	.L97:
+ 1304               	.LM206:
+ 1305 06aa 90E0      		ldi r25,lo8(0)
+ 1306               	.LVL108:
+ 1307 06ac FE01      		movw r30,r28
+ 1308 06ae EF0D      		add r30,r15
+ 1309 06b0 F11D      		adc r31,__zero_reg__
+ 1310 06b2 8081      		ld r24,Z
+ 1311 06b4 8130      		cpi r24,lo8(1)
+ 1312 06b6 01F4      		brne .L110
+ 1313 06b8 91E0      		ldi r25,lo8(1)
+ 1314               	.L110:
+ 1315 06ba F394      		inc r15
+ 1316 06bc 892F      		mov r24,r25
+ 1317 06be 0E94 0000 		call CTL_change_mode
+ 1318 06c2 00C0      		rjmp .L118
+ 1319               	.LVL109:
+ 1320               	.L92:
+ 1321               	.LM207:
+ 1322 06c4 FE01      		movw r30,r28
+ 1323 06c6 EF0D      		add r30,r15
+ 1324 06c8 F11D      		adc r31,__zero_reg__
+ 1325 06ca 8081      		ld r24,Z
+ 1326               	.LVL110:
+ 1327 06cc 8930      		cpi r24,lo8(9)
+ 1328 06ce 00F0      		brlo .L116
+ 1329               	.LM208:
+ 1330 06d0 8E33      		cpi r24,lo8(62)
+ 1331 06d2 00F4      		brsh .L116
+ 1332               	.LM209:
+ 1333 06d4 C092 0000 		sts PID_force_update,r12
+ 1334 06d8 8081      		ld r24,Z
+ 1335               	.LVL111:
+ 1336 06da 8093 0000 		sts CTL_temp_wanted,r24
+ 1337 06de F394      		inc r15
+ 1338               	.LVL112:
+ 1339               	.L118:
+ 1340               	.LM210:
+ 1341 06e0 82E0      		ldi r24,lo8(2)
+ 1342 06e2 0E94 0000 		call COM_print_debug
+ 1343               	.LVL113:
+ 1344 06e6 00C0      		rjmp .L116
+ 1345               	.LVL114:
+ 1346               	.L96:
+ 1347               	.LM211:
+ 1348 06e8 FE01      		movw r30,r28
+ 1349 06ea EF0D      		add r30,r15
+ 1350 06ec F11D      		adc r31,__zero_reg__
+ 1351 06ee E081      		ld r30,Z
+ 1352               	.LVL115:
+ 1353 06f0 E230      		cpi r30,lo8(2)
+ 1354 06f2 00F4      		brsh .L111
+ 1355 06f4 E093 0000 		sts menu_locked,r30
+ 1356               	.L111:
+ 1357               	.LM212:
+ 1358 06f8 8091 0000 		lds r24,menu_locked
+ 1359               	.L119:
+ 1360 06fc 0E94 0000 		call wireless_putchar
+ 1361               	.LVL116:
+ 1362               	.L120:
+ 1363               	.LM213:
+ 1364 0700 F394      		inc r15
+ 1365               	.LVL117:
+ 1366               	.L116:
+ 1367               	.LBE20:
+ 1368               	.LM214:
+ 1369 0702 FD14      		cp r15,r13
+ 1370 0704 00F4      		brsh .+2
+ 1371 0706 00C0      		rjmp .L112
+ 1372               	.LVL118:
+ 1373               	/* epilogue start */
+ 1374               	.LM215:
+ 1375 0708 CDB7      		in r28,__SP_L__
+ 1376 070a DEB7      		in r29,__SP_H__
+ 1377               	.LVL119:
+ 1378 070c E8E0      		ldi r30, lo8(8)
+ 1379 070e 0C94 0000 		jmp __epilogue_restores__ + ((18 - 8) * 2)
+ 1380               	.LFE31:
+ 1382               	.global	COM_command_parse
+ 1384               	COM_command_parse:
+ 1385               	.LFB29:
+ 1386               	.LM216:
+ 1387 0712 0F93      		push r16
+ 1388 0714 1F93      		push r17
+ 1389               	/* prologue: function */
+ 1390               	/* frame size = 0 */
+ 1391               	.LBB25:
+ 1392               	.LM217:
+ 1393 0716 02E3      		ldi r16,lo8(50)
+ 1394 0718 00C0      		rjmp .L122
+ 1395               	.LVL120:
+ 1396               	.L191:
+ 1397               	.LBE25:
+ 1398               	.LM218:
+ 1399 071a 0E94 0000 		call COM_getchar
+ 1400 071e 182F      		mov r17,r24
+ 1401               	.LVL121:
+ 1402 0720 90E0      		ldi r25,lo8(0)
+ 1403               	.LVL122:
+ 1404 0722 FC01      		movw r30,r24
+ 1405 0724 E254      		subi r30,lo8(-(-66))
+ 1406 0726 F040      		sbci r31,hi8(-(-66))
+ 1407 0728 E631      		cpi r30,22
+ 1408 072a F105      		cpc r31,__zero_reg__
+ 1409 072c 00F0      		brlo .+2
+ 1410 072e 00C0      		rjmp .L123
+ 1411 0730 E050      		subi r30,lo8(-(gs(.L131)))
+ 1412 0732 F040      		sbci r31,hi8(-(gs(.L131)))
+ 1413 0734 0C94 0000 		jmp __tablejump2__
+ 1414               		.data
+ 1415               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1416               		.p2align 1
+ 1417               	.L131:
+ 1418               		.data
+ 1419               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1420               		.p2align 1
+ 1421 002e 0000      		.word gs(.L124)
+ 1422 0030 0000      		.word gs(.L123)
+ 1423 0032 0000      		.word gs(.L125)
+ 1424 0034 0000      		.word gs(.L123)
+ 1425 0036 0000      		.word gs(.L123)
+ 1426 0038 0000      		.word gs(.L126)
+ 1427 003a 0000      		.word gs(.L123)
+ 1428 003c 0000      		.word gs(.L123)
+ 1429 003e 0000      		.word gs(.L123)
+ 1430 0040 0000      		.word gs(.L123)
+ 1431 0042 0000      		.word gs(.L127)
+ 1432 0044 0000      		.word gs(.L123)
+ 1433 0046 0000      		.word gs(.L123)
+ 1434 0048 0000      		.word gs(.L123)
+ 1435 004a 0000      		.word gs(.L123)
+ 1436 004c 0000      		.word gs(.L123)
+ 1437 004e 0000      		.word gs(.L128)
+ 1438 0050 0000      		.word gs(.L129)
+ 1439 0052 0000      		.word gs(.L123)
+ 1440 0054 0000      		.word gs(.L123)
+ 1441 0056 0000      		.word gs(.L130)
+ 1442 0058 0000      		.word gs(.L128)
+ 1443               		.text
+ 1444               	.L125:
+ 1445               	.LM219:
+ 1446 0738 0E94 0000 		call COM_getchar
+ 1447               	.LVL123:
+ 1448 073c 8A30      		cpi r24,lo8(10)
+ 1449 073e 01F0      		breq .+2
+ 1450 0740 00C0      		rjmp .L123
+ 1451 0742 81E0      		ldi r24,lo8(1)
+ 1452 0744 0E94 0000 		call COM_print_debug
+ 1453 0748 00C0      		rjmp .L123
+ 1454               	.LVL124:
+ 1455               	.L130:
+ 1456               	.LM220:
+ 1457 074a 82E0      		ldi r24,lo8(2)
+ 1458 074c 0E94 0000 		call COM_hex_parse
+ 1459               	.LVL125:
+ 1460 0750 8823      		tst r24
+ 1461 0752 01F0      		breq .+2
+ 1462 0754 00C0      		rjmp .L132
+ 1463               	.LM221:
+ 1464 0756 86E5      		ldi r24,lo8(86)
+ 1465 0758 6091 0000 		lds r22,com_hex
+ 1466 075c 0E94 0000 		call print_idx
+ 1467               	.LM222:
+ 1468 0760 8091 0000 		lds r24,com_hex
+ 1469 0764 0E94 0000 		call watch
+ 1470 0768 00C0      		rjmp .L199
+ 1471               	.LVL126:
+ 1472               	.L128:
+ 1473               	.LM223:
+ 1474 076a 1235      		cpi r17,lo8(82)
+ 1475 076c 01F4      		brne .L133
+ 1476               	.LM224:
+ 1477 076e 82E0      		ldi r24,lo8(2)
+ 1478 0770 0E94 0000 		call COM_hex_parse
+ 1479               	.LVL127:
+ 1480 0774 8823      		tst r24
+ 1481 0776 01F0      		breq .+2
+ 1482 0778 00C0      		rjmp .L132
+ 1483 077a 00C0      		rjmp .L134
+ 1484               	.LVL128:
+ 1485               	.L133:
+ 1486               	.LM225:
+ 1487 077c 86E0      		ldi r24,lo8(6)
+ 1488 077e 0E94 0000 		call COM_hex_parse
+ 1489               	.LVL129:
+ 1490 0782 8823      		tst r24
+ 1491 0784 01F0      		breq .+2
+ 1492 0786 00C0      		rjmp .L132
+ 1493               	.LM226:
+ 1494 0788 6091 0000 		lds r22,com_hex
+ 1495               	.LVL130:
+ 1496 078c 2091 0000 		lds r18,com_hex+1
+ 1497 0790 422F      		mov r20,r18
+ 1498 0792 50E0      		ldi r21,lo8(0)
+ 1499 0794 4F70      		andi r20,lo8(15)
+ 1500 0796 5070      		andi r21,hi8(15)
+ 1501 0798 542F      		mov r21,r20
+ 1502 079a 4427      		clr r20
+ 1503 079c 8091 0000 		lds r24,com_hex+2
+ 1504 07a0 480F      		add r20,r24
+ 1505 07a2 511D      		adc r21,__zero_reg__
+ 1506 07a4 2295      		swap r18
+ 1507 07a6 2F70      		andi r18,lo8(15)
+ 1508 07a8 862F      		mov r24,r22
+ 1509 07aa 8295      		swap r24
+ 1510 07ac 8F70      		andi r24,lo8(15)
+ 1511 07ae 6F70      		andi r22,lo8(15)
+ 1512 07b0 0E94 0000 		call RTC_DowTimerSet
+ 1513               	.LVL131:
+ 1514               	.LM227:
+ 1515 07b4 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1516               	.LM228:
+ 1517 07b8 8091 0000 		lds r24,config+34
+ 1518 07bc 8130      		cpi r24,lo8(1)
+ 1519 07be 01F0      		breq .L135
+ 1520 07c0 80E0      		ldi r24,lo8(0)
+ 1521 07c2 00C0      		rjmp .L136
+ 1522               	.L135:
+ 1523 07c4 8091 0000 		lds r24,RTC+6
+ 1524               	.L136:
+ 1525               	.LBB27:
+ 1526               	.LM229:
+ 1527 07c8 0E94 0000 		call RTC_DowTimerGetHourBar
+ 1528               	.LBB28:
+ 1529 07cc 6093 0000 		sts hourbar_buff,r22
+ 1530 07d0 7093 0000 		sts (hourbar_buff)+1,r23
+ 1531 07d4 8093 0000 		sts (hourbar_buff)+2,r24
+ 1532 07d8 9093 0000 		sts (hourbar_buff)+3,r25
+ 1533               	.L134:
+ 1534               	.LBE28:
+ 1535               	.LBE27:
+ 1536               	.LM230:
+ 1537 07dc 812F      		mov r24,r17
+ 1538 07de 6091 0000 		lds r22,com_hex
+ 1539 07e2 0E94 0000 		call print_idx
+ 1540               	.LM231:
+ 1541 07e6 9091 0000 		lds r25,com_hex
+ 1542               	.LVL132:
+ 1543 07ea 892F      		mov r24,r25
+ 1544 07ec 8295      		swap r24
+ 1545 07ee 8F70      		andi r24,lo8(15)
+ 1546 07f0 880F      		lsl r24
+ 1547 07f2 880F      		lsl r24
+ 1548 07f4 880F      		lsl r24
+ 1549 07f6 9F70      		andi r25,lo8(15)
+ 1550 07f8 890F      		add r24,r25
+ 1551 07fa 0E94 0000 		call eeprom_timers_read_raw
+ 1552               	.LVL133:
+ 1553               	.L199:
+ 1554 07fe 0E94 0000 		call print_hexXXXX
+ 1555 0802 00C0      		rjmp .L132
+ 1556               	.LVL134:
+ 1557               	.L124:
+ 1558               	.LM232:
+ 1559 0804 84E0      		ldi r24,lo8(4)
+ 1560 0806 0E94 0000 		call COM_hex_parse
+ 1561               	.LVL135:
+ 1562 080a 8823      		tst r24
+ 1563 080c 01F0      		breq .+2
+ 1564 080e 00C0      		rjmp .L132
+ 1565               	.LM233:
+ 1566 0810 8091 0000 		lds r24,com_hex
+ 1567 0814 8331      		cpi r24,lo8(19)
+ 1568 0816 01F0      		breq .+2
+ 1569 0818 00C0      		rjmp .L132
+ 1570 081a 8091 0000 		lds r24,com_hex+1
+ 1571 081e 8432      		cpi r24,lo8(36)
+ 1572 0820 01F0      		breq .+2
+ 1573 0822 00C0      		rjmp .L132
+ 1574               	.LM234:
+ 1575               	/* #APP */
+ 1576               	 ;  708 "com.c" 1
+ 1577 0824 F894      		cli
+ 1578               	 ;  0 "" 2
+ 1579               	.LM235:
+ 1580               	/* #NOAPP */
+ 1581 0826 28E0      		ldi r18,lo8(8)
+ 1582 0828 88E1      		ldi r24,lo8(24)
+ 1583 082a 90E0      		ldi r25,hi8(24)
+ 1584               	/* #APP */
+ 1585               	 ;  709 "com.c" 1
+ 1586 082c 0FB6      		in __tmp_reg__,__SREG__
+ 1587 082e F894      		cli
+ 1588 0830 A895      		wdr
+ 1589 0832 8093 6000 		sts 96,r24
+ 1590 0836 0FBE      		out __SREG__,__tmp_reg__
+ 1591 0838 2093 6000 		sts 96,r18
+ 1592               		
+ 1593               	 ;  0 "" 2
+ 1594               	/* #NOAPP */
+ 1595               	.L137:
+ 1596 083c 00C0      		rjmp .L137
+ 1597               	.LVL136:
+ 1598               	.L129:
+ 1599               	.LBB29:
+ 1600               	.LM236:
+ 1601 083e 0E94 0000 		call COM_getchar
+ 1602               	.LVL137:
+ 1603 0842 182F      		mov r17,r24
+ 1604               	.LVL138:
+ 1605               	.LM237:
+ 1606 0844 83E5      		ldi r24,lo8(83)
+ 1607 0846 0E94 0000 		call COM_putchar
+ 1608               	.LM238:
+ 1609 084a 812F      		mov r24,r17
+ 1610 084c 90E0      		ldi r25,lo8(0)
+ 1611               	.LVL139:
+ 1612 084e FC01      		movw r30,r24
+ 1613 0850 E154      		subi r30,lo8(-(-65))
+ 1614 0852 F040      		sbci r31,hi8(-(-65))
+ 1615 0854 E931      		cpi r30,25
+ 1616 0856 F105      		cpc r31,__zero_reg__
+ 1617 0858 00F0      		brlo .+2
+ 1618 085a 00C0      		rjmp .L171
+ 1619 085c E050      		subi r30,lo8(-(gs(.L149)))
+ 1620 085e F040      		sbci r31,hi8(-(gs(.L149)))
+ 1621 0860 0C94 0000 		jmp __tablejump2__
+ 1622               		.data
+ 1623               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1624               		.p2align 1
+ 1625               	.L149:
+ 1626               		.data
+ 1627               		.section .progmem.gcc_sw_table, "a", @progbits
+ 1628               		.p2align 1
+ 1629 005a 0000      		.word gs(.L139)
+ 1630 005c 0000      		.word gs(.L171)
+ 1631 005e 0000      		.word gs(.L140)
+ 1632 0060 0000      		.word gs(.L141)
+ 1633 0062 0000      		.word gs(.L171)
+ 1634 0064 0000      		.word gs(.L171)
+ 1635 0066 0000      		.word gs(.L171)
+ 1636 0068 0000      		.word gs(.L142)
+ 1637 006a 0000      		.word gs(.L171)
+ 1638 006c 0000      		.word gs(.L171)
+ 1639 006e 0000      		.word gs(.L171)
+ 1640 0070 0000      		.word gs(.L171)
+ 1641 0072 0000      		.word gs(.L143)
+ 1642 0074 0000      		.word gs(.L171)
+ 1643 0076 0000      		.word gs(.L171)
+ 1644 0078 0000      		.word gs(.L144)
+ 1645 007a 0000      		.word gs(.L171)
+ 1646 007c 0000      		.word gs(.L171)
+ 1647 007e 0000      		.word gs(.L145)
+ 1648 0080 0000      		.word gs(.L146)
+ 1649 0082 0000      		.word gs(.L171)
+ 1650 0084 0000      		.word gs(.L147)
+ 1651 0086 0000      		.word gs(.L171)
+ 1652 0088 0000      		.word gs(.L171)
+ 1653 008a 0000      		.word gs(.L148)
+ 1654               		.text
+ 1655               	.L143:
+ 1656               	.LM239:
+ 1657 0864 8DE4      		ldi r24,lo8(77)
+ 1658 0866 0E94 0000 		call COM_putchar
+ 1659               	.LVL140:
+ 1660               	.LM240:
+ 1661 086a 82E0      		ldi r24,lo8(2)
+ 1662 086c 0E94 0000 		call COM_hex_parse
+ 1663 0870 8823      		tst r24
+ 1664 0872 01F0      		breq .+2
+ 1665 0874 00C0      		rjmp .L198
+ 1666               	.L150:
+ 1667               	.LM241:
+ 1668 0876 8091 0000 		lds r24,com_hex
+ 1669               	.LVL141:
+ 1670 087a 8530      		cpi r24,lo8(5)
+ 1671 087c 00F0      		brlo .+2
+ 1672 087e 00C0      		rjmp .L198
+ 1673               	.LM242:
+ 1674 0880 0E94 0000 		call CTL_change_mode
+ 1675               	.LVL142:
+ 1676 0884 00C0      		rjmp .L201
+ 1677               	.LVL143:
+ 1678               	.L148:
+ 1679               	.LM243:
+ 1680 0886 89E5      		ldi r24,lo8(89)
+ 1681 0888 0E94 0000 		call COM_putchar
+ 1682               	.LVL144:
+ 1683               	.LM244:
+ 1684 088c 86E0      		ldi r24,lo8(6)
+ 1685 088e 0E94 0000 		call COM_hex_parse
+ 1686 0892 8823      		tst r24
+ 1687 0894 01F0      		breq .+2
+ 1688 0896 00C0      		rjmp .L198
+ 1689               	.L152:
+ 1690               	.LM245:
+ 1691 0898 8091 0000 		lds r24,com_hex
+ 1692 089c 0E94 0000 		call RTC_SetYear
+ 1693 08a0 8091 0000 		lds r24,com_hex+1
+ 1694 08a4 0E94 0000 		call RTC_SetMonth
+ 1695 08a8 8091 0000 		lds r24,com_hex+2
+ 1696 08ac 0E94 0000 		call RTC_SetDay
+ 1697               	.LVL145:
+ 1698               	.L201:
+ 1699               	.LM246:
+ 1700 08b0 81E3      		ldi r24,lo8(49)
+ 1701               	.LVL146:
+ 1702 08b2 00C0      		rjmp .L200
+ 1703               	.LVL147:
+ 1704               	.L142:
+ 1705               	.LM247:
+ 1706 08b4 88E4      		ldi r24,lo8(72)
+ 1707 08b6 0E94 0000 		call COM_putchar
+ 1708               	.LVL148:
+ 1709               	.LM248:
+ 1710 08ba 86E0      		ldi r24,lo8(6)
+ 1711 08bc 0E94 0000 		call COM_hex_parse
+ 1712 08c0 8823      		tst r24
+ 1713 08c2 01F0      		breq .+2
+ 1714 08c4 00C0      		rjmp .L198
+ 1715               	.L153:
+ 1716               	.LM249:
+ 1717 08c6 8091 0000 		lds r24,com_hex
+ 1718 08ca 0E94 0000 		call RTC_SetHour
+ 1719               	.LM250:
+ 1720 08ce 8091 0000 		lds r24,com_hex+1
+ 1721 08d2 0E94 0000 		call RTC_SetMinute
+ 1722               	.LM251:
+ 1723 08d6 8091 0000 		lds r24,com_hex+2
+ 1724 08da 0E94 0000 		call RTC_SetSecond
+ 1725 08de 00C0      		rjmp .L201
+ 1726               	.LVL149:
+ 1727               	.L140:
+ 1728               	.LM252:
+ 1729 08e0 83E4      		ldi r24,lo8(67)
+ 1730 08e2 0E94 0000 		call COM_putchar
+ 1731               	.LVL150:
+ 1732               	.LM253:
+ 1733 08e6 84E0      		ldi r24,lo8(4)
+ 1734 08e8 0E94 0000 		call COM_hex_parse
+ 1735 08ec 8823      		tst r24
+ 1736 08ee 01F0      		breq .+2
+ 1737 08f0 00C0      		rjmp .L198
+ 1738               	.L154:
+ 1739               	.LM254:
+ 1740 08f2 9091 0000 		lds r25,com_hex
+ 1741               	.LVL151:
+ 1742 08f6 9433      		cpi r25,lo8(52)
+ 1743 08f8 00F0      		brlo .+2
+ 1744 08fa 00C0      		rjmp .L198
+ 1745               	.LM255:
+ 1746 08fc E92F      		mov r30,r25
+ 1747 08fe F0E0      		ldi r31,lo8(0)
+ 1748               	.LVL152:
+ 1749 0900 E050      		subi r30,lo8(-(config))
+ 1750 0902 F040      		sbci r31,hi8(-(config))
+ 1751               	.LVL153:
+ 1752 0904 8091 0000 		lds r24,com_hex+1
+ 1753 0908 8083      		st Z,r24
+ 1754               	.LM256:
+ 1755 090a 892F      		mov r24,r25
+ 1756 090c 0E94 0000 		call eeprom_config_save
+ 1757               	.LVL154:
+ 1758 0910 00C0      		rjmp .L201
+ 1759               	.LVL155:
+ 1760               	.L146:
+ 1761               	.LM257:
+ 1762 0912 84E5      		ldi r24,lo8(84)
+ 1763 0914 0E94 0000 		call COM_putchar
+ 1764               	.LVL156:
+ 1765               	.LM258:
+ 1766 0918 82E0      		ldi r24,lo8(2)
+ 1767 091a 0E94 0000 		call COM_hex_parse
+ 1768 091e 8823      		tst r24
+ 1769 0920 01F0      		breq .+2
+ 1770 0922 00C0      		rjmp .L198
+ 1771               	.L156:
+ 1772               	.LM259:
+ 1773 0924 8091 0000 		lds r24,com_hex
+ 1774 0928 8950      		subi r24,lo8(-(-9))
+ 1775 092a 8533      		cpi r24,lo8(53)
+ 1776 092c 00F0      		brlo .+2
+ 1777 092e 00C0      		rjmp .L198
+ 1778               	.L157:
+ 1779               	.LM260:
+ 1780 0930 82E0      		ldi r24,lo8(2)
+ 1781 0932 0E94 0000 		call CTL_change_mode
+ 1782               	.LM261:
+ 1783 0936 8AE0      		ldi r24,lo8(10)
+ 1784 0938 8093 0000 		sts PID_force_update,r24
+ 1785 093c 8091 0000 		lds r24,com_hex
+ 1786 0940 8093 0000 		sts CTL_temp_wanted_auto,r24
+ 1787 0944 00C0      		rjmp .L201
+ 1788               	.LVL157:
+ 1789               	.L147:
+ 1790               	.LM262:
+ 1791 0946 86E5      		ldi r24,lo8(86)
+ 1792 0948 0E94 0000 		call COM_putchar
+ 1793               	.LVL158:
+ 1794               	.LM263:
+ 1795 094c 82E0      		ldi r24,lo8(2)
+ 1796 094e 0E94 0000 		call COM_hex_parse
+ 1797 0952 8823      		tst r24
+ 1798 0954 01F0      		breq .+2
+ 1799 0956 00C0      		rjmp .L198
+ 1800               	.L158:
+ 1801               	.LM264:
+ 1802 0958 83E0      		ldi r24,lo8(3)
+ 1803 095a 0E94 0000 		call CTL_change_mode
+ 1804               	.LM265:
+ 1805 095e 8091 0000 		lds r24,com_hex
+ 1806               	.LVL159:
+ 1807 0962 9091 0000 		lds r25,config+13
+ 1808               	.LVL160:
+ 1809 0966 9817      		cp r25,r24
+ 1810 0968 00F0      		brlo .L194
+ 1811               	.L159:
+ 1812               	.LM266:
+ 1813 096a 9091 0000 		lds r25,config+11
+ 1814               	.LVL161:
+ 1815 096e 8917      		cp r24,r25
+ 1816 0970 00F4      		brsh .L161
+ 1817               	.L194:
+ 1818               	.LM267:
+ 1819 0972 9093 0000 		sts CTL_valve_wanted,r25
+ 1820 0976 00C0      		rjmp .L160
+ 1821               	.L161:
+ 1822               	.LM268:
+ 1823 0978 8093 0000 		sts CTL_valve_wanted,r24
+ 1824               	.L160:
+ 1825               	.LM269:
+ 1826 097c 1092 0000 		sts PID_force_update,__zero_reg__
+ 1827 0980 00C0      		rjmp .L201
+ 1828               	.LVL162:
+ 1829               	.L144:
+ 1830               	.LM270:
+ 1831 0982 80E5      		ldi r24,lo8(80)
+ 1832 0984 0E94 0000 		call COM_putchar
+ 1833               	.LVL163:
+ 1834               	.LM271:
+ 1835 0988 84E0      		ldi r24,lo8(4)
+ 1836 098a 0E94 0000 		call COM_hex_parse
+ 1837 098e 8823      		tst r24
+ 1838 0990 01F0      		breq .+2
+ 1839 0992 00C0      		rjmp .L198
+ 1840               	.L162:
+ 1841               	.LM272:
+ 1842 0994 9091 0000 		lds r25,com_hex
+ 1843               	.LVL164:
+ 1844 0998 892F      		mov r24,r25
+ 1845 099a 8150      		subi r24,lo8(-(-1))
+ 1846 099c 8430      		cpi r24,lo8(4)
+ 1847 099e 00F0      		brlo .+2
+ 1848 09a0 00C0      		rjmp .L198
+ 1849               	.LM273:
+ 1850 09a2 E92F      		mov r30,r25
+ 1851 09a4 F0E0      		ldi r31,lo8(0)
+ 1852               	.LVL165:
+ 1853 09a6 E050      		subi r30,lo8(-(config))
+ 1854 09a8 F040      		sbci r31,hi8(-(config))
+ 1855               	.LVL166:
+ 1856 09aa 8091 0000 		lds r24,com_hex+1
+ 1857 09ae 8083      		st Z,r24
+ 1858               	.LM274:
+ 1859 09b0 892F      		mov r24,r25
+ 1860 09b2 0E94 0000 		call eeprom_config_save
+ 1861               	.LVL167:
+ 1862               	.LM275:
+ 1863 09b6 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1864 09ba 00C0      		rjmp .L201
+ 1865               	.LVL168:
+ 1866               	.L145:
+ 1867               	.LM276:
+ 1868 09bc 83E5      		ldi r24,lo8(83)
+ 1869 09be 0E94 0000 		call COM_putchar
+ 1870               	.LVL169:
+ 1871               	.LM277:
+ 1872 09c2 86E0      		ldi r24,lo8(6)
+ 1873 09c4 0E94 0000 		call COM_hex_parse
+ 1874 09c8 8823      		tst r24
+ 1875 09ca 01F0      		breq .+2
+ 1876 09cc 00C0      		rjmp .L198
+ 1877               	.L164:
+ 1878               	.LM278:
+ 1879 09ce 6091 0000 		lds r22,com_hex
+ 1880               	.LVL170:
+ 1881 09d2 2091 0000 		lds r18,com_hex+1
+ 1882 09d6 422F      		mov r20,r18
+ 1883 09d8 50E0      		ldi r21,lo8(0)
+ 1884 09da 4F70      		andi r20,lo8(15)
+ 1885 09dc 5070      		andi r21,hi8(15)
+ 1886 09de 542F      		mov r21,r20
+ 1887 09e0 4427      		clr r20
+ 1888 09e2 8091 0000 		lds r24,com_hex+2
+ 1889 09e6 480F      		add r20,r24
+ 1890 09e8 511D      		adc r21,__zero_reg__
+ 1891 09ea 2295      		swap r18
+ 1892 09ec 2F70      		andi r18,lo8(15)
+ 1893 09ee 862F      		mov r24,r22
+ 1894 09f0 8295      		swap r24
+ 1895 09f2 8F70      		andi r24,lo8(15)
+ 1896 09f4 6F70      		andi r22,lo8(15)
+ 1897 09f6 0E94 0000 		call RTC_DowTimerSet
+ 1898               	.LVL171:
+ 1899               	.LM279:
+ 1900 09fa 1092 0000 		sts CTL_temp_auto,__zero_reg__
+ 1901               	.LM280:
+ 1902 09fe 8091 0000 		lds r24,config+34
+ 1903 0a02 8130      		cpi r24,lo8(1)
+ 1904 0a04 01F0      		breq .L165
+ 1905 0a06 80E0      		ldi r24,lo8(0)
+ 1906 0a08 00C0      		rjmp .L166
+ 1907               	.L165:
+ 1908 0a0a 8091 0000 		lds r24,RTC+6
+ 1909               	.L166:
+ 1910               	.LBB30:
+ 1911               	.LM281:
+ 1912 0a0e 0E94 0000 		call RTC_DowTimerGetHourBar
+ 1913               	.LBB31:
+ 1914 0a12 6093 0000 		sts hourbar_buff,r22
+ 1915 0a16 7093 0000 		sts (hourbar_buff)+1,r23
+ 1916 0a1a 8093 0000 		sts (hourbar_buff)+2,r24
+ 1917 0a1e 9093 0000 		sts (hourbar_buff)+3,r25
+ 1918               	.LBE31:
+ 1919               	.LBE30:
+ 1920               	.LM282:
+ 1921 0a22 81E3      		ldi r24,lo8(49)
+ 1922 0a24 0E94 0000 		call COM_putchar
+ 1923               	.LM283:
+ 1924 0a28 8AE3      		ldi r24,lo8(58)
+ 1925 0a2a 0E94 0000 		call COM_putchar
+ 1926               	.LM284:
+ 1927 0a2e 8091 0000 		lds r24,com_hex
+ 1928 0a32 8295      		swap r24
+ 1929 0a34 8F70      		andi r24,lo8(15)
+ 1930 0a36 0E94 0000 		call print_digit
+ 1931 0a3a 00C0      		rjmp .L132
+ 1932               	.LVL172:
+ 1933               	.L141:
+ 1934               	.LM285:
+ 1935 0a3c 84E4      		ldi r24,lo8(68)
+ 1936 0a3e 0E94 0000 		call COM_putchar
+ 1937               	.LVL173:
+ 1938               	.LM286:
+ 1939 0a42 82E0      		ldi r24,lo8(2)
+ 1940 0a44 0E94 0000 		call COM_hex_parse
+ 1941 0a48 8823      		tst r24
+ 1942 0a4a 01F0      		breq .+2
+ 1943 0a4c 00C0      		rjmp .L198
+ 1944               	.L167:
+ 1945               	.LM287:
+ 1946 0a4e 9091 0000 		lds r25,com_hex
+ 1947               	.LVL174:
+ 1948 0a52 9923      		tst r25
+ 1949 0a54 01F4      		brne .+2
+ 1950 0a56 00C0      		rjmp .L198
+ 1951               	.L168:
+ 1952               	.LM288:
+ 1953 0a58 8AE0      		ldi r24,lo8(10)
+ 1954 0a5a 989F      		mul r25,r24
+ 1955 0a5c C001      		movw r24,r0
+ 1956 0a5e 1124      		clr r1
+ 1957 0a60 9093 0000 		sts (CTL_temp_threshold)+1,r25
+ 1958 0a64 8093 0000 		sts CTL_temp_threshold,r24
+ 1959 0a68 00C0      		rjmp .L201
+ 1960               	.LVL175:
+ 1961               	.L139:
+ 1962               	.LM289:
+ 1963 0a6a 81E4      		ldi r24,lo8(65)
+ 1964 0a6c 0E94 0000 		call COM_putchar
+ 1965               	.LVL176:
+ 1966               	.LM290:
+ 1967 0a70 82E0      		ldi r24,lo8(2)
+ 1968 0a72 0E94 0000 		call COM_hex_parse
+ 1969 0a76 8823      		tst r24
+ 1970 0a78 01F0      		breq .+2
+ 1971 0a7a 00C0      		rjmp .L198
+ 1972               	.L169:
+ 1973               	.LM291:
+ 1974 0a7c 8091 0000 		lds r24,com_hex
+ 1975               	.LVL177:
+ 1976 0a80 8823      		tst r24
+ 1977 0a82 01F4      		brne .+2
+ 1978 0a84 00C0      		rjmp .L198
+ 1979               	.L170:
+ 1980               	.LM292:
+ 1981 0a86 8093 0000 		sts CTL_bat_threshold,r24
+ 1982 0a8a 1092 0000 		sts CTL_bat_threshold+1,__zero_reg__
+ 1983 0a8e 00C0      		rjmp .L201
+ 1984               	.LVL178:
+ 1985               	.L126:
+ 1986               	.LBE29:
+ 1987               	.LBB32:
+ 1988               	.LM293:
+ 1989 0a90 0E94 0000 		call COM_getchar
+ 1990               	.LVL179:
+ 1991 0a94 182F      		mov r17,r24
+ 1992               	.LVL180:
+ 1993               	.LM294:
+ 1994 0a96 87E4      		ldi r24,lo8(71)
+ 1995 0a98 0E94 0000 		call COM_putchar
+ 1996               	.LM295:
+ 1997 0a9c 812F      		mov r24,r17
+ 1998 0a9e 90E0      		ldi r25,lo8(0)
+ 1999               	.LVL181:
+ 2000 0aa0 FC01      		movw r30,r24
+ 2001 0aa2 E154      		subi r30,lo8(-(-65))
+ 2002 0aa4 F040      		sbci r31,hi8(-(-65))
+ 2003 0aa6 E931      		cpi r30,25
+ 2004 0aa8 F105      		cpc r31,__zero_reg__
+ 2005 0aaa 00F0      		brlo .+2
+ 2006 0aac 00C0      		rjmp .L171
+ 2007 0aae E050      		subi r30,lo8(-(gs(.L184)))
+ 2008 0ab0 F040      		sbci r31,hi8(-(gs(.L184)))
+ 2009 0ab2 0C94 0000 		jmp __tablejump2__
+ 2010               		.data
+ 2011               		.section .progmem.gcc_sw_table, "a", @progbits
+ 2012               		.p2align 1
+ 2013               	.L184:
+ 2014               		.data
+ 2015               		.section .progmem.gcc_sw_table, "a", @progbits
+ 2016               		.p2align 1
+ 2017 008c 0000      		.word gs(.L172)
+ 2018 008e 0000      		.word gs(.L173)
+ 2019 0090 0000      		.word gs(.L174)
+ 2020 0092 0000      		.word gs(.L175)
+ 2021 0094 0000      		.word gs(.L171)
+ 2022 0096 0000      		.word gs(.L171)
+ 2023 0098 0000      		.word gs(.L171)
+ 2024 009a 0000      		.word gs(.L176)
+ 2025 009c 0000      		.word gs(.L177)
+ 2026 009e 0000      		.word gs(.L171)
+ 2027 00a0 0000      		.word gs(.L171)
+ 2028 00a2 0000      		.word gs(.L171)
+ 2029 00a4 0000      		.word gs(.L178)
+ 2030 00a6 0000      		.word gs(.L171)
+ 2031 00a8 0000      		.word gs(.L171)
+ 2032 00aa 0000      		.word gs(.L179)
+ 2033 00ac 0000      		.word gs(.L171)
+ 2034 00ae 0000      		.word gs(.L171)
+ 2035 00b0 0000      		.word gs(.L180)
+ 2036 00b2 0000      		.word gs(.L181)
+ 2037 00b4 0000      		.word gs(.L171)
+ 2038 00b6 0000      		.word gs(.L182)
+ 2039 00b8 0000      		.word gs(.L171)
+ 2040 00ba 0000      		.word gs(.L171)
+ 2041 00bc 0000      		.word gs(.L183)
+ 2042               		.text
+ 2043               	.L178:
+ 2044               	.LM296:
+ 2045 0ab6 8DE4      		ldi r24,lo8(77)
+ 2046 0ab8 0E94 0000 		call COM_putchar
+ 2047               	.LVL182:
+ 2048               	.LM297:
+ 2049 0abc 81E3      		ldi r24,lo8(49)
+ 2050 0abe 0E94 0000 		call COM_putchar
+ 2051               	.LM298:
+ 2052 0ac2 8AE3      		ldi r24,lo8(58)
+ 2053 0ac4 0E94 0000 		call COM_putchar
+ 2054               	.LM299:
+ 2055 0ac8 8091 0000 		lds r24,CTL_mode_auto
+ 2056 0acc 00C0      		rjmp .L195
+ 2057               	.LVL183:
+ 2058               	.L183:
+ 2059               	.LM300:
+ 2060 0ace 89E5      		ldi r24,lo8(89)
+ 2061 0ad0 0E94 0000 		call COM_putchar
+ 2062               	.LVL184:
+ 2063               	.LM301:
+ 2064 0ad4 81E3      		ldi r24,lo8(49)
+ 2065 0ad6 0E94 0000 		call COM_putchar
+ 2066               	.LM302:
+ 2067 0ada 8AE3      		ldi r24,lo8(58)
+ 2068 0adc 0E94 0000 		call COM_putchar
+ 2069               	.LM303:
+ 2070 0ae0 8091 0000 		lds r24,RTC+2
+ 2071 0ae4 0E94 0000 		call print_decXX
+ 2072               	.LM304:
+ 2073 0ae8 8EE2      		ldi r24,lo8(46)
+ 2074 0aea 0E94 0000 		call COM_putchar
+ 2075               	.LM305:
+ 2076 0aee 8091 0000 		lds r24,RTC+1
+ 2077 0af2 0E94 0000 		call print_decXX
+ 2078               	.LM306:
+ 2079 0af6 8EE2      		ldi r24,lo8(46)
+ 2080 0af8 0E94 0000 		call COM_putchar
+ 2081               	.LM307:
+ 2082 0afc 8091 0000 		lds r24,RTC
+ 2083 0b00 00C0      		rjmp .L195
+ 2084               	.LVL185:
+ 2085               	.L176:
+ 2086               	.LM308:
+ 2087 0b02 88E4      		ldi r24,lo8(72)
+ 2088 0b04 0E94 0000 		call COM_putchar
+ 2089               	.LVL186:
+ 2090               	.LM309:
+ 2091 0b08 81E3      		ldi r24,lo8(49)
+ 2092 0b0a 0E94 0000 		call COM_putchar
+ 2093               	.LM310:
+ 2094 0b0e 8AE3      		ldi r24,lo8(58)
+ 2095 0b10 0E94 0000 		call COM_putchar
+ 2096               	.LM311:
+ 2097 0b14 8091 0000 		lds r24,RTC+3
+ 2098 0b18 0E94 0000 		call print_decXX
+ 2099               	.LM312:
+ 2100 0b1c 8AE3      		ldi r24,lo8(58)
+ 2101 0b1e 0E94 0000 		call COM_putchar
+ 2102               	.LM313:
+ 2103 0b22 8091 0000 		lds r24,RTC+4
+ 2104 0b26 0E94 0000 		call print_decXX
+ 2105               	.LM314:
+ 2106 0b2a 8AE3      		ldi r24,lo8(58)
+ 2107 0b2c 0E94 0000 		call COM_putchar
+ 2108               	.LM315:
+ 2109 0b30 8091 0000 		lds r24,RTC+5
+ 2110 0b34 00C0      		rjmp .L195
+ 2111               	.LVL187:
+ 2112               	.L174:
+ 2113               	.LM316:
+ 2114 0b36 83E4      		ldi r24,lo8(67)
+ 2115 0b38 0E94 0000 		call COM_putchar
+ 2116               	.LVL188:
+ 2117               	.LM317:
+ 2118 0b3c 82E0      		ldi r24,lo8(2)
+ 2119 0b3e 0E94 0000 		call COM_hex_parse
+ 2120 0b42 8823      		tst r24
+ 2121 0b44 01F0      		breq .+2
+ 2122 0b46 00C0      		rjmp .L198
+ 2123               	.L185:
+ 2124               	.LM318:
+ 2125 0b48 81E3      		ldi r24,lo8(49)
+ 2126 0b4a 0E94 0000 		call COM_putchar
+ 2127               	.LM319:
+ 2128 0b4e 8AE3      		ldi r24,lo8(58)
+ 2129 0b50 0E94 0000 		call COM_putchar
+ 2130               	.LM320:
+ 2131 0b54 85E4      		ldi r24,lo8(69)
+ 2132 0b56 6091 0000 		lds r22,com_hex
+ 2133 0b5a 0E94 0000 		call print_idx
+ 2134               	.LM321:
+ 2135 0b5e E091 0000 		lds r30,com_hex
+ 2136               	.LVL189:
+ 2137 0b62 EF3F      		cpi r30,lo8(-1)
+ 2138 0b64 01F4      		brne .L186
+ 2139               	.LM322:
+ 2140 0b66 84E1      		ldi r24,lo8(20)
+ 2141 0b68 00C0      		rjmp .L196
+ 2142               	.L186:
+ 2143               	.LM323:
+ 2144 0b6a F0E0      		ldi r31,lo8(0)
+ 2145               	.LVL190:
+ 2146 0b6c E050      		subi r30,lo8(-(config))
+ 2147 0b6e F040      		sbci r31,hi8(-(config))
+ 2148               	.LVL191:
+ 2149 0b70 8081      		ld r24,Z
+ 2150 0b72 00C0      		rjmp .L196
+ 2151               	.LVL192:
+ 2152               	.L173:
+ 2153               	.LM324:
+ 2154 0b74 82E4      		ldi r24,lo8(66)
+ 2155 0b76 0E94 0000 		call COM_putchar
+ 2156               	.LVL193:
+ 2157               	.LM325:
+ 2158 0b7a 81E3      		ldi r24,lo8(49)
+ 2159 0b7c 0E94 0000 		call COM_putchar
+ 2160               	.LM326:
+ 2161 0b80 8AE3      		ldi r24,lo8(58)
+ 2162 0b82 0E94 0000 		call COM_putchar
+ 2163               	.LM327:
+ 2164 0b86 8091 0000 		lds r24,ring_average
+ 2165 0b8a 9091 0000 		lds r25,(ring_average)+1
+ 2166 0b8e 00C0      		rjmp .L197
+ 2167               	.LVL194:
+ 2168               	.L181:
+ 2169               	.LM328:
+ 2170 0b90 84E5      		ldi r24,lo8(84)
+ 2171 0b92 0E94 0000 		call COM_putchar
+ 2172               	.LVL195:
+ 2173               	.LM329:
+ 2174 0b96 81E3      		ldi r24,lo8(49)
+ 2175 0b98 0E94 0000 		call COM_putchar
+ 2176               	.LM330:
+ 2177 0b9c 8AE3      		ldi r24,lo8(58)
+ 2178 0b9e 0E94 0000 		call COM_putchar
+ 2179               	.LM331:
+ 2180 0ba2 8091 0000 		lds r24,CTL_temp_wanted_last
+ 2181 0ba6 809F      		mul r24,r16
+ 2182 0ba8 C001      		movw r24,r0
+ 2183 0baa 1124      		clr r1
+ 2184 0bac 00C0      		rjmp .L197
+ 2185               	.LVL196:
+ 2186               	.L182:
+ 2187               	.LM332:
+ 2188 0bae 86E5      		ldi r24,lo8(86)
+ 2189 0bb0 0E94 0000 		call COM_putchar
+ 2190               	.LVL197:
+ 2191               	.LM333:
+ 2192 0bb4 81E3      		ldi r24,lo8(49)
+ 2193 0bb6 0E94 0000 		call COM_putchar
+ 2194               	.LM334:
+ 2195 0bba 8AE3      		ldi r24,lo8(58)
+ 2196 0bbc 0E94 0000 		call COM_putchar
+ 2197               	.LM335:
+ 2198 0bc0 8091 0000 		lds r24,valveHistory
+ 2199               	.L195:
+ 2200 0bc4 0E94 0000 		call print_decXX
+ 2201 0bc8 00C0      		rjmp .L132
+ 2202               	.LVL198:
+ 2203               	.L177:
+ 2204               	.LM336:
+ 2205 0bca 89E4      		ldi r24,lo8(73)
+ 2206 0bcc 0E94 0000 		call COM_putchar
+ 2207               	.LVL199:
+ 2208               	.LM337:
+ 2209 0bd0 81E3      		ldi r24,lo8(49)
+ 2210 0bd2 0E94 0000 		call COM_putchar
+ 2211               	.LM338:
+ 2212 0bd6 8AE3      		ldi r24,lo8(58)
+ 2213 0bd8 0E94 0000 		call COM_putchar
+ 2214               	.LM339:
+ 2215 0bdc 8091 0000 		lds r24,ring_average+2
+ 2216 0be0 9091 0000 		lds r25,(ring_average+2)+1
+ 2217 0be4 00C0      		rjmp .L197
+ 2218               	.LVL200:
+ 2219               	.L179:
+ 2220               	.LM340:
+ 2221 0be6 80E5      		ldi r24,lo8(80)
+ 2222 0be8 0E94 0000 		call COM_putchar
+ 2223               	.LVL201:
+ 2224               	.LM341:
+ 2225 0bec 81E3      		ldi r24,lo8(49)
+ 2226 0bee 0E94 0000 		call COM_putchar
+ 2227               	.LM342:
+ 2228 0bf2 8AE3      		ldi r24,lo8(58)
+ 2229 0bf4 0E94 0000 		call COM_putchar
+ 2230               	.LM343:
+ 2231 0bf8 86E4      		ldi r24,lo8(70)
+ 2232 0bfa 0E94 0000 		call COM_putchar
+ 2233               	.LM344:
+ 2234 0bfe 8091 0000 		lds r24,config+1
+ 2235 0c02 0E94 0000 		call print_hexXX
+ 2236               	.LM345:
+ 2237 0c06 8CE2      		ldi r24,lo8(44)
+ 2238 0c08 0E94 0000 		call COM_putchar
+ 2239               	.LM346:
+ 2240 0c0c 85E4      		ldi r24,lo8(69)
+ 2241 0c0e 0E94 0000 		call COM_putchar
+ 2242               	.LM347:
+ 2243 0c12 8091 0000 		lds r24,config+2
+ 2244 0c16 0E94 0000 		call print_hexXX
+ 2245               	.LM348:
+ 2246 0c1a 8CE2      		ldi r24,lo8(44)
+ 2247 0c1c 0E94 0000 		call COM_putchar
+ 2248               	.LM349:
+ 2249 0c20 83E4      		ldi r24,lo8(67)
+ 2250 0c22 0E94 0000 		call COM_putchar
+ 2251               	.LM350:
+ 2252 0c26 8091 0000 		lds r24,config+3
+ 2253 0c2a 0E94 0000 		call print_hexXX
+ 2254               	.LM351:
+ 2255 0c2e 8CE2      		ldi r24,lo8(44)
+ 2256 0c30 0E94 0000 		call COM_putchar
+ 2257               	.LM352:
+ 2258 0c34 83E5      		ldi r24,lo8(83)
+ 2259 0c36 0E94 0000 		call COM_putchar
+ 2260               	.LM353:
+ 2261 0c3a 8091 0000 		lds r24,config+4
+ 2262 0c3e 00C0      		rjmp .L196
+ 2263               	.LVL202:
+ 2264               	.L180:
+ 2265               	.LBB26:
+ 2266               	.LM354:
+ 2267 0c40 83E5      		ldi r24,lo8(83)
+ 2268 0c42 0E94 0000 		call COM_putchar
+ 2269               	.LVL203:
+ 2270               	.LM355:
+ 2271 0c46 81E0      		ldi r24,lo8(1)
+ 2272 0c48 0E94 0000 		call COM_hex_parse
+ 2273 0c4c 8823      		tst r24
+ 2274 0c4e 01F0      		breq .+2
+ 2275 0c50 00C0      		rjmp .L198
+ 2276               	.L187:
+ 2277               	.LM356:
+ 2278 0c52 8091 0000 		lds r24,com_hex
+ 2279 0c56 8295      		swap r24
+ 2280 0c58 8F70      		andi r24,lo8(15)
+ 2281 0c5a 8830      		cpi r24,lo8(8)
+ 2282 0c5c 00F0      		brlo .+2
+ 2283 0c5e 00C0      		rjmp .L198
+ 2284               	.L188:
+ 2285               	.LM357:
+ 2286 0c60 81E3      		ldi r24,lo8(49)
+ 2287 0c62 0E94 0000 		call COM_putchar
+ 2288               	.LM358:
+ 2289 0c66 8AE3      		ldi r24,lo8(58)
+ 2290 0c68 0E94 0000 		call COM_putchar
+ 2291               	.LM359:
+ 2292 0c6c 8091 0000 		lds r24,com_hex
+ 2293 0c70 8295      		swap r24
+ 2294 0c72 8F70      		andi r24,lo8(15)
+ 2295 0c74 0E94 0000 		call print_digit
+ 2296 0c78 10E0      		ldi r17,lo8(0)
+ 2297               	.LVL204:
+ 2298               	.L189:
+ 2299               	.LM360:
+ 2300 0c7a 8CE2      		ldi r24,lo8(44)
+ 2301 0c7c 0E94 0000 		call COM_putchar
+ 2302               	.LM361:
+ 2303 0c80 8091 0000 		lds r24,com_hex
+ 2304 0c84 8295      		swap r24
+ 2305 0c86 8F70      		andi r24,lo8(15)
+ 2306 0c88 880F      		lsl r24
+ 2307 0c8a 880F      		lsl r24
+ 2308 0c8c 880F      		lsl r24
+ 2309 0c8e 810F      		add r24,r17
+ 2310 0c90 0E94 0000 		call eeprom_timers_read_raw
+ 2311 0c94 0E94 0000 		call print_hexXXXX
+ 2312 0c98 1F5F      		subi r17,lo8(-(1))
+ 2313               	.LM362:
+ 2314 0c9a 1830      		cpi r17,lo8(8)
+ 2315 0c9c 01F4      		brne .L189
+ 2316 0c9e 00C0      		rjmp .L132
+ 2317               	.LVL205:
+ 2318               	.L175:
+ 2319               	.LBE26:
+ 2320               	.LM363:
+ 2321 0ca0 84E4      		ldi r24,lo8(68)
+ 2322 0ca2 0E94 0000 		call COM_putchar
+ 2323               	.LVL206:
+ 2324               	.LM364:
+ 2325 0ca6 81E3      		ldi r24,lo8(49)
+ 2326 0ca8 0E94 0000 		call COM_putchar
+ 2327               	.LM365:
+ 2328 0cac 8AE3      		ldi r24,lo8(58)
+ 2329 0cae 0E94 0000 		call COM_putchar
+ 2330               	.LM366:
+ 2331 0cb2 8091 0000 		lds r24,CTL_temp_threshold
+ 2332 0cb6 9091 0000 		lds r25,(CTL_temp_threshold)+1
+ 2333 0cba 00C0      		rjmp .L197
+ 2334               	.LVL207:
+ 2335               	.L172:
+ 2336               	.LM367:
+ 2337 0cbc 81E4      		ldi r24,lo8(65)
+ 2338 0cbe 0E94 0000 		call COM_putchar
+ 2339               	.LVL208:
+ 2340               	.LM368:
+ 2341 0cc2 81E3      		ldi r24,lo8(49)
+ 2342 0cc4 0E94 0000 		call COM_putchar
+ 2343               	.LM369:
+ 2344 0cc8 8AE3      		ldi r24,lo8(58)
+ 2345 0cca 0E94 0000 		call COM_putchar
+ 2346               	.LM370:
+ 2347 0cce 8091 0000 		lds r24,CTL_bat_threshold
+ 2348 0cd2 9091 0000 		lds r25,(CTL_bat_threshold)+1
+ 2349               	.L197:
+ 2350 0cd6 0E94 0000 		call print_decXXXX
+ 2351 0cda 00C0      		rjmp .L132
+ 2352               	.LVL209:
+ 2353               	.L171:
+ 2354               	.LM371:
+ 2355 0cdc 80E3      		ldi r24,lo8(48)
+ 2356 0cde 0E94 0000 		call COM_putchar
+ 2357               	.LVL210:
+ 2358               	.L198:
+ 2359               	.LM372:
+ 2360 0ce2 80E3      		ldi r24,lo8(48)
+ 2361               	.LVL211:
+ 2362               	.L200:
+ 2363 0ce4 0E94 0000 		call COM_putchar
+ 2364               	.LVL212:
+ 2365 0ce8 00C0      		rjmp .L132
+ 2366               	.LVL213:
+ 2367               	.L127:
+ 2368               	.LBE32:
+ 2369               	.LM373:
+ 2370 0cea 82E0      		ldi r24,lo8(2)
+ 2371 0cec 0E94 0000 		call COM_hex_parse
+ 2372               	.LVL214:
+ 2373 0cf0 8823      		tst r24
+ 2374 0cf2 01F4      		brne .L132
+ 2375               	.LM374:
+ 2376 0cf4 8091 0000 		lds r24,com_hex
+ 2377               	.LVL215:
+ 2378 0cf8 8230      		cpi r24,lo8(2)
+ 2379 0cfa 00F4      		brsh .L190
+ 2380 0cfc 8093 0000 		sts menu_locked,r24
+ 2381               	.L190:
+ 2382               	.LM375:
+ 2383 0d00 8091 0000 		lds r24,menu_locked
+ 2384               	.LVL216:
+ 2385               	.L196:
+ 2386 0d04 0E94 0000 		call print_hexXX
+ 2387               	.LVL217:
+ 2388               	.L132:
+ 2389               	.LM376:
+ 2390 0d08 8AE0      		ldi r24,lo8(10)
+ 2391 0d0a 0E94 0000 		call COM_putchar
+ 2392               	.LVL218:
+ 2393               	.L123:
+ 2394               	.LM377:
+ 2395 0d0e 0E94 0000 		call COM_flush
+ 2396               	.LVL219:
+ 2397               	.L122:
+ 2398               	.LM378:
+ 2399 0d12 8091 0000 		lds r24,COM_requests
+ 2400 0d16 8823      		tst r24
+ 2401 0d18 01F0      		breq .+2
+ 2402 0d1a 00C0      		rjmp .L191
+ 2403               	/* epilogue start */
+ 2404               	.LM379:
+ 2405 0d1c 1F91      		pop r17
+ 2406               	.LVL220:
+ 2407 0d1e 0F91      		pop r16
+ 2408 0d20 0895      		ret
+ 2409               	.LFE29:
+ 2411               	.global	COM_send_valve_event
+ 2413               	COM_send_valve_event:
+ 2414               	.LFB23:
+ 2415               	.LM380:
+ 2416               	.LVL221:
+ 2417 0d22 1F93      		push r17
+ 2418               	/* prologue: function */
+ 2419               	/* frame size = 0 */
+ 2420 0d24 182F      		mov r17,r24
+ 2421               	.LM381:
+ 2422 0d26 85E4      		ldi r24,lo8(69)
+ 2423               	.LVL222:
+ 2424 0d28 0E94 0000 		call COM_putchar
+ 2425               	.LM382:
+ 2426 0d2c 86E5      		ldi r24,lo8(86)
+ 2427 0d2e 0E94 0000 		call COM_putchar
+ 2428               	.LM383:
+ 2429 0d32 8AE3      		ldi r24,lo8(58)
+ 2430 0d34 0E94 0000 		call COM_putchar
+ 2431               	.LM384:
+ 2432 0d38 812F      		mov r24,r17
+ 2433 0d3a 0E94 0000 		call print_decXX
+ 2434               	.LM385:
+ 2435 0d3e 8AE0      		ldi r24,lo8(10)
+ 2436 0d40 0E94 0000 		call COM_putchar
+ 2437               	.LM386:
+ 2438 0d44 0E94 0000 		call COM_flush
+ 2439               	/* epilogue start */
+ 2440               	.LM387:
+ 2441 0d48 1F91      		pop r17
+ 2442               	.LVL223:
+ 2443 0d4a 0895      		ret
+ 2444               	.LFE23:
+ 2446               	.global	COM_send_error_event
+ 2448               	COM_send_error_event:
+ 2449               	.LFB22:
+ 2450               	.LM388:
+ 2451               	.LVL224:
+ 2452 0d4c 1F93      		push r17
+ 2453               	/* prologue: function */
+ 2454               	/* frame size = 0 */
+ 2455 0d4e 182F      		mov r17,r24
+ 2456               	.LM389:
+ 2457 0d50 85E4      		ldi r24,lo8(69)
+ 2458               	.LVL225:
+ 2459 0d52 0E94 0000 		call COM_putchar
+ 2460               	.LM390:
+ 2461 0d56 85E4      		ldi r24,lo8(69)
+ 2462 0d58 0E94 0000 		call COM_putchar
+ 2463               	.LM391:
+ 2464 0d5c 8AE3      		ldi r24,lo8(58)
+ 2465 0d5e 0E94 0000 		call COM_putchar
+ 2466               	.LM392:
+ 2467 0d62 812F      		mov r24,r17
+ 2468 0d64 0E94 0000 		call print_hexXX
+ 2469               	.LM393:
+ 2470 0d68 8AE0      		ldi r24,lo8(10)
+ 2471 0d6a 0E94 0000 		call COM_putchar
+ 2472               	.LM394:
+ 2473 0d6e 0E94 0000 		call COM_flush
+ 2474               	/* epilogue start */
+ 2475               	.LM395:
+ 2476 0d72 1F91      		pop r17
+ 2477               	.LVL226:
+ 2478 0d74 0895      		ret
+ 2479               	.LFE22:
+ 2481               	.global	COM_send_battery_event
+ 2483               	COM_send_battery_event:
+ 2484               	.LFB21:
+ 2485               	.LM396:
+ 2486               	.LVL227:
+ 2487 0d76 0F93      		push r16
+ 2488 0d78 1F93      		push r17
+ 2489               	/* prologue: function */
+ 2490               	/* frame size = 0 */
+ 2491 0d7a 8C01      		movw r16,r24
+ 2492               	.LM397:
+ 2493 0d7c 85E4      		ldi r24,lo8(69)
+ 2494               	.LVL228:
+ 2495 0d7e 0E94 0000 		call COM_putchar
+ 2496               	.LM398:
+ 2497 0d82 82E4      		ldi r24,lo8(66)
+ 2498 0d84 0E94 0000 		call COM_putchar
+ 2499               	.LM399:
+ 2500 0d88 8AE3      		ldi r24,lo8(58)
+ 2501 0d8a 0E94 0000 		call COM_putchar
+ 2502               	.LM400:
+ 2503 0d8e C801      		movw r24,r16
+ 2504 0d90 0E94 0000 		call print_decXXXX
+ 2505               	.LM401:
+ 2506 0d94 8AE0      		ldi r24,lo8(10)
+ 2507 0d96 0E94 0000 		call COM_putchar
+ 2508               	.LM402:
+ 2509 0d9a 0E94 0000 		call COM_flush
+ 2510               	/* epilogue start */
+ 2511               	.LM403:
+ 2512 0d9e 1F91      		pop r17
+ 2513 0da0 0F91      		pop r16
+ 2514               	.LVL229:
+ 2515 0da2 0895      		ret
+ 2516               	.LFE21:
+ 2518               	.global	COM_send_temperature_event
+ 2520               	COM_send_temperature_event:
+ 2521               	.LFB20:
+ 2522               	.LM404:
+ 2523               	.LVL230:
+ 2524 0da4 0F93      		push r16
+ 2525 0da6 1F93      		push r17
+ 2526               	/* prologue: function */
+ 2527               	/* frame size = 0 */
+ 2528 0da8 8C01      		movw r16,r24
+ 2529               	.LM405:
+ 2530 0daa 85E4      		ldi r24,lo8(69)
+ 2531               	.LVL231:
+ 2532 0dac 0E94 0000 		call COM_putchar
+ 2533               	.LM406:
+ 2534 0db0 84E5      		ldi r24,lo8(84)
+ 2535 0db2 0E94 0000 		call COM_putchar
+ 2536               	.LM407:
+ 2537 0db6 8AE3      		ldi r24,lo8(58)
+ 2538 0db8 0E94 0000 		call COM_putchar
+ 2539               	.LM408:
+ 2540 0dbc C801      		movw r24,r16
+ 2541 0dbe 0E94 0000 		call print_decXXXX
+ 2542               	.LM409:
+ 2543 0dc2 8AE0      		ldi r24,lo8(10)
+ 2544 0dc4 0E94 0000 		call COM_putchar
+ 2545               	.LM410:
+ 2546 0dc8 0E94 0000 		call COM_flush
+ 2547               	/* epilogue start */
+ 2548               	.LM411:
+ 2549 0dcc 1F91      		pop r17
+ 2550 0dce 0F91      		pop r16
+ 2551               	.LVL232:
+ 2552 0dd0 0895      		ret
+ 2553               	.LFE20:
+ 2555               	.global	COM_send_mode_event
+ 2557               	COM_send_mode_event:
+ 2558               	.LFB19:
+ 2559               	.LM412:
+ 2560               	.LVL233:
+ 2561 0dd2 1F93      		push r17
+ 2562               	/* prologue: function */
+ 2563               	/* frame size = 0 */
+ 2564 0dd4 182F      		mov r17,r24
+ 2565               	.LM413:
+ 2566 0dd6 85E4      		ldi r24,lo8(69)
+ 2567               	.LVL234:
+ 2568 0dd8 0E94 0000 		call COM_putchar
+ 2569               	.LM414:
+ 2570 0ddc 8DE4      		ldi r24,lo8(77)
+ 2571 0dde 0E94 0000 		call COM_putchar
+ 2572               	.LM415:
+ 2573 0de2 8AE3      		ldi r24,lo8(58)
+ 2574 0de4 0E94 0000 		call COM_putchar
+ 2575               	.LM416:
+ 2576 0de8 812F      		mov r24,r17
+ 2577 0dea 0E94 0000 		call print_decXXX
+ 2578               	.LM417:
+ 2579 0dee 8AE0      		ldi r24,lo8(10)
+ 2580 0df0 0E94 0000 		call COM_putchar
+ 2581               	.LM418:
+ 2582 0df4 0E94 0000 		call COM_flush
+ 2583               	/* epilogue start */
+ 2584               	.LM419:
+ 2585 0df8 1F91      		pop r17
+ 2586               	.LVL235:
+ 2587 0dfa 0895      		ret
+ 2588               	.LFE19:
+ 2590               	.global	COM_send_wheel_event
+ 2592               	COM_send_wheel_event:
+ 2593               	.LFB18:
+ 2594               	.LM420:
+ 2595               	.LVL236:
+ 2596 0dfc 1F93      		push r17
+ 2597               	/* prologue: function */
+ 2598               	/* frame size = 0 */
+ 2599 0dfe 182F      		mov r17,r24
+ 2600               	.LM421:
+ 2601 0e00 85E4      		ldi r24,lo8(69)
+ 2602               	.LVL237:
+ 2603 0e02 0E94 0000 		call COM_putchar
+ 2604               	.LM422:
+ 2605 0e06 87E5      		ldi r24,lo8(87)
+ 2606 0e08 0E94 0000 		call COM_putchar
+ 2607               	.LM423:
+ 2608 0e0c 8AE3      		ldi r24,lo8(58)
+ 2609 0e0e 0E94 0000 		call COM_putchar
+ 2610               	.LM424:
+ 2611 0e12 812F      		mov r24,r17
+ 2612 0e14 8058      		subi r24,lo8(-(-128))
+ 2613 0e16 0E94 0000 		call print_decXXX
+ 2614               	.LM425:
+ 2615 0e1a 8AE0      		ldi r24,lo8(10)
+ 2616 0e1c 0E94 0000 		call COM_putchar
+ 2617               	.LM426:
+ 2618 0e20 0E94 0000 		call COM_flush
+ 2619               	/* epilogue start */
+ 2620               	.LM427:
+ 2621 0e24 1F91      		pop r17
+ 2622               	.LVL238:
+ 2623 0e26 0895      		ret
+ 2624               	.LFE18:
+ 2626               	.global	COM_init
+ 2628               	COM_init:
+ 2629               	.LFB17:
+ 2630               	.LM428:
+ 2631               	/* prologue: function */
+ 2632               	/* frame size = 0 */
+ 2633               	.LM429:
+ 2634 0e28 80E0      		ldi r24,lo8(0)
+ 2635 0e2a 0E94 0000 		call print_version
+ 2636               	.LM430:
+ 2637 0e2e 0E94 0000 		call RS_Init
+ 2638               	.LM431:
+ 2639 0e32 0E94 0000 		call COM_flush
+ 2640               	/* epilogue start */
+ 2641               	.LM432:
+ 2642 0e36 0895      		ret
+ 2643               	.LFE17:
+ 2645               		.section	.progmem.data,"a",@progbits
+ 2648               	__c.1588:
+ 2649 0000 3A4F 7065 		.string	":OpenHR20rfm 1.1 Dec 10 2012 22:40:54 \n"
+ 2649      6E48 5232 
+ 2649      3072 666D 
+ 2649      2031 2E31 
+ 2649      2044 6563 
+ 2650               		.section	.bss.rx_buff_in,"aw",@nobits
+ 2653               	rx_buff_in:
+ 2654 0000 00        		.skip 1,0
+ 2655               		.section	.bss.rx_buff_out,"aw",@nobits
+ 2658               	rx_buff_out:
+ 2659 0000 00        		.skip 1,0
+ 2660               		.section	.progmem.data
+ 2663               	__c.1666:
+ 2664 0028 204C 00   		.string	" L"
+ 2667               	__c.1664:
+ 2668 002b 2057 00   		.string	" W"
+ 2671               	__c.1662:
+ 2672 002e 2058 00   		.string	" X"
+ 2675               	__c.1660:
+ 2676 0031 2045 3A00 		.string	" E:"
+ 2679               	__c.1658:
+ 2680 0035 2049 653A 		.string	" Ie: "
+ 2680      2000 
+ 2683               	__c.1656:
+ 2684 003b 2049 633A 		.string	" Ic: "
+ 2684      2000 
+ 2687               	__c.1654:
+ 2688 0041 2049 623A 		.string	" Ib: "
+ 2688      2000 
+ 2691               	__c.1652:
+ 2692 0047 2049 733A 		.string	" Is: "
+ 2692      2000 
+ 2695               	__c.1650:
+ 2696 004d 2042 3A20 		.string	" B: "
+ 2696      00
+ 2699               	__c.1648:
+ 2700 0052 424F 4F54 		.string	"BOOT"
+ 2700      00
+ 2703               	__c.1646:
+ 2704 0057 2053 3A20 		.string	" S: "
+ 2704      00
+ 2707               	__c.1644:
+ 2708 005c 2049 3A20 		.string	" I: "
+ 2708      00
+ 2711               	__c.1642:
+ 2712 0061 2056 3A20 		.string	" V: "
+ 2712      00
+ 2715               	__c.1633:
+ 2716 0066 443A 2000 		.string	"D: "
+ 2717               		.section	.bss.tx_buff_in,"aw",@nobits
+ 2720               	tx_buff_in:
+ 2721 0000 00        		.skip 1,0
+ 2722               		.section	.bss.tx_buff_out,"aw",@nobits
+ 2725               	tx_buff_out:
+ 2726 0000 00        		.skip 1,0
+ 2727               		.section	.bss.tx_buff,"aw",@nobits
+ 2730               	tx_buff:
+ 2731 0000 0000 0000 		.skip 128,0
+ 2731      0000 0000 
+ 2731      0000 0000 
+ 2731      0000 0000 
+ 2731      0000 0000 
+ 2732               		.section	.bss.rx_buff,"aw",@nobits
+ 2735               	rx_buff:
+ 2736 0000 0000 0000 		.skip 64,0
+ 2736      0000 0000 
+ 2736      0000 0000 
+ 2736      0000 0000 
+ 2736      0000 0000 
+ 2737               		.section	.bss.COM_requests,"aw",@nobits
+ 2740               	COM_requests:
+ 2741 0000 00        		.skip 1,0
+ 2742               		.section	.bss.com_hex,"aw",@nobits
+ 2745               	com_hex:
+ 2746 0000 0000 00   		.skip 3,0
+ 2963               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 com.c
+C:\Tools\cygwin\tmp/cc8LO588.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/cc8LO588.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/cc8LO588.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/cc8LO588.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/cc8LO588.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/cc8LO588.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/cc8LO588.s:18     .text:00000000 COM_putchar
+C:\Tools\cygwin\tmp/cc8LO588.s:2720   .bss.tx_buff_in:00000000 tx_buff_in
+C:\Tools\cygwin\tmp/cc8LO588.s:2725   .bss.tx_buff_out:00000000 tx_buff_out
+C:\Tools\cygwin\tmp/cc8LO588.s:2730   .bss.tx_buff:00000000 tx_buff
+C:\Tools\cygwin\tmp/cc8LO588.s:68     .text:00000034 COM_tx_char_isr
+C:\Tools\cygwin\tmp/cc8LO588.s:101    .text:00000058 COM_rx_char_isr
+C:\Tools\cygwin\tmp/cc8LO588.s:2653   .bss.rx_buff_in:00000000 rx_buff_in
+C:\Tools\cygwin\tmp/cc8LO588.s:2735   .bss.rx_buff:00000000 rx_buff
+C:\Tools\cygwin\tmp/cc8LO588.s:2658   .bss.rx_buff_out:00000000 rx_buff_out
+C:\Tools\cygwin\tmp/cc8LO588.s:2740   .bss.COM_requests:00000000 COM_requests
+C:\Tools\cygwin\tmp/cc8LO588.s:153    .text:0000009e COM_getchar
+C:\Tools\cygwin\tmp/cc8LO588.s:205    .text:000000d6 print_decXX
+C:\Tools\cygwin\tmp/cc8LO588.s:250    .text:00000116 print_digit
+C:\Tools\cygwin\tmp/cc8LO588.s:269    .text:00000126 print_decXXX
+C:\Tools\cygwin\tmp/cc8LO588.s:320    .text:0000016e print_decXXXX
+C:\Tools\cygwin\tmp/cc8LO588.s:351    .text:00000196 print_hexXX
+C:\Tools\cygwin\tmp/cc8LO588.s:403    .text:000001c2 print_hexXXXX
+C:\Tools\cygwin\tmp/cc8LO588.s:427    .text:000001d6 print_s_p
+C:\Tools\cygwin\tmp/cc8LO588.s:476    .text:000001f6 COM_hex_parse
+C:\Tools\cygwin\tmp/cc8LO588.s:2745   .bss.com_hex:00000000 com_hex
+C:\Tools\cygwin\tmp/cc8LO588.s:566    .text:00000250 print_idx
+C:\Tools\cygwin\tmp/cc8LO588.s:598    .text:00000274 COM_flush
+C:\Tools\cygwin\tmp/cc8LO588.s:615    .text:00000286 print_version
+C:\Tools\cygwin\tmp/cc8LO588.s:2648   .progmem.data:00000000 __c.1588
+C:\Tools\cygwin\tmp/cc8LO588.s:685    .text:000002c8 COM_print_debug
+C:\Tools\cygwin\tmp/cc8LO588.s:2715   .progmem.data:00000066 __c.1633
+C:\Tools\cygwin\tmp/cc8LO588.s:2711   .progmem.data:00000061 __c.1642
+C:\Tools\cygwin\tmp/cc8LO588.s:2707   .progmem.data:0000005c __c.1644
+C:\Tools\cygwin\tmp/cc8LO588.s:2703   .progmem.data:00000057 __c.1646
+C:\Tools\cygwin\tmp/cc8LO588.s:2699   .progmem.data:00000052 __c.1648
+C:\Tools\cygwin\tmp/cc8LO588.s:2695   .progmem.data:0000004d __c.1650
+C:\Tools\cygwin\tmp/cc8LO588.s:2691   .progmem.data:00000047 __c.1652
+C:\Tools\cygwin\tmp/cc8LO588.s:2687   .progmem.data:00000041 __c.1654
+C:\Tools\cygwin\tmp/cc8LO588.s:2683   .progmem.data:0000003b __c.1656
+C:\Tools\cygwin\tmp/cc8LO588.s:2679   .progmem.data:00000035 __c.1658
+C:\Tools\cygwin\tmp/cc8LO588.s:2675   .progmem.data:00000031 __c.1660
+C:\Tools\cygwin\tmp/cc8LO588.s:2671   .progmem.data:0000002e __c.1662
+C:\Tools\cygwin\tmp/cc8LO588.s:2667   .progmem.data:0000002b __c.1664
+C:\Tools\cygwin\tmp/cc8LO588.s:2663   .progmem.data:00000028 __c.1666
+C:\Tools\cygwin\tmp/cc8LO588.s:1006   .text:00000538 COM_wireless_command_parse
+C:\Tools\cygwin\tmp/cc8LO588.s:1384   .text:00000712 COM_command_parse
+C:\Tools\cygwin\tmp/cc8LO588.s:2413   .text:00000d22 COM_send_valve_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2448   .text:00000d4c COM_send_error_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2483   .text:00000d76 COM_send_battery_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2520   .text:00000da4 COM_send_temperature_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2557   .text:00000dd2 COM_send_mode_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2592   .text:00000dfc COM_send_wheel_event
+C:\Tools\cygwin\tmp/cc8LO588.s:2628   .text:00000e28 COM_init
+
+UNDEFINED SYMBOLS
+__udivmodqi4
+__udivmodhi4
+RS_startSend
+wireless_putchar
+RTC
+CTL_mode_auto
+valveHistory
+ring_average
+CTL_temp_wanted_last
+sumError
+CTL_integratorBlock
+CTL_interatorCredit
+CTL_creditExpiration
+CTL_error
+CTL_mode_window
+menu_locked
+wireless_async
+CTL_temp_auto
+CTL_temp_wanted
+__prologue_saves__
+__tablejump2__
+watch
+config
+eeprom_config_save
+RTC_DowTimerSet
+eeprom_timers_read_raw
+CTL_change_mode
+PID_force_update
+__epilogue_restores__
+RTC_DowTimerGetHourBar
+hourbar_buff
+RTC_SetYear
+RTC_SetMonth
+RTC_SetDay
+RTC_SetHour
+RTC_SetMinute
+RTC_SetSecond
+CTL_temp_wanted_auto
+CTL_valve_wanted
+CTL_temp_threshold
+CTL_bat_threshold
+RS_Init
+__do_copy_data
+__do_clear_bss

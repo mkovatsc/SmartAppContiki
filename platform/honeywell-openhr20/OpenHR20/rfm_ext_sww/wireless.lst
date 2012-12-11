@@ -1,0 +1,1013 @@
+   1               		.file	"wireless.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	/* #APP */
+  17               		left_roll:               
+  18 0000 AF81      	   ldd r26,Y+7           
+  19 0002 AA0F      	   lsl r26               
+  20 0004 BFB7      	   in r27,__SREG__       
+  21 0006 A7E0      	   ldi r26,7             
+  22               	roll_loop:               
+  23 0008 0880      	   ld __tmp_reg__,Y      
+  24 000a BFBF      	   out __SREG__,r27      
+  25 000c 001C      	   rol __tmp_reg__       
+  26 000e BFB7      	   in r27,__SREG__       
+  27 0010 0082      	   st Z,__tmp_reg__      
+  28 0012 2196      	   adiw r28,1            
+  29 0014 3196      	   adiw r30,1            
+  30 0016 A150      	   subi r26,1            
+  31 0018 00F4      	   brcc roll_loop        
+  32 001a 2897      	   sbiw r28,8            
+  33 001c 0895      	   ret 
+  34               	/* #NOAPP */
+  35               	.global	wireless_putchar
+  37               	wireless_putchar:
+  38               	.LFB9:
+  39               	.LM1:
+  40               	.LVL0:
+  41               	/* prologue: function */
+  42               	/* frame size = 0 */
+  43 001e 982F      		mov r25,r24
+  44               	.LM2:
+  45 0020 8091 0000 		lds r24,wireless_async
+  46               	.LVL1:
+  47 0024 8823      		tst r24
+  48 0026 01F4      		brne .L2
+  49               	.LM3:
+  50 0028 8091 0000 		lds r24,rfm_framesize
+  51 002c 8A34      		cpi r24,lo8(74)
+  52 002e 00F4      		brsh .L4
+  53               	.LM4:
+  54 0030 E82F      		mov r30,r24
+  55 0032 F0E0      		ldi r31,lo8(0)
+  56 0034 E050      		subi r30,lo8(-(rfm_framebuf))
+  57 0036 F040      		sbci r31,hi8(-(rfm_framebuf))
+  58 0038 9083      		st Z,r25
+  59 003a 8F5F      		subi r24,lo8(-(1))
+  60 003c 8093 0000 		sts rfm_framesize,r24
+  61 0040 0895      		ret
+  62               	.L2:
+  63               	.LM5:
+  64 0042 8091 0000 		lds r24,wireless_buf_ptr
+  65 0046 8634      		cpi r24,lo8(70)
+  66 0048 00F4      		brsh .L4
+  67               	.LM6:
+  68 004a E82F      		mov r30,r24
+  69 004c F0E0      		ldi r31,lo8(0)
+  70 004e E050      		subi r30,lo8(-(wireless_framebuf))
+  71 0050 F040      		sbci r31,hi8(-(wireless_framebuf))
+  72 0052 9083      		st Z,r25
+  73 0054 8F5F      		subi r24,lo8(-(1))
+  74 0056 8093 0000 		sts wireless_buf_ptr,r24
+  75               	.L4:
+  76 005a 0895      		ret
+  77               	.LFE9:
+  79               	.global	wirelesTimeSyncCheck
+  81               	wirelesTimeSyncCheck:
+  82               	.LFB8:
+  83               	.LM7:
+  84               	/* prologue: function */
+  85               	/* frame size = 0 */
+  86               	.LM8:
+  87 005c 8091 0000 		lds r24,time_sync_tmo
+  88 0060 8150      		subi r24,lo8(-(-1))
+  89 0062 8093 0000 		sts time_sync_tmo,r24
+  90               	.LM9:
+  91 0066 1816      		cp __zero_reg__,r24
+  92 0068 04F0      		brlt .L9
+  93               	.LM10:
+  94 006a 8823      		tst r24
+  95 006c 01F0      		breq .L7
+  96 006e 823E      		cpi r24,lo8(-30)
+  97 0070 04F4      		brge .L8
+  98               	.L7:
+  99               	.LM11:
+ 100 0072 1092 0000 		sts time_sync_tmo,__zero_reg__
+ 101               	.LM12:
+ 102 0076 8091 6B00 		lds r24,107
+ 103 007a 8B7F      		andi r24,lo8(-5)
+ 104 007c 8093 6B00 		sts 107,r24
+ 105               	.LM13:
+ 106 0080 81E8      		ldi r24,lo8(-13695)
+ 107 0082 9AEC      		ldi r25,hi8(-13695)
+ 108 0084 0E94 0000 		call rfm_spi16
+ 109               	.LM14:
+ 110 0088 83E8      		ldi r24,lo8(-13693)
+ 111 008a 9AEC      		ldi r25,hi8(-13693)
+ 112 008c 0E94 0000 		call rfm_spi16
+ 113               	.LM15:
+ 114 0090 89ED      		ldi r24,lo8(-32039)
+ 115 0092 92E8      		ldi r25,hi8(-32039)
+ 116 0094 0E94 0000 		call rfm_spi16
+ 117               	.LM16:
+ 118 0098 1092 0000 		sts rfm_framepos,__zero_reg__
+ 119               	.LM17:
+ 120 009c 84E0      		ldi r24,lo8(4)
+ 121 009e 8093 0000 		sts rfm_mode,r24
+ 122               	.LM18:
+ 123 00a2 8091 6B00 		lds r24,107
+ 124 00a6 8460      		ori r24,lo8(4)
+ 125 00a8 8093 6B00 		sts 107,r24
+ 126 00ac 0E94 0000 		call __vector_2
+ 127 00b0 0895      		ret
+ 128               	.L8:
+ 129               	.LM19:
+ 130 00b2 8C3F      		cpi r24,lo8(-4)
+ 131 00b4 04F4      		brge .L9
+ 132               	.LM20:
+ 133 00b6 8091 6B00 		lds r24,107
+ 134 00ba 8B7F      		andi r24,lo8(-5)
+ 135 00bc 8093 6B00 		sts 107,r24
+ 136               	.LM21:
+ 137 00c0 81E0      		ldi r24,lo8(-32255)
+ 138 00c2 92E8      		ldi r25,hi8(-32255)
+ 139 00c4 0E94 0000 		call rfm_spi16
+ 140               	.LM22:
+ 141 00c8 8091 0000 		lds r24,CTL_error
+ 142 00cc 8061      		ori r24,lo8(16)
+ 143 00ce 8093 0000 		sts CTL_error,r24
+ 144               	.L9:
+ 145 00d2 0895      		ret
+ 146               	.LFE8:
+ 149               	encrypt_decrypt:
+ 150               	.LFB3:
+ 151               	.LM23:
+ 152               	.LVL2:
+ 153 00d4 A8E0      		ldi r26,lo8(8)
+ 154 00d6 B0E0      		ldi r27,hi8(8)
+ 155 00d8 E0E0      		ldi r30,lo8(gs(1f))
+ 156 00da F0E0      		ldi r31,hi8(gs(1f))
+ 157 00dc 0C94 0000 		jmp __prologue_saves__+((18 - 8) * 2)
+ 158               	1:
+ 159               	/* prologue: function */
+ 160               	/* frame size = 8 */
+ 161 00e0 7C01      		movw r14,r24
+ 162 00e2 062F      		mov r16,r22
+ 163               	.LM24:
+ 164 00e4 6623      		tst r22
+ 165 00e6 01F0      		breq .L14
+ 166               	.LVL3:
+ 167 00e8 10E0      		ldi r17,lo8(0)
+ 168               	.LVL4:
+ 169               	.LM25:
+ 170 00ea 6E01      		movw r12,r28
+ 171 00ec 0894      		sec
+ 172 00ee C11C      		adc r12,__zero_reg__
+ 173 00f0 D11C      		adc r13,__zero_reg__
+ 174               	.LVL5:
+ 175               	.L13:
+ 176 00f2 C601      		movw r24,r12
+ 177 00f4 60E0      		ldi r22,lo8(RTC)
+ 178 00f6 70E0      		ldi r23,hi8(RTC)
+ 179 00f8 40E0      		ldi r20,lo8(Keys+8)
+ 180 00fa 50E0      		ldi r21,hi8(Keys+8)
+ 181 00fc 0E94 0000 		call xtea_enc
+ 182               	.LVL6:
+ 183               	.LM26:
+ 184 0100 8091 0000 		lds r24,RTC+7
+ 185 0104 8F5F      		subi r24,lo8(-(1))
+ 186 0106 8093 0000 		sts RTC+7,r24
+ 187               	.LVL7:
+ 188               	.L12:
+ 189               	.LM27:
+ 190 010a E12F      		mov r30,r17
+ 191 010c F0E0      		ldi r31,lo8(0)
+ 192               	.LVL8:
+ 193 010e D701      		movw r26,r14
+ 194 0110 AE0F      		add r26,r30
+ 195 0112 BF1F      		adc r27,r31
+ 196 0114 E770      		andi r30,lo8(7)
+ 197 0116 F070      		andi r31,hi8(7)
+ 198               	.LVL9:
+ 199 0118 EC0D      		add r30,r12
+ 200 011a FD1D      		adc r31,r13
+ 201               	.LVL10:
+ 202 011c 8C91      		ld r24,X
+ 203 011e 9081      		ld r25,Z
+ 204 0120 8927      		eor r24,r25
+ 205 0122 8C93      		st X,r24
+ 206               	.LM28:
+ 207 0124 1F5F      		subi r17,lo8(-(1))
+ 208               	.LVL11:
+ 209               	.LM29:
+ 210 0126 1017      		cp r17,r16
+ 211 0128 00F4      		brsh .L14
+ 212               	.LM30:
+ 213 012a 812F      		mov r24,r17
+ 214 012c 90E0      		ldi r25,lo8(0)
+ 215               	.LVL12:
+ 216 012e 8770      		andi r24,lo8(7)
+ 217 0130 9070      		andi r25,hi8(7)
+ 218               	.LVL13:
+ 219 0132 892B      		or r24,r25
+ 220 0134 01F4      		brne .L12
+ 221 0136 00C0      		rjmp .L13
+ 222               	.LVL14:
+ 223               	.L14:
+ 224               	/* epilogue start */
+ 225               	.LM31:
+ 226 0138 2896      		adiw r28,8
+ 227 013a E8E0      		ldi r30, lo8(8)
+ 228 013c 0C94 0000 		jmp __epilogue_restores__ + ((18 - 8) * 2)
+ 229               	.LFE3:
+ 232               	wirelessSendPacket:
+ 233               	.LFB6:
+ 234               	.LM32:
+ 235               	.LVL15:
+ 236 0140 1F93      		push r17
+ 237               	/* prologue: function */
+ 238               	/* frame size = 0 */
+ 239 0142 182F      		mov r17,r24
+ 240               	.LM33:
+ 241 0144 8091 6B00 		lds r24,107
+ 242               	.LVL16:
+ 243 0148 8B7F      		andi r24,lo8(-5)
+ 244 014a 8093 6B00 		sts 107,r24
+ 245               	.LM34:
+ 246 014e 89E1      		ldi r24,lo8(-32231)
+ 247 0150 92E8      		ldi r25,hi8(-32231)
+ 248 0152 0E94 0000 		call rfm_spi16
+ 249               	.LM35:
+ 250 0156 80E0      		ldi r24,lo8(rfm_framebuf)
+ 251 0158 90E0      		ldi r25,hi8(rfm_framebuf)
+ 252 015a 60E0      		ldi r22,lo8(wl_header)
+ 253 015c 70E0      		ldi r23,hi8(wl_header)
+ 254 015e 44E0      		ldi r20,lo8(4)
+ 255 0160 50E0      		ldi r21,hi8(4)
+ 256 0162 0E94 0000 		call memcpy_P
+ 257               	.LM36:
+ 258 0166 8091 0000 		lds r24,config+43
+ 259 016a 8093 0000 		sts rfm_framebuf+5,r24
+ 260               	.LM37:
+ 261 016e 1123      		tst r17
+ 262 0170 01F0      		breq .L17
+ 263               	.LM38:
+ 264 0172 4091 0000 		lds r20,wireless_buf_ptr
+ 265 0176 4A5F      		subi r20,lo8(-(6))
+ 266 0178 4093 0000 		sts rfm_framesize,r20
+ 267 017c 4650      		subi r20,lo8(-(-6))
+ 268               	.LM39:
+ 269 017e 80E0      		ldi r24,lo8(rfm_framebuf+6)
+ 270 0180 90E0      		ldi r25,hi8(rfm_framebuf+6)
+ 271 0182 60E0      		ldi r22,lo8(wireless_framebuf)
+ 272 0184 70E0      		ldi r23,hi8(wireless_framebuf)
+ 273 0186 50E0      		ldi r21,lo8(0)
+ 274 0188 0E94 0000 		call memcpy
+ 275               	.L17:
+ 276               	.LM40:
+ 277 018c 6091 0000 		lds r22,rfm_framesize
+ 278 0190 6093 0000 		sts rfm_framebuf+4,r22
+ 279               	.LM41:
+ 280 0194 6650      		subi r22,lo8(-(-6))
+ 281 0196 80E0      		ldi r24,lo8(rfm_framebuf+6)
+ 282 0198 90E0      		ldi r25,hi8(rfm_framebuf+6)
+ 283 019a 0E94 0000 		call encrypt_decrypt
+ 284               	.LM42:
+ 285 019e 6091 0000 		lds r22,rfm_framesize
+ 286 01a2 6550      		subi r22,lo8(-(-5))
+ 287 01a4 80E0      		ldi r24,lo8(rfm_framebuf+5)
+ 288 01a6 90E0      		ldi r25,hi8(rfm_framebuf+5)
+ 289 01a8 40E0      		ldi r20,lo8(RTC)
+ 290 01aa 50E0      		ldi r21,hi8(RTC)
+ 291 01ac 20E0      		ldi r18,lo8(0)
+ 292 01ae 0E94 0000 		call cmac_calc
+ 293               	.LM43:
+ 294 01b2 8091 0000 		lds r24,RTC+7
+ 295 01b6 8F5F      		subi r24,lo8(-(1))
+ 296 01b8 8093 0000 		sts RTC+7,r24
+ 297               	.LM44:
+ 298 01bc 8091 0000 		lds r24,rfm_framesize
+ 299 01c0 8A5F      		subi r24,lo8(-(6))
+ 300 01c2 8093 0000 		sts rfm_framesize,r24
+ 301               	.LM45:
+ 302 01c6 1092 0000 		sts rfm_framepos,__zero_reg__
+ 303               	.LM46:
+ 304 01ca 82E0      		ldi r24,lo8(2)
+ 305 01cc 8093 0000 		sts rfm_mode,r24
+ 306               	.LM47:
+ 307 01d0 89E3      		ldi r24,lo8(-32199)
+ 308 01d2 92E8      		ldi r25,hi8(-32199)
+ 309 01d4 0E94 0000 		call rfm_spi16
+ 310               	.LM48:
+ 311 01d8 8D98      		cbi 49-32,5
+ 312               	.LM49:
+ 313 01da 8091 6B00 		lds r24,107
+ 314 01de 8460      		ori r24,lo8(4)
+ 315 01e0 8093 6B00 		sts 107,r24
+ 316 01e4 0E94 0000 		call __vector_2
+ 317               	/* epilogue start */
+ 318               	.LM50:
+ 319 01e8 1F91      		pop r17
+ 320               	.LVL17:
+ 321 01ea 0895      		ret
+ 322               	.LFE6:
+ 324               	.global	wirelessReceivePacket
+ 326               	wirelessReceivePacket:
+ 327               	.LFB7:
+ 328               	.LM51:
+ 329 01ec 1F93      		push r17
+ 330               	/* prologue: function */
+ 331               	/* frame size = 0 */
+ 332               	.LM52:
+ 333 01ee 4091 0000 		lds r20,rfm_framepos
+ 334 01f2 4423      		tst r20
+ 335 01f4 01F4      		brne .+2
+ 336 01f6 00C0      		rjmp .L37
+ 337               	.LM53:
+ 338 01f8 6091 0000 		lds r22,rfm_framebuf
+ 339 01fc 262F      		mov r18,r22
+ 340 01fe 30E0      		ldi r19,lo8(0)
+ 341 0200 2F77      		andi r18,lo8(127)
+ 342 0202 3070      		andi r19,hi8(127)
+ 343 0204 C901      		movw r24,r18
+ 344 0206 0697      		sbiw r24,6
+ 345 0208 8A34      		cpi r24,74
+ 346 020a 9105      		cpc r25,__zero_reg__
+ 347 020c 00F4      		brsh .L21
+ 348 020e 4035      		cpi r20,lo8(80)
+ 349 0210 00F0      		brlo .L22
+ 350               	.L21:
+ 351               	.LM54:
+ 352 0212 1092 0000 		sts rfm_framepos,__zero_reg__
+ 353 0216 00C0      		rjmp .L37
+ 354               	.L22:
+ 355               	.LM55:
+ 356 0218 50E0      		ldi r21,lo8(0)
+ 357 021a 4217      		cp r20,r18
+ 358 021c 5307      		cpc r21,r19
+ 359 021e 04F4      		brge .+2
+ 360 0220 00C0      		rjmp .L37
+ 361               	.LM56:
+ 362 0222 8091 6B00 		lds r24,107
+ 363 0226 8B7F      		andi r24,lo8(-5)
+ 364 0228 8093 6B00 		sts 107,r24
+ 365               	.LM57:
+ 366 022c 2417      		cp r18,r20
+ 367 022e 3507      		cpc r19,r21
+ 368 0230 04F4      		brge .L23
+ 369 0232 862F      		mov r24,r22
+ 370 0234 8F77      		andi r24,lo8(127)
+ 371 0236 8093 0000 		sts rfm_framepos,r24
+ 372               	.L23:
+ 373               	.LBB2:
+ 374               	.LM58:
+ 375 023a 67FF      		sbrs r22,7
+ 376 023c 00C0      		rjmp .L24
+ 377               	.LM59:
+ 378 023e 6F77      		andi r22,lo8(127)
+ 379 0240 6550      		subi r22,lo8(-(-5))
+ 380 0242 80E0      		ldi r24,lo8(rfm_framebuf+1)
+ 381 0244 90E0      		ldi r25,hi8(rfm_framebuf+1)
+ 382 0246 40E0      		ldi r20,lo8(0)
+ 383 0248 50E0      		ldi r21,hi8(0)
+ 384 024a 21E0      		ldi r18,lo8(1)
+ 385 024c 0E94 0000 		call cmac_calc
+ 386               	.LM60:
+ 387 0250 8823      		tst r24
+ 388 0252 01F4      		brne .+2
+ 389 0254 00C0      		rjmp .L25
+ 390               	.LM61:
+ 391 0256 1092 0000 		sts rfm_mode,__zero_reg__
+ 392               	.LM62:
+ 393 025a 81E0      		ldi r24,lo8(-32255)
+ 394 025c 92E8      		ldi r25,hi8(-32255)
+ 395 025e 0E94 0000 		call rfm_spi16
+ 396               	.LM63:
+ 397 0262 8091 0000 		lds r24,RTC_timer_todo
+ 398 0266 8B7F      		andi r24,lo8(-5)
+ 399 0268 8093 0000 		sts RTC_timer_todo,r24
+ 400 026c 8091 0000 		lds r24,RTC_timer_done
+ 401 0270 8B7F      		andi r24,lo8(-5)
+ 402 0272 8093 0000 		sts RTC_timer_done,r24
+ 403               	.LM64:
+ 404 0276 8091 0000 		lds r24,rfm_framebuf
+ 405 027a 8B38      		cpi r24,lo8(-117)
+ 406 027c 01F4      		brne .L26
+ 407               	.LM65:
+ 408 027e 8091 0000 		lds r24,rfm_framebuf+5
+ 409 0282 8093 0000 		sts wl_force_addr1,r24
+ 410               	.LM66:
+ 411 0286 8091 0000 		lds r24,rfm_framebuf+6
+ 412 028a 8093 0000 		sts wl_force_addr2,r24
+ 413 028e 00C0      		rjmp .L27
+ 414               	.L26:
+ 415               	.LM67:
+ 416 0290 8D38      		cpi r24,lo8(-115)
+ 417 0292 01F4      		brne .L28
+ 418               	.LM68:
+ 419 0294 8FEF      		ldi r24,lo8(-1)
+ 420 0296 8093 0000 		sts wl_force_addr1,r24
+ 421               	.LM69:
+ 422 029a 80E0      		ldi r24,lo8(wl_force_flags)
+ 423 029c 90E0      		ldi r25,hi8(wl_force_flags)
+ 424 029e 60E0      		ldi r22,lo8(rfm_framebuf+5)
+ 425 02a0 70E0      		ldi r23,hi8(rfm_framebuf+5)
+ 426 02a2 44E0      		ldi r20,lo8(4)
+ 427 02a4 50E0      		ldi r21,hi8(4)
+ 428 02a6 0E94 0000 		call memcpy
+ 429 02aa 00C0      		rjmp .L27
+ 430               	.L28:
+ 431               	.LM70:
+ 432 02ac 83E0      		ldi r24,lo8(3)
+ 433 02ae 8093 0000 		sts wl_skip_sync,r24
+ 434               	.L27:
+ 435               	.LM71:
+ 436 02b2 84E1      		ldi r24,lo8(20)
+ 437 02b4 8093 0000 		sts time_sync_tmo,r24
+ 438               	.L29:
+ 439               	.LM72:
+ 440 02b8 8091 B600 		lds r24,182
+ 441 02bc 80FD      		sbrc r24,0
+ 442 02be 00C0      		rjmp .L29
+ 443               	.LM73:
+ 444 02c0 8091 B200 		lds r24,178
+ 445 02c4 8138      		cpi r24,lo8(-127)
+ 446 02c6 00F0      		brlo .L30
+ 447               	.LM74:
+ 448 02c8 84E0      		ldi r24,lo8(4)
+ 449 02ca 8093 B200 		sts 178,r24
+ 450               	.LM75:
+ 451               	/* #APP */
+ 452               	 ;  396 "../common/wireless.c" 1
+ 453 02ce F894      		cli
+ 454               	 ;  0 "" 2
+ 455               	/* #NOAPP */
+ 456 02d0 8091 0000 		lds r24,RTC_timer_done
+ 457 02d4 8160      		ori r24,lo8(1)
+ 458 02d6 8093 0000 		sts RTC_timer_done,r24
+ 459               	/* #APP */
+ 460               	 ;  396 "../common/wireless.c" 1
+ 461 02da 7894      		sei
+ 462               	 ;  0 "" 2
+ 463               	.LM76:
+ 464               	/* #NOAPP */
+ 465 02dc F19A      		sbi 62-32,1
+ 466               	.L30:
+ 467               	.LM77:
+ 468 02de 82E0      		ldi r24,lo8(2)
+ 469 02e0 83BD      		out 67-32,r24
+ 470               	.LM78:
+ 471 02e2 8AE0      		ldi r24,lo8(10)
+ 472 02e4 8093 B200 		sts 178,r24
+ 473               	.L31:
+ 474               	.LM79:
+ 475 02e8 8091 B600 		lds r24,182
+ 476 02ec 82FD      		sbrc r24,2
+ 477 02ee 00C0      		rjmp .L31
+ 478               	.LM80:
+ 479 02f0 8091 0000 		lds r24,CTL_error
+ 480 02f4 8F7E      		andi r24,lo8(-17)
+ 481 02f6 8093 0000 		sts CTL_error,r24
+ 482               	.LM81:
+ 483 02fa 8091 0000 		lds r24,rfm_framebuf+1
+ 484 02fe 0E94 0000 		call RTC_SetYear
+ 485               	.LM82:
+ 486 0302 8091 0000 		lds r24,rfm_framebuf+2
+ 487 0306 8295      		swap r24
+ 488 0308 8F70      		andi r24,lo8(15)
+ 489 030a 0E94 0000 		call RTC_SetMonth
+ 490               	.LM83:
+ 491 030e 8091 0000 		lds r24,rfm_framebuf+2
+ 492 0312 880F      		lsl r24
+ 493 0314 880F      		lsl r24
+ 494 0316 880F      		lsl r24
+ 495 0318 8871      		andi r24,lo8(24)
+ 496 031a 9091 0000 		lds r25,rfm_framebuf+3
+ 497 031e 9295      		swap r25
+ 498 0320 9695      		lsr r25
+ 499 0322 9770      		andi r25,lo8(7)
+ 500 0324 890F      		add r24,r25
+ 501 0326 0E94 0000 		call RTC_SetDay
+ 502               	.LM84:
+ 503 032a 8091 0000 		lds r24,rfm_framebuf+3
+ 504 032e 8F71      		andi r24,lo8(31)
+ 505 0330 0E94 0000 		call RTC_SetHour
+ 506               	.LM85:
+ 507 0334 8091 0000 		lds r24,rfm_framebuf+4
+ 508 0338 8695      		lsr r24
+ 509 033a 0E94 0000 		call RTC_SetMinute
+ 510               	.LM86:
+ 511 033e 8091 0000 		lds r24,rfm_framebuf+4
+ 512 0342 80FD      		sbrc r24,0
+ 513 0344 00C0      		rjmp .L32
+ 514 0346 80E0      		ldi r24,lo8(0)
+ 515 0348 00C0      		rjmp .L33
+ 516               	.L32:
+ 517 034a 8EE1      		ldi r24,lo8(30)
+ 518               	.L33:
+ 519 034c 0E94 0000 		call RTC_SetSecond
+ 520               	.LM87:
+ 521               	/* #APP */
+ 522               	 ;  414 "../common/wireless.c" 1
+ 523 0350 F894      		cli
+ 524               	 ;  0 "" 2
+ 525               	/* #NOAPP */
+ 526 0352 8091 0000 		lds r24,RTC_timer_done
+ 527 0356 8F77      		andi r24,lo8(127)
+ 528 0358 8093 0000 		sts RTC_timer_done,r24
+ 529               	/* #APP */
+ 530               	 ;  414 "../common/wireless.c" 1
+ 531 035c 7894      		sei
+ 532               	 ;  0 "" 2
+ 533               	/* #NOAPP */
+ 534 035e 00C0      		rjmp .L37
+ 535               	.L24:
+ 536               	.LM88:
+ 537 0360 6091 0000 		lds r22,rfm_framepos
+ 538 0364 862F      		mov r24,r22
+ 539 0366 90E0      		ldi r25,lo8(0)
+ 540 0368 0196      		adiw r24,1
+ 541 036a 23E0      		ldi r18,3
+ 542 036c 9595      	1:	asr r25
+ 543 036e 8795      		ror r24
+ 544 0370 2A95      		dec r18
+ 545 0372 01F4      		brne 1b
+ 546 0374 2091 0000 		lds r18,RTC+7
+ 547 0378 280F      		add r18,r24
+ 548 037a 2093 0000 		sts RTC+7,r18
+ 549               	.LM89:
+ 550 037e 6550      		subi r22,lo8(-(-5))
+ 551 0380 80E0      		ldi r24,lo8(rfm_framebuf+1)
+ 552 0382 90E0      		ldi r25,hi8(rfm_framebuf+1)
+ 553 0384 40E0      		ldi r20,lo8(RTC)
+ 554 0386 50E0      		ldi r21,hi8(RTC)
+ 555 0388 21E0      		ldi r18,lo8(1)
+ 556 038a 0E94 0000 		call cmac_calc
+ 557 038e 182F      		mov r17,r24
+ 558               	.LVL18:
+ 559               	.LM90:
+ 560 0390 2091 0000 		lds r18,rfm_framepos
+ 561 0394 822F      		mov r24,r18
+ 562 0396 90E0      		ldi r25,lo8(0)
+ 563 0398 0196      		adiw r24,1
+ 564 039a 68E0      		ldi r22,lo8(8)
+ 565 039c 70E0      		ldi r23,hi8(8)
+ 566 039e 0E94 0000 		call __divmodhi4
+ 567 03a2 8091 0000 		lds r24,RTC+7
+ 568 03a6 861B      		sub r24,r22
+ 569 03a8 8093 0000 		sts RTC+7,r24
+ 570               	.LM91:
+ 571 03ac 2650      		subi r18,lo8(-(-6))
+ 572 03ae 80E0      		ldi r24,lo8(rfm_framebuf+2)
+ 573 03b0 90E0      		ldi r25,hi8(rfm_framebuf+2)
+ 574 03b2 622F      		mov r22,r18
+ 575 03b4 0E94 0000 		call encrypt_decrypt
+ 576               	.LM92:
+ 577 03b8 8091 0000 		lds r24,RTC+7
+ 578 03bc 8F5F      		subi r24,lo8(-(1))
+ 579 03be 8093 0000 		sts RTC+7,r24
+ 580               	.LM93:
+ 581 03c2 1123      		tst r17
+ 582 03c4 01F0      		breq .L25
+ 583 03c6 8091 0000 		lds r24,rfm_framebuf+1
+ 584 03ca 8823      		tst r24
+ 585 03cc 01F4      		brne .L25
+ 586               	.LM94:
+ 587 03ce 1092 0000 		sts wireless_buf_ptr,__zero_reg__
+ 588               	.LM95:
+ 589 03d2 8091 0000 		lds r24,RTC_timer_todo
+ 590 03d6 8B7F      		andi r24,lo8(-5)
+ 591 03d8 8093 0000 		sts RTC_timer_todo,r24
+ 592 03dc 8091 0000 		lds r24,RTC_timer_done
+ 593 03e0 8B7F      		andi r24,lo8(-5)
+ 594 03e2 8093 0000 		sts RTC_timer_done,r24
+ 595               	.LM96:
+ 596 03e6 6091 0000 		lds r22,rfm_framepos
+ 597 03ea 6630      		cpi r22,lo8(6)
+ 598 03ec 01F4      		brne .L34
+ 599               	.LM97:
+ 600 03ee 1092 0000 		sts rfm_mode,__zero_reg__
+ 601               	.LM98:
+ 602 03f2 81E0      		ldi r24,lo8(-32255)
+ 603 03f4 92E8      		ldi r25,hi8(-32255)
+ 604 03f6 0E94 0000 		call rfm_spi16
+ 605 03fa 00C0      		rjmp .L37
+ 606               	.L34:
+ 607               	.LM99:
+ 608 03fc 86E0      		ldi r24,lo8(6)
+ 609 03fe 8093 0000 		sts rfm_framesize,r24
+ 610               	.LBB3:
+ 611               	.LM100:
+ 612 0402 962F      		mov r25,r22
+ 613               	.LVL19:
+ 614 0404 9550      		subi r25,lo8(-(-5))
+ 615 0406 2FE4      		ldi r18,lo8(79)
+ 616               	.LVL20:
+ 617 0408 00C0      		rjmp .L35
+ 618               	.LVL21:
+ 619               	.L36:
+ 620               	.LM101:
+ 621 040a E22F      		mov r30,r18
+ 622 040c F0E0      		ldi r31,lo8(0)
+ 623 040e E050      		subi r30,lo8(-(rfm_framebuf))
+ 624 0410 F040      		sbci r31,hi8(-(rfm_framebuf))
+ 625               	.LVL22:
+ 626 0412 A92F      		mov r26,r25
+ 627 0414 B0E0      		ldi r27,lo8(0)
+ 628 0416 A050      		subi r26,lo8(-(rfm_framebuf))
+ 629 0418 B040      		sbci r27,hi8(-(rfm_framebuf))
+ 630               	.LVL23:
+ 631 041a 8C91      		ld r24,X
+ 632 041c 8083      		st Z,r24
+ 633 041e 2150      		subi r18,lo8(-(-1))
+ 634               	.LVL24:
+ 635               	.LM102:
+ 636 0420 9150      		subi r25,lo8(-(-1))
+ 637               	.LVL25:
+ 638               	.L35:
+ 639 0422 9230      		cpi r25,lo8(2)
+ 640 0424 00F4      		brsh .L36
+ 641               	.LBE3:
+ 642               	.LM103:
+ 643 0426 86E5      		ldi r24,lo8(86)
+ 644 0428 90E0      		ldi r25,hi8(86)
+ 645 042a 861B      		sub r24,r22
+ 646 042c 9109      		sbc r25,__zero_reg__
+ 647 042e 6650      		subi r22,lo8(-(-6))
+ 648 0430 8050      		subi r24,lo8(-(rfm_framebuf))
+ 649 0432 9040      		sbci r25,hi8(-(rfm_framebuf))
+ 650 0434 0E94 0000 		call COM_wireless_command_parse
+ 651               	.LVL26:
+ 652               	.LM104:
+ 653 0438 80E0      		ldi r24,lo8(0)
+ 654 043a 0E94 0000 		call wirelessSendPacket
+ 655 043e 00C0      		rjmp .L37
+ 656               	.L25:
+ 657               	.LBE2:
+ 658               	.LM105:
+ 659 0440 1092 0000 		sts rfm_framepos,__zero_reg__
+ 660               	.LM106:
+ 661 0444 84E0      		ldi r24,lo8(4)
+ 662 0446 8093 0000 		sts rfm_mode,r24
+ 663               	.LM107:
+ 664 044a 81E8      		ldi r24,lo8(-13695)
+ 665 044c 9AEC      		ldi r25,hi8(-13695)
+ 666 044e 0E94 0000 		call rfm_spi16
+ 667               	.LM108:
+ 668 0452 83E8      		ldi r24,lo8(-13693)
+ 669 0454 9AEC      		ldi r25,hi8(-13693)
+ 670 0456 0E94 0000 		call rfm_spi16
+ 671               	.LM109:
+ 672 045a 8091 6B00 		lds r24,107
+ 673 045e 8460      		ori r24,lo8(4)
+ 674 0460 8093 6B00 		sts 107,r24
+ 675 0464 0E94 0000 		call __vector_2
+ 676               	.L37:
+ 677               	/* epilogue start */
+ 678               	.LM110:
+ 679 0468 1F91      		pop r17
+ 680               	.LVL27:
+ 681 046a 0895      		ret
+ 682               	.LFE7:
+ 684               	.global	crypto_init
+ 686               	crypto_init:
+ 687               	.LFB2:
+ 688               	.LM111:
+ 689 046c 0F93      		push r16
+ 690 046e 1F93      		push r17
+ 691 0470 CF93      		push r28
+ 692 0472 DF93      		push r29
+ 693               	/* prologue: function */
+ 694               	/* frame size = 0 */
+ 695               	.LM112:
+ 696 0474 80E0      		ldi r24,lo8(Keys+24)
+ 697 0476 90E0      		ldi r25,hi8(Keys+24)
+ 698 0478 60E0      		ldi r22,lo8(config+44)
+ 699 047a 70E0      		ldi r23,hi8(config+44)
+ 700 047c 48E0      		ldi r20,lo8(8)
+ 701 047e 50E0      		ldi r21,hi8(8)
+ 702 0480 0E94 0000 		call memcpy
+ 703               	.LM113:
+ 704 0484 80E0      		ldi r24,lo8(Keys+32)
+ 705 0486 90E0      		ldi r25,hi8(Keys+32)
+ 706 0488 60E0      		ldi r22,lo8(Km_upper)
+ 707 048a 70E0      		ldi r23,hi8(Km_upper)
+ 708 048c 48E0      		ldi r20,lo8(8)
+ 709 048e 50E0      		ldi r21,hi8(8)
+ 710 0490 0E94 0000 		call memcpy_P
+ 711 0494 20E0      		ldi r18,lo8(0)
+ 712 0496 30E0      		ldi r19,hi8(0)
+ 713               	.L41:
+ 714               	.LM114:
+ 715 0498 F901      		movw r30,r18
+ 716 049a E050      		subi r30,lo8(-(Keys))
+ 717 049c F040      		sbci r31,hi8(-(Keys))
+ 718 049e 822F      		mov r24,r18
+ 719 04a0 8054      		subi r24,lo8(-(-64))
+ 720 04a2 8083      		st Z,r24
+ 721 04a4 2F5F      		subi r18,lo8(-(1))
+ 722 04a6 3F4F      		sbci r19,hi8(-(1))
+ 723               	.LM115:
+ 724 04a8 2831      		cpi r18,24
+ 725 04aa 3105      		cpc r19,__zero_reg__
+ 726 04ac 01F4      		brne .L41
+ 727               	.LM116:
+ 728 04ae 80E0      		ldi r24,lo8(Keys)
+ 729 04b0 90E0      		ldi r25,hi8(Keys)
+ 730 04b2 BC01      		movw r22,r24
+ 731 04b4 40E0      		ldi r20,lo8(Keys+24)
+ 732 04b6 50E0      		ldi r21,hi8(Keys+24)
+ 733 04b8 0E94 0000 		call xtea_enc
+ 734               	.LM117:
+ 735 04bc 80E0      		ldi r24,lo8(Keys+8)
+ 736 04be 90E0      		ldi r25,hi8(Keys+8)
+ 737 04c0 BC01      		movw r22,r24
+ 738 04c2 40E0      		ldi r20,lo8(Keys+24)
+ 739 04c4 50E0      		ldi r21,hi8(Keys+24)
+ 740 04c6 0E94 0000 		call xtea_enc
+ 741               	.LM118:
+ 742 04ca 80E0      		ldi r24,lo8(Keys+16)
+ 743 04cc 90E0      		ldi r25,hi8(Keys+16)
+ 744 04ce BC01      		movw r22,r24
+ 745 04d0 40E0      		ldi r20,lo8(Keys+24)
+ 746 04d2 50E0      		ldi r21,hi8(Keys+24)
+ 747 04d4 0E94 0000 		call xtea_enc
+ 748 04d8 E0E0      		ldi r30,lo8(Keys+24)
+ 749 04da F0E0      		ldi r31,hi8(Keys+24)
+ 750               	.L42:
+ 751               	.LM119:
+ 752 04dc 1192      		st Z+,__zero_reg__
+ 753               	.LM120:
+ 754 04de 80E0      		ldi r24,hi8(Keys+32)
+ 755 04e0 E030      		cpi r30,lo8(Keys+32)
+ 756 04e2 F807      		cpc r31,r24
+ 757 04e4 01F4      		brne .L42
+ 758               	.LM121:
+ 759 04e6 8F01      		movw r16,r30
+ 760 04e8 0850      		subi r16,lo8(-(-8))
+ 761 04ea 1040      		sbci r17,hi8(-(-8))
+ 762 04ec B097      		sbiw r30,32
+ 763 04ee C801      		movw r24,r16
+ 764 04f0 B801      		movw r22,r16
+ 765 04f2 AF01      		movw r20,r30
+ 766 04f4 0E94 0000 		call xtea_enc
+ 767               	.LM122:
+ 768 04f8 E801      		movw r28,r16
+ 769               	/* #APP */
+ 770               	 ;  102 "../common/wireless.c" 1
+ 771 04fa FE01      		   movw  R30,r28   
+ 772 04fc 00D0      	   rcall left_roll 
+ 773 04fe E0E0      	   ldi r30,lo8((Keys+4*8)) 
+ 774 0500 F0E0      	   ldi r31,hi8((Keys+4*8)) 
+ 775 0502 00D0      	   rcall left_roll 
+ 776               	
+ 777               	 ;  0 "" 2
+ 778               	/* epilogue start */
+ 779               	.LM123:
+ 780               	/* #NOAPP */
+ 781 0504 DF91      		pop r29
+ 782 0506 CF91      		pop r28
+ 783 0508 1F91      		pop r17
+ 784 050a 0F91      		pop r16
+ 785 050c 0895      		ret
+ 786               	.LFE2:
+ 788               	.global	wirelessTimer
+ 790               	wirelessTimer:
+ 791               	.LFB5:
+ 792               	.LM124:
+ 793               	/* prologue: function */
+ 794               	/* frame size = 0 */
+ 795               	.LM125:
+ 796 050e 8091 0000 		lds r24,wirelessTimerCase
+ 797 0512 8230      		cpi r24,lo8(2)
+ 798 0514 01F0      		breq .L49
+ 799 0516 8330      		cpi r24,lo8(3)
+ 800 0518 01F0      		breq .L50
+ 801 051a 8130      		cpi r24,lo8(1)
+ 802 051c 01F0      		breq .+2
+ 803 051e 00C0      		rjmp .L47
+ 804               	.LM126:
+ 805 0520 81E0      		ldi r24,lo8(1)
+ 806 0522 0E94 0000 		call wirelessSendPacket
+ 807 0526 00C0      		rjmp .L47
+ 808               	.L50:
+ 809               	.LM127:
+ 810 0528 8091 6B00 		lds r24,107
+ 811 052c 8B7F      		andi r24,lo8(-5)
+ 812 052e 8093 6B00 		sts 107,r24
+ 813               	.LM128:
+ 814 0532 1092 0000 		sts wl_force_addr1,__zero_reg__
+ 815               	.LM129:
+ 816 0536 1092 0000 		sts wl_force_addr2,__zero_reg__
+ 817               	.LM130:
+ 818 053a 81E8      		ldi r24,lo8(-13695)
+ 819 053c 9AEC      		ldi r25,hi8(-13695)
+ 820 053e 0E94 0000 		call rfm_spi16
+ 821               	.LM131:
+ 822 0542 83E8      		ldi r24,lo8(-13693)
+ 823 0544 9AEC      		ldi r25,hi8(-13693)
+ 824 0546 0E94 0000 		call rfm_spi16
+ 825               	.LM132:
+ 826 054a 89ED      		ldi r24,lo8(-32039)
+ 827 054c 92E8      		ldi r25,hi8(-32039)
+ 828 054e 0E94 0000 		call rfm_spi16
+ 829               	.LM133:
+ 830 0552 8D98      		cbi 49-32,5
+ 831               	.LM134:
+ 832 0554 8091 6B00 		lds r24,107
+ 833 0558 8460      		ori r24,lo8(4)
+ 834 055a 8093 6B00 		sts 107,r24
+ 835 055e 0E94 0000 		call __vector_2
+ 836               	.LM135:
+ 837 0562 1092 0000 		sts rfm_framepos,__zero_reg__
+ 838               	.LM136:
+ 839 0566 84E0      		ldi r24,lo8(4)
+ 840 0568 8093 0000 		sts rfm_mode,r24
+ 841               	.LM137:
+ 842 056c 82E0      		ldi r24,lo8(2)
+ 843 056e 8093 0000 		sts wirelessTimerCase,r24
+ 844               	.L51:
+ 845               	.LM138:
+ 846 0572 8091 B600 		lds r24,182
+ 847 0576 80FD      		sbrc r24,0
+ 848 0578 00C0      		rjmp .L51
+ 849               	.LM139:
+ 850 057a 6091 B200 		lds r22,178
+ 851 057e 6A5F      		subi r22,lo8(-(6))
+ 852 0580 82E0      		ldi r24,lo8(2)
+ 853 0582 0E94 0000 		call RTC_timer_set
+ 854 0586 00C0      		rjmp .L47
+ 855               	.L49:
+ 856               	.LM140:
+ 857 0588 8091 0000 		lds r24,rfm_mode
+ 858 058c 8230      		cpi r24,lo8(2)
+ 859 058e 01F0      		breq .L47
+ 860               	.LM141:
+ 861 0590 8091 6B00 		lds r24,107
+ 862 0594 8B7F      		andi r24,lo8(-5)
+ 863 0596 8093 6B00 		sts 107,r24
+ 864               	.LM142:
+ 865 059a 1092 0000 		sts rfm_mode,__zero_reg__
+ 866               	.LM143:
+ 867 059e 81E0      		ldi r24,lo8(-32255)
+ 868 05a0 92E8      		ldi r25,hi8(-32255)
+ 869 05a2 0E94 0000 		call rfm_spi16
+ 870               	.L47:
+ 871               	.LM144:
+ 872 05a6 1092 0000 		sts wirelessTimerCase,__zero_reg__
+ 873               	/* epilogue start */
+ 874               	.LM145:
+ 875 05aa 0895      		ret
+ 876               	.LFE5:
+ 878               	.global	wirelessSendDone
+ 880               	wirelessSendDone:
+ 881               	.LFB4:
+ 882               	.LM146:
+ 883               	/* prologue: function */
+ 884               	/* frame size = 0 */
+ 885               	.LM147:
+ 886 05ac 8091 6B00 		lds r24,107
+ 887 05b0 8B7F      		andi r24,lo8(-5)
+ 888 05b2 8093 6B00 		sts 107,r24
+ 889               	.LM148:
+ 890 05b6 1092 0000 		sts rfm_mode,__zero_reg__
+ 891               	.LM149:
+ 892 05ba 1092 0000 		sts rfm_framepos,__zero_reg__
+ 893               	.LM150:
+ 894 05be 81E8      		ldi r24,lo8(-13695)
+ 895 05c0 9AEC      		ldi r25,hi8(-13695)
+ 896 05c2 0E94 0000 		call rfm_spi16
+ 897               	.LM151:
+ 898 05c6 83E8      		ldi r24,lo8(-13693)
+ 899 05c8 9AEC      		ldi r25,hi8(-13693)
+ 900 05ca 0E94 0000 		call rfm_spi16
+ 901               	.LM152:
+ 902 05ce 89ED      		ldi r24,lo8(-32039)
+ 903 05d0 92E8      		ldi r25,hi8(-32039)
+ 904 05d2 0E94 0000 		call rfm_spi16
+ 905               	.LM153:
+ 906 05d6 84E0      		ldi r24,lo8(4)
+ 907 05d8 8093 0000 		sts rfm_mode,r24
+ 908               	.LM154:
+ 909 05dc 8091 6B00 		lds r24,107
+ 910 05e0 8460      		ori r24,lo8(4)
+ 911 05e2 8093 6B00 		sts 107,r24
+ 912 05e6 0E94 0000 		call __vector_2
+ 913               	.LM155:
+ 914 05ea 82E0      		ldi r24,lo8(2)
+ 915 05ec 8093 0000 		sts wirelessTimerCase,r24
+ 916               	.L55:
+ 917               	.LM156:
+ 918 05f0 8091 B600 		lds r24,182
+ 919 05f4 80FD      		sbrc r24,0
+ 920 05f6 00C0      		rjmp .L55
+ 921               	.LM157:
+ 922 05f8 6091 B200 		lds r22,178
+ 923 05fc 6C5E      		subi r22,lo8(-(20))
+ 924 05fe 82E0      		ldi r24,lo8(2)
+ 925 0600 0E94 0000 		call RTC_timer_set
+ 926               	/* epilogue start */
+ 927               	.LM158:
+ 928 0604 0895      		ret
+ 929               	.LFE4:
+ 931               	.global	wireless_buf_ptr
+ 932               		.section	.bss.wireless_buf_ptr,"aw",@nobits
+ 935               	wireless_buf_ptr:
+ 936 0000 00        		.skip 1,0
+ 937               	.global	wirelessTimerCase
+ 938               		.section	.bss.wirelessTimerCase,"aw",@nobits
+ 941               	wirelessTimerCase:
+ 942 0000 00        		.skip 1,0
+ 943               	.global	time_sync_tmo
+ 944               		.section	.bss.time_sync_tmo,"aw",@nobits
+ 947               	time_sync_tmo:
+ 948 0000 00        		.skip 1,0
+ 949               	.global	wl_skip_sync
+ 950               		.section	.bss.wl_skip_sync,"aw",@nobits
+ 953               	wl_skip_sync:
+ 954 0000 00        		.skip 1,0
+ 955               	.global	wireless_async
+ 956               		.section	.bss.wireless_async,"aw",@nobits
+ 959               	wireless_async:
+ 960 0000 00        		.skip 1,0
+ 961               		.section	.progmem.data,"a",@progbits
+ 964               	wl_header:
+ 965 0000 AA        		.byte	-86
+ 966 0001 AA        		.byte	-86
+ 967 0002 2D        		.byte	45
+ 968 0003 D4        		.byte	-44
+ 971               	Km_upper:
+ 972 0004 01        		.byte	1
+ 973 0005 23        		.byte	35
+ 974 0006 45        		.byte	69
+ 975 0007 67        		.byte	103
+ 976 0008 89        		.byte	-119
+ 977 0009 AB        		.byte	-85
+ 978 000a CD        		.byte	-51
+ 979 000b EF        		.byte	-17
+ 980               		.section	.bss.wireless_framebuf,"aw",@nobits
+ 983               	wireless_framebuf:
+ 984 0000 0000 0000 		.skip 70,0
+ 984      0000 0000 
+ 984      0000 0000 
+ 984      0000 0000 
+ 984      0000 0000 
+ 985               		.comm Keys,40,1
+ 986               		.comm wl_force_addr1,1,1
+ 987               		.comm wl_force_addr2,1,1
+ 988               		.comm wl_force_flags,4,1
+ 1069               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 wireless.c
+C:\Tools\cygwin\tmp/ccxqniHB.s:2      *ABS*:0000003f __SREG__
+C:\Tools\cygwin\tmp/ccxqniHB.s:3      *ABS*:0000003e __SP_H__
+C:\Tools\cygwin\tmp/ccxqniHB.s:4      *ABS*:0000003d __SP_L__
+C:\Tools\cygwin\tmp/ccxqniHB.s:5      *ABS*:00000034 __CCP__
+C:\Tools\cygwin\tmp/ccxqniHB.s:6      *ABS*:00000000 __tmp_reg__
+C:\Tools\cygwin\tmp/ccxqniHB.s:7      *ABS*:00000001 __zero_reg__
+C:\Tools\cygwin\tmp/ccxqniHB.s:17     .text:00000000 left_roll
+C:\Tools\cygwin\tmp/ccxqniHB.s:22     .text:00000008 roll_loop
+C:\Tools\cygwin\tmp/ccxqniHB.s:37     .text:0000001e wireless_putchar
+C:\Tools\cygwin\tmp/ccxqniHB.s:959    .bss.wireless_async:00000000 wireless_async
+C:\Tools\cygwin\tmp/ccxqniHB.s:935    .bss.wireless_buf_ptr:00000000 wireless_buf_ptr
+C:\Tools\cygwin\tmp/ccxqniHB.s:983    .bss.wireless_framebuf:00000000 wireless_framebuf
+C:\Tools\cygwin\tmp/ccxqniHB.s:81     .text:0000005c wirelesTimeSyncCheck
+C:\Tools\cygwin\tmp/ccxqniHB.s:947    .bss.time_sync_tmo:00000000 time_sync_tmo
+C:\Tools\cygwin\tmp/ccxqniHB.s:149    .text:000000d4 encrypt_decrypt
+                            *COM*:00000028 Keys
+C:\Tools\cygwin\tmp/ccxqniHB.s:232    .text:00000140 wirelessSendPacket
+C:\Tools\cygwin\tmp/ccxqniHB.s:964    .progmem.data:00000000 wl_header
+C:\Tools\cygwin\tmp/ccxqniHB.s:326    .text:000001ec wirelessReceivePacket
+                            *COM*:00000001 wl_force_addr1
+                            *COM*:00000001 wl_force_addr2
+                            *COM*:00000004 wl_force_flags
+C:\Tools\cygwin\tmp/ccxqniHB.s:953    .bss.wl_skip_sync:00000000 wl_skip_sync
+C:\Tools\cygwin\tmp/ccxqniHB.s:686    .text:0000046c crypto_init
+C:\Tools\cygwin\tmp/ccxqniHB.s:971    .progmem.data:00000004 Km_upper
+C:\Tools\cygwin\tmp/ccxqniHB.s:790    .text:0000050e wirelessTimer
+C:\Tools\cygwin\tmp/ccxqniHB.s:941    .bss.wirelessTimerCase:00000000 wirelessTimerCase
+C:\Tools\cygwin\tmp/ccxqniHB.s:880    .text:000005ac wirelessSendDone
+
+UNDEFINED SYMBOLS
+rfm_framesize
+rfm_framebuf
+rfm_spi16
+rfm_framepos
+rfm_mode
+__vector_2
+CTL_error
+__prologue_saves__
+RTC
+xtea_enc
+__epilogue_restores__
+memcpy_P
+config
+memcpy
+cmac_calc
+RTC_timer_todo
+RTC_timer_done
+RTC_SetYear
+RTC_SetMonth
+RTC_SetDay
+RTC_SetHour
+RTC_SetMinute
+RTC_SetSecond
+__divmodhi4
+COM_wireless_command_parse
+RTC_timer_set
+__do_clear_bss
