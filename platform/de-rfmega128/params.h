@@ -32,6 +32,8 @@
 #define settings_add_uint16(...) 0
 #endif
 
+extern uint8_t eemem_channel[2];
+
 #if AVR_WEBSERVER
 /* Webserver builds can set some defaults in httpd-fsdata.c via makefsdata.h */
 extern uint8_t eemem_mac_address[8];
