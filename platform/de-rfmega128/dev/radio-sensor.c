@@ -37,8 +37,12 @@ value(int type)
 	switch (type){
 		case RADIO_SENSOR_LAST_PACKET:
 		default:
+#if RF230_CONF_AUTOACK
+			return RSSI_BASE_VALUE + rf230_get_raw_rssi();
+#else
 			read = PHY_RSSI & 0x1f;
 			return RSSI_BASE_VALUE + 3 * (read - 1);
+#endif
 	}	
 }
 
