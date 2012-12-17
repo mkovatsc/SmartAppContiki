@@ -73,7 +73,7 @@
 #define REMOTE_PORT UIP_HTONS(COAP_DEFAULT_PORT)
 
 #define EPTYPE "Honeywell"
-#define VERSION "0.11.10"
+#define VERSION "0.12.0"
 
 
 extern uip_ds6_nbr_t uip_ds6_nbr_cache[];
@@ -104,16 +104,14 @@ static char * location;
 static char loc[40];
 static uint8_t registred = 0;
 
-static int16_t rssi_value[5];
-static int16_t rssi_count=0;
-static int16_t rssi_position=0;
+static int8_t rssi_value[5] = {0};
+static int8_t rssi_count=0;
+static int8_t rssi_position=0;
 static int16_t rssi_avg;
 
 /* EEPROM variables */
-//uint16_t ee_error_ip[8] EEMEM;
-//uint16_t ee_error_port EEMEM;
-//char ee_error_uri[50] EEMEM;
 char ee_identifier[50] EEMEM;
+char ee_rdaddr[40] EEMEM = COAP_RD_ADDRESS;
 
 static char last_setting[20];
 
@@ -143,6 +141,7 @@ static uint8_t error_active = 0;
 //uint16_t error_port;
 //char error_uri[50];
 char identifier[50];
+char rdaddrstr[40];
 int channel_num;
 
 
@@ -163,16 +162,9 @@ static struct {
 	uint8_t valve_is;
 	uint8_t mode;
 
-/*	// values used in the auto mode
-	uint16_t frost_temperature;
-	uint16_t energy_temperature;
-	uint16_t comfort_temperature;
-	uint16_t supercomfort_temperature;
-*/
+	// values used in the auto mode
 	uint16_t threshold_temperature;
 	uint16_t threshold_battery;
-
-//	hw_timer_slot_t timers[8][8];
 
 	/* 0 : justOne
 	 *  1 : weekdays */
@@ -235,27 +227,6 @@ typedef struct application_separate_get_valve_wanted_store {
 
 static uint8_t separate_get_valve_wanted_active = 0;
 static application_separate_get_valve_wanted_store_t separate_get_valve_wanted_store[1];
-/*
-typedef struct application_separate_get_predefined_store {
-	coap_separate_t request_metadata;
-	uint8_t index;
-	uint8_t error;
-} application_separate_get_predefined_store_t;
-
-static uint8_t separate_get_predefined_active = 0;
-static application_separate_get_predefined_store_t separate_get_predefined_store[1];
-
-
-typedef struct application_separate_get_slots_store {
-	coap_separate_t request_metadata;
-	uint8_t day;
-	uint8_t slot;
-	uint8_t error;
-} application_separate_get_slots_store_t;
-
-static uint8_t separate_get_slots_active = 0;
-static application_separate_get_slots_store_t separate_get_slots_store[1];
-*/
 
 typedef struct application_separate_get_threshold_temp_store {
 	coap_separate_t request_metadata;
@@ -307,7 +278,6 @@ PROCESS_THREAD(honeywell_process, ev, data)
 	get_threshold_temp_response_event = process_alloc_event();
 	get_threshold_bat_response_event = process_alloc_event();
 	get_valve_wanted_response_event = process_alloc_event();
-	//	get_temperature_response_event = process_alloc_event();
 	get_predefined_response_event = process_alloc_event();
 	get_slots_response_event = process_alloc_event();
 
@@ -315,16 +285,7 @@ PROCESS_THREAD(honeywell_process, ev, data)
 
 	poll_data.mode=3;
 	poll_data.threshold_battery = 100;
-/*
-	eeprom_read_block(&error_uri, ee_error_uri, 50);
 
-	error_port = eeprom_read_word(&ee_error_port);
-
-	int i;
-	for(i=0;i<8;i++){
-		error_ip[i] = eeprom_read_word(&ee_error_ip[i]);
-	}
-*/
 	eeprom_read_block(&identifier, ee_identifier, 50);
 	// finish booting first
 	PROCESS_PAUSE();
@@ -342,10 +303,8 @@ PROCESS_THREAD(honeywell_process, ev, data)
 					buf[buf_pos++] = '\n';
 					buf[buf_pos] = '\0';
 
-					switch (buf[0]){
-						case 'D':
-							//parseD(buf);
-							break;
+					switch (buf[0])
+					{
 
 						case 'S':
 							if (buf[2]=='1'){
@@ -1299,33 +1258,27 @@ void identifier_handler(void* request, void* response, uint8_t *buffer, uint16_t
 	}
 	else
 	{
-		int success = 1;
 		const uint8_t * string = NULL;
 		int len;
 
 		len = coap_get_payload(request, &string);
-		if (len > 3){
+		if (len > 3)
+		{
 			strncpy(identifier,string,50);
-			eeprom_write_block(identifier,ee_identifier,50);
-		}
-		else{
-			success=0;
-		}
-
-		if(success){
+			eeprom_write_block(identifier,ee_identifier,strlen(identifier)+1);
 			REST.set_response_status(response,CHANGED_2_04);
 		}
-		else{
+		else
+		{
 			REST.set_response_status(response, REST.status.BAD_REQUEST);
 		}
 	}
-
 
 	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
 }
 
 /*--------- Channel  ------------------------------------------------------------*/ //anwar
-RESOURCE(channel, METHOD_GET | METHOD_PUT,  "debug/channel", "title=\"ChannelNum\";rt=\"ch\"");
+RESOURCE(channel, METHOD_GET | METHOD_PUT,  "debug/channel", "title=\"IEEE 802.15.4 channel\"");
 void channel_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
   if (REST.get_method_type(request)==METHOD_GET)
@@ -1336,7 +1289,7 @@ void channel_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
   }
   else
   {
-    int success = 1;
+    int success = 0;
     const uint8_t * string = NULL;
     int len;
     len = coap_get_payload(request, &string);
@@ -1351,15 +1304,9 @@ void channel_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
         x[0] = channel;
         x[1] = ~x[0];
         eeprom_write_word((uint16_t *) &eemem_channel, *(uint16_t *)x);
+
+		success = 1;
       }
-      else
-      {
-        REST.set_response_status(response, REST.status.BAD_REQUEST);
-      }
-    }
-    else
-    {
-      success=0;
     }
 
     if (success)
@@ -1371,9 +1318,54 @@ void channel_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
       REST.set_response_status(response, REST.status.BAD_REQUEST);
     }
   }
+}
+
+/*--------- Reset ------------------------------------------------------------*/
+RESOURCE(reset, METHOD_POST,  "debug/reset", "title=\"Soft reset\"");
+void reset_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+  const uint8_t * string = NULL;
+  int len;
+  len = coap_get_payload(request, &string);
+
+  if (len==8 && strncmp(string, "Rollmops", 8)==0)
+  {
+	watchdog_reboot();
+  }
+  else
+  {
+    REST.set_response_status(response, REST.status.FORBIDDEN);
+  }
+}
 
 
-  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+/*--------- RD address ------------------------------------------------------------*/
+RESOURCE(rdconfig, METHOD_GET | METHOD_PUT, "debug/rd", "title=\"RD address\";rt=\"IPv6\"");
+void rdconfig_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+{
+	if (REST.get_method_type(request)==METHOD_GET)
+	{
+		snprintf_P((char*)buffer, preferred_size, PSTR("%s"), rdaddrstr);
+		REST.set_response_payload(response, buffer, strlen((char*)buffer));
+	}
+	else
+	{
+		const uint8_t * string = NULL;
+		int len;
+
+		len = coap_get_payload(request, &string);
+		if (len==39 && string[4]==':' && string[9]==':' && string[14]==':' && string[19]==':' && string[24]==':' && string[29]==':' && string[34]==':')
+		{
+			strncpy(rdaddrstr,string,40);
+			eeprom_write_block(rdaddrstr,ee_rdaddr,40);
+			REST.set_response_status(response,CHANGED_2_04);
+	REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+		}
+		else
+		{
+			REST.set_response_status(response, REST.status.BAD_REQUEST);
+		}
+	}
 }
 
 /*-------------------- Version ---------------------------------------------------------------------------*/
@@ -1386,29 +1378,28 @@ void version_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
 }
 
 /*------------------- HeartBeat --------------------------------------------------------------------------*/
-PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"heartbeat\"",60*CLOCK_SECOND);
+PERIODIC_RESOURCE(heartbeat, METHOD_GET, "debug/heartbeat", "title=\"heartbeat\";obs;rt=\"heartbeat\"", 60*CLOCK_SECOND);
 void heartbeat_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-
 	snprintf_P((char*)buffer, preferred_size, PSTR("version:%s,uptime:%lu,rssi:%i"),VERSION,clock_seconds(),rssi_avg);
  	REST.set_response_payload(response, buffer, strlen((char*)buffer));
 }
 
-void heartbeat_periodic_handler(resource_t *r){
-	static uint32_t event_counter=0;
+void heartbeat_periodic_handler(resource_t *r)
+{
+	static uint32_t event_counter = 0;
 	static char	content[50];
 
 	++event_counter;
 	
-	int new = radio_sensor.value(RADIO_SENSOR_LAST_PACKET);
-	rssi_value[rssi_position]=new;
-	if(rssi_count<5){
-		rssi_count++;
+	rssi_value[rssi_position] = radio_sensor.value(0);
+	if (rssi_count<5)
+	{
+		++rssi_count;
 	}
-	rssi_avg =(rssi_count>0)?(rssi_value[0]+rssi_value[1]+rssi_value[2]+rssi_value[3]+rssi_value[4])/rssi_count:0;
+	rssi_avg =(rssi_count>0) ? (rssi_value[0] + rssi_value[1] + rssi_value[2] + rssi_value[3] + rssi_value[4])/rssi_count : 0;
 
-	rssi_position++;
-	rssi_position = (rssi_position) % 5;
+	rssi_position = ++rssi_position % 5;
 
 	coap_packet_t notification[1];
 	coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
@@ -1457,12 +1448,14 @@ PROCESS_THREAD(coap_process, ev, data)
 
   rest_init_engine();
 
-  //activate the resources
   SENSORS_ACTIVATE(radio_sensor);
 
-  COAP_RD_SET_IPV6(&rd_ipaddr);
-  rest_activate_resource(&resource_date);
+  eeprom_read_block(&rdaddrstr, ee_rdaddr, 40);
+  uiplib_ipaddrconv(rdaddrstr, &rd_ipaddr);
+  printf("Using RD %s\r\n", rdaddrstr);
 
+  //activate the resources
+  rest_activate_resource(&resource_date);
   rest_activate_resource(&resource_time);
   rest_activate_resource(&resource_valve_wanted);
   rest_activate_resource(&resource_target);
@@ -1475,6 +1468,8 @@ PROCESS_THREAD(coap_process, ev, data)
   rest_activate_event_resource(&resource_wheel);
   rest_activate_periodic_resource(&periodic_resource_heartbeat);
   rest_activate_resource(&resource_channel);
+  rest_activate_resource(&resource_reset);
+  rest_activate_resource(&resource_rdconfig);
 
   stimer_set(&rdpost, 60);
   etimer_set(&event_gen, 5*CLOCK_SECOND);

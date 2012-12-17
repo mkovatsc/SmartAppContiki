@@ -40,14 +40,13 @@
 #define COAP_MAX_OBSERVERS         COAP_MAX_OPEN_TRANSACTIONS-1
 
 #undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE     128
+#define REST_MAX_CHUNK_SIZE        128
 
 #undef UIP_CONF_BUFFER_SIZE
-#define UIP_CONF_BUFFER_SIZE    240
-/*
- * avr-ravenmote
-#define UIP_CONF_BUFFER_SIZE    224
- */
+#define UIP_CONF_BUFFER_SIZE       240
+
+#undef RF230_CONF_AUTORETRIES
+#define RF230_CONF_AUTORETRIES     5
 
 /* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
 #undef PERIODICPRINTS
@@ -55,28 +54,16 @@
 #undef RADIOSTATS
 #define RADIOSTATS 0
 
-
-#ifndef UIP_CONF_RECEIVE_WINDOW
-#define UIP_CONF_RECEIVE_WINDOW  60
-#endif
-
-#ifndef WEBSERVER_CONF_CFS_CONNS
-#define WEBSERVER_CONF_CFS_CONNS 2
-#endif
-
-
 #undef RF_CHANNEL
-#define RF_CHANNEL 24
+#define RF_CHANNEL                 20
 
 #undef IEEE802154_CONF_PANID
-#define IEEE802154_CONF_PANID 0xBEEF
+#define IEEE802154_CONF_PANID      0xB0B0
 
 #undef EUI64_ADDRESS
-#define EUI64_ADDRESS {0x00,0x21,0x2e,0xff,0xff,0x00,0x03,0xe0}
-//#define EUI64_ADDRESS {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2d}
+#define EUI64_ADDRESS              {0x00,0x21,0x2e,0xff,0xff,0x00,0x22,0x80}
 
-#define COAP_RD_SET_IPV6(ipaddr)	uip_ip6addr(ipaddr, 0x2001, 0x620, 0x8, 0x35db, 0, 0, 0, 0x1f)
-#define COAP_RD_PORT							UIP_HTONS(5683)
-
+#define COAP_RD_ADDRESS            "2001:0470:5073:0000:0000:0000:0000:0010"
+#define COAP_RD_PORT               UIP_HTONS(5683)
 
 #endif /* __PROJECT_RPL_WEB_CONF_H__ */

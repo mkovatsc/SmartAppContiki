@@ -88,9 +88,6 @@ unsigned long clock_seconds(void);
 /* Starting address for code received via the codeprop facility. Not tested on Raven */
 //#define EEPROMFS_ADDR_CODEPROP 0x8000
 
-/* RADIOSTATS is used in rf230bb, clock.c and the webserver cgi to report radio usage */
-#define RADIOSTATS 1
-
 /* More extensive stats */
 /* Disable for these modules */
 #define ENERGEST_CONF_ON          0
