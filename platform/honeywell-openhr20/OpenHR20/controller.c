@@ -143,17 +143,12 @@ void CTL_update(bool minute_ch) {
 	PORTE |= _BV(PE2); // enable pull-up
 #endif
 	
-	if ( (minute_ch || (CTL_temp_auto==0)) && CTL_mode_auto!=auto_valve) {
+	if ( (minute_ch || (CTL_temp_auto==0)) && CTL_mode_auto!=auto_valve && CTL_mode_auto!=auto_target ) {
 		// minutes changed or we need return to timers
 		uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
 		uint8_t border = RTC_ActualTimerTemperature(true);
-		if (border){
-			if(CTL_mode_auto >= 2){
-				CTL_mode_auto=auto_timers;
-			}
-			else{
-				CTL_mode_auto=manual_timers;
-			}
+		if (border && CTL_mode_auto == manual_target){
+			CTL_mode_auto=manual_timers;
 			CTL_mode_changed= 1;
 			CTL_mode_changed_timer=0;
 		}
