@@ -2,6 +2,10 @@ ifeq ($(TARGET),)
 	TARGET = de-rfmega128
 endif
 
+ifeq ($(ADDR_LAST_BYTE),)
+	ADDR_LAST_BYTE = 0x87
+endif
+
 include Makefile.honeywell
 
 size:
