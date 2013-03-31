@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2013, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,7 @@
 #define COAP_MAX_HEADER_SIZE    70
 */
 
+/* The IP buffer size must fit all other hops, in particular the border router. */
 /*
 #undef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE    1280
@@ -65,7 +66,7 @@
 #define COAP_MAX_OBSERVERS      2
 */
 
-/* Filtering can be disabled to save space. */
+/* Filtering .well-known/core per query can be disabled to save space. */
 /*
 #undef COAP_LINK_FORMAT_FILTERING
 #define COAP_LINK_FORMAT_FILTERING      0
@@ -74,8 +75,8 @@
 /* Save some memory for the sky platform. */
 #undef UIP_CONF_DS6_NBR_NBU
 #define UIP_CONF_DS6_NBR_NBU     10
-#undef UIP_CONF_DS6_ROUTE_NBU
-#define UIP_CONF_DS6_ROUTE_NBU   10
+#undef UIP_CONF_MAX_ROUTES
+#define UIP_CONF_MAX_ROUTES   10
 
 /* Reduce 802.15.4 frame queue to save RAM. */
 #undef QUEUEBUF_CONF_NUM

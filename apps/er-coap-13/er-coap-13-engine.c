@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2013, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,7 +102,7 @@ coap_receive(void)
 
       /*TODO duplicates suppression, if required by application */
 
-      PRINTF("  Parsed: v %u, t %u, oc %u, c %u, mid %u\n", message->version, message->type, message->option_count, message->code, message->mid);
+      PRINTF("  Parsed: v %u, t %u, tkl %u, c %u, mid %u\n", message->version, message->type, message->token_len, message->code, message->mid);
       PRINTF("  URL: %.*s\n", message->uri_path_len, message->uri_path);
       PRINTF("  Payload: %.*s\n", message->payload_len, message->payload);
 
@@ -384,7 +384,7 @@ well_known_core_handler(void* request, void* response, uint8_t *buffer, uint16_t
       }
 #endif
 
-      PRINTF("res: /%s (%p)\npos: s%d, o%d, b%d\n", resource->url, resource, strpos, *offset, bufpos);
+      PRINTF("res: /%s (%p)\npos: s%d, o%ld, b%d\n", resource->url, resource, strpos, *offset, bufpos);
 
       if (strpos>0)
       {

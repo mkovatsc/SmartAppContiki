@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Matthias Kovatsch and other contributors.
+ * Copyright (c) 2013, Matthias Kovatsch and other contributors.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,10 +69,6 @@
 #endif
 
 
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET) && !defined (CONTIKI_TARGET_NATIVE)
-#warning "Compiling with static routing!"
-#include "static-routing.h"
-#endif
 
 #include "erbium.h"
 
@@ -253,11 +249,7 @@ static uint8_t create1_exists = 0;
 void
 create1_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  coap_packet_t *const coap_req = (coap_packet_t *) request;
-
   uint8_t method = REST.get_method_type(request);
-  const uint8_t *bytes = NULL;
-  size_t len = 0;
 
   if (test_change)
   {
@@ -302,12 +294,6 @@ RESOURCE(create2, METHOD_POST, "create2", "title=\"Creates on POST\"");
 void
 create2_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  coap_packet_t *const coap_req = (coap_packet_t *) request;
-
-  uint8_t method = REST.get_method_type(request);
-  const uint8_t *bytes = NULL;
-  size_t len = 0;
-
   if (test_change)
   {
     test_update_etag();
@@ -326,11 +312,7 @@ static uint8_t create3_exists = 0;
 void
 create3_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  coap_packet_t *const coap_req = (coap_packet_t *) request;
-
   uint8_t method = REST.get_method_type(request);
-  const uint8_t *bytes = NULL;
-  size_t len = 0;
 
   if (test_change)
   {
@@ -641,7 +623,10 @@ path_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_
 
 #if REST_RES_SEPARATE
 /* Required to manually (=not by the engine) handle the response transaction. */
-#if WITH_COAP == 12
+#if WITH_COAP == 7
+#include "er-coap-07-separate.h"
+#include "er-coap-07-transactions.h"
+#elif WITH_COAP == 12
 #include "er-coap-12-separate.h"
 #include "er-coap-12-transactions.h"
 #elif WITH_COAP == 13
@@ -840,7 +825,7 @@ large_update_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
       return;
     }
 
-    if ((len = REST.get_request_payload(request, &incoming)))
+    if ((len = REST.get_request_payload(request, (const uint8_t **) &incoming)))
     {
       if (coap_req->block1_num*coap_req->block1_size+len <= sizeof(large_update_store))
       {
@@ -892,7 +877,7 @@ large_create_handler(void* request, void* response, uint8_t *buffer, uint16_t pr
     return;
   }
 
-  if ((len = REST.get_request_payload(request, &incoming)))
+  if ((len = REST.get_request_payload(request, (const uint8_t **) &incoming)))
   {
     if (coap_req->block1_num*coap_req->block1_size+len <= 2048)
     {
@@ -994,7 +979,7 @@ obs_handler(void* request, void* response, uint8_t *buffer, uint16_t preferred_s
     } else {
     
       obs_format = ct;
-      obs_content_len = REST.get_request_payload(request, &incoming);
+      obs_content_len = REST.get_request_payload(request, (const uint8_t **) &incoming);
       memcpy(obs_content, incoming, obs_content_len);
       obs_periodic_handler(&resource_obs);
     }
@@ -1250,12 +1235,6 @@ PROCESS_THREAD(plugtest_server, ev, data)
   PRINTF("LL header: %u\n", UIP_LLH_LEN);
   PRINTF("IP+UDP header: %u\n", UIP_IPUDPH_LEN);
   PRINTF("REST max chunk: %u\n", REST_MAX_CHUNK_SIZE);
-
-/* if static routes are used rather than RPL */
-#if !UIP_CONF_IPV6_RPL && !defined (CONTIKI_TARGET_MINIMAL_NET)
-  set_global_address();
-  configure_routing();
-#endif
 
   /* Initialize the REST engine. */
   rest_init_engine();

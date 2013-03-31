@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2013, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,8 @@
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#ifndef COAP_12_H_
-#define COAP_12_H_
+#ifndef COAP_13_H_
+#define COAP_13_H_
 
 #include <stddef.h> /* for size_t */
 #include "contiki-net.h"
@@ -56,7 +56,7 @@
 #define COAP_RESPONSE_RANDOM_FACTOR          1.5
 #define COAP_MAX_RETRANSMIT                  4
 
-#define COAP_HEADER_LEN                      4 /* | oc:0xF0 type:0x0C version:0x03 | code | mid:0x00FF | mid:0xFF00 | */
+#define COAP_HEADER_LEN                      4 /* | version:0x03 type:0x0C tkl:0xF0 | code | mid:0x00FF | mid:0xFF00 | */
 #define COAP_ETAG_LEN                        8 /* The maximum number of bytes for the ETag */
 #define COAP_TOKEN_LEN                       8 /* The maximum number of bytes for the Token */
 #define COAP_MAX_ACCEPT_NUM                  2 /* The maximum number of accept preferences to parse/store */
@@ -65,8 +65,8 @@
 #define COAP_HEADER_VERSION_POSITION         6
 #define COAP_HEADER_TYPE_MASK                0x30
 #define COAP_HEADER_TYPE_POSITION            4
-#define COAP_HEADER_OPTION_COUNT_MASK        0x0F
-#define COAP_HEADER_OPTION_COUNT_POSITION    0
+#define COAP_HEADER_TOKEN_LEN_MASK           0x0F
+#define COAP_HEADER_TOKEN_LEN_POSITION       0
 
 #define COAP_HEADER_OPTION_DELTA_MASK        0xF0
 #define COAP_HEADER_OPTION_SHORT_LENGTH_MASK 0x0F
@@ -77,7 +77,7 @@
 #ifndef COAP_MAX_HEADER_SIZE
 /*                            Hdr CoT Age  Tag              Obs  Tok               Blo strings */
 #define COAP_MAX_HEADER_SIZE  (4 + 3 + 5 + 1+COAP_ETAG_LEN + 3 + 1+COAP_TOKEN_LEN + 4 + 30) /* 70 */
-#endif /* COAP_MAX_HEADER_SIZE */ 
+#endif /* COAP_MAX_HEADER_SIZE */
 
 #define COAP_MAX_PACKET_SIZE  (COAP_MAX_HEADER_SIZE + REST_MAX_CHUNK_SIZE)
 /*                                        0/14          48 for IPv6 (28 for IPv4) */
@@ -92,8 +92,8 @@
 #define COAP_MAX_ATTEMPTS             4
 #endif /* COAP_MAX_ATTEMPTS */
 
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
+#define UIP_IP_BUF    ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+#define UIP_UDP_BUF   ((struct uip_udp_hdr *)&uip_buf[UIP_LLH_LEN + UIP_IPH_LEN])
 
 /* Bitmap for set options */
 enum { OPTION_MAP_SIZE = sizeof(uint8_t) * 8 };
@@ -211,7 +211,6 @@ typedef struct {
 
   uint8_t version;
   coap_message_type_t type;
-  uint8_t option_count;
   uint8_t code;
   uint16_t mid;
 
@@ -262,7 +261,6 @@ typedef struct {
     if (IS_OPTION(coap_pkt, number)) { \
       PRINTF(text" [%u]\n", coap_pkt->field); \
       option += coap_serialize_int_option(number, current_number, option, coap_pkt->field); \
-      coap_pkt->option_count += 1; \
       current_number = number; \
     }
 #define COAP_SERIALIZE_BYTE_OPTION(number, field, text)      \
@@ -277,17 +275,13 @@ typedef struct {
         coap_pkt->field[6], \
         coap_pkt->field[7] \
       ); /*FIXME always prints 8 bytes */ \
-      uint8_t split_options = '\0'; \
-      option += coap_serialize_array_option(number, current_number, option, coap_pkt->field, coap_pkt->field##_len, &split_options); \
-      coap_pkt->option_count += split_options; \
+      option += coap_serialize_array_option(number, current_number, option, coap_pkt->field, coap_pkt->field##_len, '\0'); \
       current_number = number; \
     }
 #define COAP_SERIALIZE_STRING_OPTION(number, field, splitter, text)      \
     if (IS_OPTION(coap_pkt, number)) { \
       PRINTF(text" [%.*s]\n", coap_pkt->field##_len, coap_pkt->field); \
-      uint8_t split_options = splitter; \
-      option += coap_serialize_array_option(number, current_number, option, (uint8_t *) coap_pkt->field, coap_pkt->field##_len, &split_options); \
-      coap_pkt->option_count += split_options; \
+      option += coap_serialize_array_option(number, current_number, option, (uint8_t *) coap_pkt->field, coap_pkt->field##_len, splitter); \
       current_number = number; \
     }
 #define COAP_SERIALIZE_ACCEPT_OPTION(number, field, text)  \
@@ -297,7 +291,6 @@ typedef struct {
       { \
         PRINTF(text" [%u]\n", coap_pkt->field[i]); \
         option += coap_serialize_int_option(number, current_number, option, coap_pkt->field[i]); \
-        coap_pkt->option_count += 1; \
         current_number = number; \
       } \
     }
@@ -310,7 +303,6 @@ typedef struct {
       block |= 0xF & coap_log_2(coap_pkt->field##_size/16); \
       PRINTF(text" encoded: 0x%lX\n", block); \
       option += coap_serialize_int_option(number, current_number, option, block); \
-      coap_pkt->option_count += 1; \
       current_number = number; \
     }
 
@@ -387,4 +379,4 @@ int coap_set_header_size(void *packet, uint32_t size);
 int coap_get_payload(void *packet, const uint8_t **payload);
 int coap_set_payload(void *packet, const void *payload, size_t length);
 
-#endif /* COAP_12_H_ */
+#endif /* COAP_13_H_ */

@@ -537,6 +537,8 @@ const struct rest_implementation coap_rest_implementation = {
   coap_get_header_content_type,
   coap_set_header_content_type,
   coap_get_header_accept,
+  NULL,
+  NULL,
   coap_get_header_max_age,
   coap_set_header_max_age,
   coap_set_header_etag,
