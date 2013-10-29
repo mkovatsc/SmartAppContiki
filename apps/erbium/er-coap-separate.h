@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #ifndef COAP_SEPARATE_H_
 #define COAP_SEPARATE_H_
 
-#include "er-coap-07.h"
+#include "er-coap.h"
 
 typedef struct coap_separate {
 
@@ -60,7 +60,7 @@ typedef struct coap_separate {
 
 int coap_separate_handler(resource_t *resource, void *request, void *response);
 void coap_separate_reject();
-int coap_separate_accept(void *request, coap_separate_t *separate_store);
+void coap_separate_accept(void *request, coap_separate_t *separate_store);
 void coap_separate_resume(void *response, coap_separate_t *separate_store, uint8_t code);
 
 #endif /* COAP_SEPARATE_H_ */

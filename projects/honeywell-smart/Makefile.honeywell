@@ -1,24 +1,39 @@
 all: honeywell
 
-CONTIKI = ../..
+CONTIKI=../..
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 # variable for root Makefile.include
 UIP_CONF_IPV6=1
 
-WITH_COAP=7
+# radio configuration
+CFLAGS += -DRF_CHANNEL=25
+CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+
+REST_RESOURCES_DIR = ./resources
+REST_RESOURCES_FILES = $(notdir $(shell find $(REST_RESOURCES_DIR) -name '*.c'))
+
+PROJECTDIRS += $(REST_RESOURCES_DIR)
+PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
+
+# linker optimizations
+SMALL=1
+
+# REST Engine shall use Erbium CoAP implementation
+APPS += erbium
+APPS += rest-engine
+
+# optional rules to get assembly
+#CUSTOM_RULE_C_TO_OBJECTDIR_O = 1
+#CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
 
 # radio configuration --> project.conf.h
 #CFLAGS += -DRF_CHANNEL=12
 #CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
-#CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x2f}
-
+#CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x34}
 
 CFLAGS += -DADDR_LAST_BYTE=$(ADDR_LAST_BYTE)
-
-# must be CFLAGS not variable
-CFLAGS += -DUIP_CONF_IPV6_RPL=1
-
-CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 
 # set the baud rate
 CFLAGS += -DAPP_BAUD_RATE=USART_BAUD_2400
@@ -28,35 +43,5 @@ LDFLAGS += -Wl,-u,vfscanf,-lscanf_min
 
 #extmem
 #LDFLAGS += -Wl,--section-start,.data=0x802100,--defsym=__heap_end=0x80ffff
-
-
-# REST framework, requires WITH_COAP
-ifeq ($(WITH_COAP), 7)
-${info INFO: compiling with CoAP-07}
-CFLAGS += -DWITH_COAP=7
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-07
-else ifeq ($(WITH_COAP), 6)
-${info INFO: compiling with CoAP-06}
-CFLAGS += -DWITH_COAP=6
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-06
-else ifeq ($(WITH_COAP), 3)
-${info INFO: compiling with CoAP-03}
-CFLAGS += -DWITH_COAP=3
-CFLAGS += -DREST=coap_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=0
-APPS += er-coap-03
-else
-${info INFO: compiling with HTTP}
-CFLAGS += -DWITH_HTTP
-CFLAGS += -DREST=http_rest_implementation
-CFLAGS += -DUIP_CONF_TCP=1
-APPS += rest-http-engine
-endif
-
-APPS += erbium
 
 include $(CONTIKI)/Makefile.include

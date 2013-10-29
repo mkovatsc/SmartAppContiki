@@ -18,12 +18,12 @@ static int enabled = 0;
 static int
 status(int type)
 {
-	switch (type) {
-	case SENSORS_ACTIVE:
-	case SENSORS_READY:
-		return enabled;
-	}
-	return 0;
+        switch (type) {
+        case SENSORS_ACTIVE:
+        case SENSORS_READY:
+                return enabled;
+        }
+        return 0;
 }
 
 
@@ -33,17 +33,17 @@ status(int type)
 static int
 value(int type)
 {
-	int read;
-	switch (type){
-		case RADIO_SENSOR_LAST_PACKET:
-		default:
+        int read;
+        switch (type){
+                case RADIO_SENSOR_LAST_PACKET:
+                default:
 #if RF230_CONF_AUTOACK
-			return RSSI_BASE_VALUE + rf230_get_raw_rssi();
+                        return RSSI_BASE_VALUE + rf230_get_raw_rssi();
 #else
-			read = PHY_RSSI & 0x1f;
-			return RSSI_BASE_VALUE + 3 * (read - 1);
+                        read = PHY_RSSI & 0x1f;
+                        return RSSI_BASE_VALUE + 3 * (read - 1);
 #endif
-	}	
+        }
 }
 
 static int
@@ -57,5 +57,5 @@ configure(int type, int c)
 }
 
 SENSORS_SENSOR(radio_sensor, RADIO_SENSOR,
-	       value, configure, status);
+               value, configure, status);
 

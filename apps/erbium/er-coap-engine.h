@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,34 +36,26 @@
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#ifndef COAP_SERVER_H_
-#define COAP_SERVER_H_
-
-#if !defined(REST)
-#error "Define REST to \"coap_rest_implementation\""
-#endif
-
-#include "er-coap-03.h"
-#include "er-coap-03-transactions.h"
-#include "er-coap-03-observing.h"
+#ifndef ER_COAP_ENGINE_H_
+#define ER_COAP_ENGINE_H_
 
 #include "pt.h"
-
-/* Declare server process */
-PROCESS_NAME(coap_receiver);
+#include "uip.h"
+#include "er-coap.h"
+#include "er-coap-transactions.h"
+#include "er-coap-observe.h"
+#include "er-coap-separate.h"
 
 #define SERVER_LISTEN_PORT      UIP_HTONS(COAP_SERVER_PORT)
 
 typedef coap_packet_t rest_request_t;
 typedef coap_packet_t rest_response_t;
 
-extern const struct rest_implementation coap_rest_implementation;
+void coap_init_engine(void);
 
-void coap_receiver_init(void);
-
-/*-----------------------------------------------------------------------------------*/
-/*- Client part ---------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
+/*- Client Part -------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
 struct request_state_t {
     struct pt pt;
     struct process *process;
@@ -80,12 +72,14 @@ PT_THREAD(coap_blocking_request(struct request_state_t *state, process_event_t e
                                 blocking_response_handler request_callback));
 
 #define COAP_BLOCKING_REQUEST(server_addr, server_port, request, chunk_handler) \
-static struct request_state_t request_state; \
-PT_SPAWN(process_pt, &request_state.pt, \
-             coap_blocking_request(&request_state, ev, \
-                                   server_addr, server_port, \
-                                   request, chunk_handler) \
-    );
-/*-----------------------------------------------------------------------------------*/
+{ \
+  static struct request_state_t request_state; \
+  PT_SPAWN(process_pt, &request_state.pt, \
+           coap_blocking_request(&request_state, ev, \
+                                 server_addr, server_port, \
+                                 request, chunk_handler) \
+  ); \
+}
+/*---------------------------------------------------------------------------*/
 
-#endif /* COAP_SERVER_H_ */
+#endif /* ER_COAP_ENGINE_H_ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Institute for Pervasive Computing, ETH Zurich
+ * Copyright (c) 2012, Institute for Pervasive Computing, ETH Zurich
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,46 +31,42 @@
 
 /**
  * \file
- *      CoAP module for observing resources
+ *      CoAP module for reliable transport
  * \author
  *      Matthias Kovatsch <kovatsch@inf.ethz.ch>
  */
 
-#ifndef COAP_OBSERVING_H_
-#define COAP_OBSERVING_H_
+#ifndef COAP_TRANSACTIONS_H_
+#define COAP_TRANSACTIONS_H_
 
-#include "er-coap-03.h"
-#include "er-coap-03-transactions.h"
+#include "er-coap.h"
 
-#ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS      4
-#endif /* COAP_MAX_OBSERVERS */
+/* container for transactions with message buffer and retransmission info */
+typedef struct coap_transaction {
+  struct coap_transaction *next; /* for LIST */
 
-/* Interval in seconds in which NON notifies are changed to CON notifies to check client. */
-#define COAP_OBSERVING_REFRESH_INTERVAL  60
+  uint16_t mid;
+  struct etimer retrans_timer;
+  uint8_t retrans_counter;
 
-#if COAP_MAX_OPEN_TRANSACTIONS<COAP_MAX_OBSERVERS
-#warning "COAP_MAX_OPEN_TRANSACTIONS smaller than COAP_MAX_OBSERVERS: cannot handle CON notifications"
-#endif
-
-typedef struct coap_observer {
-  struct coap_observer *next; /* for LIST */
-
-  const char *url;
   uip_ipaddr_t addr;
   uint16_t port;
-  uint8_t token_len;
-  uint8_t token[COAP_TOKEN_LEN];
-  struct stimer refresh_timer;
-} coap_observer_t;
 
-list_t coap_get_observers(void);
-coap_observer_t *coap_add_observer(uip_ipaddr_t *addr, uint16_t port, const uint8_t *token, size_t token_len, const char *url);
-void coap_remove_observer(coap_observer_t *o);
-int coap_remove_observer_by_client(uip_ipaddr_t *addr, uint16_t port);
-int coap_remove_observer_by_token(uip_ipaddr_t *addr, uint16_t port, uint8_t *token, size_t token_len);
-void coap_notify_observers(const char *url, int type, uint32_t observe, uint8_t *payload, size_t payload_len);
+  restful_response_handler callback;
+  void *callback_data;
 
-void coap_observe_handler(resource_t *resource, void *request, void *response);
+  uint16_t packet_len;
+  uint8_t packet[COAP_MAX_PACKET_SIZE+1]; /* +1 for the terminating '\0' which will not be sent.
+                                           * Use snprintf(buf, len+1, "", ...) to completely fill payload. */
+} coap_transaction_t;
 
-#endif /* COAP_OBSERVING_H_ */
+void coap_register_as_transaction_handler();
+
+coap_transaction_t *coap_new_transaction(uint16_t mid, uip_ipaddr_t *addr, uint16_t port);
+void coap_send_transaction(coap_transaction_t *t);
+void coap_clear_transaction(coap_transaction_t *t);
+coap_transaction_t *coap_get_transaction_by_mid(uint16_t mid);
+
+void coap_check_transactions();
+
+#endif /* COAP_TRANSACTIONS_H_ */

@@ -1906,7 +1906,7 @@ struct uip_udp_hdr {
                                                          + IP header */
 #define UIP_LLIPH_LEN (UIP_LLH_LEN + UIP_IPH_LEN)    /* size of L2
                                                         + IP header */
-#if UIP_CONF_IPV6
+#ifdef UIP_CONF_IPV6
 /**
  * The sums below are quite used in ND. When used for uip_buf, we
  * include link layer length when used for uip_len, we do not, hence

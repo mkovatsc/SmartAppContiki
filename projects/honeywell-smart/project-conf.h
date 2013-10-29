@@ -29,8 +29,8 @@
  *
  */
 
-#ifndef __PROJECT_RPL_WEB_CONF_H__
-#define __PROJECT_RPL_WEB_CONF_H__
+#ifndef __PROJECT_HONEYWELL_SMART_H__
+#define __PROJECT_HONEYWELL_SMART_H__
 
 /* avr-ravenmote: 2 */
 #undef COAP_MAX_OPEN_TRANSACTIONS
@@ -54,16 +54,16 @@
 #undef RADIOSTATS
 #define RADIOSTATS 0
 
-#undef RF_CHANNEL
-#define RF_CHANNEL                 20
-
-#undef IEEE802154_CONF_PANID
-#define IEEE802154_CONF_PANID      0xB0B0
+#ifndef ADDR_LAST_BYTE
+#define ADDR_LAST_BYTE 0x80
+#endif
 
 #undef EUI64_ADDRESS
-#define EUI64_ADDRESS              {0x00,0x21,0x2e,0xff,0xff,0x00,0x22,0x80}
+//#define EUI64_ADDRESS              {0x00,0x21,0x2e,0xff,0xff,0x00,0x03,0xdf}
+#define EUI64_ADDRESS              {0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x34}
+//#define EUI64_ADDRESS              {0x00,0x00,0x00,0xff,0xff,0x00,0x00,0x01}
 
 #define COAP_RD_ADDRESS            "2001:0470:5073:0000:0000:0000:0000:0010"
 #define COAP_RD_PORT               UIP_HTONS(5683)
 
-#endif /* __PROJECT_RPL_WEB_CONF_H__ */
+#endif /* __PROJECT_HONEYWELL_SMART_H__ */
