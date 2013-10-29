@@ -39,10 +39,6 @@
 #include "main.h"
 #include "../common/rtc.h"
 #include "adc.h"
-#if (RFM == 1)
-	#include "rfm_config.h"
-	#include "../common/rfm.h"
-#endif
 
 
 #define EEPROM __attribute__((section(".eeprom")))
@@ -86,17 +82,11 @@ typedef struct { // each variables must be uint8_t or int8_t without exception
     /* 23 */ uint8_t bat_warning_thld; //!< treshold for battery warning [unit 0.02V]=[unit 0.01V per cell]
     /* 24 */ uint8_t bat_low_thld; //!< threshold for battery low [unit 0.02V]=[unit 0.01V per cell]
     /* 25 */ uint8_t allow_ADC_during_motor;
-#if HW_WINDOW_DETECTION
-    /* 26 */ uint8_t window_open_detection_enable;
-    /* 27 */ uint8_t window_open_detection_delay; //!< window open detection delay [sec]
-    /* 28 */ uint8_t window_close_detection_delay; //!< window close detection delay [sec]
-#else
     /* 26 */ uint8_t window_open_detection_diff; //!< threshold for window open detection unit is 0.1C
     /* 27 */ uint8_t window_close_detection_diff; //!< threshold for window close detection unit is 0.1C
     /* 28 */ uint8_t window_open_detection_time;
     /* 29 */ uint8_t window_close_detection_time;
     /* 2a */ uint8_t window_open_timeout;           //!< maximum time for window open state [minutes]
-#endif
 #if BOOST_CONTROLER_AFTER_CHANGE
 	/*    */ uint8_t  temp_boost_setpoint_diff;
 	/*    */ uint8_t  temp_boost_hystereses;
@@ -107,11 +97,6 @@ typedef struct { // each variables must be uint8_t or int8_t without exception
 #endif
 #if TEMP_COMPENSATE_OPTION
 	/*    */ int8_t  room_temp_offset;
-#endif
-#if (RFM==1)
-	/*    */ uint8_t RFM_devaddr; //!< HR20's own device address in RFM radio networking. =0 mean disable radio
-	/*    */ uint8_t security_key[8]; //!< key for encrypted radio messasges
-    /* unused */ 
 #endif
 
 } config_t;
@@ -132,11 +117,8 @@ extern uint8_t EEPROM ee_layout;
 #define BOOT_ON2      (16*60+0x2000) //!<  16:00
 #define BOOT_OFF2     (21*60+0x1000) //!<  21:00
 
-#if (HW_WINDOW_DETECTION)
-#define EE_LAYOUT (0x15) 
-#else
 #define EE_LAYOUT (0x14) 
-#endif
+
 #if (BOOST_CONTROLER_AFTER_CHANGE) || (TEMP_COMPENSATE_OPTION)
 	#define EE_LAYOUT (0xff) 
 	// for this options we haven't reserved EE_LAYOUT number yet
@@ -242,17 +224,11 @@ uint8_t EEPROM ee_config[][4] ={  // must be alligned to 4 bytes
   /* 23 */  {120,       120,       80,      160},   //!< bat_warning_thld; treshold for battery warning [unit 0.02V]=[unit 0.01V per cell]
   /* 24 */  {100,       100,       80,      160},   //!< bat_low_thld; treshold for battery low [unit 0.02V]=[unit 0.01V per cell]
   /* 25 */  {1,           1,        0,        1},   //!< allow_ADC_during_motor
-#if HW_WINDOW_DETECTION
-  /* 26 */  {1,           1,        0,        1},   //!< window_open_detection_enable
-  /* 27 */  {5,           5,        0,      240},   //!< window_open_detection_delay [sec] max 4 minutes
-  /* 28 */  {5,           5,        0,      240},   //!< window_close_detection_delay [sec] max 4 minutes
-#else
   /* 26 */  {100,         100,        7,      255},   //!< window_open_detection_diff; reshold for window open/close detection unit is 0.01C
   /* 27 */  {75,         75,        7,      255},   //!< window_close_detection_diff; reshold for window open/close detection unit is 0.01C
   /* 28 */  {8,           8,  1, AVGS_BUFFER_LEN},  //!< window_open_detection_time unit 15sec = 1/4min
   /* 29 */  {8,           8,  1, AVGS_BUFFER_LEN},  //!< window_close_detection_time unit 15sec = 1/4min
   /* 2a */  {90,         90,        2,      255},   //!< window_open_timeout
-#endif
 #if BOOST_CONTROLER_AFTER_CHANGE
   /*    */  {50,           0,        0,      255},   //!< temp_boost_setpoint_diff, unit 0,01°C
   /*    */  {10,           0,        0,      255},   //!< temp_boost_hystereses, unit 0,01°C 
@@ -263,17 +239,6 @@ uint8_t EEPROM ee_config[][4] ={  // must be alligned to 4 bytes
 #endif
 #if TEMP_COMPENSATE_OPTION
   /*    */  {0,           0,        0,      255},   //!< offset to roomtemp 1=0,1°C, binary complement for <0
-#endif
-#if (RFM==1)
-  /*    */  {RFM_DEVICE_ADDRESS, RFM_DEVICE_ADDRESS, 0, 29}, //!< RFM_devaddr: HR20's own device address in RFM radio networking.
-  /*    */  {SECURITY_KEY_0, SECURITY_KEY_0, 0x00, 0xff},   //!< security_key[0] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_1, SECURITY_KEY_1, 0x00, 0xff},   //!< security_key[1] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_2, SECURITY_KEY_2, 0x00, 0xff},   //!< security_key[2] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_3, SECURITY_KEY_3, 0x00, 0xff},   //!< security_key[3] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_4, SECURITY_KEY_4, 0x00, 0xff},   //!< security_key[4] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_5, SECURITY_KEY_5, 0x00, 0xff},   //!< security_key[5] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_6, SECURITY_KEY_6, 0x00, 0xff},   //!< security_key[6] for encrypted radio messasges
-  /*    */  {SECURITY_KEY_7, SECURITY_KEY_7, 0x00, 0xff},   //!< security_key[7] for encrypted radio messasges
 #endif
 };
 #endif //__EEPROM_C__

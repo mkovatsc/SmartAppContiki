@@ -87,64 +87,8 @@ In this file we define only configuration parameters, for example what kind of c
 
 #define DEFAULT_TEMPERATURE 2000
 
-#ifndef HW_WINDOW_DETECTION
-	#define HW_WINDOW_DETECTION 0
-#endif
 #ifndef TEMP_COMPENSATE_OPTION
 	#define TEMP_COMPENSATE_OPTION 0
-#endif
-
-#if THERMOTRONIC
-    #ifdef RFM
-        #if RFM
-            #error "THERMOTRONIC with RFM12 not implemented"
-        #endif
-    #else
-        #define RFM 0
-    #endif
-#else
-    #ifndef RFM
-        #define RFM 1 //!< define RFM to 1 if you want to have support for the RFM Radio Moodule in the Code
-    #endif
-#endif
-
-#if (RFM == 1)
-	#ifndef RFM_WIRE_MARIOJTAG 
-		#define RFM_WIRE_MARIOJTAG 0 //!< define that if you want to wire your RFM to external JTAG pins
-	#endif
-    #if RFM_WIRE_MARIOJTAG
-		#define RFM_WIRE_JD_INTERNAL 0 //!< define that if you want to wire your RFM to free internal pins
-	#else 
-		#define RFM_WIRE_JD_INTERNAL 1 //!< define that if you want to wire your RFM to free internal pins
-	#endif
-
-	#define RFM12 1 // just a synonym
-	#define RFM_DEVICE_ADDRESS 0x00
-
-	#if (RFM_WIRE_MARIOJTAG == 1)
-		#define DISABLE_JTAG 1 //!< define DISABLE_JTAG if your RFM's connection uses any JTAG pins
-		#if (HW_WINDOW_DETECTION)
-			#error HW_WINDOW_DETECTION is not compatible with RFM_WIRE_MARIOJTAG
-		#endif
-	#endif
-	#define SECURITY_KEY_0		0x01
-	#define SECURITY_KEY_1		0x23
-	#define SECURITY_KEY_2		0x45
-	#define SECURITY_KEY_3		0x67
-	#define SECURITY_KEY_4		0x89
-	#define SECURITY_KEY_5     	0xab
-	#define SECURITY_KEY_6		0xcd
-	#define SECURITY_KEY_7		0xef
-#else
-	#define RFM12                  0
-	#define RFM_WIRE_MARIOJTAG     0
-	#define RFM_WIRE_JD_INTERNAL   0
-	#define DISABLE_JTAG           0
-#endif
-
-#ifndef REMOTE_SETTING_ONLY
-	#define REMOTE_SETTING_ONLY	(RFM12)
-	// #define REMOTE_SETTING_ONLY	0
 #endif
 
 // Some default Values
@@ -218,11 +162,7 @@ In this file we define only configuration parameters, for example what kind of c
 // typedefs
 typedef enum { false, true } bool;
 
-#if RFM
-	#define VER_NAME "OpenHR20rfm"
-#else
-	#define VER_NAME "OpenHR20"
-#endif
+#define VER_NAME "OpenHR20"
 
 #define VERSION_STRING  ":" VER_NAME " " STR(REVHIGH) "." STR(REVLOW) " " __DATE__ " " __TIME__ " " REVISION
 

@@ -56,14 +56,7 @@
 #include "menu.h"
 #include "com.h"
 #include "../common/rs232_485.h"
-#include "../common/rfm.h"
 #include "controller.h"
-#include "../common/wireless.h"
-
-#if RFM
-	#include "rfm_config.h"
-	#include "../common/rfm.h"
-#endif
 
 // global Vars
 //volatile bool    m_automatic_mode;         // auto mode (false: manu mode)
@@ -96,7 +89,7 @@ int __attribute__ ((noreturn)) main(void)
     //! initalization
     init();
 
-	task=0;
+    task=0;
 
     //! Enable interrupts
     sei();
@@ -107,17 +100,9 @@ int __attribute__ ((noreturn)) main(void)
         task_lcd_update();
         for(;;) {;}  //fatal error, stop startup
     }
-#if THERMOTRONIC != 1
-	COM_init();
-#endif
-    #if RFM
-        // enable persistent RX for initial sync
-        RFM_SPI_16(RFM_FIFO_IT(8) | RFM_FIFO_FF | RFM_FIFO_DR);
-        RFM_SPI_16(RFM_LOW_BATT_DETECT_D_10MHZ);
-        RFM_RX_ON();
-		RFM_INT_EN(); // enable RFM interrupt
-    	rfm_mode = rfmmode_rx;
-    #endif
+
+    COM_init();
+
 
 	// We should do the following once here to have valid data from the start
 
@@ -128,10 +113,10 @@ int __attribute__ ((noreturn)) main(void)
     ***************************************************************************/
     for (;;){
 		// go to sleep with ADC conversion start
-	asm volatile ("cli");
-        if (! task && ((ASSR & (_BV(OCR2UB)|_BV(TCN2UB)|_BV(TCR2UB))) == 0)) {  // ATmega169 datasheet chapter 17.8.1
+      asm volatile ("cli");
+      if (! task && ((ASSR & (_BV(OCR2UB)|_BV(TCN2UB)|_BV(TCR2UB))) == 0)) {  // ATmega169 datasheet chapter 17.8.1
   			// nothing to do, go to sleep
-        	if(timer0_need_clock() || RS_need_clock()) {
+      	if(timer0_need_clock() || RS_need_clock()) {
 			SMCR = (0<<SM1)|(0<<SM0)|(1<<SE); // Idle mode
 		}
 		else {
@@ -160,22 +145,7 @@ int __attribute__ ((noreturn)) main(void)
 		asm volatile ("sei");
 	}
 
-	#if RFM
-	// RFM12
-	if (task & TASK_RFM) {
-		task &= ~TASK_RFM;
-
-		if (rfm_mode == rfmmode_tx_done){
-	                wirelessSendDone();
-		}
-  		else if ((rfm_mode == rfmmode_rx) || (rfm_mode == rfmmode_rx_owf)){
-  		    wirelessReceivePacket();
-  		}
-		continue; // on most case we have only 1 task, improve time to sleep
-	}
-	#endif
-
-        // update LCD task
+  // update LCD task
 	if (task & TASK_LCD) {
 		task&=~TASK_LCD;
 		task_lcd_update();
@@ -210,79 +180,51 @@ int __attribute__ ((noreturn)) main(void)
 		task_keyboard();
 	}
 
-	if (task & TASK_RTC) {
-        	task&=~TASK_RTC;
-		#if (HW_WINDOW_DETECTION)
-			PORTE |= _BV(PE2); // enable pull-up
-		#endif
-           	if (RTC_timer_done&_BV(RTC_TIMER_RTC))
-           	{
-                	RTC_AddOneSecond();
-			wheel_tick_time++;
-			CTL_mode_changed_timer++;
-			if (((wheel_tick_time == 2)) && wheel_tick_counter){
-				COM_send_wheel_event(wheel_tick_counter);
-				wheel_tick_counter=0;
-			}
-			if (CTL_mode_changed && (CTL_mode_changed_timer==7)){
-				COM_send_mode_event(CTL_mode_auto);
-				CTL_mode_changed=0;
-			}
-            	}
-            	if (RTC_timer_done&(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)))
-            	{
-                	cli();
-			RTC_timer_done&=~(_BV(RTC_TIMER_OVF)|_BV(RTC_TIMER_RTC)); 
-			sei();
-                	#if (DEBUG_PRINT_RTC_TICKS)
-                		COM_putchar('*');
-                    		COM_flush();
-                	#endif
-                	bool minute=(RTC_GetSecond()==0);
-                	CTL_update(minute);
-                	if (minute) {
-				COM_send_error_event(CTL_error);
-                		if (((CTL_error &  (CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING)) == 0) && (RTC_GetDayOfWeek()==6)
-	    				    && (RTC_GetHour()==10) && (RTC_GetMinute()==0)) {
-	        	                // every saturday 10:00AM
-        		                // TODO openHR: improve this code!
-                	        // valve protection / CyCL
-                	        MOTOR_updateCalibration(0);
-                		}
-				#if (! HW_WINDOW_DETECTION)
-                	    	if (CTL_mode_window!=0) {
-                        		CTL_mode_window--;
-                        		if (CTL_mode_window==0) {
-                           			PID_force_update = 0;
-                        		}
-                    		}
-				#endif
-                    		#if RFM
-                    		wirelesTimeSyncCheck();
-                    		#endif
-			}
-                	#if RFM
-    			if ((config.RFM_devaddr!=0) && (time_sync_tmo>1) && (
-					((RTC_GetSecond() == config.RFM_devaddr) && (wireless_buf_ptr)) ||
-                            		(((RTC_GetSecond()>30) && ((RTC_GetSecond()&1)?(wl_force_addr1==config.RFM_devaddr):(wl_force_addr2==config.RFM_devaddr))) ||
-					((wl_force_addr1==0xff) && (RTC_GetSecond()%30 == config.RFM_devaddr) && ((wl_force_flags>>config.RFM_devaddr)&1))))) // collission protection: every HR20 shall send when the second counter is equal to it's own address.
-    			{
-                        	wirelessTimerCase = WL_TIMER_FIRST;
-                        	RTC_timer_set(RTC_TIMER_RFM, WLTIME_START);
-    			}
-    			if ((config.RFM_devaddr!=0) && (time_sync_tmo>1) && ((RTC_GetSecond() == 59) || (RTC_GetSecond() == 29))) {
-				#if (WL_SKIP_SYNC)
-				if (wl_skip_sync!=0) {
-					wl_skip_sync--;
-				}
-				else
-				#endif
-				{
-					wirelessTimerCase = WL_TIMER_SYNC;
-                        		RTC_timer_set(RTC_TIMER_RFM, WLTIME_SYNC);
-				}
-                    	}
-                	#endif
+	if(task & TASK_RTC) {
+      task &= ~TASK_RTC;
+      if(RTC_timer_done & _BV(RTC_TIMER_RTC)) {
+        RTC_AddOneSecond();
+        wheel_tick_time++;
+        CTL_mode_changed_timer++;
+
+        if(((wheel_tick_time == 2)) && wheel_tick_counter) {
+          COM_send_wheel_event(wheel_tick_counter);
+          wheel_tick_counter = 0;
+        }
+
+        if(CTL_mode_changed && (CTL_mode_changed_timer == 7)) {
+          COM_send_mode_event(CTL_thermostat_mode);
+          CTL_mode_changed = 0;
+        }
+      }
+      if(RTC_timer_done & (_BV(RTC_TIMER_OVF) | _BV(RTC_TIMER_RTC))) {
+        cli();
+        RTC_timer_done &= ~(_BV(RTC_TIMER_OVF) | _BV(RTC_TIMER_RTC));
+        sei();
+#if (DEBUG_PRINT_RTC_TICKS)
+        COM_putchar('*');
+        COM_flush();
+#endif
+        bool minute = (RTC_GetSecond() == 0);
+        CTL_update(minute);
+        if(minute) {
+          COM_send_error_event(CTL_error);
+          if(((CTL_error & (CTL_ERR_BATT_LOW | CTL_ERR_BATT_WARNING)) == 0)
+              && (RTC_GetDayOfWeek() == 6) && (RTC_GetHour() == 10)
+              && (RTC_GetMinute() == 0)) {
+            // every saturday 10:00AM
+            // TODO openHR: improve this code!
+            // valve protection / CyCL
+            MOTOR_updateCalibration(0);
+          }
+          if(CTL_mode_window != 0) {
+            CTL_mode_window--;
+            if(CTL_mode_window == 0) {
+              PID_force_update = 0;
+            }
+          }
+        }
+
 			if (bat_average>0) {
 				MOTOR_updateCalibration(mont_contact_pooling());
 				MOTOR_Goto(valve_wanted);
@@ -297,14 +239,6 @@ int __attribute__ ((noreturn)) main(void)
         	        menu_view(false); // TODO openHR: move it, it is wrong place
         	        LCD_Update(); // TODO openHR: move it, it is wrong place
         	}
-        	#if RFM
-              	if (RTC_timer_done&_BV(RTC_TIMER_RFM)){
-			cli(); 
-			RTC_timer_done&=~_BV(RTC_TIMER_RFM); 
-			sei();
-                  	wirelessTimer();
-		}
-	        #endif
         	// do not use continue here (menu_auto_update_timeout==0)
         }
 
@@ -391,46 +325,17 @@ static inline void init(void)
     DDRB = (1<<PB0)|(1<<PB4)|(1<<PB7)|(1<<PB6); // PB4, PB7 Motor out
 #endif
 
-#if (RFM_WIRE_MARIOJTAG == 1)
-    DDRE  = (1<<PE3)|                  (1<<PE1); // ACTLIGHTEYE | TXD
-	PORTE =                            (1<<PE1)|(1<<PE0); // TXD | RXD
-	//PORTE =                            (1<<PE1)|(1<<PE0); // TXD | RXD
-	DDRF  =          (1<<PF6)|(1<<PF5)|(1<<PF4)|(1<<PF3); // RFMSDI | RFMNSEL | RFMSCK | ACTTEMPSENS
-    PORTF = (1<<PF7)|         (1<<PF5); // JTAGTDI | RFMNSEL;
-
-#elif (RFM_WIRE_JD_INTERNAL == 1)
-    DDRE  = (1<<PE3)|(1<<PE1);  // PE3  activate lighteye
-	PORTE = (1<<PE2)|(1<<PE1)|(1<<PE0);  // TXD | RXD(pullup)
-    DDRF  = (1<<PF0)|(1<<PF1)|(1<<PF3);  // RFMSDI | RFMSCK | PF3  activate tempsensor
-    PORTF = 0xf0;
-    PORTA = (1<<PA3); // RFMnSEL
-    DDRA = (1<<PA3); // RFMnSEL
-
-#elif THERMOTRONIC	//Thermotronic without RFM
-	DDRE|=(1<<PE3);
-	PORTE|=(1<<PE3);
-    DDRF = (1<<PF2); // PF2  activate tempsensor
-    PORTF = 0xf5;
-
-#else //HR20 without RFM
     DDRE = (1<<PE3)|(1<<PE1);  // PE3  activate lighteye
     PORTE = (1<<PE2)|(1<<PE1)|(1<<PE0); // PE2 | TXD | RXD(pullup);
     DDRF = (1<<PF3);          // PF3  activate tempsensor
     PORTF = 0xf3;
-#endif
 
     //! remark for PCMSK0:
     //!     PCINT0 for lighteye (motor monitor) is activated in motor.c using
     //!     mask register PCMSK0: PCMSK0=(1<<PCINT4) and PCMSK0&=~(1<<PCINT4)
 
-#if THERMOTRONIC==1
-	PCMSK0=(1<<PCINT1);
-    //! PCMSK1 for keyactions
-    PCMSK1 = (1<<PCINT9)|(1<<PCINT10)|(1<<PCINT8)|(1<<PCINT12);
-#else
     //! PCMSK1 for keyactions
     PCMSK1 = (1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11)|(1<<PCINT13);
-#endif
 
     //! activate PCINT0 + PCINT1
     EIMSK = (1<<PCIE1)|(1<<PCIE0);
@@ -441,21 +346,12 @@ static inline void init(void)
 	// press all keys on boot reload default eeprom values
     eeprom_config_init((PINB & (KBI_PROG | KBI_C | KBI_AUTO))==0);
 
-#if RFM
-	crypto_init();
-#endif
-
     //! Initialize the motor
     MOTOR_Init();
 
     //1 Initialize the LCD
     LCD_Init();
 
-#if RFM
-	RFM_init();
-	RFM_OFF();
-#endif
-
-	// init keyboard
+    // init keyboard
     state_wheel_prev = ~PINB & (KBI_ROT1 | KBI_ROT2);
 }

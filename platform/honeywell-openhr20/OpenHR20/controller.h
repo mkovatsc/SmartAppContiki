@@ -34,8 +34,8 @@
 #pragma once
 
 extern uint8_t CTL_temp_wanted; //!< wanted temperature
-extern uint8_t CTL_temp_wanted_auto;
-extern uint8_t CTL_temp_wanted_manual; 
+extern uint8_t CTL_temp_wanted_radio;
+extern uint8_t CTL_temp_wanted_manual;
 extern uint8_t CTL_valve_wanted; //!< wanted valve (just valid in the valve mode)
 extern uint8_t CTL_temp_wanted_last;   // desired temperatur value used for last PID control
 extern uint8_t CTL_temp_auto;
@@ -43,9 +43,9 @@ extern uint8_t CTL_temp_auto;
 extern int16_t CTL_temp_threshold;
 extern int16_t CTL_bat_threshold;
 
-enum mode {manual_target=0, manual_timers=1, auto_target=2, auto_valve=3, auto_timers=4};
+enum mode {manual_target=0, manual_timer=1, radio_target=2, radio_valve=3};
 
-extern enum mode CTL_mode_auto;
+extern enum mode CTL_thermostat_mode;
 extern int8_t PID_force_update;      // signed value, val<0 means disable force updates
 extern uint8_t CTL_error;
 extern uint8_t CTL_mode_window;
@@ -63,7 +63,7 @@ extern uint8_t valveHistory[VALVE_HISTORY_LEN];
 #define CTL_update_temp_auto() (CTL_temp_auto=0)
 #define CTL_test_auto() (CTL_mode_auto && (CTL_temp_auto==CTL_temp_wanted))
 #define CTL_set_temp(t) (PID_force_update = 10, CTL_temp_wanted=t)
-#define CTL_set_temp_auto(t) (PID_force_update = 10, CTL_temp_wanted_auto=t)
+#define CTL_set_temp_auto(t) (PID_force_update = 10, CTL_temp_wanted_radio=t)
 #define CTL_set_temp_manual(t) (PID_force_update = 10, CTL_temp_wanted_manual=t)
 
 void CTL_update(bool minute_ch);

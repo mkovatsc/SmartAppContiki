@@ -45,9 +45,6 @@
 # 5.4.2008: Dario Carluccio
 #           command line parameters for "avr-size" on Linux and Windows.
 
-# Default for independent Contiki-based RFM
-RFM = -DRFM=0
-
 # HW = THERMOTRONIC
 HW = HONEYWELL 
 
@@ -85,8 +82,6 @@ SRC =  \
     controller.c \
     watch.c \
     com.c \
-    wireless.c \
-    rfm.c \
     cmac.c \
 
 SRC_B =  \
@@ -156,9 +151,7 @@ ADEFS = -DF_CPU=$(F_CPU)
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += $(REV)
-CFLAGS += $(RFM)
 CFLAGS += $(TEMP_COMPENSATE_OPTION)
-CFLAGS += $(HW_WINDOW_DETECTION)
 CFLAGS += $(MENU_SHOW_BATTERY)
 CFLAGS += $(MOTOR_COMPENSATE_BATTERY)
 CFLAGS += $(NO_AUTORETURN_FROM_ALT_MENUES)
@@ -511,8 +504,6 @@ extcoff: $(TARGET).elf
 %.txt: %.elf
 	$(REMOVE) $@
 	@echo "Configuration" >> $@
-	@echo "RFM=$(RFM)" >> $@
-	@echo "HW_WINDOW_DETECTION=$(HW_WINDOW_DETECTION)" >> $@
 	@echo "==================================" >> $@
 	@echo >> $@
 	$(ELFSIZE) >> $@

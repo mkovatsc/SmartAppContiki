@@ -47,8 +47,8 @@
 // global Vars for default values: temperatures and speed
 uint8_t CTL_temp_wanted=0x22;   // actual desired temperature
 uint8_t CTL_temp_wanted_manual=0x22;
-uint8_t CTL_temp_wanted_auto=0x22;
-uint8_t CTL_temp_wanted_last=0xff;   // desired temperature value used for last PID control
+uint8_t CTL_temp_wanted_radio=0x22; // desired temperature value set via radio
+uint8_t CTL_temp_wanted_last=0xff;  // desired temperature value used for last PID control
 uint8_t CTL_temp_auto=0;   // actual desired temperature by timer
 uint8_t CTL_valve_wanted=0;
 uint8_t CTL_valve_old_wanted=0;
@@ -56,15 +56,14 @@ uint8_t CTL_mode_changed=0;
 uint8_t CTL_mode_changed_timer=0;
 
 int16_t CTL_temp_threshold = 10;
-int16_t CTL_bat_threshold = 100;
+int16_t CTL_bat_threshold = 10;
 
-enum mode CTL_mode_auto = auto_valve;   // actual desired temperature by timer
-uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timmer)
-#if (HW_WINDOW_DETECTION)
-static uint8_t window_timer=AVERAGE_LEN+1;
-#else
+enum mode CTL_thermostat_mode = manual_target;   // actual desired temperature by timer
+
+// window detection
+uint8_t CTL_mode_window = 0; // open window (0=closed, >0 open-timer)
 uint16_t CTL_open_window_timeout;
-#endif
+
 int8_t CTL_interatorCredit;
 uint8_t CTL_creditExpiration;
 #if BOOST_CONTROLER_AFTER_CHANGE
@@ -78,27 +77,6 @@ static uint8_t pid_Controller(int16_t setPoint, int16_t processValue, uint8_t ol
 
 uint8_t CTL_error=0;
 
-#if (HW_WINDOW_DETECTION)
-static void CTL_window_detection(void) {
-	bool w;
-	// PORTE |= _BV(PE2); // enable pull-up
-	// nop();nop();
-	w = ((PINE & _BV(PE2))!=0) && config.window_open_detection_enable;
-	if (!w) PORTE &= ~_BV(PE2); // disable pullup for save energy
-
-	if (CTL_mode_window != w) {
-		if (window_timer==0) {
-			CTL_mode_window = w;
-			PID_force_update = 0;
-			// kb_events |= KB_EVENT_UPDATE_LCD;
-		} else {
-			window_timer--;
-			return;
-		}
-	}
-	window_timer=(w)?(config.window_close_detection_delay):(config.window_open_detection_delay);
-}
-#else
 static void CTL_window_detection(void) {
 	uint8_t i = (ring_buf_temp_avgs_pos+AVGS_BUFFER_LEN
 			-((CTL_mode_window!=0)?config.window_close_detection_time:config.window_open_detection_time)
@@ -128,7 +106,6 @@ static void CTL_window_detection(void) {
 		}
 	}
 }
-#endif
 
 /*!
  *******************************************************************************
@@ -139,26 +116,17 @@ static void CTL_window_detection(void) {
  *
  ******************************************************************************/
 void CTL_update(bool minute_ch) {
-#if (HW_WINDOW_DETECTION)
-	PORTE |= _BV(PE2); // enable pull-up
-#endif
 	
-	if ( (minute_ch || (CTL_temp_auto==0)) && CTL_mode_auto!=auto_valve && CTL_mode_auto!=auto_target ) {
-		// minutes changed or we need return to timers
-		uint8_t t=RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
-		uint8_t border = RTC_ActualTimerTemperature(true);
-		if (border && CTL_mode_auto == manual_target){
-			CTL_mode_auto=manual_timers;
-			CTL_mode_changed= 1;
-			CTL_mode_changed_timer=0;
-		}
+	if ( (minute_ch || (CTL_temp_auto==0)) && CTL_thermostat_mode==manual_timer) {
+
+	  // minutes changed or we need return to timers
+		uint8_t t = RTC_ActualTimerTemperature(!(CTL_temp_auto==0));
+
 		if (t!=0) {
-			CTL_temp_auto=t;
-			if (CTL_mode_auto==manual_timers || CTL_mode_auto==auto_timers) {
-				CTL_temp_wanted=CTL_temp_auto;
-				if ((PID_force_update<0)&&(CTL_temp_wanted!=CTL_temp_wanted_last)) {
-					PID_force_update=0;
-				}
+			CTL_temp_auto = t;
+      CTL_temp_wanted = CTL_temp_auto;
+      if ((PID_force_update<0)&&(CTL_temp_wanted!=CTL_temp_wanted_last)) {
+        PID_force_update=0;
 			}		
 		}
 	}
@@ -170,7 +138,8 @@ void CTL_update(bool minute_ch) {
 		}
 	}
 #endif
-	if (!(CTL_mode_auto >=2 )){
+
+	if (CTL_thermostat_mode!=radio_valve && CTL_thermostat_mode!=radio_target){
 		CTL_window_detection();
 	}
 	if (PID_update_timeout>0) {
@@ -181,41 +150,42 @@ void CTL_update(bool minute_ch) {
 	}
 	else if ((PID_update_timeout == 0)||(PID_force_update==0)) {
 		uint8_t temp;
-		if (CTL_mode_auto == auto_target){
-			CTL_temp_wanted = CTL_temp_wanted_auto;
-		}
-		else if (CTL_mode_auto == manual_target){
+
+		if (CTL_thermostat_mode == radio_target){
+			CTL_temp_wanted = CTL_temp_wanted_radio;
+		} else if (CTL_thermostat_mode == manual_target){
 			CTL_temp_wanted = CTL_temp_wanted_manual;
 		}
+
 		if (((CTL_temp_wanted<TEMP_MIN) || mode_window()) ) {
 			temp = TEMP_MIN;	// frost protection to TEMP_MIN 
 		} else {
 			temp = CTL_temp_wanted;
 		}
+
 		bool updateNow=(temp!=CTL_temp_wanted_last);
-		if (updateNow) {
-			CTL_temp_wanted_last=temp;
+
+		if (updateNow || CTL_thermostat_mode==radio_valve) {
 			goto UPDATE_NOW; // optimize
 		}
-		if (CTL_mode_auto==auto_valve){
-			goto UPDATE_NOW;
-		}
+
 		if ((PID_update_timeout == 0)) {
 UPDATE_NOW:
 			PID_update_timeout = (config.PID_interval * 5); // new PID pooling
+
 			uint8_t new_valve;
-			if (CTL_mode_auto==auto_valve){
+
+			if (CTL_thermostat_mode==radio_valve){
 				new_valve=CTL_valve_wanted;
-			}
-			else{
+			} else {
 				if (temp>TEMP_MAX) {
 					new_valve = config.valve_max;
-				} 
-				else {
+				} else {
 					new_valve = pid_Controller(calc_temp(temp),temp_average,valveHistory[0],updateNow);
 				}
 				CTL_valve_wanted = new_valve;
 			}
+
 			if(new_valve != CTL_valve_old_wanted){
 				CTL_valve_old_wanted = new_valve;
 				COM_send_valve_event(new_valve);
@@ -299,11 +269,6 @@ void CTL_valve_change_inc (int8_t ch) {
 	PID_force_update = 0;
 }
 
-static uint8_t menu_temp_rewoke;
-static uint8_t target_temp_rewoke;
-static uint8_t target_valve_rewoke;
-static uint8_t mode_auto_rewoke;
-
 /*!
  *******************************************************************************
  *  Change controller mode
@@ -311,66 +276,42 @@ static uint8_t mode_auto_rewoke;
  ******************************************************************************/
 void CTL_change_mode(int8_t m) {
 
+  enum mode previous_mode = CTL_thermostat_mode;
+
 	if (m == CTL_CHANGE_AUTO) {
-		// Save vars for rewoke
-		menu_temp_rewoke=CTL_temp_auto;	
-		target_temp_rewoke=CTL_temp_wanted;
-		target_valve_rewoke=CTL_valve_wanted;
-		mode_auto_rewoke=CTL_mode_auto;
-
-		if (CTL_mode_auto >=2){ 	
+		if (CTL_thermostat_mode >= radio_target) {
 			//Was in auto, go into manual mode
-			CTL_mode_auto = manual_target;
-		}
-		else{
+			CTL_thermostat_mode = manual_target;
+		} else {
 			//Was in manual mode, go into auto
-			CTL_mode_auto = auto_target;
+			CTL_thermostat_mode = radio_target;
 		}
-		PID_force_update = 9;
-		CTL_mode_changed= 1;
-		CTL_mode_changed_timer=0;
 
-	} else if ((m == CTL_CHANGE_MINOR_MODE)) {   
-		// Save vars for rewoke
-		menu_temp_rewoke=CTL_temp_auto;	
-		target_temp_rewoke=CTL_temp_wanted;
-		target_valve_rewoke=CTL_valve_wanted;
-		mode_auto_rewoke=CTL_mode_auto;
-
-		if(!(CTL_mode_auto >= 2)){
-			CTL_mode_auto=CTL_mode_auto ^ 1;	
-			CTL_mode_changed= 1;
-			CTL_mode_changed_timer=0;
+	} else if ((m == CTL_CHANGE_MINOR_MODE)) {
+		if(CTL_thermostat_mode < radio_target) {
+			CTL_thermostat_mode = CTL_thermostat_mode ^ 1;
 		}
-		PID_force_update = 9;
-
-
 		// CTL_CHANGE_MINOR_MODE triggers nothing in auto mode, nothing to do
 
-	}else if( m == CTL_CHANGE_MODE_REWOKE){
-
-		CTL_temp_auto=menu_temp_rewoke;
-		CTL_temp_wanted=target_temp_rewoke;
-		CTL_valve_wanted=target_valve_rewoke;
-		CTL_mode_auto=mode_auto_rewoke;
-
-		PID_force_update = 9;
-		CTL_mode_changed= 0;
-		CTL_mode_changed_timer=0;
-
-	} else {				//direct set, from uart;
-		if (m >= 0) CTL_mode_auto=m;
-		PID_force_update = 9;
+	} else { //direct set mode
+		if (m >= 0) CTL_thermostat_mode = m;
 	}
-	if ( ((CTL_mode_auto == manual_timers) || (CTL_mode_auto== auto_timers)) && (m != CTL_CHANGE_MODE_REWOKE)) { //If set to timers, set correct target temp
-		CTL_temp_wanted=(CTL_temp_auto=RTC_ActualTimerTemperature(false));
-		// CTL_temp_auto=0;  //refresh wanted temperature in next step
-	}	
-	if(CTL_mode_auto == manual_target){
-		CTL_temp_wanted = CTL_temp_wanted_manual;
-	}
-	else if( CTL_mode_auto == auto_target){
-		CTL_temp_wanted = CTL_temp_wanted_auto;
+
+	if (CTL_thermostat_mode != previous_mode) {
+	  CTL_mode_changed = 1;
+	  CTL_mode_changed_timer = 0;
+	  PID_force_update = 9;
+
+    if (CTL_thermostat_mode == manual_timer) { //If set to timers, set correct target temp
+      CTL_temp_wanted = (CTL_temp_auto = RTC_ActualTimerTemperature(false));
+      // CTL_temp_auto=0;  //refresh wanted temperature in next step
+    } else if (CTL_thermostat_mode == manual_target) {
+      CTL_temp_wanted = CTL_temp_wanted_manual;
+    } else if( CTL_thermostat_mode == radio_target) {
+      CTL_temp_wanted = CTL_temp_wanted_radio;
+    } else if( CTL_thermostat_mode == radio_valve) {
+      PID_force_update = 0;
+    }
 	}
 	CTL_mode_window = 0;
 }

@@ -478,11 +478,11 @@ void LCD_PrintHexW(uint16_t value, uint8_t mode)
  *  \note  You have to call \ref LCD_Update() to trigger update on LCD if not
  *         it is triggered automatically at change of bitframe
  *
- *  \note  range for desired temperature 5,0°C - 30°C, OFF and ON 
+ *  \note  range for desired temperature 5,0ï¿½C - 30ï¿½C, OFF and ON 
  *
  *  \param temp<BR>
  *     - TEMP_MIN-1          : \c OFF <BR>
- *     - TEMP_MIN to TEMP_MAX : temperature = temp/2  [5,0°C - 30°C]
+ *     - TEMP_MIN to TEMP_MAX : temperature = temp/2  [5,0ï¿½C - 30ï¿½C]
  *     - TEMP_MAX+1          : \c ON  <BR>
  *     -    other: \c invalid <BR>
  *  \param mode  \ref LCD_MODE_ON, \ref LCD_MODE_OFF, \ref LCD_MODE_BLINK_1
@@ -519,8 +519,8 @@ void LCD_PrintTemp(uint8_t temp, uint8_t mode)
  *
  *
  *  \param temp temperature in 1/100 deg C<BR>
- *     min:  -999 => -9,9°C
- *     max:  9999 => 99,9°C
+ *     min:  -999 => -9,9ï¿½C
+ *     max:  9999 => 99,9ï¿½C
   *  \param mode  \ref LCD_MODE_ON, \ref LCD_MODE_OFF, \ref LCD_MODE_BLINK_1
  ******************************************************************************/
 void LCD_PrintTempInt(int16_t temp, uint8_t mode)
@@ -538,14 +538,14 @@ void LCD_PrintTempInt(int16_t temp, uint8_t mode)
         temp = -temp;    
     } 
 
-    // 1/100°C not printed
+    // 1/100ï¿½C not printed
     LCD_PrintDec3(temp/10, 1, mode);
     
     if (neg){
         // negative Temp      
         LCD_PrintChar(LCD_CHAR_neg, 3, mode);
     } else if (temp < 1000){
-        // Temp < 10°C
+        // Temp < 10ï¿½C
         LCD_PrintChar(LCD_CHAR_NULL, 3, mode);
     }                             
 
@@ -605,12 +605,14 @@ void LCD_SetHourBarSeg(uint8_t seg, uint8_t mode)
  ******************************************************************************/
 void LCD_HourBarBitmap(uint32_t bitmap)
 {
-#if 0
+#if 1
     uint8_t i;
     for (i=0;i<24;i++) {
-        uint8_t segment = pgm_read_byte(&LCD_SegHourBarOffsetTablePrgMem[i]);
-        LCD_SetSeg(segment, (((uint8_t)bitmap & 1)? LCD_MODE_ON : LCD_MODE_OFF ));
-        bitmap = bitmap>>1;
+      if (i == RTC_GetHour()) {
+        LCD_SetHourBarSeg(i, LCD_MODE_BLINK_1);
+      } else {
+        LCD_SetHourBarSeg(i, LCD_MODE_OFF);
+      }
     }
 #else
     asm volatile (
@@ -638,66 +640,6 @@ void LCD_HourBarBitmap(uint32_t bitmap)
     );
 #endif
 }
-
-
-/*!
- *******************************************************************************
- *  Set all segments from left up to val and clear all other segments
- *
- *  \note  You have to call \ref LCD_Update() to trigger update on LCD if not
- *         it is triggered automatically at change of bitframe
- *
- *  \param seg No of the last hour bar segment to be set 0-23
- *  \param mode  \ref LCD_MODE_ON, \ref LCD_MODE_OFF, \ref LCD_MODE_BLINK_1
- ******************************************************************************/
-#if 0
-void LCD_SetHourBarBar(uint8_t val, uint8_t mode)
-{
-    uint8_t i;
-    // Only Segment 0:23
-    if (val > 23){
-        val = 23;
-    }
-    // For each Segment 0:23
-    for (i=0; i<24; i++) {
-        if (i > val){
-            LCD_SetHourBarSeg(i, LCD_MODE_OFF);
-        } else {
-            LCD_SetHourBarSeg(i, mode);
-        } 
-    }
-}
-#endif
-
-
-/*!
- *******************************************************************************
- *  Set only one segment and clear all others
- *
- *  \note You have to call \ref LCD_Update() to trigger update on LCD if not
- *         it is triggered automatically at change of bitframe
- *
- *  \param seg No of the hour bar segment to be set 0-23
- *  \param mode  \ref LCD_MODE_ON, \ref LCD_MODE_OFF, \ref LCD_MODE_BLINK_1
- ******************************************************************************/
-#if 0
-void LCD_SetHourBarVal(uint8_t val, uint8_t mode)
-{
-    uint8_t i;
-    // Only Segment 0:23
-    if (val > 23){
-        val = 23;
-    }
-    // For each Segment 0:23
-    for (i=0; i<24; i++) {
-        if (i == val){
-            LCD_SetHourBarSeg(i, mode);
-        } else {
-            LCD_SetHourBarSeg(i, LCD_MODE_OFF);
-        }
-    }
-}
-#endif
 
 
 /*!

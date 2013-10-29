@@ -54,9 +54,3 @@
 #define DEBUG_BATT_ADC 0
 
 #define DEBUG_PRINT_STR_16 (DEBUG_BATT_ADC)
-
-#if RFM
-    #define DEBUG_DUMP_RFM DEBUG_MODE
-#else
-    #define DEBUG_DUMP_RFM 0
-#endif

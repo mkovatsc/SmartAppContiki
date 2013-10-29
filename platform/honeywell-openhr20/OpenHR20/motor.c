@@ -49,7 +49,6 @@
 #include "eeprom.h"
 #include "task.h"
 #include "../common/rs232_485.h"
-#include "../common/rfm.h"
 #include "controller.h"
 #include "com.h"
 #include "debug.h"
@@ -441,35 +440,7 @@ ISR (PCINT0_vect){
         }
     }
     pine_last=pine;
-    #if (RFM==1)
-      if (PCMSK0 & _BV(RFM_SDO_PCINT)) {
-      // RFM module interupt
-        while (RFM_SDO_PIN & _BV(RFM_SDO_BITPOS)) {
-          PCMSK0 &= ~_BV(RFM_SDO_PCINT); // disable RFM interrupt
-          sei(); // enable global interrupts
-          if (rfm_mode == rfmmode_tx) {
-            RFM_WRITE(rfm_framebuf[rfm_framepos++]);
-            if (rfm_framepos >= rfm_framesize) {
-              rfm_mode = rfmmode_tx_done;
-              task |= TASK_RFM; // inform the rfm task about end of transmition
-              return; // \note !!WARNING!!
-            }
-		  } else if (rfm_mode == rfmmode_rx) {
-	        rfm_framebuf[rfm_framepos++]=RFM_READ_FIFO();
-    		task |= TASK_RFM; // inform the rfm task about next RX byte
-        	if (rfm_framepos >= RFM_FRAME_MAX) {
-				rfm_mode = rfmmode_rx_owf;
-				// ignore any data in buffer
-				return; // RFM interrupt disabled 
- 			}
-    	  } 
-          cli(); // disable global interrupts
-          asm volatile("nop"); // we must have one instruction after cli() 
-          PCMSK0 |= _BV(RFM_SDO_PCINT); // enable RFM interrupt
-          asm volatile("nop"); // we must have one instruction after
-        }
-    }
-  #endif
+
   // do NOT add anything after RFM part
 }
 

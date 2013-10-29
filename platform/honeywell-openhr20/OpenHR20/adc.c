@@ -67,10 +67,10 @@ bool sleep_with_ADC=0;
  ******************************************************************************/
 
 static int16_t ring_buf[2][AVERAGE_LEN];
-#if ! HW_WINDOW_DETECTION
+
+// window detection
 int16_t ring_buf_temp_avgs [AVGS_BUFFER_LEN];
 uint8_t ring_buf_temp_avgs_pos;
-#endif
 
 int16_t last_temp_reading = 0;
 int16_t last_bat_reading = 0;
@@ -85,12 +85,12 @@ static void shift_ring(void) {
 	if (ring_used<AVERAGE_LEN) {
 		ring_used++;
 	} 
-#if ! HW_WINDOW_DETECTION
+
+	// window detection
 	if (ring_pos==0) {
 		ring_buf_temp_avgs[ring_buf_temp_avgs_pos]=temp_average;
 		ring_buf_temp_avgs_pos = (ring_buf_temp_avgs_pos+1)%AVGS_BUFFER_LEN;
 	}
-#endif
 }
 
 static void update_ring(uint8_t type, int16_t value) {
