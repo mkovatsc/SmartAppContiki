@@ -9,7 +9,7 @@ UIP_CONF_IPV6=1
 
 # radio configuration
 CFLAGS += -DRF_CHANNEL=25
-CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
+CFLAGS += -DIEEE802154_CONF_PANID=0xB0B0
 
 REST_RESOURCES_DIR = ./resources
 REST_RESOURCES_FILES = $(notdir $(shell find $(REST_RESOURCES_DIR) -name '*.c'))
@@ -27,11 +27,6 @@ APPS += rest-engine
 # optional rules to get assembly
 #CUSTOM_RULE_C_TO_OBJECTDIR_O = 1
 #CUSTOM_RULE_S_TO_OBJECTDIR_O = 1
-
-# radio configuration --> project.conf.h
-#CFLAGS += -DRF_CHANNEL=12
-#CFLAGS += -DIEEE802154_CONF_PANID=0xBEEF
-#CFLAGS += -DEUI64_ADDRESS={0x00,0x50,0xc2,0xff,0xff,0x18,0x8d,0x34}
 
 CFLAGS += -DADDR_LAST_BYTE=$(ADDR_LAST_BYTE)
 
